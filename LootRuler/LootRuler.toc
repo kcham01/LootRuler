@@ -1,0 +1,30 @@
+## Interface: 20506
+## Title: |cffffd100LootRuler|r
+## Notes: Soft reserves inside the game for TBC raids: the raid leader picks the raid, how many reserves each and any hard reserves, everyone reserves in the addon or by whisper, and it all goes into Gargul.
+## Author: Jamesthefishguy
+## Version: 1.0.0-beta
+## SavedVariables: LootRulerDB
+## OptionalDeps: Gargul
+## IconTexture: Interface\Icons\INV_Misc_Note_02
+## Category: Raid
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\AceComm-3.0\ChatThrottleLib.lua
+Libs\AceComm-3.0\AceComm-3.0.lua
+Libs\LibSerialize\LibSerialize.lua
+Libs\LibDeflate\LibDeflate.lua
+
+Init.lua
+Data\Loot.lua
+Core\Util.lua
+Core\Loot.lua
+Core\Session.lua
+Core\Gargul.lua
+Core\Net.lua
+Core\Whisper.lua
+UI\Kit.lua
+UI\Main.lua
+UI\Reserve.lua
+UI\Overview.lua
+UI\Setup.lua

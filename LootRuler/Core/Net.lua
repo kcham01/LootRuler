@@ -1,0 +1,444 @@
+-- Keeping everyone in step. The raid leader's addon holds the session that counts and sends a copy of it
+-- (reserves and all) to the group, and to the guild when the leader shares it there, every time it
+-- changes. Raiders' addons send the leader their own picks; the leader checks them against the rules and
+-- answers. Players without the addon whisper the leader instead (Core/Whisper.lua).
+--
+-- Raiders can pick while the leader is offline or out of the group: their picks are kept and sent as soon
+-- as the leader's addon is heard from again.
+--
+-- Messages (LibSerialize + LibDeflate over AceComm, prefix "LootRuler"):
+--   T  leader -> group / guild    the whole session
+--   E  leader -> group / guild    the session was ended
+--   Q  anyone -> group / guild    "which sessions are open?" (leaders answer with T)
+--   P  raider -> leader           my picks for session id: { c = class, i = items }
+--   A  leader -> raider           the answer to P: ok, or why not, with the picks the leader now has
+-- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
+-- for a leader who isn't them.
+local _, LR = ...
+local U, S = LR.U, LR.Session
+
+local PROTOCOL = 1
+local KEEP_DAYS = 7
+
+local Net = {}
+LR.Net = Net
+local AceComm = LibStub("AceComm-3.0")
+local LibSerialize = LibStub("LibSerialize")
+local LibDeflate = LibStub("LibDeflate")
+AceComm:Embed(Net)
+
+local db              -- LootRulerDB: sessions, mine, current, settings
+local listeners = {}
+
+--- something changed that the window shows
+function LR.changed(what)
+  for _, fn in ipairs(listeners) do fn(what) end
+end
+function LR.onChange(fn) listeners[#listeners + 1] = fn end
+
+function LR.print(msg) print("|cffffd100LootRuler|r: " .. msg) end
+
+---------------------------------------------------------------------- saved state
+function LR.loadDB()
+  LootRulerDB = LootRulerDB or {}
+  db = LootRulerDB
+  db.sessions = db.sessions or {}     -- id -> session (ours as leader, or the latest copy from its leader)
+  db.mine = db.mine or {}             -- id -> { i = my picks, dirty = not yet confirmed by the leader }
+  db.ui = db.ui or {}
+  db.settings = db.settings or {}
+  if db.settings.hideWhispers == nil then db.settings.hideWhispers = true end
+  -- forget sessions nobody has touched for a week
+  local cutoff = U.now() - KEEP_DAYS * 86400
+  for id, s in pairs(db.sessions) do
+    if not S.valid(s) or (s.updated or 0) < cutoff then db.sessions[id] = nil db.mine[id] = nil end
+  end
+  for id in pairs(db.mine) do if not db.sessions[id] then db.mine[id] = nil end end
+  if db.current and not db.sessions[db.current] then db.current = nil end
+  LR.db = db
+  return db
+end
+
+function LR.session(id) return id and db.sessions[id] end
+function LR.isLeader(s) return s ~= nil and U.samePlayer(s.leader, U.me()) end
+function LR.myClass() local _, c = UnitClass("player") return c end
+
+--- the session the window shows: the chosen one, else the newest open one whose leader is in the group or is us
+function LR.current()
+  if db.current and db.sessions[db.current] then return db.sessions[db.current] end
+  local best
+  for _, s in pairs(db.sessions) do
+    if not s.ended and (LR.isLeader(s) or LR.inGroup(s.leader)) and (not best or s.created > best.created) then best = s end
+  end
+  return best
+end
+function LR.select(id) db.current = id LR.changed("select") end
+
+--- every known session, newest first
+function LR.sessions()
+  local out = {}
+  for _, s in pairs(db.sessions) do out[#out + 1] = s end
+  table.sort(out, function(a, b) return a.created > b.created end)
+  return out
+end
+
+--- my picks in a session: as the leader has them, or as I've picked them and the leader hasn't confirmed yet
+function LR.myPicks(s)
+  if not s then return {} end
+  local mine = db.mine[s.id]
+  if not LR.isLeader(s) and mine and mine.dirty then return mine.i end
+  return S.reservesOf(s, U.me())
+end
+function LR.pending(s) local m = s and db.mine[s.id] return m ~= nil and m.dirty == true end
+
+---------------------------------------------------------------------- the group
+function LR.groupChannel()
+  if IsInRaid() then return "RAID" end
+  if IsInGroup() then return "PARTY" end
+end
+
+--- group members: { name = "Name-Realm", class = "PALADIN", online = bool, leader = bool }
+function LR.roster()
+  local out = {}
+  if IsInRaid() then
+    for i = 1, GetNumGroupMembers() do
+      local name, rank, _, _, _, class, _, online = GetRaidRosterInfo(i)
+      if name then out[#out + 1] = { name = U.full(name), class = class, online = online and true or false, leader = rank == 2 } end
+    end
+  else
+    local units = { "player" }
+    if IsInGroup() then for i = 1, GetNumGroupMembers() - 1 do units[#units + 1] = "party" .. i end end
+    for _, unit in ipairs(units) do
+      if UnitExists(unit) then
+        local name, realm = UnitName(unit)
+        local _, class = UnitClass(unit)
+        out[#out + 1] = { name = realm and realm ~= "" and (name .. "-" .. realm) or U.full(name), class = class,
+          online = UnitIsConnected(unit) and true or false, leader = UnitIsGroupLeader(unit) and true or false }
+      end
+    end
+  end
+  return out
+end
+function LR.inGroup(name)
+  if not name or not IsInGroup() then return false end
+  for _, m in ipairs(LR.roster()) do if U.samePlayer(m.name, name) then return m end end
+  return false
+end
+function LR.classOf(name)
+  local m = LR.inGroup(name)
+  return m and m.class or nil
+end
+
+---------------------------------------------------------------------- sending
+local function encode(msg)
+  msg.v = PROTOCOL
+  return LibDeflate:EncodeForWoWAddonChannel(LibDeflate:CompressDeflate(LibSerialize:Serialize(msg)))
+end
+local function decode(text)
+  local raw = LibDeflate:DecodeForWoWAddonChannel(text)
+  raw = raw and LibDeflate:DecompressDeflate(raw)
+  if not raw then return nil end
+  local ok, msg = LibSerialize:Deserialize(raw)
+  if ok and type(msg) == "table" and type(msg.t) == "string" then return msg end
+end
+Net.encode, Net.decode = encode, decode
+
+local function send(msg, channel, target)
+  if not channel then return end
+  Net:SendCommMessage(LR.PREFIX, encode(msg), channel, target, "NORMAL")
+end
+
+--- where the leader's messages go: the group (if any) and the guild (when shared)
+local function publishTo(s)
+  local out = {}
+  local g = LR.groupChannel()
+  if g then out[#out + 1] = g end
+  if s.guild and IsInGuild() then out[#out + 1] = "GUILD" end
+  return out
+end
+
+--- how to reach a session's leader: a whisper when they're in our group and online, else the guild
+--- channel when the session came from there; nil when they can't be reached right now
+local function routeTo(s)
+  local m = LR.inGroup(s.leader)
+  if m and m.online then return "WHISPER", s.leader end
+  if s.guild and IsInGuild() then return "GUILD" end
+end
+
+--- the leader sends the session out (once, shortly after a burst of changes)
+local publishSeq = {}
+function LR.publish(s, now)
+  if not LR.isLeader(s) then return end
+  publishSeq[s.id] = (publishSeq[s.id] or 0) + 1
+  local mine = publishSeq[s.id]
+  local function go()
+    if publishSeq[s.id] ~= mine then return end
+    for _, ch in ipairs(publishTo(s)) do send({ t = "T", s = s }, ch) end
+  end
+  if now then go() else C_Timer.After(0.5, go) end
+end
+
+--- asks for open sessions
+function LR.query()
+  local g = LR.groupChannel()
+  if g then send({ t = "Q" }, g) end
+  if IsInGuild() then send({ t = "Q" }, "GUILD") end
+end
+
+--- sends my picks to the leader if they're waiting and the leader can be reached
+function LR.sendPicks(s)
+  local mine = s and db.mine[s.id]
+  if not mine or not mine.dirty or LR.isLeader(s) then return false end
+  local channel, target = routeTo(s)
+  if not channel then return false end
+  send({ t = "P", id = s.id, c = LR.myClass(), i = mine.i }, channel, target)
+  return true
+end
+
+---------------------------------------------------------------------- what the leader does
+function LR.startSession(raidKey, sr, dupes, guild)
+  local now = U.now()
+  local s = S.new(U.me(), raidKey, sr, dupes, now)
+  s.guild = guild and true or false
+  db.sessions[s.id] = s
+  db.current = s.id
+  LR.preload(raidKey)
+  LR.publish(s, true)
+  LR.changed("session")
+  return s
+end
+
+--- a change the leader made: save, tell everyone, redraw
+local function leaderChanged(s)
+  s.updated = U.now()
+  LR.publish(s)
+  LR.changed("session")
+end
+LR.leaderChanged = leaderChanged
+
+function LR.configure(s, sr, dupes)
+  local ok, touched = S.configure(s, sr, dupes, U.now())
+  if ok then leaderChanged(s) end
+  return ok, touched
+end
+function LR.setHR(s, id, forWho, note)
+  local ok, lost = S.setHR(s, id, forWho, note, U.now())
+  if ok then
+    leaderChanged(s)
+    if #lost > 0 then
+      LR.print(("%s is now hard reserved; %s lost their reserve on it."):format(LR.itemLink(id), table.concat(U.map(lost, U.short), ", ")))
+    end
+  end
+  return ok, lost
+end
+function LR.clearHR(s, id) if S.clearHR(s, id, U.now()) then leaderChanged(s) end end
+function LR.setLocked(s, locked)
+  if S.setLocked(s, locked, U.now()) then
+    leaderChanged(s)
+    if locked and LR.Gargul.available() then LR.Gargul.send(s, true) end
+  end
+end
+function LR.setGuild(s, guild)
+  s.guild = guild and true or false
+  leaderChanged(s)
+end
+function LR.leaderAdd(s, player, class, id) local ok, why = S.add(s, player, class, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
+function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
+
+function LR.endSession(s)
+  if not LR.isLeader(s) then return end
+  for _, ch in ipairs(publishTo(s)) do send({ t = "E", id = s.id }, ch) end
+  db.sessions[s.id] = nil
+  db.mine[s.id] = nil
+  if db.current == s.id then db.current = nil end
+  LR.changed("session")
+end
+
+--- raiders forget a session (it stays with its leader)
+function LR.forget(s)
+  db.sessions[s.id] = nil
+  db.mine[s.id] = nil
+  if db.current == s.id then db.current = nil end
+  LR.changed("session")
+end
+
+---------------------------------------------------------------------- what I do with my own reserves
+--- reserve one more of an item in a session; returns true, or false and why
+function LR.reserve(s, id) return LR.changeMine(s, function(items) items[#items + 1] = id end, id) end
+function LR.unreserve(s, id)
+  return LR.changeMine(s, function(items)
+    local i = U.indexOf(items, id)
+    if i then table.remove(items, i) end
+  end, id)
+end
+
+function LR.changeMine(s, edit, id)
+  if not s then return false, "NO_SESSION" end
+  local me = U.me()
+  if LR.isLeader(s) then
+    local items = U.copy(S.reservesOf(s, me))
+    edit(items)
+    local ok, why = S.set(s, me, LR.myClass(), items, true, U.now())
+    if ok then leaderChanged(s) end
+    return ok, why
+  end
+  if s.locked then return false, "LOCKED" end
+  local items = U.copy(LR.myPicks(s))
+  edit(items)
+  local ok, why = S.check(s, items)
+  if not ok then return false, why end
+  db.mine[s.id] = { i = items, dirty = true }
+  LR.sendPicks(s)
+  LR.changed("mine")
+  return true
+end
+
+---------------------------------------------------------------------- receiving
+local queryAnswered = {}
+
+local handlers = {}
+
+-- a session from its leader
+function handlers.T(msg, channel, sender)
+  local t = msg.s
+  if not S.valid(t) or not U.samePlayer(t.leader, sender) then return end
+  local known = db.sessions[t.id]
+  if LR.isLeader(known) then return end                     -- ours: we're the one that knows best
+  if known and known.rev >= t.rev then
+    LR.sendPicks(known)                                     -- the leader is back: anything still waiting goes now
+    return
+  end
+  local first = not known
+  t.guild = t.guild or channel == "GUILD"
+  db.sessions[t.id] = t
+  local mine = db.mine[t.id]
+  local theirs = S.reservesOf(t, U.me())
+  if mine and mine.dirty then
+    if U.sameItems(mine.i, theirs) then mine.dirty = false mine.i = U.copy(theirs)
+    elseif not t.locked then LR.sendPicks(t)
+    else db.mine[t.id] = { i = U.copy(theirs), dirty = false } end
+  else
+    db.mine[t.id] = { i = U.copy(theirs), dirty = false }
+  end
+  if first then
+    LR.preload(t.raid)
+    if LR.inGroup(t.leader) and not db.current then db.current = t.id end
+    if not t.ended then
+      LR.print(("%s opened soft reserves for %s: %s each%s. Type |cffffd100/lr|r to reserve."):format(
+        U.short(t.leader), LR.raid(t.raid).name, U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))
+    end
+  end
+  LR.changed("session")
+end
+
+-- a session was ended by its leader
+function handlers.E(msg, channel, sender)
+  local s = db.sessions[msg.id]
+  if not s or not U.samePlayer(s.leader, sender) or LR.isLeader(s) then return end
+  db.sessions[msg.id] = nil
+  db.mine[msg.id] = nil
+  if db.current == msg.id then db.current = nil end
+  LR.print(("%s closed the soft reserves for %s."):format(U.short(s.leader), LR.raid(s.raid).name))
+  LR.changed("session")
+end
+
+-- someone asks which sessions are open: leaders answer (once every few seconds per channel)
+function handlers.Q(msg, channel, sender)
+  local now = GetTime()
+  for _, s in pairs(db.sessions) do
+    if LR.isLeader(s) and (channel ~= "GUILD" or s.guild) then
+      local key = s.id .. channel
+      if not queryAnswered[key] or now - queryAnswered[key] > 5 then
+        queryAnswered[key] = now
+        send({ t = "T", s = s }, channel == "WHISPER" and "WHISPER" or channel, channel == "WHISPER" and sender or nil)
+      end
+    end
+  end
+end
+
+-- a raider's picks, at the leader
+function handlers.P(msg, channel, sender)
+  local s = db.sessions[msg.id]
+  if not s or not LR.isLeader(s) or type(msg.i) ~= "table" then return end
+  local items = {}
+  for _, id in ipairs(msg.i) do if type(id) == "number" then items[#items + 1] = id end end
+  local class = LR.classOf(sender) or (type(msg.c) == "string" and LR.CLASS_BIT[msg.c] and msg.c) or nil
+  local ok, why, id = S.set(s, sender, class, items, false, U.now())
+  local answer = { t = "A", id = s.id, to = sender, ok = ok, why = why, item = id, i = S.reservesOf(s, sender) }
+  local route, target = channel, nil
+  if channel == "WHISPER" or LR.inGroup(sender) then route, target = "WHISPER", sender end
+  send(answer, route, target)
+  if ok then leaderChanged(s) end
+end
+
+-- the leader's answer to my picks
+function handlers.A(msg, channel, sender)
+  if msg.to and not U.samePlayer(msg.to, U.me()) then return end
+  local s = db.sessions[msg.id]
+  if not s or not U.samePlayer(s.leader, sender) or type(msg.i) ~= "table" then return end
+  local before = db.mine[s.id] and db.mine[s.id].i or {}
+  db.mine[s.id] = { i = U.copy(msg.i), dirty = false }
+  -- keep our copy of the session in step until the next full copy arrives
+  if #msg.i > 0 then s.res[U.me()] = { c = LR.myClass(), i = U.copy(msg.i) } else s.res[U.me()] = nil end
+  if not msg.ok then
+    local why = S.WHY[msg.why] or "The leader didn't accept that."
+    LR.print(("%s turned down your reserves: %s%s"):format(U.short(s.leader), why, msg.item and (" (" .. LR.itemLink(msg.item) .. ")") or ""))
+    LR.toast(why)
+  elseif not U.sameItems(before, msg.i) then
+    LR.changed("mine")
+  end
+  LR.changed("mine")
+end
+
+function Net:OnComm(prefix, text, channel, sender)
+  if prefix ~= LR.PREFIX or not sender then return end
+  sender = U.full(sender)
+  if U.samePlayer(sender, U.me()) then return end
+  local msg = decode(text)
+  if not msg or (msg.v or 0) > PROTOCOL then return end
+  local fn = handlers[msg.t]
+  if fn then
+    local ok, err = pcall(fn, msg, channel, sender)
+    if not ok then geterrorhandler()(err) end
+  end
+end
+
+---------------------------------------------------------------------- start up
+function LR.toast(text) if LR.UI and LR.UI.toast then LR.UI.toast(text) end end
+
+local wasGrouped = false
+local events = CreateFrame("Frame")
+events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("GROUP_ROSTER_UPDATE")
+events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+events:SetScript("OnEvent", function(_, event)
+  if event == "PLAYER_LOGIN" then
+    LR.loadDB()
+    C_ChatInfo.RegisterAddonMessagePrefix(LR.PREFIX)
+    Net:RegisterComm(LR.PREFIX, "OnComm")
+    wasGrouped = IsInGroup()
+    -- once the game has settled: ask what's open, re-send our own sessions and anything we picked meanwhile
+    C_Timer.After(5, function()
+      LR.query()
+      for _, s in pairs(db.sessions) do
+        if LR.isLeader(s) then LR.publish(s, true) else LR.sendPicks(s) end
+      end
+    end)
+  elseif event == "GROUP_ROSTER_UPDATE" then
+    if not db then return end
+    local grouped = IsInGroup()
+    if grouped and not wasGrouped then
+      C_Timer.After(2, function()
+        LR.query()
+        for _, s in pairs(db.sessions) do
+          if LR.isLeader(s) then LR.publish(s, true) else LR.sendPicks(s) end
+        end
+      end)
+    end
+    wasGrouped = grouped
+    -- someone came online or joined: if it's a leader we have picks waiting for, send them
+    for _, s in pairs(db.sessions) do if not LR.isLeader(s) then LR.sendPicks(s) end end
+    LR.changed("roster")
+  elseif event == "GET_ITEM_INFO_RECEIVED" then
+    LR.changed("items")
+  end
+end)

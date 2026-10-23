@@ -1,0 +1,254 @@
+-- A stand-in for the game's servers, so several players' clients can run LootRuler side by side in one
+-- test: each client is its own copy of the WoW stand-in (tests/wow/mock.lua) with its own globals, frames,
+-- timers and saved variables. The server carries addon messages (group, guild and whisper channels, with
+-- the sender's name attached by the "server", as in the game), whispers and raid chat between them, and
+-- knows who is grouped with whom, who leads, who's in which guild and who's online.
+local L = require("load")
+local MOCK_PATH = "tests/wow/mock.lua"
+
+local Server = {}
+Server.__index = Server
+
+function Server.new(root)
+  return setmetatable({ root = root or ".", players = {}, queue = {}, group = nil, clock = 0, chat = {} }, Server)
+end
+
+local CLASS_NAME = { WARRIOR = "Warrior", PALADIN = "Paladin", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
+  SHAMAN = "Shaman", MAGE = "Mage", WARLOCK = "Warlock", DRUID = "Druid" }
+
+local function full(p) return p.name .. "-" .. p.realm end
+Server.full = full
+
+--- the name another player's client sees: "Name" on the same realm, "Name-Realm" otherwise
+local function seenAs(p, viewer) if viewer and viewer.realm == p.realm then return p.name end return full(p) end
+
+function Server:find(name)
+  for _, p in ipairs(self.players) do
+    if full(p):lower() == name:lower() or (not name:find("-") and p.name:lower() == name:lower()) then return p end
+  end
+end
+
+--- a player without the addon (they can whisper and be grouped)
+function Server:player(o)
+  local p = { name = o.name, realm = o.realm or "Dreamscythe", class = o.class or "WARRIOR", guild = o.guild,
+    faction = o.faction or "Alliance", online = true, inbox = {}, client = false }
+  table.insert(self.players, p)
+  return p
+end
+
+--- a player running LootRuler; savedVariables: carry a LootRulerDB over (logging in again)
+function Server:client(o, savedVariables)
+  local p = o.client ~= nil and o or self:player(o)
+  p.online = true
+  local M = dofile(MOCK_PATH)
+  local G = M.env({ name = p.name, realm = p.realm, class = p.class:lower() })
+  p.M, p.G, p.client = M, G, true
+  self:install(p)
+  G.LootRulerDB = savedVariables
+  if self.gargul and p.gargul then self.gargul(p) end
+  p.LR = L.load(self.root, G)
+  M.fire("ADDON_LOADED", "LootRuler")
+  M.fire("PLAYER_LOGIN")
+  return p
+end
+
+function Server:logout(p)
+  p.online = false
+  if p.M then p.M.fire("PLAYER_LOGOUT") end
+  local db = p.G and p.G.LootRulerDB
+  p.M, p.G, p.LR, p.client = nil, nil, nil, false
+  self:rosterChanged()
+  return db
+end
+
+function Server:login(p, db) self:client(p, db) self:rosterChanged() end
+
+---------------------------------------------------------------------- the group
+function Server:setGroup(list, leader, raid)
+  self.group = { members = list, leader = leader, raid = raid ~= false }
+  for _, p in ipairs(list) do p.inGroup = true end
+  self:rosterChanged()
+end
+function Server:leaveGroup(p)
+  if not self.group then return end
+  for i, m in ipairs(self.group.members) do if m == p then table.remove(self.group.members, i) break end end
+  p.inGroup = false
+  self:rosterChanged(p)
+end
+function Server:inGroup(p) return self.group and p.inGroup end
+function Server:rosterChanged(extra)
+  for _, q in ipairs(self.players) do
+    if q.client and (self:inGroup(q) or q == extra) then q.M.fire("GROUP_ROSTER_UPDATE") end
+  end
+end
+
+---------------------------------------------------------------------- messages
+function Server:deliver(fn) table.insert(self.queue, fn) end
+
+--- delivers everything sent so far (and whatever that sends), in order
+function Server:pump()
+  local n = 0
+  while #self.queue > 0 do
+    local fn = table.remove(self.queue, 1)
+    fn()
+    n = n + 1
+    if n > 100000 then error("message storm") end
+  end
+end
+
+--- lets time pass for every client (timers, throttled sends) and delivers messages
+function Server:tick(seconds, step)
+  step = step or 0.1
+  local t = 0
+  repeat
+    self.clock = self.clock + step
+    for _, p in ipairs(self.players) do if p.client then p.M.tick(step) end end
+    self:pump()
+    t = t + step
+  until t >= (seconds or step) - 1e-9
+end
+
+function Server:addonMessage(from, prefix, text, channel, target)
+  local recipients = {}
+  if channel == "RAID" or channel == "PARTY" then
+    if not self:inGroup(from) then return 5 end              -- NotInGroup
+    for _, q in ipairs(self.group.members) do recipients[#recipients + 1] = q end
+  elseif channel == "GUILD" then
+    if not from.guild then return 7 end
+    for _, q in ipairs(self.players) do if q.guild == from.guild then recipients[#recipients + 1] = q end end
+  elseif channel == "WHISPER" then
+    local q = target and self:find(target)
+    if not q or not q.online then
+      self:deliver(function() if from.client then from.M.fire("CHAT_MSG_SYSTEM", "No player named '" .. tostring(target) .. "' is currently playing.") end end)
+      return 0
+    end
+    recipients[1] = q
+  else
+    return 4
+  end
+  for _, q in ipairs(recipients) do
+    self:deliver(function()
+      if q.client and q.online and q.prefixes and q.prefixes[prefix] then
+        q.M.fire("CHAT_MSG_ADDON", prefix, text, channel, full(from), full(q), 0, 0, "", 0)
+      end
+    end)
+  end
+  return 0
+end
+
+function Server:chatMessage(from, text, channel, target)
+  if #text > 255 then error("chat message over 255 characters: " .. #text) end
+  table.insert(self.chat, { from = full(from), text = text, channel = channel, target = target })
+  if channel == "WHISPER" then
+    local q = self:find(target)
+    if not q or not q.online then return end
+    self:deliver(function()
+      table.insert(q.inbox, { from = full(from), text = text })
+      if q.client then q.M.fire("CHAT_MSG_WHISPER", text, full(from), "", "", "", "", 0, 0, "", 0, 1, "") end
+      if from.client then from.M.fire("CHAT_MSG_WHISPER_INFORM", text, full(q)) end
+    end)
+  elseif channel == "RAID" or channel == "PARTY" or channel == "RAID_WARNING" then
+    for _, q in ipairs(self.group and self.group.members or {}) do
+      self:deliver(function()
+        table.insert(q.inbox, { from = full(from), text = text, channel = channel })
+        if q.client then q.M.fire("CHAT_MSG_" .. channel, text, full(from)) end
+      end)
+    end
+  end
+end
+
+--- a player (with or without the addon) whispers someone
+function Server:whisper(from, to, text) self:chatMessage(from, text, "WHISPER", full(to)) end
+
+---------------------------------------------------------------------- the client's view of all this
+function Server:install(p)
+  local srv, G, M = self, p.G, p.M
+  p.prefixes = {}
+  local function members() return srv:inGroup(p) and srv.group.members or { p } end
+  local function unitPlayer(unit)
+    if unit == "player" then return p end
+    local list = {}
+    for _, q in ipairs(members()) do if q ~= p then list[#list + 1] = q end end
+    local n = unit and tonumber(unit:match("^party(%d+)$"))
+    if n then return list[n] end
+    n = unit and tonumber(unit:match("^raid(%d+)$"))
+    if n then return members()[n] end
+  end
+  G.Ambiguate = function(name, context)
+    local n, r = name:match("^(.-)%-(.+)$")
+    if not n then return name end
+    if context == "short" or r == p.realm then return n end
+    return name
+  end
+  G.GetServerTime = function() return 1760000000 + math.floor(srv.clock) end
+  G.GetNormalizedRealmName = function() return p.realm end
+  G.GetRealmName = function() return p.realm end
+  G.UnitFullName = function(unit) local q = unitPlayer(unit) if q then return q.name, q.realm end end
+  G.UnitName = function(unit)
+    local q = unitPlayer(unit)
+    if not q then return nil end
+    if q.realm == p.realm then return q.name, nil end
+    return q.name, q.realm
+  end
+  G.UnitClass = function(unit) local q = unitPlayer(unit) if q then return CLASS_NAME[q.class], q.class, 1 end end
+  G.UnitExists = function(unit) return unitPlayer(unit) ~= nil end
+  G.UnitIsConnected = function(unit) local q = unitPlayer(unit) return q and q.online or false end
+  G.UnitIsGroupLeader = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and srv.group.leader == q or false end
+  G.UnitIsGroupAssistant = function() return false end
+  G.UnitFactionGroup = function() return p.faction, p.faction end
+  G.IsInGroup = function() return srv:inGroup(p) and true or false end
+  G.IsInRaid = function() return srv:inGroup(p) and srv.group.raid or false end
+  G.IsInGuild = function() return p.guild ~= nil end
+  G.GetNumGroupMembers = function() return srv:inGroup(p) and #srv.group.members or 0 end
+  G.GetRaidRosterInfo = function(i)
+    local q = srv:inGroup(p) and srv.group.members[i]
+    if not q then return nil end
+    return seenAs(q, p), srv.group.leader == q and 2 or 0, 1, 70, CLASS_NAME[q.class], q.class, "Karazhan", q.online, false, "NONE", false
+  end
+  G.GetFramerate = function() return 60 end
+  G.Enum = { SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
+    NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10 } }
+  local function sendAddon(prefix, text, channel, target)
+    if type(prefix) ~= "string" or #prefix > 16 then error("bad addon prefix " .. tostring(prefix) .. " " .. debug.traceback()) end
+    if type(text) ~= "string" or #text > 255 then error("addon message over 255 characters") end
+    if not p.online then return 9 end
+    return srv:addonMessage(p, prefix, text, channel, target)
+  end
+  local function sendChat(text, channel, language, target)
+    if type(text) ~= "string" then error("SendChatMessage needs text") end
+    srv:chatMessage(p, text, channel, target)
+  end
+  G.C_ChatInfo = {
+    RegisterAddonMessagePrefix = function(prefix) p.prefixes[prefix] = true return true end,
+    IsAddonMessagePrefixRegistered = function(prefix) return p.prefixes[prefix] == true end,
+    SendAddonMessage = sendAddon,
+    SendAddonMessageLogged = sendAddon,
+    SendChatMessage = sendChat,
+  }
+  G.SendChatMessage = sendChat
+  G.C_BattleNet = { SendGameData = function() return 0 end }
+  G.BNSendGameData = function() end
+  -- items: the test can say which ones the client has loaded (names from the data until then)
+  G.C_Item = {
+    GetItemInfo = function(id)
+      local it = srv.itemInfo and srv.itemInfo(id)
+      if not it then return nil end
+      return it.name, it.link, it.quality, 115, 70, "Armor", "Plate", 1, "INVTYPE_HAND", 133000 + id % 100
+    end,
+    GetItemIconByID = function(id) return 133000 + id % 1000 end,
+    RequestLoadItemDataByID = function(id) p.requested = (p.requested or 0) + 1 end,
+  }
+  G.IsModifiedClick = function() return false end
+  G.ChatEdit_InsertLink = function() return false end
+  G.ChatFrameUtil = { AddMessageEventFilter = function(event, fn) p.filters = p.filters or {} p.filters[event] = p.filters[event] or {} table.insert(p.filters[event], fn) end }
+  G.RAID_CLASS_COLORS = {}
+  for token in pairs(CLASS_NAME) do G.RAID_CLASS_COLORS[token] = { r = 0.8, g = 0.8, b = 0.8, colorStr = "ffcccccc" } end
+end
+
+--- whether a client's chat filters would hide a message
+function Server:hidden(p, event, text)
+  for _, fn in ipairs(p.filters and p.filters[event] or {}) do if fn(nil, event, text) then return true end end
+  return false
+end
+
+return Server
