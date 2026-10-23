@@ -150,7 +150,8 @@ local lastTab, lastId
 
 local function drawTop(s)
   if not s then
-    top.icon:SetTexture("Interface\\Icons\\INV_Misc_Note_02")
+    top.icon:SetTexture(LR.LOGO)
+    top.icon:SetTexCoord(0, 1, 0, 1)
     top.name:SetText("LootRuler")
     top.sub:SetText("Soft reserves inside the game")
     top.count:Hide()
@@ -158,6 +159,7 @@ local function drawTop(s)
   end
   local raid = LR.raid(s.raid)
   top.icon:SetTexture(LR.raidIcon(s.raid))
+  top.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
   top.name:SetText(raid.name)
   local bits = { (LR.isLeader(s) and "Your session" or ("By " .. U.short(s.leader))), U.plural(s.sr, "reserve") .. " each" }
   local hr = #U.keys(s.hr)
@@ -423,7 +425,8 @@ local function minimapButton()
   b:SetFrameLevel(8)
   b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
   local icon = b:CreateTexture(nil, "BACKGROUND")
-  icon:SetTexture("Interface\\Icons\\INV_Misc_Note_02")
+  icon:SetTexture(LR.LOGO)
+  icon:SetTexCoord(0.06, 0.94, 0.06, 0.94)
   icon:SetSize(20, 20)
   icon:SetPoint("TOPLEFT", 7, -5)
   local border = b:CreateTexture(nil, "OVERLAY")

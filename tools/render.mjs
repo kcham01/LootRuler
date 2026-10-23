@@ -10,6 +10,8 @@ let chromium;
 try { ({ chromium } = await import('playwright')); } catch { ({ chromium } = await import('/opt/node-tools/node_modules/playwright/index.mjs')); }
 
 const dir = path.resolve(process.argv[2] || 'build/shots');
+const logoFile = path.join(path.dirname(path.dirname(new URL(import.meta.url).pathname)), 'docs/logo.png');
+const LOGO = fs.existsSync(logoFile) ? `data:image/png;base64,${fs.readFileSync(logoFile).toString('base64')}` : null;
 const files = fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort();
 
 const rgba = (c, a = 1) => c ? `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${(c[3] ?? 1) * a})` : 'transparent';
@@ -98,6 +100,11 @@ function opHtml(op) {
     if (/Backpack-EmptySlot/i.test(tex)) return `<div style="${base}background:#151210;border:1px solid #333;box-sizing:border-box"></div>`;
     if (/SliderBar-Button/i.test(tex)) return '';
     if (/Minimap/i.test(tex)) return '';
+    if (/LootRuler\\Media\\Logo/i.test(tex) && LOGO) {
+      const c = op.coord || [0, 1, 0, 1];
+      const w = b.w / (c[1] - c[0]), h = b.h / (c[3] - c[2]);
+      return `<div style="${base}overflow:hidden"><img src="${LOGO}" style="position:absolute;left:${-c[0] * w}px;top:${-c[2] * h}px;width:${w}px;height:${h}px"></div>`;
+    }
     if (/Indicator-Yellow/i.test(tex)) return `<div style="${base}border-radius:50%;background:radial-gradient(#ffe066,#c98a00)"></div>`;
     if (/ButtonHilight|QuestTitleHighlight/i.test(tex)) return '';
     return `<div style="${base}background:repeating-linear-gradient(45deg,#3a0040,#3a0040 4px,#200020 4px,#200020 8px)" title="${esc(tex)}"></div>`;

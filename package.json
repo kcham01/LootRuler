@@ -8,6 +8,8 @@
     "test": "lua5.1 tests/session.lua && lua5.1 tests/raid.lua && lua5.1 tests/ui.lua"
   },
   "devDependencies": {
+    "@fontsource/cinzel": "5.1.0",
+    "@fontsource/inter": "5.1.0",
     "playwright": "1.48.2"
   }
 }

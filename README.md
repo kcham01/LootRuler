@@ -1,6 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/04-reserve.png" alt="LootRuler's reserve screen" width="46%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/09-reserves.png" alt="Everyone's reserves" width="46%">
+  <img src="docs/banner.png" alt="LootRuler: soft reserves inside World of Warcraft for TBC Anniversary raids" width="100%">
 </p>
 
 <p align="center">
@@ -14,6 +13,12 @@
 </p>
 
 # LootRuler
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/04-reserve.png" alt="Reserving" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/09-reserves.png" alt="Everyone's reserves" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/08-session.png" alt="Running the session" width="32%">
+</p>
 
 **Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or whisper the leader if they don't have the addon; and it all goes into **Gargul** with one click.
 

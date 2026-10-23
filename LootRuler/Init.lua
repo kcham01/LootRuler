@@ -13,5 +13,6 @@ LR.NAME = ADDON
 LR.PREFIX = "LootRuler"          -- addon message prefix (16 characters at most)
 LR.TAG = "[LootRuler]"           -- starts every chat line the addon writes for other players
 LR.VERSION = "1.0.0-beta"
+LR.LOGO = "Interface\\AddOns\\LootRuler\\Media\\Logo"   -- Media/Logo.tga (drawn by tools/art.mjs)
 
 _G.LootRuler = LR                -- for other addons (and /dump)

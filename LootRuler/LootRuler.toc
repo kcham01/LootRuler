@@ -5,7 +5,7 @@
 ## Version: 1.0.0-beta
 ## SavedVariables: LootRulerDB
 ## OptionalDeps: Gargul
-## IconTexture: Interface\Icons\INV_Misc_Note_02
+## IconTexture: Interface\AddOns\LootRuler\Media\Logo
 ## Category: Raid
 
 Libs\LibStub\LibStub.lua
