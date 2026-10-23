@@ -33,6 +33,7 @@ check("plate for plate wearers", LR.usableBy(28518, "PALADIN") and not LR.usable
 check("recipes for everyone", LR.usableBy(22559, "MAGE"))
 check("Magtheridon's Head by faction", LR.forFaction(32385, "Alliance") and not LR.forFaction(32385, "Horde") and LR.forFaction(32386, "Horde"))
 check("item kinds", LR.itemKind(28518) == "Plate Hands" and LR.itemKind(28830) == "Trinket", LR.itemKind(28518) .. ", " .. LR.itemKind(28830))
+check("mounts and quest items say so", LR.itemKind(30480) == "Mount" and LR.itemKind(18423) == "Quest item", LR.itemKind(30480) .. ", " .. LR.itemKind(18423))
 check("find by name", LR.findItem("GruulsLair", "dragonspine trophy") == 28830)
 check("find by part of the name", LR.findItem("GruulsLair", "dragonspine") == 28830)
 check("find by link", LR.findItem("GruulsLair", "|cffa335ee|Hitem:28830::::::::70:::::|h[Dragonspine Trophy]|h|r") == 28830)

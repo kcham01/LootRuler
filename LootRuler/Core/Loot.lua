@@ -141,6 +141,8 @@ function LR.itemKind(id)
     return w
   end
   if class == 15 and LR.ITEMS[id][7] ~= -1 then return "Tier token" end
+  if class == 15 and sub == 5 then return "Mount" end
+  if class == 12 then return "Quest item" end
   return MISC_NAME[class] or ""
 end
 
