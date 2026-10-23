@@ -132,6 +132,12 @@ local function manage(f, s)
 
   f:panel("More", function(p)
     p:buttons({
+      { label = "Tell the raid how to SR without the addon", disabled = LR.groupChannel() == nil, click = function()
+        if LR.Whisper.postHowTo() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+      end },
+    }, "left")
+    p:note("Posts: \"" .. LR.Whisper.HOW_TO .. "\"")
+    p:buttons({
       { label = "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()
         UI.confirm("End the session", "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)", "End it", function()

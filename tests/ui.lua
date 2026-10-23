@@ -306,8 +306,20 @@ run("a raider's window", function()
   shot("raider-session", ann)
 end)
 
+run("telling the raid how to SR without the addon", function()
+  LR.UI.show("session")
+  srv:tick(0.3)
+  local before = #pug.inbox
+  clickText("Tell the raid how to SR without the addon")
+  srv:tick(1)
+  local got = pug.inbox[#pug.inbox]
+  check("the raid gets the how-to", #pug.inbox == before + 1 and got.channel == "RAID"
+    and got.text == "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon.", got and got.text)
+  check("and the leader is told it went", visible("Posted in raid chat."))
+end)
+
 run("ending", function()
-  G.SlashCmdList.LOOTRULER("")
+  LR.UI.show()
   srv:tick(0.3)
   LR.UI.go("session")
   clickText("End session")

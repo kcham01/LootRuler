@@ -158,6 +158,15 @@ if addFilter then
 end
 W.hideIncoming, W.hideOutgoing = hideIncoming, hideOutgoing
 
+--- the short how-to for raiders without the addon, posted to the group
+W.HOW_TO = "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon."
+function W.postHowTo()
+  local channel = LR.groupChannel()
+  if not channel then return false end
+  chat(W.HOW_TO, channel)
+  return true
+end
+
 --- the line the leader posts to the raid
 function W.announce(s)
   local text = ("%s Soft reserves are open for %s: %s each%s. Reserve in the LootRuler addon, or whisper me \"!lr <item link>\"."):format(
