@@ -1,7 +1,7 @@
 // Draws the screens tests/ui.lua captured (build/shots/*.json) as PNG pictures, so the addon's layout can be
 // looked at without the game: node tools/render.mjs [build/shots]
-// Item and spell icons come from Wowhead's icon server when it can be reached; the game's own interface art
-// is drawn as close stand-ins (dialog borders, gold title plates, red buttons, slot frames).
+// Item icons come from Wowhead's icon server when it can be reached (ICONS=1); the game's own interface art
+// is drawn as close stand-ins (dialog borders, gold title plates, red buttons).
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -98,6 +98,8 @@ function opHtml(op) {
     if (/Backpack-EmptySlot/i.test(tex)) return `<div style="${base}background:#151210;border:1px solid #333;box-sizing:border-box"></div>`;
     if (/SliderBar-Button/i.test(tex)) return '';
     if (/Minimap/i.test(tex)) return '';
+    if (/Indicator-Yellow/i.test(tex)) return `<div style="${base}border-radius:50%;background:radial-gradient(#ffe066,#c98a00)"></div>`;
+    if (/ButtonHilight|QuestTitleHighlight/i.test(tex)) return '';
     return `<div style="${base}background:repeating-linear-gradient(45deg,#3a0040,#3a0040 4px,#200020 4px,#200020 8px)" title="${esc(tex)}"></div>`;
   }
   if (op.kind === 'model') {
@@ -122,7 +124,7 @@ const page = await b.newPage({ viewport: { width: 1280, height: 800 }, deviceSca
 await page.route(/zamimg/, r => (process.env.ICONS ? r.continue() : r.abort()));
 for (const f of files) {
   const shot = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-  const win = shot.ops.find(o => o.kind === 'backdrop' && o.name === 'TBCrushCalcFrame');
+  const win = shot.ops.find(o => o.kind === 'backdrop' && o.name === 'LootRulerFrame');
   const html = `<!doctype html><html><body style="margin:0;background:#2a3540;width:${shot.w}px;height:${shot.h}px;position:relative;overflow:hidden">${shot.ops.map(opHtml).join('\n')}</body></html>`;
   await page.setContent(html);
   await page.waitForTimeout(process.env.ICONS ? 800 : 50);

@@ -19,7 +19,10 @@ end
 local U, S = LR.U, LR.Session
 
 -- the loot data
-check("ten raids", #LR.RAIDS == 10)
+check("every raid up to Zul'Aman", #LR.RAIDS == 16 and LR.raid("MoltenCore") and LR.raid("ZulAman") and not LR.raid("SunwellPlateau") and not LR.raid("Naxxramas"))
+check("Hakkar's off-hand blade is Mandokir's", LR.raidHas("Zul'Gurub", 19866) and #LR.dropsFrom("Zul'Gurub", 19866) == 1 and LR.dropsFrom("Zul'Gurub", 19866)[1] == "Bloodlord Mandokir")
+check("boss heads, one for each faction", LR.forFaction(18423, "Alliance") and not LR.forFaction(18423, "Horde") and LR.forFaction(18422, "Horde"))
+check("cloth isn't for a paladin", LR.usableBy(28507, "PALADIN") and not LR.forClass(28507, "PALADIN") and LR.forClass(28518, "PALADIN"))
 local kara = LR.raid("Karazhan")
 check("Karazhan bosses in order", kara.bosses[1].name == "Attumen the Huntsman" and kara.bosses[#kara.bosses].name == "Trash")
 check("Dragonspine Trophy drops from Gruul", LR.raidHas("GruulsLair", 28830) and U.indexOf(LR.dropsFrom("GruulsLair", 28830), "Gruul the Dragonkiller"))

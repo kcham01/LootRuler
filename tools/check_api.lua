@@ -3,7 +3,9 @@
 --  1. every method the test stand-in (tests/wow/mock.lua) gives a widget is in the client's API
 --     documentation for that widget type, so the UI tests can't pass on a method the game lacks;
 --  2. every global the addon reads is a Lua built-in, a documented client function, something the
---     client's interface code defines, or the addon's own.
+--     client's interface code defines, or the addon's own;
+--  3. every C_Namespace.Function the addon calls is documented for the client (or called by Blizzard's code).
+-- The bundled libraries (Libs/) are left out: they check for what they use themselves.
 -- lua5.1 tools/check_api.lua <wow-ui-source checkout>
 local src = assert(arg[1], "usage: lua5.1 tools/check_api.lua <wow-ui-source>")
 local docsDir = src .. "/Interface/AddOns/Blizzard_APIDocumentationGenerated"
@@ -27,12 +29,17 @@ local function loadDocs()
 end
 loadDocs()
 
-local byName, globals = {}, {}
+local byName, globals, nsFunctions = {}, {}, {}
 for _, d in ipairs(docs) do
   if d.Name then byName[d.Name] = d end
   for _, fn in ipairs(d.Functions or {}) do
     if d.Type ~= "ScriptObject" then
-      if d.Namespace then globals[d.Namespace] = true else globals[fn.Name] = true end
+      if d.Namespace then
+        globals[d.Namespace] = true
+        nsFunctions[d.Namespace .. "." .. fn.Name] = true
+      else
+        globals[fn.Name] = true
+      end
     end
   end
 end
@@ -116,11 +123,14 @@ for w in p:lines() do
 end
 p:close()
 
-local own = { TBCrushCalcDB = true, SLASH_TBCRUSHCALC1 = true, SLASH_TBCRUSHCALC2 = true, TBCrushCalcFrame = true }
+local own = { LootRulerDB = true, SLASH_LOOTRULER1 = true, SLASH_LOOTRULER2 = true, LootRulerFrame = true, LootRuler = true,
+  -- read only to see whether they're there (other addons, and the game's newer chat API)
+  Gargul = true, ChatFrameUtil = true, ChatFrame_AddMessageEventFilter = true,
+  LibStub = true }   -- from the bundled libraries
 local files = {}
-for line in io.lines("TBCrushCalc/TBCrushCalc.toc") do
+for line in io.lines("LootRuler/LootRuler.toc") do
   line = line:gsub("\r", "")
-  if line:match("%.lua$") and not line:match("^Data") then files[#files + 1] = "TBCrushCalc/" .. line:gsub("\\", "/") end
+  if line:match("%.lua$") and not line:match("^Data") and not line:match("^Libs") then files[#files + 1] = "LootRuler/" .. line:gsub("\\", "/") end
 end
 local used = {}
 for _, f in ipairs(files) do
@@ -135,10 +145,31 @@ local names = {}
 for g in pairs(used) do names[#names + 1] = g end
 table.sort(names)
 for _, g in ipairs(names) do
-  if not (builtins[g] or globals[g] or defined[g] or called[g] or own[g] or g:match("^TBCrushCalc")) then
+  if not (builtins[g] or globals[g] or defined[g] or called[g] or own[g] or g:match("^LootRuler")) then
     print(("global %s (in %s) is not something the client has"):format(g, used[g]))
     failures = failures + 1
   end
 end
-print(("checked %d widget types and %d globals; problems %d"):format(#KINDS == 0 and 11 or 11, #names, failures))
+-- C_Namespace.Function calls
+local nsUsed, nsNames = {}, {}
+for _, f in ipairs(files) do
+  local text = io.open(f):read("*a")
+  for ns, fn in text:gmatch("(C_%w+)%.([%w_]+)") do
+    local k = ns .. "." .. fn
+    if not nsUsed[k] then nsUsed[k] = f nsNames[#nsNames + 1] = k end
+  end
+end
+table.sort(nsNames)
+-- the same calls in Blizzard's own code
+local blizzNs = {}
+p = io.popen('grep -rhoE "C_[A-Za-z]+\\.[A-Za-z_]+" "' .. src .. '/Interface" --include=*.lua')
+for w in p:lines() do blizzNs[w] = true end
+p:close()
+for _, k in ipairs(nsNames) do
+  if not (nsFunctions[k] or blizzNs[k]) then
+    print(("%s (in %s) is not something the client has"):format(k, nsUsed[k]))
+    failures = failures + 1
+  end
+end
+print(("checked %d widget types, %d globals and %d C_ functions; problems %d"):format(11, #names, #nsNames, failures))
 if failures > 0 then os.exit(1) end

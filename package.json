@@ -1,0 +1,13 @@
+{
+  "name": "lootruler",
+  "version": "1.0.0-beta",
+  "private": true,
+  "description": "LootRuler: soft reserves inside World of Warcraft for TBC Anniversary raids",
+  "license": "GPL-2.0-only",
+  "scripts": {
+    "test": "lua5.1 tests/session.lua && lua5.1 tests/raid.lua && lua5.1 tests/ui.lua"
+  },
+  "devDependencies": {
+    "playwright": "1.48.2"
+  }
+}

@@ -184,12 +184,18 @@ function LR.query()
   if IsInGuild() then send({ t = "Q" }, "GUILD") end
 end
 
---- sends my picks to the leader if they're waiting and the leader can be reached
-function LR.sendPicks(s)
+--- sends my picks to the leader if they're waiting and the leader can be reached. The same picks aren't
+--- sent again within a few seconds (group changes and the leader's updates both ask for a send).
+local lastSent = {}
+function LR.sendPicks(s, force)
   local mine = s and db.mine[s.id]
   if not mine or not mine.dirty or LR.isLeader(s) then return false end
   local channel, target = routeTo(s)
   if not channel then return false end
+  local key = table.concat(mine.i, ",")
+  local last = lastSent[s.id]
+  if not force and last and last.key == key and GetTime() - last.at < 10 then return false end
+  lastSent[s.id] = { key = key, at = GetTime() }
   send({ t = "P", id = s.id, c = LR.myClass(), i = mine.i }, channel, target)
   return true
 end
@@ -287,7 +293,7 @@ function LR.changeMine(s, edit, id)
   local ok, why = S.check(s, items)
   if not ok then return false, why end
   db.mine[s.id] = { i = items, dirty = true }
-  LR.sendPicks(s)
+  LR.sendPicks(s, true)
   LR.changed("mine")
   return true
 end
@@ -304,7 +310,7 @@ function handlers.T(msg, channel, sender)
   local known = db.sessions[t.id]
   if LR.isLeader(known) then return end                     -- ours: we're the one that knows best
   if known and known.rev >= t.rev then
-    LR.sendPicks(known)                                     -- the leader is back: anything still waiting goes now
+    LR.sendPicks(known, true)                               -- the leader is there: anything still waiting goes now
     return
   end
   local first = not known
@@ -314,14 +320,15 @@ function handlers.T(msg, channel, sender)
   local theirs = S.reservesOf(t, U.me())
   if mine and mine.dirty then
     if U.sameItems(mine.i, theirs) then mine.dirty = false mine.i = U.copy(theirs)
-    elseif not t.locked then LR.sendPicks(t)
+    elseif not t.locked then LR.sendPicks(t, true)
     else db.mine[t.id] = { i = U.copy(theirs), dirty = false } end
   else
     db.mine[t.id] = { i = U.copy(theirs), dirty = false }
   end
   if first then
     LR.preload(t.raid)
-    if LR.inGroup(t.leader) and not db.current then db.current = t.id end
+    -- a new session from someone in our group is the one to show (last week's can go to the back)
+    if LR.inGroup(t.leader) then db.current = t.id end
     if not t.ended then
       LR.print(("%s opened soft reserves for %s: %s each%s. Type |cffffd100/lr|r to reserve."):format(
         U.short(t.leader), LR.raid(t.raid).name, U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))
@@ -362,12 +369,13 @@ function handlers.P(msg, channel, sender)
   local items = {}
   for _, id in ipairs(msg.i) do if type(id) == "number" then items[#items + 1] = id end end
   local class = LR.classOf(sender) or (type(msg.c) == "string" and LR.CLASS_BIT[msg.c] and msg.c) or nil
+  local rev = s.rev
   local ok, why, id = S.set(s, sender, class, items, false, U.now())
   local answer = { t = "A", id = s.id, to = sender, ok = ok, why = why, item = id, i = S.reservesOf(s, sender) }
   local route, target = channel, nil
   if channel == "WHISPER" or LR.inGroup(sender) then route, target = "WHISPER", sender end
   send(answer, route, target)
-  if ok then leaderChanged(s) end
+  if s.rev ~= rev then leaderChanged(s) end
 end
 
 -- the leader's answer to my picks
@@ -412,7 +420,7 @@ events:RegisterEvent("GROUP_ROSTER_UPDATE")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 events:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_LOGIN" then
-    LR.loadDB()
+    if not db then LR.loadDB() end
     C_ChatInfo.RegisterAddonMessagePrefix(LR.PREFIX)
     Net:RegisterComm(LR.PREFIX, "OnComm")
     wasGrouped = IsInGroup()

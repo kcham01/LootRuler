@@ -1,7 +1,8 @@
--- Reads AtlasLootClassic's TBC raid tables (AtlasLootClassic_DungeonsAndRaids/data-tbc.lua) by running the
--- file against a small stand-in for AtlasLoot, and prints the raids, their bosses and the item ids each one
--- drops as JSON:   lua5.1 tools/atlasloot_extract.lua <path to data-tbc.lua> > out.json
-local path = assert(arg[1], "usage: atlasloot_extract.lua <data-tbc.lua>")
+-- Reads AtlasLootClassic's raid tables (AtlasLootClassic_DungeonsAndRaids: data.lua for the original raids,
+-- data-tbc.lua for TBC's) by running the files against a small stand-in for AtlasLoot set to the TBC
+-- client, and prints the raids, their bosses and the item ids each one drops as JSON:
+--   lua5.1 tools/atlasloot_extract.lua <AtlasLootClassic_DungeonsAndRaids folder> > out.json
+local dir = assert(arg[1], "usage: atlasloot_extract.lua <AtlasLootClassic_DungeonsAndRaids folder>")
 
 local function L(t) return setmetatable({}, { __index = function(_, k) return k end }) end
 local diffs, made = {}, {}
@@ -11,24 +12,51 @@ local data = setmetatable({}, { __index = {
   AddExtraItemTableType = function(_, a) return "extra:" .. a end,
   AddContentType = function(_, a) return "content:" .. a end,
 } })
+-- AtlasLoot's version helpers (Init.lua), answering as the TBC client (version 2) does
+local CURRENT = 2
+local function cmp(test) return function(_, v, ret, retFalse) if test(CURRENT, v) then return ret or true end return retFalse end end
 local AtlasLoot = {
-  BC_VERSION_NUM = 2, GameVersion_LT = function() return false end, GameVersion_GT = function() return true end,
-  GameVersion_GE = function() return true end, GameVersion_LE = function() return true end,
+  CLASSIC_VERSION_NUM = 1, BC_VERSION_NUM = 2, WRATH_VERSION_NUM = 3, RETAIL_VERSION_NUM = 99, CURRENT_VERSION_NUM = CURRENT,
+  GameVersion_EQ = cmp(function(a, b) return a == b end), GameVersion_NE = cmp(function(a, b) return a ~= b end),
+  GameVersion_GT = cmp(function(a, b) return a > b end), GameVersion_LT = cmp(function(a, b) return a < b end),
+  GameVersion_GE = cmp(function(a, b) return a >= b end), GameVersion_LE = cmp(function(a, b) return a <= b end),
+  GetGameVersion = function() return CURRENT end,
+  ReturnForGameVersion = function(classic, bcc, wrath) return bcc or classic end,
   ItemDB = { Add = function() return data end },
   Locales = L(), IngameLocales = L(),
+  Data = { ContentPhase = { GetActivePhase = function() return 99 end } },
 }
-local env = setmetatable({ AtlasLoot = AtlasLoot }, { __index = function(_, k)
+local env = setmetatable({ AtlasLoot = AtlasLoot, C_Seasons = { GetActiveSeason = function() return 0 end },
+  UnitFactionGroup = function() return "Alliance" end }, { __index = function(_, k)
   if _G[k] ~= nil then return _G[k] end
+  -- the game's API (dungeon names from C_Map and the like): anything, answering "?"
+  if type(k) == "string" and k:match("^C_") then
+    local any
+    any = setmetatable({}, { __index = function() return any end, __call = function() return "?" end })
+    return any
+  end
   return k   -- ATLASLOOT_* constants and colours: their own names are fine here
 end })
 env._G = env
 env.getfenv = function() return env end
-local chunk = assert(loadfile(path))
-setfenv(chunk, env)
-chunk("AtlasLootClassic_DungeonsAndRaids")
+for _, file in ipairs({ "data.lua", "data-tbc.lua" }) do
+  local chunk = assert(loadfile(dir .. "/" .. file))
+  setfenv(chunk, env)
+  chunk("AtlasLootClassic_DungeonsAndRaids")
+end
 
-local RAIDS = { "Karazhan", "GruulsLair", "MagtheridonsLair", "SerpentshrineCavern", "TempestKeep", "HyjalSummit",
-  "BlackTemple", "ZulAman", "SunwellPlateau", "WorldBossesBC" }
+local RAIDS = { "MoltenCore", "Onyxia", "BlackwingLair", "Zul'Gurub", "TheRuinsofAhnQiraj", "TheTempleofAhnQiraj", "WorldBosses",
+  "Karazhan", "GruulsLair", "MagtheridonsLair", "SerpentshrineCavern", "TempestKeep", "HyjalSummit", "BlackTemple", "ZulAman",
+  "SunwellPlateau", "WorldBossesBC" }
+
+--- a list AtlasLoot wrote with holes in it (entries for other game versions are nil): its entries in order
+local function entries(t)
+  local n = 0
+  for k in pairs(t) do if type(k) == "number" and k > n then n = k end end
+  local out = {}
+  for i = 1, n do if t[i] ~= nil then out[#out + 1] = t[i] end end
+  return out
+end
 
 local function str(s) return '"' .. tostring(s):gsub('[%c"\\]', function(c) return ("\\u%04x"):format(c:byte()) end) .. '"' end
 local function strip(s) return (tostring(s):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
@@ -38,11 +66,11 @@ for _, key in ipairs(RAIDS) do
   local raid = data[key]
   assert(raid, "no raid " .. key)
   local bosses = {}
-  for _, b in ipairs(raid.items) do if type(b) == "table" then
+  for _, b in ipairs(entries(raid.items)) do if type(b) == "table" then
     local list
-    for _, d in ipairs({ "NORMAL", "25RAID", "10RAID" }) do if b[d] then list = b[d] break end end
+    for _, d in ipairs({ "NORMAL", "25RAID", "10RAID", "40RAID", "20RAID", "FACTION_ALLIANCE" }) do if type(b[d]) == "table" then list = b[d] break end end
     local items = {}
-    for _, e in ipairs(list or {}) do
+    for _, e in ipairs(entries(list or {})) do
       local id = e[2]
       if type(id) == "number" then
         local alt = {}

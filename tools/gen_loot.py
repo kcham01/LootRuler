@@ -1,10 +1,16 @@
 """Builds LootRuler/Data/Loot.lua: the TBC raids, their bosses in kill order and what each one drops.
 
-  python3 tools/gen_loot.py <AtlasLootClassic_DungeonsAndRaids/data-tbc.lua> <cmangos tbc-db dump .sql>
+  python3 tools/gen_loot.py <AtlasLootClassic_DungeonsAndRaids folder> <cmangos tbc-db dump .sql>
 
-The loot lists come from AtlasLootClassic's TBC raid tables (GPL-2): which bosses, in which order, and which
-items each one drops, including trash, patterns and Zul'Aman's timed chests. Tier set overviews and Kael'thas'
-legendaries (they vanish when the fight ends) are left out.
+Every raid you can do on the TBC Anniversary realms, up to Zul'Aman: the original game's (Molten Core to
+Temple of Ahn'Qiraj, and the world bosses still there in TBC) and TBC's own. Naxxramas isn't: the original
+40-player Naxxramas can't be entered in TBC. Sunwell Plateau is ready to switch on (see RAIDS) when it opens.
+
+The loot lists come from AtlasLootClassic's raid tables (GPL-2): which bosses, in which order, and which items
+each one drops, including trash, patterns, books, scarabs and Zul'Aman's timed chests. Left out: tier set
+overviews, Kael'thas' legendaries (they vanish when the fight ends), enchant lists (they're spells), the
+items for opening Ahn'Qiraj (quest rewards, not drops), Zul'Gurub's fishing pool, and Lord Kazzak in the
+Blasted Lands (he left for Outland in TBC).
 
 Item names, quality, slot, item level and which classes can use them come from the cmangos TBC world database
 (GPL-2). The same database checks the lists: every item a boss is listed with has to be in that boss's loot in
@@ -23,6 +29,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # AtlasLoot key -> what the addon calls the raid, a short name, raid size
 RAIDS = [
+    ('MoltenCore', 'Molten Core', 'MC', 40),
+    ('Onyxia', "Onyxia's Lair", 'Ony', 40),
+    ('BlackwingLair', 'Blackwing Lair', 'BWL', 40),
+    ("Zul'Gurub", "Zul'Gurub", 'ZG', 20),
+    ('TheRuinsofAhnQiraj', "Ruins of Ahn'Qiraj", 'AQ20', 20),
+    ('TheTempleofAhnQiraj', "Temple of Ahn'Qiraj", 'AQ40', 40),
+    ('WorldBosses', 'World Bosses (Azeroth)', 'World', 40),
     ('Karazhan', 'Karazhan', 'Kara', 10),
     ('GruulsLair', "Gruul's Lair", 'Gruul', 25),
     ('MagtheridonsLair', "Magtheridon's Lair", 'Mag', 25),
@@ -31,31 +44,44 @@ RAIDS = [
     ('HyjalSummit', 'Mount Hyjal', 'Hyjal', 25),
     ('BlackTemple', 'Black Temple', 'BT', 25),
     ('ZulAman', "Zul'Aman", 'ZA', 10),
-    ('SunwellPlateau', 'Sunwell Plateau', 'SWP', 25),
-    ('WorldBossesBC', 'World Bosses', 'World', 40),
+    # ('SunwellPlateau', 'Sunwell Plateau', 'SWP', 25),   # phase 5: add it back when it opens on the Anniversary realms
+    ('WorldBossesBC', 'World Bosses (Outland)', 'World', 40),
 ]
-SKIP_BOSSES = {'Legendaries', 'Terokk'}   # Kael'thas' weapons vanish after the fight; Terokk is a Skettis summon
+SKIP_BOSSES = {'Legendaries', 'Terokk', 'Enchants', 'Ahn\'Qiraj enchants', 'AQ opening', 'Muddy Churning Waters', 'Lord Kazzak'}
 
 # where cmangos keeps a loot list AtlasLoot gives another npc (or no npc) for
 SOURCES = {
     'Reliquary of the Lost': [('npc', 23420)],                 # the loot is on the Essence of Anger
     'Chess Event': [('object', 'Dust Covered Chest')],
+    'Majordomo Executus': [('object', 'Cache of the Firelord')],
+    # Rajaxx's event: his lieutenants carry the loot AtlasLoot lists for him
+    'General Rajaxx': [('npc', n) for n in (15341, 15385, 15386, 15388, 15389, 15390, 15391, 15392)],
 }
 
 # items AtlasLoot doesn't list for a boss that cmangos has it drop, and that raids reserve
 EXTRA = {
-    'Magtheridon': [32386],    # Magtheridon's Head for the Horde (AtlasLoot lists the Alliance one): one per kill
+    # the boss heads, one per kill and a quest for a reward everyone wants (one for each faction)
+    'Magtheridon': [32386],    # Magtheridon's Head for the Horde (AtlasLoot lists the Alliance one)
+    'Onyxia': [18422, 18423],
+    'Nefarian': [19002, 19003],
     # the Twins drop the same Sunwell tier tokens as Kalecgos, Brutallus and Felmyst
     'Eredar Twins': [34848, 34851, 34852, 34853, 34854, 34855, 34856, 34857, 34858],
 }
 
 # differences from cmangos that are right, with why
 KNOWN = {
+    ("Ossirian the Unscarred", 21457): "Bracers of Brutality: missing from cmangos altogether; Ossirian drops them",
+    ("Fankriss the Unyielding", 21639): "Pauldrons of the Unrelenting: missing from cmangos altogether; Fankriss drops them",
 }
 
 ALLIANCE, HORDE = 1101, 690    # race masks: human, dwarf, night elf, gnome, draenei / orc, undead, tauren, troll, blood elf
 MIN_QUALITY = 2   # grey and white raid drops are quest items everyone loots for themselves
-SKIP_ITEMS = {29434}   # Badge of Justice: everyone gets one
+SKIP_ITEMS = {
+    29434,            # Badge of Justice: everyone gets one
+    20600,            # Malfurion's Signet Ring: a quest reward, not a drop
+    15410, 20381,     # Scale of Onyxia, Dreamscale: skinned, not looted
+    21108, 21110,     # Draconic for Dummies: quest pages everyone on the quest loots
+}
 
 
 def lua_str(s):
@@ -130,7 +156,7 @@ def main():
         for item in expand(rows_):
             droppers[item] = droppers.get(item, 0) + 1
 
-    problems, out_raids, used = [], [], set()
+    problems, notes, out_raids, used = [], [], [], set()
     for key, name, short, size in RAIDS:
         raid = by_key[key]
         bosses = []
@@ -144,26 +170,47 @@ def main():
                     continue
                 if item not in ids and item not in SKIP_ITEMS and int(items[item][ci['Quality']]) >= MIN_QUALITY:
                     ids.append(item)
-            if not ids:
-                continue
             npcs = b['npc'] if isinstance(b['npc'], list) else ([b['npc']] if b['npc'] else [])
             sources = SOURCES.get(b['name']) or [('npc', n) for n in npcs]
+            cm = None
             if sources:
                 cm = set()
                 for kind, what in sources:
                     cm |= drops(kind, what)
-                for item in ids:
-                    if item not in cm and (b['name'], item) not in KNOWN:
-                        problems.append(f'{name} / {b["name"]}: {item} {items[item][ci["name"]]} isn\'t in its cmangos loot')
-                for item in sorted(cm):
-                    r = items.get(item)
-                    if (r and int(r[ci['Quality']]) >= 4 and int(r[ci['class']]) != 12 and item not in ids and droppers.get(item, 0) <= 4
-                            and (b['name'], item) not in KNOWN):
-                        problems.append(f'{name} / {b["name"]}: cmangos has epic {item} {r[ci["name"]]} that isn\'t listed')
-            used.update(ids)
-            bosses.append({'name': b['name'], 'trash': b['extra'], 'items': ids})
-        out_raids.append({'key': key, 'name': name, 'short': short, 'size': size, 'bosses': bosses})
+            bosses.append({'name': b['name'], 'trash': b['extra'], 'items': ids, 'cm': cm})
 
+        # check every boss's list against cmangos: items another boss of the raid drops move there; epics only
+        # this boss drops that aren't listed are added; anything else that doesn't match is a problem
+        listed = set(i for b in bosses for i in b['items'])
+        for b in bosses:
+            if b['cm'] is None:
+                continue
+            for item in list(b['items']):
+                if item in b['cm'] or (b['name'], item) in KNOWN:
+                    continue
+                others = [o for o in bosses if o is not b and o['cm'] is not None and item in o['cm']]
+                if len(others) == 1:
+                    b['items'].remove(item)
+                    if item not in others[0]['items']:
+                        others[0]['items'].append(item)
+                    notes.append(f'{name}: {items[item][ci["name"]]} moved from {b["name"]} to {others[0]["name"]} (where cmangos has it)')
+                else:
+                    problems.append(f'{name} / {b["name"]}: {item} {items[item][ci["name"]]} isn\'t in its cmangos loot')
+            for item in sorted(b['cm']):
+                r = items.get(item)
+                if (r and int(r[ci['Quality']]) >= 4 and int(r[ci['class']]) != 12 and item not in listed and item not in SKIP_ITEMS
+                        and droppers.get(item, 0) <= 4 and (b['name'], item) not in KNOWN):
+                    b['items'].append(item)
+                    listed.add(item)
+                    notes.append(f'{name}: {r[ci["name"]]} added to {b["name"]} (cmangos has it drop there)')
+        bosses = [b for b in bosses if b['items']]
+        for b in bosses:
+            used.update(b['items'])
+        era = 'classic' if key in ('MoltenCore', 'Onyxia', 'BlackwingLair', "Zul'Gurub", 'TheRuinsofAhnQiraj', 'TheTempleofAhnQiraj', 'WorldBosses') else 'tbc'
+        out_raids.append({'key': key, 'name': name, 'short': short, 'size': size, 'era': era, 'bosses': bosses})
+
+    for n in notes:
+        print('..', n)
     for p in problems:
         print('!!', p)
 
@@ -171,7 +218,7 @@ def main():
              "-- AtlasLootClassic's TBC raid tables and the cmangos TBC world database. Do not edit by hand.",
              'local _, LR = ...', '', 'LR.RAIDS = {']
     for r in out_raids:
-        lines.append(f'  {{ key = {lua_str(r["key"])}, name = {lua_str(r["name"])}, short = {lua_str(r["short"])}, size = {r["size"]}, bosses = {{')
+        lines.append(f'  {{ key = {lua_str(r["key"])}, name = {lua_str(r["name"])}, short = {lua_str(r["short"])}, size = {r["size"]}, era = "{r["era"]}", bosses = {{')
         for b in r['bosses']:
             lines.append(f'    {{ name = {lua_str(b["name"])},{" trash = true," if b["trash"] else ""} items = {{ {", ".join(map(str, b["items"]))} }} }},')
         lines.append('  } },')

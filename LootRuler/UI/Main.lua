@@ -358,15 +358,24 @@ end
 ---------------------------------------------------------------------- shared bits for the screens
 -- each raid's picture: the icon of one of its best-known drops
 LR.RAID_ITEM = {
+  MoltenCore = 17204, Onyxia = 18423, BlackwingLair = 19364, ["Zul'Gurub"] = 19902, TheRuinsofAhnQiraj = 21220,
+  TheTempleofAhnQiraj = 21134, WorldBosses = 17070,
   Karazhan = 30480, GruulsLair = 28830, MagtheridonsLair = 32385, SerpentshrineCavern = 30627, TempestKeep = 32458,
   HyjalSummit = 30908, BlackTemple = 32837, ZulAman = 33467, SunwellPlateau = 34334, WorldBossesBC = 30729,
 }
 function LR.raidIcon(key) return LR.itemIcon(LR.RAID_ITEM[key] or 0) end
 
---- the game's tooltip for an item, with who reserved it underneath
-function UI.itemTooltip(owner, s, id)
+--- the game's tooltip for an item, with who reserved it underneath (and where it drops)
+function UI.itemTooltip(owner, s, id, raidKey)
   GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
   GameTooltip:SetHyperlink("item:" .. id)
+  if not s and raidKey then
+    local from = LR.dropsFrom(raidKey, id)
+    if #from > 0 then
+      GameTooltip:AddLine(" ")
+      GameTooltip:AddLine(LR.raid(raidKey).name .. ": " .. table.concat(from, ", "), 0.7, 0.7, 0.7, true)
+    end
+  end
   if s then
     local hr = s.hr[id]
     if hr then
@@ -391,10 +400,12 @@ function UI.itemTooltip(owner, s, id)
   GameTooltip:Show()
 end
 
---- who reserved an item, as one short coloured line
-function UI.whoLine(s, id, limit)
+--- who reserved an item, as one short coloured line (leaving out `except`, usually yourself)
+function UI.whoLine(s, id, limit, except)
   local who = S.byItem(s)[id]
   if not who then return nil end
+  if except then who = U.filter(who, function(w) return not U.samePlayer(w[1], except) end) end
+  if #who == 0 then return nil end
   local parts = {}
   for i, w in ipairs(who) do
     if limit and i > limit then parts[#parts + 1] = "+" .. (#who - limit) break end
@@ -479,7 +490,7 @@ end
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function()
-  -- Core/Net.lua loads the saved state on PLAYER_LOGIN first (it registered earlier)
+  if not LR.db then LR.loadDB() end      -- Core/Net.lua normally has by now; the order isn't promised
   minimapButton()
 end)
 

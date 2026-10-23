@@ -63,6 +63,18 @@ function LR.usableBy(id, cls)
   return true
 end
 
+-- the armour each class wears (TBC, level 40 and up)
+local BEST_ARMOR = { WARRIOR = 4, PALADIN = 4, HUNTER = 3, SHAMAN = 3, ROGUE = 2, DRUID = 2, PRIEST = 1, MAGE = 1, WARLOCK = 1 }
+
+--- what a class would reserve: what it can use, and of armour only its own kind (plate for a paladin, not
+--- the cloth it could also wear). Cloaks, jewellery, weapons, tokens and everything else as LR.usableBy.
+function LR.forClass(id, cls)
+  if not LR.usableBy(id, cls) then return false end
+  local it = LR.ITEMS[id]
+  if it and it[4] == 4 and it[5] >= 1 and it[5] <= 4 and it[3] ~= 16 and BEST_ARMOR[cls] then return it[5] == BEST_ARMOR[cls] end
+  return true
+end
+
 local ALLIANCE, HORDE = 1101, 690
 --- items that only drop for one faction (Magtheridon's Head) are hidden from the other
 function LR.forFaction(id, faction)

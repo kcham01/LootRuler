@@ -176,6 +176,16 @@ srv:addonMessage(bob, "LootRuler", "not a real message", "RAID")
 srv:tick(1)
 check("nonsense is ignored", #lead.M.errors == 0, table.concat(lead.M.errors, " | "))
 
+section("no chatter")
+local sent = 0
+local orig = srv.addonMessage
+srv.addonMessage = function(self, from, ...) sent = sent + 1 return orig(self, from, ...) end
+ann.LR.db.mine[s.id].dirty = true                -- as if Ann's last picks were never confirmed
+for _ = 1, 10 do srv:rosterChanged() srv:tick(0.3) end
+srv.addonMessage = orig
+check("group changes don't make raiders resend the same picks over and over", sent <= 6, sent .. " messages")
+check("and Ann's picks are confirmed", not ann.LR.pending(cur(ann)))
+
 section("joining late")
 local dan = srv:client({ name = "Dan", class = "ROGUE" })
 srv:tick(1)

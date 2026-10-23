@@ -1,0 +1,42 @@
+name: Build and test LootRuler
+# Tests the session rules, a whole raid of clients side by side, Gargul's importer reading the export and
+# the window; checks the addon only uses what the TBC Anniversary client has; draws every screen; and puts
+# the zip, pictures and logs on the "results" branch.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['README.md', 'LICENSE', 'docs/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build
+  cancel-in-progress: false
+jobs:
+  addon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Gethe/wow-ui-source
+          ref: classic_anniversary
+          path: wowui
+          sparse-checkout: Interface
+      - uses: actions/checkout@v4
+        with:
+          repository: papa-smurf/Gargul
+          path: gargul
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: |
+          sudo apt-get update -q && sudo apt-get install -yq lua5.1 lua-bitop zip
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - run: bash ci/build.sh
+      - if: always()
+        run: bash ci/publish.sh
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -151,12 +151,16 @@ local function newSession(f)
   local d = UI.draft
   if d.guild == nil then d.guild = IsInGuild() and true or false end
   f:panel("Open soft reserves", function(p)
-    p:text("Raid", { font = "GameFontNormal", gap = 2 })
-    local chips = {}
-    for _, r in ipairs(LR.RAIDS) do
-      chips[#chips + 1] = { label = r.name, on = d.raid == r.key, click = function() d.raid = r.key UI.render() end }
+    for _, era in ipairs({ { "tbc", "Burning Crusade raids" }, { "classic", "Original raids" } }) do
+      p:text(era[2], { font = "GameFontNormal", gap = 2 })
+      local chips = {}
+      for _, r in ipairs(LR.RAIDS) do
+        if r.era == era[1] then
+          chips[#chips + 1] = { label = r.name, on = d.raid == r.key, click = function() d.raid = r.key UI.render() end }
+        end
+      end
+      p:chips(chips)
     end
-    p:chips(chips)
     stepper(p, "Reserves each", d.sr, S.MIN_SR, S.MAX_SR, function(v) d.sr = v UI.render() end)
     p:chips({
       { label = (d.dupes and "[x] " or "[  ] ") .. "Same item more than once", on = d.dupes, click = function() d.dupes = not d.dupes UI.render() end,

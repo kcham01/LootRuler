@@ -765,6 +765,7 @@ function M.layerClashes()
 end
 
 function M.frameCount() return #allFrames end
+function M.allFrames() return allFrames end
 
 --- every method name the stand-in gives a widget type (including what it inherits)
 function M.methodNames(kind)
