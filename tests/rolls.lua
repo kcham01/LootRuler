@@ -373,6 +373,18 @@ check("a bonus comes out of the pot first; someone left out gets no share", sp.b
 Gd.paid(gs, ANN, 575, 516)
 Gd.paid(gs, DAN, -525, 517)
 sp = Gd.split(gs)
+local rs = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 700)
+Gd.set(rs, true, 701)
+Gd.saw(rs, { "Lead-Dreamscythe", ANN, BOB, DAN }, 702)
+S.award(rs, 28525, BOB, "BID", 1000, 703)
+check("tanks and healers get their role's cut", Gd.setRoleCut(rs, "tank", 3, 704) and Gd.setRoleCut(rs, "healer", 2, 705)
+  and Gd.setRole(rs, ANN, "healer", 706) and Gd.setRole(rs, DAN, "tank", 707) and not Gd.setRole(rs, DAN, "dps", 707) and not Gd.setRoleCut(rs, "tank", 50, 707))
+local rsp = Gd.split(rs)
+check("out of the pot, before the even split", rsp.cut == 100 and rsp.roles == 50 and rsp.share == 212 and rsp.rows[DAN].roleCut == 30
+  and rsp.rows[DAN].gets == 242 and rsp.rows[ANN].gets == 232 and rsp.rows[ANN].role == "healer")
+check("taking someone out of a role", Gd.setRole(rs, DAN, nil, 708) and Gd.split(rs).rows[DAN].roleCut == 0 and Gd.valid(rs.gk) and S.valid(rs))
+rs.gk.role[ANN] = 5
+check("nonsense roles aren't valid", not Gd.valid(rs.gk))
 check("gold handed over counts", sp.rows[ANN].owed == 0 and sp.rows[DAN].owed == 0 and sp.rows[BOB].owed == -175)
 check("it's all a valid session", S.valid(gs) and Gd.valid(gs.gk))
 local owing = Gd.unsettled(gs)

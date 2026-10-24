@@ -34,6 +34,7 @@ UI.goldSheet = goldSheet
 --- one player's line on the payouts sheet: what they bought, their share, and who gives whom what
 local function payoutText(s, name, row)
   local parts = {}
+  if row.role then parts[#parts + 1] = row.role .. (row.roleCut > 0 and (" cut " .. G.gold(row.roleCut)) or "") end
   if row.spent > 0 then parts[#parts + 1] = "bought " .. G.gold(row.spent) end
   parts[#parts + 1] = row.out and "left out of the split" or ("share " .. G.gold(row.gets))
   if row.paid ~= 0 then parts[#parts + 1] = (row.paid > 0 and "paid " or "had ") .. G.gold(math.abs(row.paid)) end
@@ -80,6 +81,7 @@ function UI.payoutSheet(s)
       { "Pot", G.gold(split.pot) .. "  (" .. U.plural(#G.sales(s), "item") .. ")" },
       { "Your cut (" .. s.gk.cut .. "%)", G.gold(split.cut) },
       split.bonuses > 0 and { "Bonuses", G.gold(split.bonuses) } or false,
+      split.roles > 0 and { "Tank and healer cuts", G.gold(split.roles) } or false,
       { "Split " .. #split.players .. " ways", G.gold(split.share) .. " each" },
     })
     f:gap(6)
@@ -109,6 +111,27 @@ function UI.payoutSheet(s)
   end, { full = true })
 end
 
+--- who tanks and who heals (for their cuts): each player, and a choice
+function UI.rolesSheet(s)
+  UI.openSheet("Tanks and healers", function(f, h)
+    f:note("Pick who tanks and who heals: each gets the cut for their role, out of the pot, on top of their share.")
+    local people = {}
+    local seen = {}
+    for _, m in ipairs(LR.roster()) do people[#people + 1] = { name = U.full(m.name), class = m.class } seen[U.full(m.name)] = true end
+    for name in pairs(s.gk.seen or {}) do if not seen[name] then people[#people + 1] = { name = name } seen[name] = true end end
+    table.sort(people, function(a, b) return a.name < b.name end)
+    if #people == 0 then f:note("Nobody in the group yet.") end
+    for _, m in ipairs(people) do
+      local role = s.gk.role and s.gk.role[m.name]
+      local chips = { { plain = true, width = 150, label = U.classText(U.short(m.name), m.class or LR.classOf(m.name)) } }
+      for _, r in ipairs(G.ROLES) do
+        chips[#chips + 1] = { label = r[3]:gsub("^%l", string.upper), width = 64, on = role == r[1], click = function() LR.gdkpRole(s, m.name, role ~= r[1] and r[1] or nil) h.redraw(true) end }
+      end
+      f:chips(chips, { gap = 2 })
+    end
+  end, { full = true })
+end
+
 --- the GDKP panel on the Session tab
 function UI.gdkpPanel(f, s)
   local leader = LR.isLeader(s)
@@ -127,6 +150,13 @@ function UI.gdkpPanel(f, s)
       chips("Bids start at:", "min", { 50, 100, 250, 500, 1000 }, G.gold)
       chips("Raise by at least:", "inc", { 10, 25, 50, 100 }, G.gold)
       chips("Your cut:", "cut", { 0, 5, 10, 15, 20 }, function(v) return v .. "%" end)
+      for _, r in ipairs(G.ROLES) do
+        local list = { { plain = true, label = r[2] .. " each get:" } }
+        for _, v in ipairs({ 0, 1, 2, 3, 5 }) do
+          list[#list + 1] = { label = v .. "%", on = ((gk.rp and gk.rp[r[1]]) or 0) == v, click = function() LR.gdkpRoleCut(s, r[1], v) end }
+        end
+        p:chips(list, { gap = 2 })
+      end
       p:chips({ { label = (gk.strict and "[x] " or "[  ] ") .. "Bids start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
         tip = "Only \"bid 150\" counts, not just \"150\": someone saying \"500\" in raid chat doesn't bid by accident." } }, { gap = 2 })
       p:gap(4)
@@ -155,6 +185,9 @@ function UI.gdkpPanel(f, s)
       p:gap(4)
       p:buttons({
         { label = "Payouts", click = function() UI.payoutSheet(s) end },
+        { label = "Tanks and healers", click = function() UI.rolesSheet(s) end },
+      }, "left")
+      p:buttons({
         { label = "A starting bid for an item", click = function()
           UI.pickAnyItem("Which item starts higher (or lower)?", function(id)
             goldSheet("Bids for " .. LR.itemName(id) .. " start at", nil, G.minFor(s, id), function(g) LR.gdkpPrice(s, id, g) end)
