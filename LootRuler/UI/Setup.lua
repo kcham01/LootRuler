@@ -107,6 +107,8 @@ local function manage(f, s)
       end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
       not LR.raidOf(s).custom and { label = (s.any and "[x] " or "[  ] ") .. "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
         tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
+      { label = (s.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
+        tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserves tab (by player)." },
       { label = (s.locked and "[x] " or "[  ] ") .. "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
         tip = "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
     })
@@ -183,6 +185,8 @@ local function newSession(f)
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         d.guild = not d.guild UI.render()
       end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
+      { label = (d.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = d.plusOne, click = function() d.plusOne = not d.plusOne UI.render() end,
+        tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more." },
       d.raid ~= LR.CUSTOM and { label = (d.any and "[x] " or "[  ] ") .. "Any item", on = d.any, click = function() d.any = not d.any UI.render() end,
         tip = "Lets people reserve any item, not just the raid's loot: for loot LootRuler's lists don't have yet." } or false,
     })
@@ -193,6 +197,7 @@ local function newSession(f)
     p:buttons({ { label = "Open reserves", click = function()
       if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
       local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)
+      if d.plusOne then LR.setPlusOne(s, true) end
       UI.toast(("%s reserves are open."):format(LR.raidOf(s).name))
       UI.render()
     end } })

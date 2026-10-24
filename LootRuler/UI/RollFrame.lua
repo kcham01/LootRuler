@@ -47,15 +47,15 @@ function UI.rollStatus(copy)
   if copy.state == "closed" then
     if tied then return ("Tied at %d: %s. The loot master decides."):format(top.n, R.names(tied)) end
     if top then
-      if U.samePlayer(top.p, me()) then return ("|cff1eff00You win with %d (%s).|r"):format(top.n, R.LABEL[top.kind]) end
-      return ("%s wins with %d (%s)."):format(U.short(top.p), top.n, R.LABEL[top.kind])
+      if U.samePlayer(top.p, me()) then return ("|cff1eff00You win with %d (%s).|r"):format(top.n, R.label(copy, top)) end
+      return ("%s wins with %d (%s)."):format(U.short(top.p), top.n, R.label(copy, top))
     end
     return "Rolls closed. Nobody rolled."
   end
   if copy.state == "cancelled" then return "Called off." end
-  local highest = top and ((tied and "Tied at " or "Highest: ") .. (tied and (top.n .. " (" .. R.names(tied, 3) .. ")") or (who(top) .. " " .. top.n .. " (" .. R.LABEL[top.kind] .. ")"))) or nil
+  local highest = top and ((tied and "Tied at " or "Highest: ") .. (tied and (top.n .. " (" .. R.names(tied, 3) .. ")") or (who(top) .. " " .. top.n .. " (" .. R.label(copy, top) .. ")"))) or nil
   if mine then
-    local line = ("You rolled %d (%s)."):format(mine.n, R.LABEL[mine.kind])
+    local line = ("You rolled %d (%s)."):format(mine.n, R.label(copy, mine))
     if top and top == mine and not tied then return line .. " |cff1eff00That's the highest.|r" end
     return line .. (highest and (" " .. highest .. ".") or "")
   end

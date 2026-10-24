@@ -95,7 +95,8 @@ local function howTo(roll, link, secs)
     return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), roll.tie == "OS" and "/roll 99" or "/roll", t)
   end
   local away = #roll.away > 0 and (" (Reserved by %s, who isn't here.)"):format(R.names(roll.away, 3)) or ""
-  return ("Roll for %s: /roll for main spec, /roll 99 for off spec. %s.%s"):format(link, t, away)
+  local po = roll.po and next(roll.po) and " Main spec: anyone with a +1 rolls after those without." or ""
+  return ("Roll for %s: /roll for main spec, /roll 99 for off spec. %s.%s%s"):format(link, t, po, away)
 end
 
 local function resultText(roll, link)
@@ -104,7 +105,7 @@ local function resultText(roll, link)
   if tied then
     return ("Rolls closed for %s: %s tied at %d."):format(link, R.names(tied), top.n)
   end
-  return ("Rolls closed for %s: %s wins with %d (%s)."):format(link, U.short(top.p), top.n, R.LABEL[top.kind])
+  return ("Rolls closed for %s: %s wins with %d (%s)."):format(link, U.short(top.p), top.n, R.label(roll, top))
 end
 
 ---------------------------------------------------------------------- sending
@@ -116,7 +117,7 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie }
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po }
 end
 
 ---------------------------------------------------------------------- the loot master's roll
@@ -174,6 +175,8 @@ function Rolls.start(id, opts)
   else
     plan = R.plan(s, id, LR.roster())
   end
+  -- the +1 rule: everyone's +1s as the roll starts
+  if s and s.plusOne then plan.po = S.plusOneTable(s, U.map(LR.roster(), function(m) return m.name end)) end
   seq = seq + 1
   local roll = R.new(U.me() .. ":" .. U.now() .. ":" .. seq, id, plan)
   roll.by = U.me()
@@ -338,7 +341,7 @@ function Rolls.award(player, kind, n)
     note = ("Open a trade with %s: LootRuler puts %s in it for you."):format(U.short(player), U.plain(roll.link))
   end
   Rolls.ended(roll.k, "awarded", player, n, kind)
-  say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. R.LABEL[kind] .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")))
+  say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")))
   changed()
   return true, note
 end
@@ -358,7 +361,18 @@ function Rolls.follow(msg, sender)
         elseif type(w) == "table" and type(w[1]) == "string" then who[#who + 1] = { w[1], tonumber(w[2]) or 1 } end
       end
     end
-    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil) })
+    -- +1s: names -> counts, checked
+    local po
+    if type(msg.po) == "table" then
+      po = {}
+      local n = 0
+      for name, c in pairs(msg.po) do
+        n = n + 1
+        if n > 80 then break end
+        if type(name) == "string" and type(c) == "number" and c > 0 and c < 100 then po[name:lower()] = math.floor(c) end
+      end
+    end
+    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil) })
     copy.by = sender
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"

@@ -166,7 +166,7 @@ local function rowFor(f, roll, e, rank, pick)
   b.name:SetText(U.classText(U.short(e.p), class))
   b.name:SetWidth(f.width - 130)
   if e.kind then
-    b.kind:SetText(R.LABEL[e.kind])
+    b.kind:SetText(R.label(roll, e))
     b.num:SetText(tostring(e.n))
   else
     b.kind:SetText(R.WHY[e.why] or e.why or "")

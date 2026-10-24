@@ -125,6 +125,14 @@ check("the leader's chat hides !lr whispers", srv:hidden(lead, "CHAT_MSG_WHISPER
 check("and the answers", srv:hidden(lead, "CHAT_MSG_WHISPER_INFORM", "[LootRuler] Reserved"))
 check("raiders see whispered reserves", same(ann.LR.Session.reservesOf(cur(ann), full(pug)), { WATCH }))
 
+section("+1s in whispers")
+lead.LR.setPlusOne(s, true)
+srv:tick(1)
+r = ask("!lr")
+check("with the +1 rule on, !lr says your +1s", r:find("You have 0 +1s", 1, true) ~= nil, r)
+lead.LR.setPlusOne(s, false)
+srv:tick(1)
+
 section("!lr in raid chat")
 local before = #pug.inbox
 srv:chatMessage(pug, "!lr remove watch", "RAID")

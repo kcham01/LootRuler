@@ -42,7 +42,8 @@ end
 
 local function status(s, player)
   local left = s.sr - #S.reservesOf(s, player)
-  return ("You have reserved %s (%d of %d used%s)."):format(list(s, player), s.sr - left, s.sr, s.locked and ", reserves are locked" or "")
+  local po = s.plusOne and (" You have %s."):format(S.plusOnes(s, player) == 1 and "a +1" or (S.plusOnes(s, player) .. " +1s")) or ""
+  return ("You have reserved %s (%d of %d used%s).%s"):format(list(s, player), s.sr - left, s.sr, s.locked and ", reserves are locked" or "", po)
 end
 
 local function nameOf(s, id) return LR.itemLink(id) end

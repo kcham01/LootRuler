@@ -17,6 +17,8 @@
 --            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time,
 --              d = the drop it was (its key, when known) }
 --            A reserve that has won its item is used up: it doesn't count when another copy drops.
+--   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
+--   po       +1 changes the leader made by hand: "Name-Realm" -> number (added to the counted ones)
 --   drops    every item that dropped while the session was open, in order (Core/Drops.lua):
 --            { k = key, i = item id, b = boss ("" when not known), at = when it dropped, by = who recorded it (the
 --              loot master), src = what it dropped from, h = who has it now (nil: still on the corpse),
@@ -253,6 +255,47 @@ function S.winners(s, id)
   return out
 end
 
+---------------------------------------------------------------------- +1s
+--- whether the +1 rule is on
+function S.setPlusOne(s, on, now)
+  on = on and true or false
+  if (s.plusOne or false) == on then return false end
+  s.plusOne = on
+  bump(s, now)
+  return true
+end
+
+--- a player's +1s: an item won on a main spec roll is one, plus the leader's changes by hand (never below 0)
+function S.plusOnes(s, player)
+  local n = 0
+  for _, w in ipairs(s.won or {}) do if w.k == "MS" and U.samePlayer(w.p, player) then n = n + 1 end end
+  for name, d in pairs(s.po or {}) do if U.samePlayer(name, player) then n = n + d end end
+  return math.max(0, n)
+end
+
+--- the leader gives a player a +1 (delta 1) or takes one off (delta -1)
+function S.adjustPlusOne(s, player, delta, now)
+  if type(player) ~= "string" or (delta ~= 1 and delta ~= -1) then return false end
+  if delta < 0 and S.plusOnes(s, player) == 0 then return false end
+  s.po = s.po or {}
+  local key = U.full(player)
+  for name in pairs(s.po) do if U.samePlayer(name, player) then key = name end end
+  s.po[key] = (s.po[key] or 0) + delta
+  if s.po[key] == 0 then s.po[key] = nil end
+  bump(s, now)
+  return true
+end
+
+--- everyone's +1s, for a roll (lower-case names; only those with any)
+function S.plusOneTable(s, names)
+  local out = {}
+  for _, name in ipairs(names) do
+    local n = S.plusOnes(s, name)
+    if n > 0 then out[U.full(name):lower()] = n end
+  end
+  return out
+end
+
 ---------------------------------------------------------------------- the raid's drops
 S.MAX_DROPS = 300
 
@@ -335,6 +378,10 @@ function S.valid(t)
       -- a kind this version doesn't know (a newer version's) is kept and shown as it is
       if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or type(w.k) ~= "string" or #w.k > 12 then return false end
     end
+  end
+  if t.po ~= nil then
+    if type(t.po) ~= "table" then return false end
+    for name, n in pairs(t.po) do if type(name) ~= "string" or type(n) ~= "number" then return false end end
   end
   if t.drops ~= nil then
     if type(t.drops) ~= "table" or #t.drops > S.MAX_DROPS then return false end

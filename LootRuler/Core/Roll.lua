@@ -9,6 +9,10 @@
 --   OPEN  nobody here reserved it: /roll (1-100) for main spec beats /roll 99 for off spec
 --   TIE   the highest rolls were equal: just those players roll again, the same way they rolled before
 -- Each player's first roll that counts is the one that counts.
+--
+-- The +1 rule (when the session has it on): every item won on a main spec roll is a +1, and among main spec
+-- rolls, players with fewer +1s win over players with more, whatever they rolled. roll.po holds the +1s of
+-- everyone in the group when the roll started (name, lower case -> count).
 local _, LR = ...
 local U, S = LR.U, LR.Session
 local R = {}
@@ -58,7 +62,17 @@ end
 --- a new roll (the loot master's, or a raider's copy of it)
 function R.new(k, id, plan)
   return { k = k, id = id, mode = plan.mode, who = plan.who or {}, away = plan.away or {}, f = plan.f, n = plan.n,
-    tie = plan.tie, entries = {}, rolled = {}, passed = {} }
+    tie = plan.tie, po = plan.po, entries = {}, rolled = {}, passed = {} }
+end
+
+--- a player's +1s in a roll (0 when the +1 rule is off)
+function R.plusOnes(roll, player) return roll.po and roll.po[key(player)] or 0 end
+
+--- what a roll counts as, for people: "MS", "MS +1", "SR 2"...
+function R.label(roll, e)
+  local l = R.LABEL[e.kind] or tostring(e.kind)
+  local po = e.kind == "MS" and R.plusOnes(roll, e.p) or 0
+  return po > 0 and (l .. " +" .. po) or l
 end
 
 --- whether a player may roll in this roll at all
@@ -113,6 +127,10 @@ function R.standings(roll)
   table.sort(good, function(a, b)
     local ra, rb = R.KINDS[a.kind][3], R.KINDS[b.kind][3]
     if ra ~= rb then return ra < rb end
+    if a.kind == "MS" then
+      local pa, pb = R.plusOnes(roll, a.p), R.plusOnes(roll, b.p)
+      if pa ~= pb then return pa < pb end
+    end
     if a.n ~= b.n then return a.n > b.n end
     return a.seq < b.seq
   end)
@@ -128,7 +146,9 @@ function R.result(roll)
   local tied = { top.p }
   for i = 2, #good do
     local e = good[i]
-    if e.kind == top.kind and e.n == top.n then tied[#tied + 1] = e.p else break end
+    if e.kind == top.kind and e.n == top.n and (e.kind ~= "MS" or R.plusOnes(roll, e.p) == R.plusOnes(roll, top.p)) then
+      tied[#tied + 1] = e.p
+    else break end
   end
   if #tied > 1 then return top, tied end
   return top

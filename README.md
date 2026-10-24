@@ -74,6 +74,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 - **A soft reserved item** is only rolled for by the players who reserved it, and who are in the raid. Everyone else sees who reserved it, and their window won't let them roll. Once a reserve has won its item it's used up, so if a second one drops it goes to the next reserver.
 - **A hard reserved item** isn't rolled for at all: the loot master gets a "Give to" button.
 - **A tie** can be rolled again, just between the players who tied.
+- **The +1 rule** (the leader turns it on for a session): every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. The raid is told when a roll starts, roll windows and the loot master's window show who has a +1, `!lr` tells players their +1s, and the leader can give or take +1s on the Reserves tab.
 - **Players without the addon** are told in raid chat what to roll, and their `/roll`s count the same.
 - **Giving it out:** the loot master's window lists every roll, best first, and the ones that don't count (wrong roll, didn't reserve it, too late) underneath. One click gives the item to the winner through master loot. The item, the winner and how they won it go on the Reserves tab's list of loot given out.
 
