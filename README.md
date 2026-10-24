@@ -20,9 +20,17 @@
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/08-session.png" alt="Running the session" width="32%">
 </p>
 
-**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or type `!lr [item]` in raid chat if they don't have the addon; and when loot drops, everyone gets a **roll window** that knows who reserved it, and a **loot list** of everything that's dropped and who has it. Or send it all to **Gargul** with one click.
+**Raid loot, run inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord. Only the person running loot needs the addon: everyone else can type in raid chat, whisper, or `/roll`.
 
 Type **/lr** in game.
+
+| For | What LootRuler does |
+| --- | --- |
+| [Pugs](#for-raid-leaders) | Soft and hard reserves, extra reserves for tanks and healers, `!lr` in raid chat for anyone without the addon, softres.it import, and handing it all to Gargul |
+| [Handing out loot](#rolling-out-loot) | Roll windows that know who reserved what, one item or all of them one after another, ties, +1s, a disenchanter, loot rules, trade help |
+| [Keeping track](#the-raids-loot-list) | The raid's loot list, who has what, exports (spreadsheet, thatsmybis, DFT), and past raids |
+| [GDKP](#gdkp) | Auctions bid on in raid chat, max bids, the pot with cuts for the organiser, tanks and healers, and payouts |
+| [Guilds](#for-guilds) | Boosted rolls with points per raid (alts included), priority lists like a DFT sheet, kept in the game and shared with the guild |
 
 > **Beta.** If something looks off or throws an error, please [say so](https://github.com/kcham01/LootRuler/issues/new?title=Bug:%20&labels=bug), with a screenshot if you can.
 
@@ -57,7 +65,12 @@ Already used softres.it? **Import from softres.it** brings in its "Gargul Export
 | `!lr <item link or name>` | reserves it (several links in one whisper reserve each) |
 | `!lr remove <item>` | takes a reserve back |
 | `!lr clear` | takes all of them back |
-| `!lr` | tells you what you have reserved |
+| `!lr` | tells you what you have reserved (and how many you get, extras included) |
+| `!lr points` | your boosted roll points, and what to `/roll` with them (when the raid uses them) |
+| `!lr prio` / `!lr prio <item>` | your places on the guild's priority lists, or who's on an item's list |
+| `!lr bid 150` | a GDKP bid (or just type `150` in raid chat) |
+| `!lr max 800` | a GDKP max bid: LootRuler bids for you, up to 800g |
+| `!lr pot` | in a GDKP: what you owe the organiser, or what they owe you |
 
 (`!sr` is left alone: Gargul answers that one.)
 
@@ -70,7 +83,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/19-roll-windows.png" alt="Roll windows" width="28%">
 </p>
 
-- **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. Click one to roll it out, **Ctrl+Alt+click** any item (in your bags, the loot window or a chat link), or type `/lr roll` and an item link. (The shortcut can be changed to Alt+click, Gargul's, on the Settings tab.)
+- **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. Click one to roll it out, or **Roll them all out** to put every item up one after another. **Ctrl+Alt+click** any item (in your bags, the loot window or a chat link), or type `/lr roll` and an item link. (The shortcut can be changed to Alt+click, Gargul's, on the Settings tab.)
 - **Everyone with LootRuler** gets a roll window: the dice is main spec (`/roll`), the coin is off spec (`/roll 99`), the x passes. It shows the timer and the highest roll so far, then who won.
 - **A soft reserved item** is only rolled for by the players who reserved it, and who are in the raid. Everyone else sees who reserved it, and their window won't let them roll. Once a reserve has won its item it's used up, so if a second one drops it goes to the next reserver.
 - **A hard reserved item** isn't rolled for at all: the loot master gets a "Give to" button.
@@ -82,7 +95,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 
 ## The raid's loot list
 
-The **Loot** tab lists everything that has dropped this raid, boss by boss, for the whole raid to see, with the game's icons, tooltips and quality colours: who reserved it, whether it's still on the corpse or being rolled for, who won it and how, and who has it now. Your own wins and reserves stand out. It's part of the soft reserves, so it's cleared when the session ends.
+The **Loot** tab lists everything that has dropped this raid, boss by boss, for the whole raid to see, with the game's icons, tooltips and quality colours: who reserved it, whether it's still on the corpse or being rolled for, who won it and how, and who has it now. Your own wins and reserves stand out. When the session ends it moves to **Past raids** (below).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/20-loot-tab.png" alt="The Loot tab" width="40%">
@@ -140,7 +153,7 @@ Guild members get a **Guild** tab: things that last between raids, kept by the o
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/29-priority-list.png" alt="Changing a priority list" width="40%">
 </p>
 
-The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Session tab can turn roll windows off, or show them only for items you can roll on.
+The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Settings tab can turn roll windows off, or show them only for items you can roll on.
 
 ## Install
 
@@ -151,17 +164,28 @@ The loot master (or the raid leader, or an assistant) needs LootRuler; raiders d
 
 Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
 
-`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr history` past raids, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr guild` opens the Guild tab, `/lr settings` opens the Settings tab (every option, each saying what it does), `/lr help` lists the commands, `/lr minimap` hides or shows the minimap button.
+| Command | Does |
+| --- | --- |
+| `/lr` | opens or closes LootRuler |
+| `/lr session`, `/lr reserves`, `/lr loot`, `/lr guild`, `/lr settings` | opens that tab (Settings has every option, each saying what it does) |
+| `/lr roll <item>` | rolls an item out (or auctions it, in a GDKP) |
+| `/lr master` | brings back the loot master's window |
+| `/lr de <name>` | who disenchants what nobody wants |
+| `/lr max 800` | in a GDKP: bid for you up to 800g on the item that's up |
+| `/lr history` | past raids |
+| `/lr test` | a pretend roll window, to drag where you want it |
+| `/lr help` | lists the commands |
+| `/lr minimap` | hides or shows the minimap button |
 
 ## How it's checked
 
 Every build:
 
-- checks the session rules (limits, doubling up, hard reserves, locking, changing the rules part way);
-- runs a **whole raid of clients side by side** in a stand-in for the game: the leader, raiders on the same and other realms, a pug whispering, a guild member outside the group, the leader logging out and back in, people joining late, and messages from people who shouldn't be able to change things;
-- runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot; then the raid's loot list: what each corpse dropped, who has it, items kept to roll out later and handed over in trades, and group loot;
-- runs a **GDKP raid**: everything auctioned one after another, bids clicked, typed in raid chat and whispered, a bid that's too low, a bid at the last moment, an item nobody bids on, a hard reserved item, the cut and the split, gold changing hands in trades, and everyone told their payout;
-- runs a **guild raid**: the guild master, officers, members with and without the addon and someone logging in later; only the ranks the guild master picked can change points (even sending the change themselves doesn't work), raid points reach everyone in the guild, and boosted rolls, clicked and typed, win and spend their points, ties included; priority lists brought in, an item going straight to the first on its list, two who share a place rolling, winners coming off the lists everywhere, and a raid that goes by priority lists only;
+- checks the session rules (limits, extra reserves, doubling up, hard reserves, locking, changing the rules part way), and the rules for rolls, +1s, boosted rolls, priority lists, auctions, max bids and the GDKP pot;
+- runs a **whole raid of clients side by side** in a stand-in for the game: the leader, raiders on the same and other realms, a pug whispering, a guild member outside the group, the leader logging out and back in, people joining late, extra reserves, and messages from people who shouldn't be able to change things;
+- runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot; then the raid's loot list: what each corpse dropped, who has it, items kept to roll out later and handed over in trades, group loot, and the raid kept under past raids once it ends;
+- runs a **GDKP raid**: everything auctioned one after another, bids clicked, typed in raid chat and whispered, a bid that's too low, a bid at the last moment, max bids against each other, an item nobody bids on, a hard reserved item, bids that must start with "bid", the cut, tank and healer cuts and the split, gold changing hands in trades, everyone told their payout, and payouts finished after the raid has ended;
+- runs a **guild raid**: the guild master, officers, members with and without the addon and someone logging in later; only the ranks the guild master picked can change points (even sending the change themselves doesn't work), raid points reach everyone in the guild, and boosted rolls, clicked and typed, win and spend their points, ties included; priority lists brought in, an item going straight to the first on its list, two who share a place rolling, winners coming off the lists everywhere, a raid that goes by priority lists only, alts sharing their main's points, and points and alts brought in from Gargul;
 - loads **Gargul's own soft-reserve importer** and checks it reads LootRuler's reserves exactly (doubled reserves, classes, hard reserves, players from other realms);
 - checks the addon only uses what the TBC Anniversary client has, against Blizzard's own interface code;
 - clicks through every screen, checks nothing errors or leaks frames, and draws every screen.
