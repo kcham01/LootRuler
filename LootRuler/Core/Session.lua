@@ -357,6 +357,19 @@ function S.adjustPlusOne(s, player, delta, now)
   return true
 end
 
+--- sets a player's +1s to a number (brought in from Gargul, say): the change is kept on top of what they won
+function S.setPlusOnes(s, player, n, now)
+  n = tonumber(n)
+  if type(player) ~= "string" or not n or n < 0 or n > 99 or n % 1 ~= 0 then return false end
+  local won = 0
+  for _, w in ipairs(s.won or {}) do if w.k == "MS" and U.samePlayer(w.p, player) then won = won + 1 end end
+  s.po = s.po or {}
+  for name in pairs(s.po) do if U.samePlayer(name, player) then s.po[name] = nil end end
+  if n - won ~= 0 then s.po[U.full(player)] = n - won end
+  bump(s, now)
+  return true
+end
+
 --- everyone's +1s, for a roll (lower-case names; only those with any)
 function S.plusOneTable(s, names)
   local out = {}

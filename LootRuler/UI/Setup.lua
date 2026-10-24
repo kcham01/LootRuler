@@ -142,6 +142,29 @@ local function manage(f, s)
     end } }, "left")
   end)
 
+  if s.plusOne then
+    f:panel("+1s", function(p)
+      p:note("Everyone's +1s are on the Reserves tab (by player). Bring them in from Gargul, or copy them out for it.")
+      p:buttons({
+        { label = "Bring in from Gargul", click = function()
+          UI.countsSheet({ title = "+1s from Gargul", gargul = "plusOnes", max = 99,
+            note = "Paste Gargul's +1 export (\"Name,+1s\" lines; Gargul: /gl po, Export), or read it straight from Gargul if it's loaded. Each player's +1s are set to these.",
+            apply = function(list) UI.toast(("+1s for %s are in."):format(U.plural(LR.importPlusOnes(s, list), "player"))) end })
+        end },
+        { label = "Copy out", click = function()
+          local list = {}
+          local names = {}
+          for _, m in ipairs(LR.roster()) do names[U.full(m.name)] = true end
+          for _, pl in ipairs(S.players(s)) do names[pl.name] = true end
+          for _, w in ipairs(s.won or {}) do names[w.p] = true end
+          for name in pairs(s.po or {}) do names[name] = true end
+          for name in pairs(names) do local n = S.plusOnes(s, name) if n > 0 then list[#list + 1] = { p = name, n = n } end end
+          UI.textSheet("+1s", "For Gargul's +1 importer, or a spreadsheet.", LR.Prio.countsText(list))
+        end },
+      }, "left")
+    end)
+  end
+
   if not s.gdkp and s.prio ~= "only" then
     f:panel("Extra reserves", function(p)
       local list = {}

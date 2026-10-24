@@ -871,6 +871,51 @@ run("tanks and healers in a GDKP", function()
   LR.UI.go("reserve")
 end)
 
+run("+1s and boosted roll points from Gargul", function()
+  -- Gargul's own exports, as the stand-in gives them
+  local before = G.Gargul
+  G.Gargul = { PlusOnes = { getPlusOnes = function() return 0 end, export = function() return "Ann,2\nBob-Faerlina,1\n" end },
+    BoostedRolls = { export = function() return "Ann,40,Annalt\nPug,15,\n" end } }
+  LR.UI.go("guild")
+  clickText("Bring in from Gargul")
+  check("points: read straight from Gargul", visible("Read them from Gargul"))
+  clickText("Read them from Gargul")
+  check("it says what it found", visible("2 players, from Ann to Pug."))
+  shot("from-gargul")
+  clickText("Bring them in")
+  srv:tick(1)
+  check("the points are in, and shared", LR.Book.points(LR.book(), "Ann-Dreamscythe") == 40 and LR.Book.points(LR.book(), "Pug-Dreamscythe") == 15
+    and ann.LR.Book.points(ann.LR.book(), "Ann-Dreamscythe") == 40)
+  clickText("Copy out")
+  local function memoText()
+    local out
+    local function walk(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() then out = c:GetText() end walk(c) end end
+    walk(LR.UI.topSheet())
+    return out or ""
+  end
+  check("and copied out for Gargul", visible("Boosted roll points") and memoText():find("Ann,40", 1, true) and memoText():find("Pug,15", 1, true), memoText())
+  LR.UI.closeAll()
+  local s11 = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  LR.UI.go("session")
+  check("no +1s panel until the +1 rule is on", not visible("Everyone's +1s are on the Reserves tab"))
+  LR.setPlusOne(s11, true)
+  srv:tick(1)
+  clickText("Bring in from Gargul")
+  clickText("Read them from Gargul")
+  clickText("Bring them in")
+  srv:tick(1)
+  check("+1s are in, for raiders' addons too", LR.Session.plusOnes(s11, "Ann-Dreamscythe") == 2 and LR.Session.plusOnes(s11, "Bob-Faerlina") == 1
+    and ann.LR.Session.plusOnes(ann.LR.current(), "Ann-Dreamscythe") == 2)
+  clickText("Copy out")
+  check("and copied back out", memoText():find("Ann,2", 1, true) and memoText():find("Bob,1", 1, true), memoText())
+  LR.UI.closeAll()
+  LR.endSession(s11)
+  srv:tick(1)
+  G.Gargul = before
+  LR.UI.go("reserve")
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)

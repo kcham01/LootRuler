@@ -130,6 +130,20 @@ local function pointsPanel(f, book, editor)
     end
     if editor then
       p:buttons({ { label = "Give a player points", click = function() pointsSheet(nil) end } }, "left")
+      p:buttons({
+        { label = "Bring in from Gargul", click = function()
+          UI.countsSheet({ title = "Boosted roll points from Gargul", gargul = "boosted", max = B.MAX_POINTS,
+            note = "Paste Gargul's boosted roll export (\"Name,Points\" lines; Gargul: /gl br, Export), or read it straight from Gargul if it's loaded. Each player's points are set to these.",
+            apply = function(list)
+              local ok, why = Guild.importPoints(list)
+              if ok then UI.toast(("Points for %s are in, and shared with the guild."):format(U.plural(#list, "player"))) else UI.refused(why) end
+            end })
+        end },
+        { label = "Copy out", disabled = #list == 0, click = function()
+          UI.textSheet("Boosted roll points", "For Gargul's boosted roll importer, or a spreadsheet.",
+            LR.Prio.countsText(U.map(list, function(x) return { p = x[1], n = x[2] } end)))
+        end },
+      }, "left")
     end
   end)
 end
