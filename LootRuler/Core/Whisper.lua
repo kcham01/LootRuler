@@ -175,7 +175,9 @@ function W.handle(text, sender)
     local n = LR.Book.points(book, player)
     if n == 0 then W.reply(player, ("You have no points for boosted rolls yet. Each raid with %s is worth %d."):format(book.guild, book.boost.perRaid)) return end
     local lo, hi = LR.Book.boostRange(n)
-    W.reply(player, ("You have %d points. For a boosted main spec roll, type /roll %d %d. If you win with it, the points are spent."):format(n, lo, hi))
+    local main = LR.Book.mainOf(book, player)
+    local whose = U.samePlayer(main, player) and "You have" or ("You're " .. U.short(main) .. "'s alt: you share their")
+    W.reply(player, ("%s %d points. For a boosted main spec roll, type /roll %d %d. If you win with it, the points are spent."):format(whose, n, lo, hi))
     return
   end
 
