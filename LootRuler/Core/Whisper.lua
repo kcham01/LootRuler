@@ -1,9 +1,10 @@
--- Reserving by whisper, for raiders without the addon. They whisper the raid leader:
---   !lr <item link or name>     reserve an item (several links in one whisper reserve each)
+-- Reserving without the addon. Raiders type in raid (or party) chat, or whisper the raid leader:
+--   !lr <item link or name>     reserve an item (several links in one message reserve each)
 --   !lr remove <item>           take a reserve back
 --   !lr clear                   take all of them back
 --   !lr                         what you have reserved
--- The leader's addon answers by whisper. ("!sr" is left alone: Gargul answers that one.)
+-- The leader's addon answers by whisper, so raid chat isn't flooded with answers. ("!sr" is left alone:
+-- Gargul answers that one.)
 local _, LR = ...
 local U, S = LR.U, LR.Session
 
@@ -21,10 +22,7 @@ function W.session()
   return best
 end
 
-local function chat(msg, channel, target)
-  local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
-  fn(msg, channel, nil, target)
-end
+local function chat(msg, channel, target) LR.say(msg, channel, target) end
 
 --- whispers someone, in lines of up to 255 characters (item links are long), each starting with the tag
 function W.reply(to, text)
@@ -59,9 +57,9 @@ local function pick(s, player, text)
   elseif #close > 1 then
     local some = {}
     for i = 1, math.min(4, #close) do some[i] = LR.itemLink(close[i]) end
-    W.reply(player, ("Which one? %s%s - whisper the item link to be sure."):format(table.concat(some, " "), #close > 4 and " ..." or ""))
+    W.reply(player, ("Which one? %s%s - use the item link to be sure."):format(table.concat(some, " "), #close > 4 and " ..." or ""))
   else
-    W.reply(player, ("I couldn't find \"%s\" in %s. Shift-click the item to whisper its link."):format(U.plain(text), LR.raidOf(s).name))
+    W.reply(player, ("I couldn't find \"%s\" in %s. Shift-click the item to put its link after !lr."):format(U.plain(text), LR.raidOf(s).name))
   end
 end
 
@@ -92,7 +90,7 @@ function W.handle(text, sender)
   local now = U.now()
 
   if lower == "" or lower == "list" or lower == "help" or lower == "?" then
-    W.reply(player, ("Soft reserves for %s: %d each%s. %s Whisper \"!lr <item link>\" to reserve, \"!lr remove <item>\" to take one back."):format(
+    W.reply(player, ("Soft reserves for %s: %d each%s. %s Type \"!lr <item link>\" in raid chat or whisper me to reserve, \"!lr remove <item>\" to take one back."):format(
       LR.raidOf(s).name, s.sr, s.dupes and "" or " (one per item)", status(s, player)))
     return
   end
@@ -139,38 +137,51 @@ end
 local function isCommand(text) return text and text:lower():sub(1, #COMMAND) == COMMAND and (#text == #COMMAND or text:sub(#COMMAND + 1, #COMMAND + 1) == " ") end
 W.isCommand = isCommand
 
+-- raid and party chat count when the option's on (and only from people in the group)
+local GROUP_CHAT = { CHAT_MSG_RAID = true, CHAT_MSG_RAID_LEADER = true, CHAT_MSG_PARTY = true, CHAT_MSG_PARTY_LEADER = true }
+
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("CHAT_MSG_WHISPER")
-frame:SetScript("OnEvent", function(_, _, text, sender)
-  if LR.db and isCommand(text) then
-    local ok, err = pcall(W.handle, text, sender)
-    if not ok then geterrorhandler()(err) end
-  end
+for e in pairs(GROUP_CHAT) do frame:RegisterEvent(e) end
+frame:SetScript("OnEvent", function(_, event, text, sender)
+  if not LR.db or not isCommand(text) or not sender then return end
+  if GROUP_CHAT[event] and not (LR.db.settings.raidCommands and LR.inGroup(U.full(sender))) then return end
+  local ok, err = pcall(W.handle, text, sender)
+  if not ok then geterrorhandler()(err) end
 end)
 
--- hides "!lr" whispers to us and our answers (they'd flood the leader's chat during sign-ups)
+-- hides "!lr" whispers to us and our answers (they'd flood the leader's chat during sign-ups), and "!lr" lines
+-- in raid chat for anyone with soft reserves open
 local function hideIncoming(_, _, text) return LR.db and LR.db.settings.hideWhispers and W.session() ~= nil and isCommand(text) end
+local function hideGroup(_, _, text) return LR.db and LR.db.settings.hideWhispers and LR.current() ~= nil and isCommand(text) end
 local function hideOutgoing(_, _, text) return LR.db and LR.db.settings.hideWhispers and text and text:sub(1, #LR.TAG) == LR.TAG end
 local addFilter = (ChatFrameUtil and ChatFrameUtil.AddMessageEventFilter) or ChatFrame_AddMessageEventFilter
 if addFilter then
   addFilter("CHAT_MSG_WHISPER", hideIncoming)
   addFilter("CHAT_MSG_WHISPER_INFORM", hideOutgoing)
+  for e in pairs(GROUP_CHAT) do addFilter(e, hideGroup) end
 end
-W.hideIncoming, W.hideOutgoing = hideIncoming, hideOutgoing
+W.hideIncoming, W.hideOutgoing, W.hideGroup = hideIncoming, hideOutgoing, hideGroup
 
 --- the short how-to for raiders without the addon, posted to the group
-W.HOW_TO = "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon."
+function W.howTo()
+  if LR.db and LR.db.settings.raidCommands then
+    return "Type !lr [linked item] in raid chat to SR if you do not have the LootRuler addon."
+  end
+  return "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon."
+end
 function W.postHowTo()
   local channel = LR.groupChannel()
   if not channel then return false end
-  chat(W.HOW_TO, channel)
+  chat(W.howTo(), channel)
   return true
 end
 
 --- the line the leader posts to the raid
 function W.announce(s)
-  local text = ("%s Soft reserves are open for %s: %s each%s. Reserve in the LootRuler addon, or whisper me \"!lr <item link>\"."):format(
-    LR.TAG, LR.raidOf(s).name, U.plural(s.sr, "reserve"), s.dupes and "" or ", one per item")
+  local text = ("%s Soft reserves are open for %s: %s each%s. Reserve in the LootRuler addon, or %s."):format(
+    LR.TAG, LR.raidOf(s).name, U.plural(s.sr, "reserve"), s.dupes and "" or ", one per item",
+    LR.db.settings.raidCommands and "type \"!lr <item link>\" in raid chat" or "whisper me \"!lr <item link>\"")
   local hr = U.keys(s.hr)
   if #hr > 0 then
     local links = U.map(hr, function(id) return LR.itemLink(id) end)

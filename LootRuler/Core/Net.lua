@@ -51,11 +51,12 @@ function LR.print(msg) print("|cffffd100LootRuler|r: " .. msg) end
 ---------------------------------------------------------------------- saved state
 -- every option, and what it is until changed (the Settings tab, UI/Settings.lua)
 LR.DEFAULTS = {
-  hideWhispers = true,     -- "!lr" whispers and the answers don't show in the leader's chat
+  hideWhispers = true,     -- "!lr" messages (whispers and raid chat) and the answers don't show in my chat
   rollWindow = true,       -- roll windows pop up
   rollOnlyMine = false,    -- ...only for items I may roll on
   tradeHelp = true,        -- won items go into trades with their winners
   rollSeconds = 20,        -- how long everyone has to roll
+  raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
 }
 function LR.loadDB()
@@ -170,6 +171,18 @@ local function send(msg, channel, target)
   Net:SendCommMessage(LR.PREFIX, encode(msg), channel, target, "NORMAL")
 end
 Net.send = send
+
+--- says something in chat (raid, party, a whisper...). It goes through ChatThrottleLib, which spaces lines
+--- out when there are many (answering a whole raid's "!lr"s at once would otherwise get you muted for spam).
+function LR.say(text, channel, target)
+  if not channel then return end
+  if ChatThrottleLib and ChatThrottleLib.SendChatMessage then
+    ChatThrottleLib:SendChatMessage("NORMAL", LR.PREFIX, text, channel, nil, target)
+  else
+    local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+    fn(text, channel, nil, target)
+  end
+end
 
 --- where the leader's messages go: the group (if any) and the guild (when shared)
 local function publishTo(s)

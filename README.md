@@ -20,7 +20,7 @@
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/08-session.png" alt="Running the session" width="32%">
 </p>
 
-**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or whisper the leader if they don't have the addon; and when loot drops, everyone gets a **roll window** that knows who reserved it, and a **loot list** of everything that's dropped and who has it. Or send it all to **Gargul** with one click.
+**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or type `!lr [item]` in raid chat if they don't have the addon; and when loot drops, everyone gets a **roll window** that knows who reserved it, and a **loot list** of everything that's dropped and who has it. Or send it all to **Gargul** with one click.
 
 Type **/lr** in game.
 
@@ -49,9 +49,9 @@ Already used softres.it? **Import from softres.it** brings in its "Gargul Export
 ## For raiders
 
 - **With the addon:** a message tells you when your leader opens reserves. Type **/lr**, click an item to reserve it, right-click to take it back. The list only shows what your class would wear unless you switch "For my class" off. If the leader is offline, your picks wait and go to them when they're back.
-- **Without the addon:** whisper the leader.
+- **Without the addon:** type in raid chat, or whisper the leader. The answer comes by whisper.
 
-| Whisper | Does |
+| Type (raid chat or whisper) | Does |
 | --- | --- |
 | `!lr <item link or name>` | reserves it (several links in one whisper reserve each) |
 | `!lr remove <item>` | takes a reserve back |
