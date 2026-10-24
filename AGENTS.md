@@ -139,7 +139,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 - [x] `!lr` in raid chat as well as by whisper (quick onboarding for a whole pug)
 - [x] Plus ones: +1 for each win; players with fewer roll first (a session option; counted from the awards)
 - [x] Disenchanter: a "Disenchant" choice when nobody wants an item (awards are kind "OS" with `de = true`)
-- [ ] Export: who won what, to copy out
+- [x] Export: who won what, to copy out (CSV, thatsmybis, DFT; `Core/Export.lua`), and posted in raid chat
 - [ ] Trade announcements: a chat line when an item is traded over
 
 **Less clicking**

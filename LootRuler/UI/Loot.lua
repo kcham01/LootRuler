@@ -105,6 +105,27 @@ local function dropRow(f, s, d, runner, leader)
   f:gap(2)
 end
 
+--- who won what, to copy out (a sheet with a choice of formats)
+local exportFormat = "csv"
+function UI.exportSheet(s)
+  UI.openSheet("Export who won what", function(f, h)
+    local chips = {}
+    for _, x in ipairs(LR.Export.FORMATS) do
+      chips[#chips + 1] = { label = x[2], on = exportFormat == x[1], click = function() exportFormat = x[1] h.redraw() end }
+    end
+    f:chips(chips)
+    f:note(({ csv = "For a spreadsheet: paste into Google Sheets or Excel.", tmb = "For thatsmybis.com's loot import.",
+      dftus = "For the DFT sheet's import (month/day dates). Disenchanted items are left out.",
+      dfteu = "For the DFT sheet's import (day/month dates). Disenchanted items are left out." })[exportFormat])
+    local text = LR.Export.text(s, exportFormat)
+    local m = K.get(f.owner, "memo", f.parent)
+    f:place(m, 200, 0)
+    K.setMemo(m, f.width, 200, text)
+    f:gap(4)
+    f:note("It's all selected: press Ctrl+C to copy it.")
+  end)
+end
+
 function UI.lootView(f, s)
   if not s then
     f:panel("The raid's loot", function(p)
@@ -127,6 +148,15 @@ function UI.lootView(f, s)
     end)
   else
     f:note(("%s dropped, %d given out, %d still to roll for."):format(U.plural(#drops, "item"), given, toRoll), toRoll > 0 and K.GOLD or K.GREEN)
+  end
+  if s.won and #s.won > 0 then
+    f:buttons({
+      { label = "Export", click = function() UI.exportSheet(s) end },
+      (runner or leader) and { label = "Post in raid chat", disabled = LR.groupChannel() == nil, click = function()
+        for _, line in ipairs(LR.Export.chat(s)) do LR.say(line, LR.groupChannel()) end
+        UI.toast("Posted who won what.")
+      end } or nil,
+    }, "left")
   end
 
   -- what the loot master still has to hand over
