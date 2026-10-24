@@ -12,6 +12,7 @@
 --   Core/Book.lua     the guild book: boosted roll points and priority lists (no game calls)
 --   Core/Guild.lua    sharing the guild book with the guild; who may change it
 --   Core/Prio.lua     priority lists in and out (Gargul's CSV, DFT, thatsmybis)
+--   Core/Gdkp.lua     GDKP: auctions' pot, cuts and payouts (no game calls); Core/Pot.lua does it in the game
 --   UI/*              the window; UI/RollFrame.lua the roll windows, UI/Master.lua the loot master's
 local ADDON, LR = ...
 LR.NAME = ADDON

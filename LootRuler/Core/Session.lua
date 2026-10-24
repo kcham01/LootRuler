@@ -22,6 +22,7 @@
 --   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
 --   prio     the guild's priority lists decide loot: "both" (priority lists first, then reserves) or "only"
 --            (no reserves); nil: reserves only
+--   gdkp     items are auctioned for gold (Core/Gdkp.lua); gk: its settings, who's in the pot, what's been paid
 --   boost    boosted rolls are on: guild members roll with their guild points added (Core/Book.lua)
 --   po       +1 changes the leader made by hand: "Name-Realm" -> number (added to the counted ones)
 --   drops    every item that dropped while the session was open, in order (Core/Drops.lua):
@@ -47,6 +48,7 @@ S.WHY = {
   NOT_RESERVED = "You haven't reserved that item.",
   BAD_COUNT = "That's not a number of reserves this addon allows.",
   PRIO_ONLY = "This raid goes by the guild's priority lists, not reserves.",
+  GDKP = "This raid auctions its loot for gold (GDKP): there are no reserves.",
 }
 
 --- a new session. raidKey: a built-in raid, or LR.CUSTOM with name (a raid that isn't in the lists).
@@ -66,6 +68,7 @@ local function bump(s, now)
   s.rev = s.rev + 1
   s.updated = now or s.updated
 end
+S.bump = bump
 
 --- whether a list of item ids is allowed for one player; false, reason, item id when not. lenient: leave
 --- which items are allowed to the leader's addon (a raider's addon checking before it asks)
@@ -91,6 +94,7 @@ end
 function S.set(s, player, class, items, byLeader, now)
   if s.locked and not byLeader then return false, "LOCKED" end
   if s.prio == "only" and #items > 0 and not byLeader then return false, "PRIO_ONLY" end
+  if s.gdkp and #items > 0 and not byLeader then return false, "GDKP" end
   local ok, why, id = S.check(s, items)
   if not ok then return false, why, id end
   local cur = s.res[player]
@@ -111,6 +115,7 @@ function S.add(s, player, class, id, byLeader, now)
   local items = U.copy(S.reservesOf(s, player))
   if s.locked and not byLeader then return false, "LOCKED" end
   if s.prio == "only" and not byLeader then return false, "PRIO_ONLY" end
+  if s.gdkp and not byLeader then return false, "GDKP" end
   if not LR.allowedItem(s, id) then return false, "NOT_IN_RAID", id end
   if s.hr[id] then return false, "HARD_RESERVED", id end
   if #items >= s.sr then return false, "TOO_MANY", id end
@@ -218,7 +223,7 @@ function S.players(s)
 end
 
 ---------------------------------------------------------------------- loot given out
-S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true }
+S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true, BID = true }
 
 --- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
 --- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
@@ -417,6 +422,8 @@ function S.valid(t)
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
+  if t.gdkp ~= nil and type(t.gdkp) ~= "boolean" then return false end
+  if LR.Gdkp and not LR.Gdkp.valid(t.gk) then return false end
   -- (a way of deciding loot this version doesn't know is kept, and treated as reserves)
   if t.prio ~= nil and (type(t.prio) ~= "string" or #t.prio > 12) then return false end
   if t.po ~= nil then

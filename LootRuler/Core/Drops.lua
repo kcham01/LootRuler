@@ -225,6 +225,7 @@ function Drops.tradeShow()
   local name, realm = UnitName("NPC")
   trade.partner = name and (realm and realm ~= "" and (name .. "-" .. realm) or U.full(name)) or nil
   trade.queue, trade.offered, trade.items = {}, {}, {}
+  if trade.partner and LR.Pot then LR.Pot.tradeNote(trade.partner) end      -- GDKP: who owes whom
   if not trade.partner or not LR.db.settings.tradeHelp then return end
   for i, x in ipairs(Drops.toDeliver(trade.partner)) do
     if i > 6 then break end                                -- the trade window takes six items
@@ -283,9 +284,14 @@ function Drops.tradeDone()
       for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, LR.groupChannel()) end
     end
   end
+  local gaveMoney, gotMoney = trade.gaveMoney or 0, trade.gotMoney or 0
   trade.gave, trade.got, trade.gaveMoney, trade.gotMoney = {}, {}, 0, 0
   local s = Rolls.session()
   if not s or not partner then return end
+  -- GDKP: gold that changed hands counts towards what they owe, or what they're owed (Core/Gdkp.lua)
+  if s.gdkp and LR.isLeader(s) and gotMoney ~= gaveMoney and LR.Gdkp.paid(s, partner, (gotMoney - gaveMoney) / 10000, U.now()) then
+    LR.leaderChanged(s)
+  end
   local list, used = {}, {}
   for _, id in ipairs(trade.items or {}) do
     local pick

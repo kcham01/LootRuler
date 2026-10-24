@@ -50,6 +50,7 @@ local function noRoll(roll) return roll.mode == "HR" or (roll.mode == "PR" and #
 local function selectedPlayer(roll)
   if roll.pick then return roll.pick end
   if roll.mode == "PR" and #roll.who == 1 then return roll.who[1] end
+  if roll.mode == "BID" then local top = R.topBid(roll) return top and top.p end
   if roll.mode == "HR" then
     local f = roll.f or ""
     for _, m in ipairs(LR.roster()) do
@@ -158,6 +159,8 @@ local function modeLine(roll)
     return "|cffffd100Soft reserved:|r " .. R.names(roll.who, 6) .. (#roll.away > 0 and ("; " .. R.names(roll.away, 2) .. " isn't here") or "")
   elseif roll.mode == "TIE" then
     return "|cffffd100Tie:|r " .. R.names(roll.who, 6) .. " roll again"
+  elseif roll.mode == "BID" then
+    return ("|cffffd100Auction:|r bids from %s, each %s more"):format(LR.Gdkp.gold(roll.min), LR.Gdkp.gold(roll.inc))
   elseif roll.mode == "PR" then
     local place = roll.n and LR.Prio.place(roll.n) or "first"
     if #roll.who == 1 then return ("|cff1eff00Priority list:|r %s is %s"):format(U.short(roll.who[1]), place) end
@@ -173,13 +176,14 @@ local function rowFor(f, roll, e, rank, pick)
   b.rank:SetText(rank and tostring(rank) or "")
   b.name:SetText(U.classText(U.short(e.p), class))
   b.name:SetWidth(f.width - 130)
+  local num = roll.mode == "BID" and LR.Gdkp.gold(e.n) or tostring(e.n)
   if e.kind then
     b.kind:SetText(R.label(roll, e))
-    b.num:SetText(tostring(e.n))
+    b.num:SetText(num)
   else
     b.kind:SetText(R.WHY[e.why] or e.why or "")
     b.kind:SetTextColor(K.rgb(K.GREY))
-    b.num:SetText(tostring(e.n))
+    b.num:SetText(num)
     b.num:SetTextColor(K.rgb(K.GREY))
     b.name:SetText("|cff9d9d9d" .. U.short(e.p) .. "|r")
   end
@@ -218,7 +222,8 @@ function UI.masterDraw()
   local pick = selectedPlayer(roll)
   if not noRoll(roll) then
     if #good == 0 and #bad == 0 then
-      f:note(roll.state == "open" and "No rolls yet." or "Nobody rolled.")
+      if roll.mode == "BID" then f:note(roll.state == "open" and "No bids yet." or "Nobody bid.")
+      else f:note(roll.state == "open" and "No rolls yet." or "Nobody rolled.") end
     end
     for i, e in ipairs(good) do rowFor(f, roll, e, i, pick) end
     for _, e in ipairs(bad) do rowFor(f, roll, e, nil, pick) end
@@ -239,7 +244,9 @@ function UI.masterDraw()
       { label = "Call off", click = function() Rolls.cancel() end },
     }, "left")
   elseif roll.state == "awarded" then
-    f:text("Given to " .. U.classText(U.short(roll.winner), LR.classOf(roll.winner)) .. (roll.de and ", to disenchant." or "."), { font = "GameFontNormal" })
+    local sold = roll.mode == "BID" and not roll.de and R.topBid(roll)
+    f:text((sold and "Sold to " or "Given to ") .. U.classText(U.short(roll.winner), LR.classOf(roll.winner))
+      .. (roll.de and ", to disenchant." or sold and (" for " .. LR.Gdkp.gold(sold.n) .. ".") or "."), { font = "GameFontNormal" })
     if roll.note then f:note(roll.note, K.GOLD) end
     if Rolls.session() then f:note(LR.isLeader(Rolls.session()) and "It's on the soft reserves' list of loot given out." or "The soft reserves' leader keeps a list of loot given out.") end
     f:buttons({ { label = "Close", click = function() Rolls.dismiss() end } }, "left")
@@ -274,6 +281,8 @@ function UI.masterDraw()
     local more = {}
     if roll.mode == "SR" or roll.mode == "HR" or roll.mode == "TIE" or roll.mode == "PR" then
       more[#more + 1] = { label = noRoll(roll) and "Roll it out anyway" or "Let everyone roll", click = function() Rolls.again("OPEN") end }
+    elseif roll.mode == "BID" then
+      more[#more + 1] = { label = "Roll it out instead", click = function() Rolls.again("OPEN") end }
     else
       more[#more + 1] = { label = "Roll again", click = function() Rolls.again("OPEN") end }
     end
@@ -282,6 +291,11 @@ function UI.masterDraw()
     if pick and not inLoot then
       f:note(LR.isMasterLooter() and "The item isn't in the open loot window: it's marked as theirs, for you to trade it." or "You're not the master looter: it's marked as theirs and announced, for whoever has it to hand it over.")
     end
+  end
+  -- what's waiting its turn
+  if #Rolls.queue > 0 then
+    f:note(("%s in the queue after this one."):format(U.plural(#Rolls.queue, "more item")), K.GOLD)
+    f:buttons({ { label = "Stop the queue", click = function() Rolls.clearQueue() UI.masterDraw() end } }, "left")
   end
   master.body:SetHeight(math.max(1, f.y))
   master:SetHeight(104 + f.y + 14)
@@ -304,6 +318,9 @@ end
 local function lootSub(s, it)
   if not s then return LR.itemKind(it.id) end
   if s.hr[it.id] then return "|cffff5a4aHard reserved|r" .. (s.hr[it.id].f ~= "" and (" for " .. s.hr[it.id].f) or "") end
+  if s.gdkp and s.gk then return "Auction: bids from " .. LR.Gdkp.gold(LR.Gdkp.minFor(s, it.id)) end
+  local pr = s.prio and LR.Guild.prioPlan(it.id)
+  if pr then return ("|cff1eff00Priority %s:|r %s"):format(LR.Prio.place(pr.n), R.names(pr.who, 4)) end
   local plan = R.plan(s, it.id, LR.roster())
   if plan.mode == "SR" then return "|cffffd100SR:|r " .. R.names(plan.who, 4) end
   if #plan.away > 0 then return "Reserved by " .. R.names(plan.away, 2) .. " (not here)" end
@@ -352,7 +369,9 @@ function UI.lootPanel()
   local s = Rolls.session()
   local f = K.flow("lootpanel", panel.body, 0, 0, 268)
   local busy = Rolls.mine() and Rolls.mine().state == "open"
-  f:note(busy and ("Rolling for " .. U.plain(Rolls.mine().link) .. "...") or "Click an item to roll it out.")
+  local auction = s and s.gdkp
+  f:note(busy and ((auction and "Auctioning " or "Rolling for ") .. U.plain(Rolls.mine().link) .. "...")
+    or (auction and "Click an item to auction it, or auction them all one after another." or "Click an item to roll it out, or roll them all out one after another."))
   for _, it in ipairs(Rolls.loot()) do
     local b = K.get(f.owner, "item", f.parent)
     local hr = s and s.hr[it.id]
@@ -370,6 +389,17 @@ function UI.lootPanel()
     f:place(b, 36)
     f:gap(2)
   end
+  -- all of them, one after another (the queue)
+  local loot = Rolls.loot()
+  if #loot > 1 then
+    f:buttons({ { label = auction and "Auction them all" or "Roll them all out", click = function()
+      local list = {}
+      for _, it in ipairs(loot) do list[#list + 1] = { id = it.id, link = it.link, slot = it.slot, drop = LR.Drops.forSlot(it.slot) } end
+      Rolls.enqueue(list)
+      UI.masterDraw()
+    end } }, "left")
+  end
+  if #Rolls.queue > 0 then f:note(("%s waiting their turn."):format(U.plural(#Rolls.queue, "item")), K.GOLD) end
   f:gap(4)
   local chips = { { plain = true, label = "Seconds:" } }
   local cur = LR.db.settings.rollSeconds or Rolls.DEFAULT_SECONDS

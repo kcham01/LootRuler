@@ -22,6 +22,7 @@ Core\Loot.lua
 Core\Session.lua
 Core\Book.lua
 Core\Prio.lua
+Core\Gdkp.lua
 Core\Roll.lua
 Core\Gargul.lua
 Core\Net.lua
@@ -29,6 +30,7 @@ Core\Whisper.lua
 Core\Rolls.lua
 Core\Drops.lua
 Core\Guild.lua
+Core\Pot.lua
 Core\Export.lua
 Core\AutoLoot.lua
 Core\AutoRoll.lua
@@ -41,6 +43,7 @@ UI\Setup.lua
 UI\RollFrame.lua
 UI\Master.lua
 UI\Guild.lua
+UI\Gdkp.lua
 UI\Settings.lua
 UI\Highlight.lua
 UI\Shortcuts.lua

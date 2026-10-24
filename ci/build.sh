@@ -23,6 +23,9 @@ lua5.1 tests/loot.lua | tee build/loot.log
 echo "== a guild raid: the guild book, raid points and boosted rolls"
 lua5.1 tests/guild.lua | tee build/guild.log
 
+echo "== a GDKP raid: auctions, the pot and payouts"
+lua5.1 tests/gdkp.lua | tee build/gdkp.log
+
 echo "== Gargul reading LootRuler's reserves"
 GARGUL=gargul lua5.1 tests/gargul.lua | tee build/gargul.log
 

@@ -9,19 +9,23 @@
 --                              m = mode, w = who may roll (names, or { name, reserves }), tie = kind of a tie roll }
 --   X  loot master -> group    a roll is over: { k, e = "closed" / "cancelled" / "awarded", p = winner, n, kd }
 --   N  raider -> loot master   "I pass" on roll k
+-- An auction (GDKP, mode "BID") works the same way, with bids typed in raid chat instead of /rolls: R also
+-- carries mn (the lowest first bid), inc (the least raise) and tb (the highest bid so far: { p, n }).
 -- The leader of the soft reserves records who won what (so a reserve that has won its item is used up),
 -- whether they rolled it out themselves or the loot master did.
 local _, LR = ...
 local U, S, R = LR.U, LR.Session, LR.Roll
 local Net = LR.Net
 
-local Rolls = { seen = {}, order = {} }
+local Rolls = { seen = {}, order = {}, queue = {} }
 LR.Rolls = Rolls
 
 Rolls.SECONDS = { 10, 15, 20, 30, 45, 60 }
 Rolls.DEFAULT_SECONDS = 20
 local LEEWAY = 1.5        -- rolls this soon after the time is up still count (chat lag)
 local LATE = 10           -- rolls up to this long after closing are listed as late; later ones are ignored
+local SNIPE = 8           -- a bid with less than this left gives everyone this long again
+local NEXT = 3            -- seconds between one item of the queue and the next
 local KEEP = 60           -- a finished roll from someone else is forgotten after this long
 
 local parse
@@ -93,6 +97,9 @@ local function howTo(roll, link, secs)
     return ("%s is soft reserved by %s: only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   elseif roll.mode == "TIE" then
     return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), roll.tie == "OS" and "/roll 99" or "/roll", t)
+  elseif roll.mode == "BID" then
+    return ("Auction: %s. Bids start at %s, each at least %s more than the last. Type your bid in raid chat (just the number). %s."):format(
+      link, LR.Gdkp.gold(roll.min), LR.Gdkp.gold(roll.inc), t)
   elseif roll.mode == "PR" then
     return ("%s: %s share the top priority, so only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   end
@@ -117,6 +124,11 @@ local function howTo(roll, link, secs)
 end
 
 local function resultText(roll, link)
+  if roll.mode == "BID" then
+    local top = R.topBid(roll)
+    if not top then return ("Nobody bid on %s."):format(link) end
+    return ("Sold: %s to %s for %s."):format(link, U.short(top.p), LR.Gdkp.gold(top.n))
+  end
   local top, tied = R.result(roll)
   if not top then return ("Rolls closed for %s: nobody rolled."):format(link) end
   if tied then
@@ -134,7 +146,8 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, pn = roll.mode == "PR" and roll.n or nil }
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, pn = roll.mode == "PR" and roll.n or nil,
+    mn = roll.min, inc = roll.inc, tb = roll.top and { roll.top.p, roll.top.n } or nil }
 end
 
 ---------------------------------------------------------------------- the loot master's roll
@@ -192,9 +205,12 @@ function Rolls.start(id, opts)
     if s then plan.away = R.plan(s, id, LR.roster()).away end
   else
     plan = R.plan(s, id, LR.roster())
+    -- GDKP: it's auctioned (a hard reserve still comes first)
+    if s and s.gdkp and s.gk and plan.mode ~= "HR" then
+      plan = { mode = "BID", min = LR.Gdkp.minFor(s, id), inc = s.gk.inc, who = {}, away = {} }
     -- the guild's priority lists, when the session goes by them: the best priority here gets it (a hard
     -- reserve still comes first); with "only", reserves don't count
-    if s and s.prio and plan.mode ~= "HR" then
+    elseif s and s.prio and plan.mode ~= "HR" then
       local pr = LR.Guild and LR.Guild.prioPlan(id)
       if pr then pr.away = plan.away plan = pr
       elseif s.prio == "only" then plan = R.plan(nil, id, LR.roster()) end
@@ -267,6 +283,22 @@ close = function(roll)
   if roll.state ~= "open" then return end
   roll.state = "closed"
   roll.closedAt = now()
+  if roll.mode == "BID" then
+    -- an auction: sold to the highest bid, or left for the loot master when nobody bid
+    local top = R.topBid(roll)
+    sendGroup({ t = "X", k = roll.k, e = "closed", p = top and top.p, n = top and top.n, kd = top and "BID" })
+    Rolls.ended(roll.k, "closed", top and top.p, top and top.n, top and "BID")
+    ticking = ticking + 1
+    if top then
+      local ok, note = Rolls.award(top.p, "BID", top.n)
+      if ok and note then roll.note = note end
+    else
+      say(resultText(roll, roll.link))
+      if #Rolls.queue > 0 then Rolls.current = nil Rolls.queueNext() end
+    end
+    changed()
+    return
+  end
   local top, tied = R.result(roll)
   sendGroup({ t = "X", k = roll.k, e = "closed", p = top and not tied and top.p or nil, n = top and top.n, kd = top and top.kind })
   Rolls.ended(roll.k, "closed", top and not tied and top.p or nil, top and top.n, top and top.kind)
@@ -294,8 +326,9 @@ function Rolls.cancel()
   ticking = ticking + 1
   sendGroup({ t = "X", k = roll.k, e = "cancelled" })
   Rolls.ended(roll.k, "cancelled")
-  if wasOpen then say(("The roll for %s is called off."):format(roll.link)) end
+  if wasOpen then say(("The %s for %s is called off."):format(roll.mode == "BID" and "auction" or "roll", roll.link)) end
   Rolls.current = nil
+  Rolls.queueNext()
   changed()
   return true
 end
@@ -305,6 +338,7 @@ function Rolls.dismiss()
   local roll = Rolls.current
   if roll and roll.state == "open" then return false end
   Rolls.current = nil
+  Rolls.queueNext()
   changed()
   return true
 end
@@ -421,8 +455,13 @@ function Rolls.award(player, kind, n, de)
     note = ("Open a trade with %s: LootRuler puts %s in it for you."):format(U.short(player), U.plain(roll.link))
   end
   Rolls.ended(roll.k, "awarded", player, n, kind)
-  if de then say(("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player)))
+  if kind == "BID" then say(("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n)))
+  elseif de then say(("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player)))
   else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
+  -- the next item in the queue, a moment later (the loot master's window shows this one until then)
+  if #Rolls.queue > 0 then
+    C_Timer.After(NEXT, function() if Rolls.current == roll then Rolls.current = nil Rolls.queueNext() end end)
+  end
   changed()
   return true, note
 end
@@ -438,7 +477,7 @@ end
 --- a roll from the loot master (or our own): start or update our copy and show its window
 function Rolls.follow(msg, sender)
   if type(msg.k) ~= "string" or type(msg.id) ~= "number" or type(msg.s) ~= "number" or type(msg.left) ~= "number" then return end
-  if msg.m ~= "OPEN" and msg.m ~= "SR" and msg.m ~= "TIE" and msg.m ~= "PR" then return end
+  if msg.m ~= "OPEN" and msg.m ~= "SR" and msg.m ~= "TIE" and msg.m ~= "PR" and msg.m ~= "BID" then return end
   local copy = Rolls.seen[msg.k]
   if not copy then
     local who = {}
@@ -471,8 +510,11 @@ function Rolls.follow(msg, sender)
         if type(name) == "string" and type(c) == "number" and c > 0 and c <= LR.Book.MAX_POINTS then bp[name:lower()] = math.floor(c) end
       end
     end
-    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil),
-      n = msg.m == "PR" and tonumber(msg.pn) or nil })
+    local bid = msg.m == "BID"
+    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp,
+      tie = msg.tie ~= "BID" and R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil),
+      n = msg.m == "PR" and tonumber(msg.pn) or nil,
+      min = bid and math.max(0, math.min(R.MAX_BID, tonumber(msg.mn) or 0)) or nil, inc = bid and math.max(1, math.min(R.MAX_BID, tonumber(msg.inc) or 1)) or nil })
     copy.by = sender
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"
@@ -480,6 +522,11 @@ function Rolls.follow(msg, sender)
     table.insert(Rolls.order, msg.k)
     -- a tie roll is only for the players who tied
     if copy.mode == "TIE" and not R.inList(copy.who, U.me()) then copy.hidden = true end
+  end
+  -- an auction: the highest bid so far (we may have missed some)
+  if copy.mode == "BID" and type(msg.tb) == "table" and type(msg.tb[1]) == "string" and tonumber(msg.tb[2]) then
+    local g = math.floor(tonumber(msg.tb[2]))
+    if not copy.top or copy.top.n < g then R.bid(copy, msg.tb[1], g) end
   end
   copy.secs = math.min(120, math.max(1, msg.s))
   copy.ends = now() + math.min(120, math.max(0, msg.left))
@@ -506,7 +553,7 @@ end
 --- I roll in a roll (the window's buttons)
 function Rolls.roll(copy, kind)
   local r = R.KINDS[kind]
-  if not r or copy.state ~= "open" then return false end
+  if not r or kind == "BID" or copy.state ~= "open" then return false end
   if kind == "BR" then
     local lo, hi = R.boostRange(copy, U.me())
     if not lo then return false end
@@ -537,7 +584,7 @@ function Rolls.onRoll(line)
   if not name then return end
   local t = now()
   local roll = Rolls.current
-  if roll and (roll.state == "open" or (roll.state == "closed" and roll.closedAt and t - roll.closedAt <= LATE)) and roll.mode ~= "HR" then
+  if roll and (roll.state == "open" or (roll.state == "closed" and roll.closedAt and t - roll.closedAt <= LATE)) and roll.mode ~= "HR" and roll.mode ~= "BID" then
     if LR.inGroup(name) or not IsInGroup() then
       R.add(roll, name, n, lo, hi, roll.state ~= "open")
       changed()
@@ -545,10 +592,95 @@ function Rolls.onRoll(line)
   end
   for _, k in ipairs(Rolls.order) do
     local copy = Rolls.seen[k]
-    if copy and copy.state == "open" then R.add(copy, name, n, lo, hi, false) end
+    if copy and copy.state == "open" and copy.mode ~= "BID" then R.add(copy, name, n, lo, hi, false) end
   end
   LR.changed("rolls")
 end
+
+---------------------------------------------------------------------- auctions: bids typed in raid chat
+--- a bid from a player (raid chat, or a whisper): counted in the loot master's auction and everyone's copies.
+--- Returns the loot master's entry (nil when there's no auction of ours).
+function Rolls.onBid(sender, g)
+  local t = now()
+  local roll = Rolls.current
+  local entry
+  if roll and roll.mode == "BID" and (roll.state == "open" or (roll.state == "closed" and roll.closedAt and t - roll.closedAt <= LEEWAY)) then
+    if LR.inGroup(sender) or not IsInGroup() then
+      entry = R.bid(roll, sender, g, roll.state ~= "open")
+      if entry.kind then
+        -- a bid at the last moment: everyone gets a few seconds to answer it
+        if roll.ends - t < SNIPE then
+          roll.ends = t + SNIPE
+          roll.warned = roll.secs < 10 or false
+          sendGroup(wire(roll))
+        end
+      elseif entry.why == "low" and not U.samePlayer(sender, U.me()) then
+        LR.say(("%s The lowest bid now is %s."):format(LR.TAG, LR.Gdkp.gold(R.nextBid(roll))), "WHISPER", sender)
+      end
+      changed()
+    end
+  end
+  for _, k in ipairs(Rolls.order) do
+    local copy = Rolls.seen[k]
+    if copy and copy.state == "open" and copy.mode == "BID" then
+      local e = R.bid(copy, sender, g)
+      if e.kind and copy.ends and copy.ends - t < SNIPE then copy.ends = t + SNIPE end
+    end
+  end
+  LR.changed("rolls")
+  return entry
+end
+
+--- a line in raid or party chat: a bid, when it's just an amount and an auction is open
+function Rolls.onChat(text, sender)
+  if not sender or sender == "" then return end
+  local open = Rolls.current and Rolls.current.mode == "BID"
+  if not open then
+    for _, k in ipairs(Rolls.order) do local c = Rolls.seen[k] if c and c.mode == "BID" and c.state == "open" then open = true break end end
+  end
+  if not open then return end
+  local g = R.parseBid(text)
+  if g then Rolls.onBid(U.full(sender), g) end
+end
+
+--- I bid (the roll window's buttons): an amount in raid chat, like anyone without the addon
+function Rolls.bid(copy, g)
+  if copy.mode ~= "BID" or copy.state ~= "open" then return false end
+  local ch = LR.groupChannel()
+  if not ch then Rolls.onBid(U.me(), g) return true end
+  LR.say(tostring(math.floor(g)), ch)
+  return true
+end
+
+---------------------------------------------------------------------- the queue: one item after another
+--- items to roll out (or auction) one after another: { { id, link, slot, drop } }
+function Rolls.enqueue(items)
+  for _, it in ipairs(items) do
+    local dup = false
+    for _, q in ipairs(Rolls.queue) do if (it.drop and q.drop == it.drop) or (it.slot and q.slot == it.slot and q.id == it.id) then dup = true end end
+    if not dup and #Rolls.queue < 40 then Rolls.queue[#Rolls.queue + 1] = it end
+  end
+  if not Rolls.current then Rolls.queueNext() end
+  changed()
+end
+
+--- starts the next item in the queue, when nothing is being rolled for
+function Rolls.queueNext()
+  while #Rolls.queue > 0 and not Rolls.current do
+    local it = table.remove(Rolls.queue, 1)
+    -- (an item already given out, or gone from the loot window, is skipped)
+    local s = session()
+    local gone = it.drop and s and S.dropWin(s, it.drop)
+    if not gone then
+      local ok, why = Rolls.start(it.id, { link = it.link, slot = it.slot, drop = it.drop })
+      if not ok then LR.print(("couldn't start %s: %s"):format(it.link or LR.itemLink(it.id), why or "?")) end
+      -- a hard reserved item doesn't wait for anyone: it waits for the loot master
+    end
+  end
+  changed()
+end
+
+function Rolls.clearQueue() Rolls.queue = {} changed() end
 
 ---------------------------------------------------------------------- messages
 local function fromLooter(sender) return LR.canRunLoot(sender) end
@@ -564,7 +696,7 @@ Net.handlers.X = function(msg, channel, sender)
   if type(msg.k) ~= "string" then return end
   local copy = Rolls.seen[msg.k]
   local winner = type(msg.p) == "string" and msg.p or nil
-  local kind = R.KINDS[msg.kd] and msg.kd or (msg.kd == "HR" and "HR" or nil)
+  local kind = R.KINDS[msg.kd] and msg.kd or (msg.kd == "HR" and "HR" or nil)      -- (BID: a sale)
   if copy and U.samePlayer(copy.by, sender) and (msg.e == "closed" or msg.e == "cancelled" or msg.e == "awarded") then
     Rolls.ended(msg.k, msg.e, winner, tonumber(msg.n), kind)
   end
@@ -586,12 +718,19 @@ end
 ---------------------------------------------------------------------- the loot window
 local events = CreateFrame("Frame")
 events:RegisterEvent("CHAT_MSG_SYSTEM")
+for _, e in ipairs({ "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_RAID_WARNING", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER" }) do
+  events:RegisterEvent(e)
+end
 events:RegisterEvent("LOOT_OPENED")
 events:RegisterEvent("LOOT_CLOSED")
 events:RegisterEvent("LOOT_SLOT_CLEARED")
 events:SetScript("OnEvent", function(_, event, ...)
   if event == "CHAT_MSG_SYSTEM" then
     local ok, err = pcall(Rolls.onRoll, ...)
+    if not ok then geterrorhandler()(err) end
+  elseif event:find("^CHAT_MSG_RAID") or event:find("^CHAT_MSG_PARTY") then
+    local text, sender = ...
+    local ok, err = pcall(Rolls.onChat, text, sender)
     if not ok then geterrorhandler()(err) end
   elseif event == "LOOT_OPENED" then
     Rolls.lootOpen = true
