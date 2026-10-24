@@ -1,0 +1,21 @@
+ok   the export is base64
+ok   LootRuler reads its own export back
+ok   Gargul's importer accepts the string
+ok   every player who reserved
+ok   hard reserves
+ok   Gargul keeps the softres metadata
+ok   materialized
+ok   the leader's reserves
+ok   doubled reserves count twice
+ok   players from other realms keep their realm
+ok   classes
+ok   who reserved what
+ok   hard reserve for a player
+ok   hard reserve for nobody in particular
+ok   a softres.it export comes into a session
+ok   items from other raids are skipped
+ok   with classes
+ok   and hard reserves
+ok   rubbish is refused with a reason
+passed 19
+errors 0

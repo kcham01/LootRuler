@@ -1,0 +1,56 @@
+== a GDKP raid
+ok   GDKP is on, for raiders too
+ok   everyone in the group is in the split
+ok   nobody can reserve
+ok   players without the addon are told
+ok   the leader changes the raise and an item's start
+== auctioning everything, one after another
+ok   the loot panel says each is auctioned, and from how much
+ok   the first one is up
+ok   the raid is told how to bid
+ok   Ann's window bids the least that counts, or a jump
+ok   clicking types the bid in raid chat
+ok   and it counts
+ok   Ann's window says she's highest, and won't bid against her
+ok   Bob's window has the next amounts
+ok   Pug types a bid without the addon
+ok   too little: it doesn't count, and Bob is told
+ok   chat that isn't a bid is left alone
+ok   Dan bids by whisper
+ok   a bid at the last moment gives everyone a few seconds more
+ok   sold to the highest bid
+ok   given through master loot
+ok   and on the list of loot given out
+ok   raiders' windows say who bought it
+ok   the next one starts on its own
+ok   nobody bids: it isn't sold, and the next one starts
+ok   a hard reserved item isn't auctioned
+ok   then the last one, from its own start
+ok   sold
+ok   the loot master's window says so
+== the pot
+ok   the pot is what was sold
+ok   10% to the organiser, the rest split five ways
+ok   Pug owes, Bob is owed
+ok   !lr pot tells Pug what he owes
+== payouts in trades
+ok   a trade with Pug: the organiser is told what he owes
+ok   the gold counts: Pug is settled
+ok   a trade with Bob: what to give him
+ok   Bob is settled
+ok   marked settled by hand (gold sent by mail)
+== telling everyone
+ok   the pot in raid chat
+ok   one short line
+ok   everyone whispered their payout
+ok   settled players hear so
+== ending
+ok   ended
+== no errors
+ok   every chat line fits
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Dan: no Lua errors
+passed 47
+errors 0

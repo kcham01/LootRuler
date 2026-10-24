@@ -1,0 +1,821 @@
+== LootRuler 1.0.0-beta, build 42
+== the session rules and the loot data
+== any item, and raids that aren't in the lists
+== priority lists instead of reserves
+passed 67
+errors 0
+== the rules of rolling for loot
+== how an item is rolled for
+ok   reserved by people here: only they roll
+ok   reservers who aren't in the group are left out, and named
+ok   reserved only by someone who isn't here: everyone rolls
+ok   nobody reserved it: everyone rolls
+ok   hard reserved: nobody rolls
+ok   no soft reserves open: everyone rolls
+== an open roll
+ok   main spec and off spec
+ok   main spec beats a higher off spec roll
+ok   only the first roll counts
+ok   a roll of the wrong range doesn't count
+ok   the winner
+ok   everyone who may roll isn't known for an open roll
+== a soft reserved item
+ok   a reserver rolls 1-100
+ok   someone who didn't reserve it can't roll
+ok   their roll doesn't count
+ok   waiting for Ann
+ok   nobody left to wait for once Ann passes
+ok   a tie
+ok   a roll after the close is late
+== a tie, rolled again
+ok   only the tied players
+ok   they roll the way they did before, still for the reserve
+ok   an off spec tie is rolled with /roll 99
+== loot given out
+ok   Ann has two reserves on the watch to claim
+ok   winning it uses one up
+ok   when another drops, Bob has nothing left to claim and Ann still has one
+ok   once Ann's both are used up, everyone rolls
+ok   winning on a main spec roll doesn't use up a reserve
+ok   the record keeps who and how
+ok   a session with loot given out is still valid
+ok   a mistake can be taken back
+ok   and something nonsensical isn't recorded
+ok   a session with a broken record isn't trusted
+== the raid's drops
+ok   a drop goes on the list
+ok   the same drop again doesn't
+ok   still on the corpse
+ok   who has it is brought up to date
+ok   the loot master holding it, to roll out
+ok   an award goes to the first drop nobody's won
+ok   won, and the loot master still has it to trade
+ok   traded: given
+ok   an award can name its drop
+ok   someone else looted it, not through LootRuler
+ok   with no loot master (group loot) whoever has it looted it
+ok   a session with drops is valid
+ok   a drop off the list keeps its award, unlinked
+ok   a broken drop isn't trusted
+ok   names from the loot message
+ok   the x2 kind
+== the +1 rule
+ok   a main spec roll with fewer +1s wins over a higher one with more
+ok   off spec rolls still come after main spec
+ok   the +1 shows with the roll
+ok   equal rolls aren't a tie when the +1s differ
+ok   only main spec wins are +1s
+ok   the leader can give one
+ok   or take one off
+ok   never below none
+ok   the table for a roll
+ok   a session with +1s is valid
+== the disenchanter
+ok   the leader picks a disenchanter
+ok   a disenchanted item is an off spec award marked to disenchant (older versions read it as off spec)
+ok   it isn't a +1
+ok   and shows as disenchanted
+ok   nobody
+ok   a broken disenchanter isn't trusted
+== exporting who won what
+ok   a spreadsheet: a heading and a line each
+ok   with the item, player, how, roll and boss
+ok   a name with a comma is quoted
+ok   disenchanted
+ok   thatsmybis: its columns, the name without the realm, and Magtheridon's head as TMB knows it
+ok   DFT: date;[item];player, without disenchanted items
+== the guild book
+ok   a new book: nobody has points, officers edit, boosted rolls off
+ok   setting points gives the change to send
+ok   setting the same points again sends nothing
+ok   points stay between 0 and the most
+ok   a raid gives everyone in it the points for a raid
+ok   a boosted roll's range
+ok   points for each raid are kept sane
+ok   a change has the right shape
+ok   merging takes what's newer
+ok   merging the same again changes nothing
+ok   points taken away spread too
+ok   only the guild master changes who may edit
+ok   an older change of who may edit doesn't count
+ok   boosted rolls switched off spreads
+ok   nonsense isn't a change
+ok   a change can't be endless
+ok   a whole saved book is checked
+== priority lists (in the guild book)
+ok   a list, best first, each player once
+ok   whose turn: the best who are here (ties together)
+ok   nobody on the list here: a free roll
+ok   someone who gets the item comes off its list
+ok   everything a player has priority on
+== priority lists in and out
+ok   Gargul's CSV, in order, with a shared place
+ok   and numbered, with realms
+ok   DFT's export (Free Roll items left out)
+ok   thatsmybis: its priorities, not its wishlists
+ok   only wishlists: those
+ok   thatsmybis compressed
+ok   anything else isn't a list
+ok   an empty paste
+ok   names that can't be names are left out
+ok   bringing lists in replaces them, and clears others when asked
+ok   names get this realm
+ok   out as Gargul's CSV
+ok   which reads back the same
+ok   out for a spreadsheet
+ok   places
+== a priority roll
+ok   only the players who share the top place roll
+ok   anyone else's roll doesn't count
+ok   who still has to roll
+== boosted rolls
+ok   someone with points may roll boosted
+ok   someone without points can't
+ok   a boosted roll counts as boosted, ranked with main spec by its number
+ok   someone else's range doesn't count
+ok   a boosted roll's label
+ok   the highest number wins
+ok   a boosted and a main spec roll can tie
+ok   with the +1 rule, a +1 still rolls after those without, boosted or not
+ok   a boosted win is a main spec win (a +1), marked as boosted
+== an auction (GDKP)
+ok   everyone may bid, nobody rolls
+ok   the first bid is at least the start
+ok   each bid at least the raise more
+ok   raising your own bid: the old one stops counting
+ok   the bids that didn't count are listed why
+ok   the highest bid wins
+ok   a bid after it closed doesn't count
+ok   what counts as a bid in chat
+ok   and what doesn't
+== the pot (GDKP)
+ok   GDKP on: reserves stop counting, nobody can reserve
+ok   its settings
+ok   an item can start higher
+ok   everyone in the group gets a share
+ok   the pot is what was sold
+ok   the cut, then an even split between everyone (Cara bought, so she's in)
+ok   who owes and who's owed
+ok   a bonus comes out of the pot first; someone left out gets no share
+ok   gold handed over counts
+ok   it's all a valid session
+ok   nonsense in it isn't
+ok   gold for people
+ok   GDKP off and on again keeps its settings
+== reading roll messages
+ok   English
+ok   other lines aren't rolls
+ok   a translation with numbered places
+ok   names for chat
+passed 145
+errors 0
+== a whole raid: the leader, raiders with the addon, a pug whispering, a guild member outside the group
+== opening reserves
+ok   the leader has a session
+ok   raiders in the group get it
+ok   and are told in chat
+ok   a raider on another realm gets it too
+ok   guild members outside the group see it
+ok   but don't make it their current one until they're grouped
+== reserving in the addon
+ok   Ann reserves a watch
+ok   the leader has it
+ok   Ann's pick is confirmed
+ok   doubling up is allowed
+ok   a third reserve is refused before it's sent
+ok   Bob sees Ann's reserves
+ok   items from another raid are refused by the leader's addon (it decides, not the raider's)
+ok   and Bob is told why
+ok   Bob, from another realm, reserves
+ok   with his class
+== the leader's own reserves
+ok   the leader reserves like everyone else
+ok   and raiders see it
+== hard reserves
+ok   hard reserving takes Bob's soft reserve away
+ok   Bob's addon agrees
+ok   the leader is told who lost a reserve
+ok   raiders see the hard reserve
+ok   and can't reserve it
+== whispers from players without the addon
+ok   an item from another raid isn't found
+ok   a linked item is reserved
+ok   and the answer says so
+ok   answers start with the tag
+ok   Pug's class comes from the raid
+ok   part of a name finds the item
+ok   an unclear name asks which
+ok   no reserves left: refused
+ok   remove one
+ok   !lr on its own lists your reserves
+ok   hard reserved items can't be whispered for
+ok   !sr is left to Gargul
+ok   every whisper fits in one chat message
+ok   the leader's chat hides !lr whispers
+ok   and the answers
+ok   raiders see whispered reserves
+== +1s in whispers
+ok   with the +1 rule on, !lr says your +1s
+== !lr in raid chat
+ok   typed in raid chat, it works like a whisper
+ok   and the answer comes by whisper, not in raid chat
+ok   raid chat isn't flooded with answers
+ok   reserving in raid chat
+ok   raiders with the addon don't see the !lr lines
+ok   the leader can switch it off
+ok   twelve people reserving at once all get in
+ok   and all get an answer
+== the leader goes offline
+ok   Ann's change waits
+ok   the leader's session survives logging out
+ok   Ann's change arrives when the leader is back
+ok   and is confirmed
+== reserving before the group is made
+ok   a guild member outside the group reserves over the guild channel
+ok   and gets the answer
+ok   with her class
+== changing the rules
+ok   fewer reserves trims everyone
+ok   raiders' addons agree
+== locking
+ok   raiders see the lock
+ok   and can't change
+ok   whispers can't either
+ok   the leader still can
+== the wrong people can't change things
+ok   a session sent by someone who isn't its leader is ignored
+ok   picks only ever count for whoever sent them
+ok   and a class claimed in a message doesn't beat the raid roster
+ok   Bob's reserves weren't touched
+ok   nonsense is ignored
+== no chatter
+ok   group changes don't make raiders resend the same picks over and over
+ok   and Ann's picks are confirmed
+== joining late
+ok   not in the group: nothing yet
+ok   joining the group brings the session
+== the leader's addon decides what can be reserved
+ok   a link to another raid's item is refused by whisper, saying why
+ok   the leader allows any item; raiders see it
+ok   then a linked item from anywhere is reserved
+ok   a raider whose loot list is out of date can still reserve what the leader's allows
+== older and newer versions
+ok   everyone's addon says which version it is
+ok   a player without the addon has none
+ok   a newer version's session is still taken
+ok   and the player is told, once, that there's a newer LootRuler
+ok   only once
+ok   screens show what they don't know without breaking
+ok   a message only newer versions can handle is left alone
+ok   and a kind of message this version doesn't know is ignored
+== ending
+ok   the leader's session is gone
+ok   raiders' copies are gone
+ok   guild members' too
+ok   and they're told
+ok   whispers are left alone once it's over
+== no errors
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Cara: no Lua errors
+ok   Dan: no Lua errors
+== a raid that isn't in the lists
+ok   raiders get it, by name
+ok   any item can be reserved
+ok   by whisper too
+ok   by name, once someone has linked it (found, then refused: one per item)
+passed 96
+errors 0
+== a whole raid rolling out loot: roll windows, reserved items, ties, hard reserves, master loot
+ok   the reserves are in
+== the loot window
+ok   what's worth rolling for is listed (not the grey)
+ok   the loot panel opens beside the loot window
+ok   it says who reserved what
+ok   raiders don't get one
+== an item nobody reserved
+ok   clicking it in the panel rolls it out
+ok   raid chat tells everyone what to roll
+ok   everyone with the addon gets a roll window
+ok   the loot master too
+ok   dice and coin can both be clicked
+ok   the window shows the item
+ok   the loot master's window opens
+ok   the dice /rolls for main spec
+ok   Ann's window says what she rolled
+ok   and she can't roll twice
+ok   a player without the addon rolls in chat and it counts
+ok   Bob's coin rolls off spec
+ok   main spec first, best first
+ok   a roll of the wrong range doesn't count
+ok   raiders see the same highest roll
+ok   the loot master's window lists the rolls
+ok   the roll closes when the time's up
+ok   five seconds' warning was given
+ok   and the result
+ok   raiders' windows say who won
+ok   a roll after it closed is listed as late
+ok   and doesn't change the winner
+ok   Give hands it over through master loot
+ok   and says so
+ok   it's on the list of loot given out
+ok   raiders' copies of the session have it
+ok   their windows say who has it
+ok   and go away after a few seconds
+ok   the item has gone from the panel
+ok   the loot master closes their window
+== a soft reserved item
+ok   only the reservers roll
+ok   chat says who
+ok   Dan's window shows, but he can't roll
+ok   and says why
+ok   Ann's window lets her roll for her reserve
+ok   and says she reserved it
+ok   Dan's roll doesn't count
+ok   Bob passes: the loot master hears it
+ok   and his window goes
+ok   everyone who may roll has rolled or passed: it closes early
+ok   given to Ann for her reserve
+ok   which uses up one of her two
+ok   if another drops, Ann's other reserve and Bob's still count
+== a hard reserved item
+ok   isn't rolled for
+ok   the loot master's window offers it to Ann
+ok   and hands it over
+ok   saying so
+== a tie
+ok   tied rolls are found
+ok   and announced
+ok   raiders see the tie
+ok   there's no winner to give it to yet
+ok   the reroll is just for the tied players
+ok   they get a window for it
+ok   Dan doesn't
+ok   chat says so
+ok   Bob wins the reroll (and it's over as soon as they've both rolled)
+ok   Dan's roll didn't count
+== someone out of range
+ok   isn't on the master loot list: it's marked as theirs to trade
+ok   and still recorded
+== the +1 rule
+ok   main spec wins so far are +1s
+ok   the announcement says +1s roll after
+ok   Ann (no +1) beats Pug's 99 (+1)
+ok   raiders' windows agree
+ok   the loot master sees the +1
+ok   the leader gives Ann a +1; raiders see it
+== the disenchanter
+ok   raiders know who disenchants
+ok   nobody rolled
+ok   the loot master's window offers it to the disenchanter
+ok   it goes to Dan through master loot
+ok   the raid is told
+ok   the list says disenchanted
+ok   no +1 for it
+== raid warnings or plain raid chat
+ok   with raid warnings off, a roll is announced in plain raid chat
+== calling it off
+ok   an item from the bags (not the loot window) can be rolled out
+ok   calling it off closes everyone's window
+ok   and says so
+== who may roll loot out
+ok   a raider can't
+ok   and a roll sent by one is ignored
+ok   the loot window closing takes the panel away
+ok   the new master looter gets the panel
+ok   an assistant running loot rolls things out
+ok   the item goes to Dan
+ok   and the soft reserves' leader records it
+== settings
+ok   'only items I can roll on' still shows Ann a reserved item she can roll on
+ok   and hides one Dan can't
+ok   roll windows can be turned off
+== the raid's loot list
+ok   everything from the first corpse is on it, in order
+ok   not the grey
+ok   with the boss it dropped from
+ok   and who has it now (master loot)
+ok   the awards are tied to the drops
+ok   an assistant running loot writes it down for the leader
+ok   raiders have the same list
+ok   opening a corpse again doesn't list its items twice
+== rolling out at the end of the raid
+ok   a new boss's loot is listed under it
+ok   the loot master keeps both, to roll out later
+ok   the trade clock starts
+ok   raiders see who has them
+ok   rolled out from the list, an hour later
+ok   won by Ann: the loot master still has it to trade
+ok   and is told to trade it
+ok   the list says so
+ok   the loot master has one to hand over
+ok   Ann opens a trade: her item goes in, and only hers
+ok   the trade goes through: Ann has it
+ok   in her bags
+ok   with trade help off, nothing is put in
+ok   it doesn't matter who opens the trade
+ok   Bob has his
+ok   the raid is told what the loot master traded
+ok   an item for gold: both sides are said
+ok   it can be turned off (Ann, an assistant, still says what she got)
+ok   nothing left to hand over
+== group loot
+ok   an epic someone loots goes on the list
+ok   a grey doesn't
+== loot rules (master looter)
+ok   rules do nothing until they're switched on
+ok   the green goes to the disenchanter (the first rule that matches decides)
+ok   the pattern goes to the loot master
+ok   a reserved item is never handed out by a rule
+ok   nor anything no rule matches
+ok   the raid is told
+ok   the disenchanted green is on the list of loot given out
+== auto-roll (each raider's own rules)
+ok   Dan passes on plate he can't use, on his own
+ok   and is told
+ok   Ann's rule passes for her
+ok   Bob's rolls off spec for him (even with his roll windows off)
+ok   shift-clicking the dice rolls and remembers it
+== reserves where you see items
+ok   the game's loot window glows on an item Ann reserved
+ok   not on one she didn't
+ok   so does a need/greed window
+ok   item tooltips say who reserved it
+ok   and who it went to
+ok   which can be turned off
+== shortcut keys
+ok   Ctrl+Alt+click on an item rolls it out
+ok   Alt alone doesn't (that's Gargul's)
+ok   unless it's picked in Settings
+ok   a raider's shortcut does nothing
+== ending the session
+ok   the loot list goes with it, everywhere
+== no errors
+ok   every chat line fits
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Dan: no Lua errors
+passed 148
+errors 0
+== a guild raid: the guild book, raid points and boosted rolls
+== who may change the guild book
+ok   everyone knows their guild
+ok   the guild master and officers may
+ok   a member may not
+ok   and knows who may
+== an officer changes it: everyone in the guild gets the change
+ok   boosted rolls are on for the whole guild
+ok   points spread
+== a member can't change it, even by sending the change themselves
+ok   nobody takes it
+ok   only the guild master says who may edit
+ok   nor someone outside the guild
+ok   nonsense is ignored
+== the raid
+ok   the Session tab offers boosted rolls when the guild uses them
+ok   the session has them on, for raiders too
+ok   who's from the guild in the group (not Zed)
+ok   raid points
+ok   everyone from the guild in the raid gets them
+ok   the guild's other copies too
+ok   the raid is told
+== someone logging in later gets the book
+ok   from an officer, on asking the guild
+== a boosted roll
+ok   everyone's points go with the roll
+ok   the raid is told how to roll boosted
+ok   Ann's roll window has a green dice with her points
+ok   Zed has no points: no green dice
+ok   the green dice rolls 41-140
+ok   and she can't roll again
+ok   Pug's typed boosted roll counts
+ok   Zed's doesn't (it's not his range)
+ok   the highest number wins
+ok   given out
+ok   Ann's points are spent
+ok   everywhere
+ok   it's a main spec win, marked as boosted
+== a tie with boosted rolls
+ok   two boosted rolls of the same number tie
+ok   they roll again as plain main spec
+ok   whoever wins the tie still spends their points
+ok   and it's marked boosted
+== players without the addon ask
+ok   Pug hears his points and what to type
+ok   Ann hears she has none now
+== priority lists
+ok   an officer brings lists in, for the guild
+ok   everyone in the guild has them
+ok   a member can't change them
+ok   the session goes by priority lists, then reserves
+ok   first on the list and here: it's theirs, no roll (over Zed's reserve)
+ok   the raid is told
+ok   the loot master's window says so, with a button
+ok   given, and Ann comes off the list
+ok   everywhere
+ok   two share first place: only they roll
+ok   the raid is told who
+ok   Bob's window lets him roll; Ann's doesn't
+ok   and says why
+ok   Ann's roll doesn't count; it's over once both have rolled
+ok   Bob comes off that list; Pug stays first
+ok   the first on a list who's here (Kay isn't)
+ok   an item with no list goes by reserves
+ok   !lr prio: your places
+ok   !lr prio [item]: its list
+ok   priority lists only: nobody can reserve
+ok   players without the addon are told
+ok   reserves don't count: everyone rolls
+== the guild master picks who may edit
+ok   only the guild master can
+ok   everyone hears it
+ok   officers can't any more
+ok   and can again
+== ending the session
+ok   ended
+== saved data is checked
+ok   a broken book is thrown away (and the guild's comes back)
+ok   so is anything else that isn't a book
+== no errors
+ok   every chat line fits
+ok   Mira: no Lua errors
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Kay: no Lua errors
+ok   Zed: no Lua errors
+ok   Neo: no Lua errors
+ok   Old: no Lua errors
+passed 75
+errors 0
+== a GDKP raid: auctions, the pot and payouts
+== a GDKP raid
+ok   GDKP is on, for raiders too
+ok   everyone in the group is in the split
+ok   nobody can reserve
+ok   players without the addon are told
+ok   the leader changes the raise and an item's start
+== auctioning everything, one after another
+ok   the loot panel says each is auctioned, and from how much
+ok   the first one is up
+ok   the raid is told how to bid
+ok   Ann's window bids the least that counts, or a jump
+ok   clicking types the bid in raid chat
+ok   and it counts
+ok   Ann's window says she's highest, and won't bid against her
+ok   Bob's window has the next amounts
+ok   Pug types a bid without the addon
+ok   too little: it doesn't count, and Bob is told
+ok   chat that isn't a bid is left alone
+ok   Dan bids by whisper
+ok   a bid at the last moment gives everyone a few seconds more
+ok   sold to the highest bid
+ok   given through master loot
+ok   and on the list of loot given out
+ok   raiders' windows say who bought it
+ok   the next one starts on its own
+ok   nobody bids: it isn't sold, and the next one starts
+ok   a hard reserved item isn't auctioned
+ok   then the last one, from its own start
+ok   sold
+ok   the loot master's window says so
+== the pot
+ok   the pot is what was sold
+ok   10% to the organiser, the rest split five ways
+ok   Pug owes, Bob is owed
+ok   !lr pot tells Pug what he owes
+== payouts in trades
+ok   a trade with Pug: the organiser is told what he owes
+ok   the gold counts: Pug is settled
+ok   a trade with Bob: what to give him
+ok   Bob is settled
+ok   marked settled by hand (gold sent by mail)
+== telling everyone
+ok   the pot in raid chat
+ok   one short line
+ok   everyone whispered their payout
+ok   settled players hear so
+== ending
+ok   ended
+== no errors
+ok   every chat line fits
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Dan: no Lua errors
+passed 47
+errors 0
+== Gargul reading LootRuler's reserves
+ok   the export is base64
+ok   LootRuler reads its own export back
+ok   Gargul's importer accepts the string
+ok   every player who reserved
+ok   hard reserves
+ok   Gargul keeps the softres metadata
+ok   materialized
+ok   the leader's reserves
+ok   doubled reserves count twice
+ok   players from other realms keep their realm
+ok   classes
+ok   who reserved what
+ok   hard reserve for a player
+ok   hard reserve for nobody in particular
+ok   a softres.it export comes into a session
+ok   items from other raids are skipped
+ok   with classes
+ok   and hard reserves
+ok   rubbish is refused with a reason
+passed 19
+errors 0
+== only what the TBC Anniversary client has
+checked 11 widget types, 102 globals and 13 C_ functions; problems 0
+== the window, clicked through
+== opening the window
+ok   /lr opens the window
+ok   nothing open yet
+ok   the minimap button
+ok   loot to browse without a session
+== browsing the loot
+ok   an original raid
+ok   for my class: a paladin sees plate, not cloth
+ok   searching every raid wants some letters
+ok   finds a sword in Blackwing Lair
+== opening reserves
+ok   the setup form
+ok   a Karazhan session with 2 each
+ok   the session panel
+ok   raiders have it
+== raiders reserve
+ok   everyone's reserves reach the leader
+== the leader reserves
+ok   the loot list
+ok   Usable by me hides what a paladin can't use
+ok   click to reserve
+ok   it's at the top
+ok   the count
+ok   right-click takes it back
+ok   a second reserve
+ok   who else reserved it shows
+ok   a third is refused, with a message
+== searching
+ok   all items with the filter off
+ok   search keeps every key
+ok   and filters
+== hard reserves
+ok   the item picker
+ok   the hard reserve panel
+ok   hard reserved, for Ann
+ok   soft reserves on it were taken away
+ok   it's listed
+ok   raiders see it
+== the reserves list
+ok   leader tools
+ok   by item
+ok   by player
+ok   who hasn't reserved
+ok   and who doesn't have LootRuler (they whisper)
+ok   the leader takes a reserve away
+ok   Bob's addon agrees
+ok   the leader adds one for him
+== Gargul
+ok   the Gargul text to copy
+ok   Gargul gets the reserves
+ok   all of them
+ok   the list says Gargul is up to date
+ok   locking sends them again
+ok   raiders see the lock
+== softres.it import
+ok   reserves from softres.it are added
+== a raider's window
+ok   Ann's window shows the session
+ok   Ann reserves from her window
+ok   the hard reserve shows
+ok   hard reserved: refused
+ok   with the leader away the picks wait
+ok   they're sent when the leader is back
+ok   raiders see the session's rules
+== rolling out loot
+ok   the loot panel beside the loot window
+ok   with who reserved what
+ok   clicking it rolls it out, for the reservers
+ok   Ann's roll window
+ok   the loot master sees the rolls
+ok   everyone who reserved it rolled: it closes
+ok   Ann is picked to get it
+ok   given to Ann
+ok   Bob sees the finished roll and the new one
+ok   the panel goes with the loot window
+ok   a reserve that's won its item shows it on the Reserves tab
+ok   the Loot tab lists what dropped, boss by boss
+ok   with who won what
+ok   and what's still on the corpse, and who reserved it
+ok   the loot master can roll things out from it
+ok   export who won what
+ok   in thatsmybis' format
+ok   and post it in raid chat for everyone
+ok   raiders see the same list
+ok   but can't roll from it
+ok   the leader can take a mistake off the list (Ann still has the item)
+ok   raiders' copies agree
+== settings
+ok   every option is on the Settings tab
+ok   each says what it does
+ok   an option switches
+ok   seconds to roll
+ok   the minimap button can be hidden
+ok   and shown again
+ok   an auto-roll rule: shift-click the item in
+ok   the rule is listed
+ok   a loot rule: which items, then who gets them
+ok   it says what the rule will do
+ok   the rule is listed
+ok   the pretend roll window shows
+ok   /lr help lists the commands
+ok   /lr settings opens the tab
+== the +1 rule
+ok   the leader turns the +1 rule on
+ok   +1 buttons for each player
+ok   giving someone a +1 shows next to their name
+== the disenchanter
+ok   the Session tab has a disenchanter panel
+ok   pick from the group
+ok   Ann disenchants; raiders know
+ok   and nobody again
+== telling the raid how to SR without the addon
+ok   the raid gets the how-to
+ok   and the leader is told it went
+== ending
+ok   asks first
+ok   the session is gone everywhere
+ok   back to the setup form
+== Escape and panels
+ok   a panel is open
+ok   Escape closes the panel, not the window
+== a raid that isn't in the lists
+ok   it asks for the raid's name
+ok   a session for it, where any item can be reserved
+ok   raiders have it, by name
+ok   the Reserve tab says how
+ok   a shift-clicked item goes in the box and shows up
+ok   click it to reserve it
+== the guild and boosted rolls
+ok   guild members get a Guild tab
+ok   players outside a guild don't
+ok   an officer turns boosted rolls on, for the whole guild
+ok   a sheet to give someone points
+ok   the points are saved and shared
+ok   the list shows them, with the roll to type
+ok   the Session tab offers boosted rolls
+ok   on for the session
+ok   it asks first, and says who gets what
+ok   raid points given
+ok   a member sees their points, and can't change anything
+ok   Ann's roll window has a green dice for her points
+ok   and says so
+ok   ending says the points were given, so it just asks
+ok   without points given, it offers to give them
+ok   points given and the session ended
+ok   /lr guild opens the tab
+== priority lists
+ok   the Guild tab has priority lists
+ok   search any raid's loot for the item
+ok   its list opens
+ok   players go on the list, and it's shared
+ok   each with their place
+ok   it reads what's pasted, and says what it found
+ok   the lists are in
+ok   the Guild tab lists them
+ok   the Session tab asks what loot goes by
+ok   priority lists, then reserves
+ok   Ann shares first place with Lead: her window lets her roll
+ok   switching to priority lists only asks first when there are reserves
+ok   raiders see their places instead of reserves
+== GDKP
+ok   the Session tab offers GDKP auctions
+ok   on: the GDKP panel, for raiders too
+ok   the leader picks where bids start
+ok   an auction's roll window: the bids to click, and the highest
+ok   both sold
+ok   the pot on the Session tab
+ok   the payouts sheet: the pot, the split, and who owes what
+ok   a player's options
+ok   a raider sees the pot and their own payout
+ok   and no reserves
+== no leaks
+ok   redrawing reuses frames
+ok   nothing drawn level with a backdrop
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+passed 154
+errors 0
+drew 34 screens into /home/runner/work/LootRuler/LootRuler/build/shots
+== the zip
+total 468
+drwxr-xr-x  3 runner runner   4096 Oct 24 11:36 .
+drwxr-xr-x 14 runner runner   4096 Oct 24 11:36 ..
+-rw-r--r--  1 runner runner 232214 Oct 24 11:36 LootRuler-1.0.0-beta.zip
+-rw-r--r--  1 runner runner 232214 Oct 24 11:36 LootRuler.zip
+drwxr-xr-x  3 runner runner   4096 Oct 24 11:36 pkg

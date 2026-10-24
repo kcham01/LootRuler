@@ -1,0 +1,171 @@
+ok   the reserves are in
+== the loot window
+ok   what's worth rolling for is listed (not the grey)
+ok   the loot panel opens beside the loot window
+ok   it says who reserved what
+ok   raiders don't get one
+== an item nobody reserved
+ok   clicking it in the panel rolls it out
+ok   raid chat tells everyone what to roll
+ok   everyone with the addon gets a roll window
+ok   the loot master too
+ok   dice and coin can both be clicked
+ok   the window shows the item
+ok   the loot master's window opens
+ok   the dice /rolls for main spec
+ok   Ann's window says what she rolled
+ok   and she can't roll twice
+ok   a player without the addon rolls in chat and it counts
+ok   Bob's coin rolls off spec
+ok   main spec first, best first
+ok   a roll of the wrong range doesn't count
+ok   raiders see the same highest roll
+ok   the loot master's window lists the rolls
+ok   the roll closes when the time's up
+ok   five seconds' warning was given
+ok   and the result
+ok   raiders' windows say who won
+ok   a roll after it closed is listed as late
+ok   and doesn't change the winner
+ok   Give hands it over through master loot
+ok   and says so
+ok   it's on the list of loot given out
+ok   raiders' copies of the session have it
+ok   their windows say who has it
+ok   and go away after a few seconds
+ok   the item has gone from the panel
+ok   the loot master closes their window
+== a soft reserved item
+ok   only the reservers roll
+ok   chat says who
+ok   Dan's window shows, but he can't roll
+ok   and says why
+ok   Ann's window lets her roll for her reserve
+ok   and says she reserved it
+ok   Dan's roll doesn't count
+ok   Bob passes: the loot master hears it
+ok   and his window goes
+ok   everyone who may roll has rolled or passed: it closes early
+ok   given to Ann for her reserve
+ok   which uses up one of her two
+ok   if another drops, Ann's other reserve and Bob's still count
+== a hard reserved item
+ok   isn't rolled for
+ok   the loot master's window offers it to Ann
+ok   and hands it over
+ok   saying so
+== a tie
+ok   tied rolls are found
+ok   and announced
+ok   raiders see the tie
+ok   there's no winner to give it to yet
+ok   the reroll is just for the tied players
+ok   they get a window for it
+ok   Dan doesn't
+ok   chat says so
+ok   Bob wins the reroll (and it's over as soon as they've both rolled)
+ok   Dan's roll didn't count
+== someone out of range
+ok   isn't on the master loot list: it's marked as theirs to trade
+ok   and still recorded
+== the +1 rule
+ok   main spec wins so far are +1s
+ok   the announcement says +1s roll after
+ok   Ann (no +1) beats Pug's 99 (+1)
+ok   raiders' windows agree
+ok   the loot master sees the +1
+ok   the leader gives Ann a +1; raiders see it
+== the disenchanter
+ok   raiders know who disenchants
+ok   nobody rolled
+ok   the loot master's window offers it to the disenchanter
+ok   it goes to Dan through master loot
+ok   the raid is told
+ok   the list says disenchanted
+ok   no +1 for it
+== raid warnings or plain raid chat
+ok   with raid warnings off, a roll is announced in plain raid chat
+== calling it off
+ok   an item from the bags (not the loot window) can be rolled out
+ok   calling it off closes everyone's window
+ok   and says so
+== who may roll loot out
+ok   a raider can't
+ok   and a roll sent by one is ignored
+ok   the loot window closing takes the panel away
+ok   the new master looter gets the panel
+ok   an assistant running loot rolls things out
+ok   the item goes to Dan
+ok   and the soft reserves' leader records it
+== settings
+ok   'only items I can roll on' still shows Ann a reserved item she can roll on
+ok   and hides one Dan can't
+ok   roll windows can be turned off
+== the raid's loot list
+ok   everything from the first corpse is on it, in order
+ok   not the grey
+ok   with the boss it dropped from
+ok   and who has it now (master loot)
+ok   the awards are tied to the drops
+ok   an assistant running loot writes it down for the leader
+ok   raiders have the same list
+ok   opening a corpse again doesn't list its items twice
+== rolling out at the end of the raid
+ok   a new boss's loot is listed under it
+ok   the loot master keeps both, to roll out later
+ok   the trade clock starts
+ok   raiders see who has them
+ok   rolled out from the list, an hour later
+ok   won by Ann: the loot master still has it to trade
+ok   and is told to trade it
+ok   the list says so
+ok   the loot master has one to hand over
+ok   Ann opens a trade: her item goes in, and only hers
+ok   the trade goes through: Ann has it
+ok   in her bags
+ok   with trade help off, nothing is put in
+ok   it doesn't matter who opens the trade
+ok   Bob has his
+ok   the raid is told what the loot master traded
+ok   an item for gold: both sides are said
+ok   it can be turned off (Ann, an assistant, still says what she got)
+ok   nothing left to hand over
+== group loot
+ok   an epic someone loots goes on the list
+ok   a grey doesn't
+== loot rules (master looter)
+ok   rules do nothing until they're switched on
+ok   the green goes to the disenchanter (the first rule that matches decides)
+ok   the pattern goes to the loot master
+ok   a reserved item is never handed out by a rule
+ok   nor anything no rule matches
+ok   the raid is told
+ok   the disenchanted green is on the list of loot given out
+== auto-roll (each raider's own rules)
+ok   Dan passes on plate he can't use, on his own
+ok   and is told
+ok   Ann's rule passes for her
+ok   Bob's rolls off spec for him (even with his roll windows off)
+ok   shift-clicking the dice rolls and remembers it
+== reserves where you see items
+ok   the game's loot window glows on an item Ann reserved
+ok   not on one she didn't
+ok   so does a need/greed window
+ok   item tooltips say who reserved it
+ok   and who it went to
+ok   which can be turned off
+== shortcut keys
+ok   Ctrl+Alt+click on an item rolls it out
+ok   Alt alone doesn't (that's Gargul's)
+ok   unless it's picked in Settings
+ok   a raider's shortcut does nothing
+== ending the session
+ok   the loot list goes with it, everywhere
+== no errors
+ok   every chat line fits
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Dan: no Lua errors
+passed 148
+errors 0

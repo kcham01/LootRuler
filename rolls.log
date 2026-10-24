@@ -1,0 +1,164 @@
+== how an item is rolled for
+ok   reserved by people here: only they roll
+ok   reservers who aren't in the group are left out, and named
+ok   reserved only by someone who isn't here: everyone rolls
+ok   nobody reserved it: everyone rolls
+ok   hard reserved: nobody rolls
+ok   no soft reserves open: everyone rolls
+== an open roll
+ok   main spec and off spec
+ok   main spec beats a higher off spec roll
+ok   only the first roll counts
+ok   a roll of the wrong range doesn't count
+ok   the winner
+ok   everyone who may roll isn't known for an open roll
+== a soft reserved item
+ok   a reserver rolls 1-100
+ok   someone who didn't reserve it can't roll
+ok   their roll doesn't count
+ok   waiting for Ann
+ok   nobody left to wait for once Ann passes
+ok   a tie
+ok   a roll after the close is late
+== a tie, rolled again
+ok   only the tied players
+ok   they roll the way they did before, still for the reserve
+ok   an off spec tie is rolled with /roll 99
+== loot given out
+ok   Ann has two reserves on the watch to claim
+ok   winning it uses one up
+ok   when another drops, Bob has nothing left to claim and Ann still has one
+ok   once Ann's both are used up, everyone rolls
+ok   winning on a main spec roll doesn't use up a reserve
+ok   the record keeps who and how
+ok   a session with loot given out is still valid
+ok   a mistake can be taken back
+ok   and something nonsensical isn't recorded
+ok   a session with a broken record isn't trusted
+== the raid's drops
+ok   a drop goes on the list
+ok   the same drop again doesn't
+ok   still on the corpse
+ok   who has it is brought up to date
+ok   the loot master holding it, to roll out
+ok   an award goes to the first drop nobody's won
+ok   won, and the loot master still has it to trade
+ok   traded: given
+ok   an award can name its drop
+ok   someone else looted it, not through LootRuler
+ok   with no loot master (group loot) whoever has it looted it
+ok   a session with drops is valid
+ok   a drop off the list keeps its award, unlinked
+ok   a broken drop isn't trusted
+ok   names from the loot message
+ok   the x2 kind
+== the +1 rule
+ok   a main spec roll with fewer +1s wins over a higher one with more
+ok   off spec rolls still come after main spec
+ok   the +1 shows with the roll
+ok   equal rolls aren't a tie when the +1s differ
+ok   only main spec wins are +1s
+ok   the leader can give one
+ok   or take one off
+ok   never below none
+ok   the table for a roll
+ok   a session with +1s is valid
+== the disenchanter
+ok   the leader picks a disenchanter
+ok   a disenchanted item is an off spec award marked to disenchant (older versions read it as off spec)
+ok   it isn't a +1
+ok   and shows as disenchanted
+ok   nobody
+ok   a broken disenchanter isn't trusted
+== exporting who won what
+ok   a spreadsheet: a heading and a line each
+ok   with the item, player, how, roll and boss
+ok   a name with a comma is quoted
+ok   disenchanted
+ok   thatsmybis: its columns, the name without the realm, and Magtheridon's head as TMB knows it
+ok   DFT: date;[item];player, without disenchanted items
+== the guild book
+ok   a new book: nobody has points, officers edit, boosted rolls off
+ok   setting points gives the change to send
+ok   setting the same points again sends nothing
+ok   points stay between 0 and the most
+ok   a raid gives everyone in it the points for a raid
+ok   a boosted roll's range
+ok   points for each raid are kept sane
+ok   a change has the right shape
+ok   merging takes what's newer
+ok   merging the same again changes nothing
+ok   points taken away spread too
+ok   only the guild master changes who may edit
+ok   an older change of who may edit doesn't count
+ok   boosted rolls switched off spreads
+ok   nonsense isn't a change
+ok   a change can't be endless
+ok   a whole saved book is checked
+== priority lists (in the guild book)
+ok   a list, best first, each player once
+ok   whose turn: the best who are here (ties together)
+ok   nobody on the list here: a free roll
+ok   someone who gets the item comes off its list
+ok   everything a player has priority on
+== priority lists in and out
+ok   Gargul's CSV, in order, with a shared place
+ok   and numbered, with realms
+ok   DFT's export (Free Roll items left out)
+ok   thatsmybis: its priorities, not its wishlists
+ok   only wishlists: those
+ok   thatsmybis compressed
+ok   anything else isn't a list
+ok   an empty paste
+ok   names that can't be names are left out
+ok   bringing lists in replaces them, and clears others when asked
+ok   names get this realm
+ok   out as Gargul's CSV
+ok   which reads back the same
+ok   out for a spreadsheet
+ok   places
+== a priority roll
+ok   only the players who share the top place roll
+ok   anyone else's roll doesn't count
+ok   who still has to roll
+== boosted rolls
+ok   someone with points may roll boosted
+ok   someone without points can't
+ok   a boosted roll counts as boosted, ranked with main spec by its number
+ok   someone else's range doesn't count
+ok   a boosted roll's label
+ok   the highest number wins
+ok   a boosted and a main spec roll can tie
+ok   with the +1 rule, a +1 still rolls after those without, boosted or not
+ok   a boosted win is a main spec win (a +1), marked as boosted
+== an auction (GDKP)
+ok   everyone may bid, nobody rolls
+ok   the first bid is at least the start
+ok   each bid at least the raise more
+ok   raising your own bid: the old one stops counting
+ok   the bids that didn't count are listed why
+ok   the highest bid wins
+ok   a bid after it closed doesn't count
+ok   what counts as a bid in chat
+ok   and what doesn't
+== the pot (GDKP)
+ok   GDKP on: reserves stop counting, nobody can reserve
+ok   its settings
+ok   an item can start higher
+ok   everyone in the group gets a share
+ok   the pot is what was sold
+ok   the cut, then an even split between everyone (Cara bought, so she's in)
+ok   who owes and who's owed
+ok   a bonus comes out of the pot first; someone left out gets no share
+ok   gold handed over counts
+ok   it's all a valid session
+ok   nonsense in it isn't
+ok   gold for people
+ok   GDKP off and on again keeps its settings
+== reading roll messages
+ok   English
+ok   other lines aren't rolls
+ok   a translation with numbered places
+ok   names for chat
+passed 145
+errors 0

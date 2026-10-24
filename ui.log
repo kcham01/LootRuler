@@ -1,0 +1,179 @@
+== opening the window
+ok   /lr opens the window
+ok   nothing open yet
+ok   the minimap button
+ok   loot to browse without a session
+== browsing the loot
+ok   an original raid
+ok   for my class: a paladin sees plate, not cloth
+ok   searching every raid wants some letters
+ok   finds a sword in Blackwing Lair
+== opening reserves
+ok   the setup form
+ok   a Karazhan session with 2 each
+ok   the session panel
+ok   raiders have it
+== raiders reserve
+ok   everyone's reserves reach the leader
+== the leader reserves
+ok   the loot list
+ok   Usable by me hides what a paladin can't use
+ok   click to reserve
+ok   it's at the top
+ok   the count
+ok   right-click takes it back
+ok   a second reserve
+ok   who else reserved it shows
+ok   a third is refused, with a message
+== searching
+ok   all items with the filter off
+ok   search keeps every key
+ok   and filters
+== hard reserves
+ok   the item picker
+ok   the hard reserve panel
+ok   hard reserved, for Ann
+ok   soft reserves on it were taken away
+ok   it's listed
+ok   raiders see it
+== the reserves list
+ok   leader tools
+ok   by item
+ok   by player
+ok   who hasn't reserved
+ok   and who doesn't have LootRuler (they whisper)
+ok   the leader takes a reserve away
+ok   Bob's addon agrees
+ok   the leader adds one for him
+== Gargul
+ok   the Gargul text to copy
+ok   Gargul gets the reserves
+ok   all of them
+ok   the list says Gargul is up to date
+ok   locking sends them again
+ok   raiders see the lock
+== softres.it import
+ok   reserves from softres.it are added
+== a raider's window
+ok   Ann's window shows the session
+ok   Ann reserves from her window
+ok   the hard reserve shows
+ok   hard reserved: refused
+ok   with the leader away the picks wait
+ok   they're sent when the leader is back
+ok   raiders see the session's rules
+== rolling out loot
+ok   the loot panel beside the loot window
+ok   with who reserved what
+ok   clicking it rolls it out, for the reservers
+ok   Ann's roll window
+ok   the loot master sees the rolls
+ok   everyone who reserved it rolled: it closes
+ok   Ann is picked to get it
+ok   given to Ann
+ok   Bob sees the finished roll and the new one
+ok   the panel goes with the loot window
+ok   a reserve that's won its item shows it on the Reserves tab
+ok   the Loot tab lists what dropped, boss by boss
+ok   with who won what
+ok   and what's still on the corpse, and who reserved it
+ok   the loot master can roll things out from it
+ok   export who won what
+ok   in thatsmybis' format
+ok   and post it in raid chat for everyone
+ok   raiders see the same list
+ok   but can't roll from it
+ok   the leader can take a mistake off the list (Ann still has the item)
+ok   raiders' copies agree
+== settings
+ok   every option is on the Settings tab
+ok   each says what it does
+ok   an option switches
+ok   seconds to roll
+ok   the minimap button can be hidden
+ok   and shown again
+ok   an auto-roll rule: shift-click the item in
+ok   the rule is listed
+ok   a loot rule: which items, then who gets them
+ok   it says what the rule will do
+ok   the rule is listed
+ok   the pretend roll window shows
+ok   /lr help lists the commands
+ok   /lr settings opens the tab
+== the +1 rule
+ok   the leader turns the +1 rule on
+ok   +1 buttons for each player
+ok   giving someone a +1 shows next to their name
+== the disenchanter
+ok   the Session tab has a disenchanter panel
+ok   pick from the group
+ok   Ann disenchants; raiders know
+ok   and nobody again
+== telling the raid how to SR without the addon
+ok   the raid gets the how-to
+ok   and the leader is told it went
+== ending
+ok   asks first
+ok   the session is gone everywhere
+ok   back to the setup form
+== Escape and panels
+ok   a panel is open
+ok   Escape closes the panel, not the window
+== a raid that isn't in the lists
+ok   it asks for the raid's name
+ok   a session for it, where any item can be reserved
+ok   raiders have it, by name
+ok   the Reserve tab says how
+ok   a shift-clicked item goes in the box and shows up
+ok   click it to reserve it
+== the guild and boosted rolls
+ok   guild members get a Guild tab
+ok   players outside a guild don't
+ok   an officer turns boosted rolls on, for the whole guild
+ok   a sheet to give someone points
+ok   the points are saved and shared
+ok   the list shows them, with the roll to type
+ok   the Session tab offers boosted rolls
+ok   on for the session
+ok   it asks first, and says who gets what
+ok   raid points given
+ok   a member sees their points, and can't change anything
+ok   Ann's roll window has a green dice for her points
+ok   and says so
+ok   ending says the points were given, so it just asks
+ok   without points given, it offers to give them
+ok   points given and the session ended
+ok   /lr guild opens the tab
+== priority lists
+ok   the Guild tab has priority lists
+ok   search any raid's loot for the item
+ok   its list opens
+ok   players go on the list, and it's shared
+ok   each with their place
+ok   it reads what's pasted, and says what it found
+ok   the lists are in
+ok   the Guild tab lists them
+ok   the Session tab asks what loot goes by
+ok   priority lists, then reserves
+ok   Ann shares first place with Lead: her window lets her roll
+ok   switching to priority lists only asks first when there are reserves
+ok   raiders see their places instead of reserves
+== GDKP
+ok   the Session tab offers GDKP auctions
+ok   on: the GDKP panel, for raiders too
+ok   the leader picks where bids start
+ok   an auction's roll window: the bids to click, and the highest
+ok   both sold
+ok   the pot on the Session tab
+ok   the payouts sheet: the pot, the split, and who owes what
+ok   a player's options
+ok   a raider sees the pot and their own payout
+ok   and no reserves
+== no leaks
+ok   redrawing reuses frames
+ok   nothing drawn level with a backdrop
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+passed 154
+errors 0
