@@ -94,6 +94,18 @@ function Guild.prioPlan(id)
   return { mode = "PR", who = first, n = n, away = {} }
 end
 
+--- boosted roll points brought in (from Gargul, say): everyone's set, in one change
+function Guild.importPoints(list)
+  return Guild.edit(function(book, now)
+    local change = { points = {} }
+    for _, x in ipairs(list) do
+      local c = B.setPoints(book, x.p, x.n, now)
+      if c then for k, v in pairs(c.points) do change.points[k] = v end end
+    end
+    return next(change.points) and change or nil
+  end)
+end
+
 ---------------------------------------------------------------------- raid points
 --- who in the group is in my guild (names)
 function Guild.raidMembers()

@@ -143,6 +143,49 @@ function UI.extraSheet(s, preset)
   end)
 end
 
+--- bringing in "Name,Number" lines (Gargul's +1s or boosted roll points): pasted, or read from Gargul itself.
+--- opts: { title, note, gargul = "plusOnes" / "boosted", max, apply(list) }
+function UI.countsSheet(opts)
+  local pasted = ""
+  UI.openSheet(opts.title, function(f, h)
+    f:note(opts.note)
+    local fromGargul = LR.Gargul.counts(opts.gargul)
+    if fromGargul then
+      f:buttons({ { label = "Read them from Gargul", click = function() pasted = fromGargul h.redraw(true) end } }, "left")
+    end
+    local m = K.get(f.owner, "memo", f.parent)
+    f:place(m, 120, 0)
+    m:SetSize(f.width, 120)
+    m.edit:SetWidth(f.width - 20)
+    m.edit:SetHeight(108)
+    m.edit:SetScript("OnTextChanged", function(self, user) if user then pasted = self:GetText() h.redraw(true) end end)
+    if m.edit:GetText() ~= pasted then m.edit:SetText(pasted) end
+    f:gap(6)
+    local list, why
+    if U.trim(pasted) ~= "" then
+      list, why = LR.Prio.parseCounts(pasted, opts.max)
+      if list then f:note(("%s, from %s to %s."):format(U.plural(#list, "player"), U.short(list[1].p), U.short(list[#list].p)), K.GOLD)
+      else f:note(why, { 1, 0.35, 0.29 }) end
+    end
+    f:buttons({
+      { label = "Cancel", click = function() h.close() end },
+      { label = "Bring them in", disabled = not list, click = function() h.close() opts.apply(list) end },
+    })
+  end)
+end
+
+--- text to copy, several lines (a sheet)
+function UI.textSheet(title, note, text)
+  UI.openSheet(title, function(f)
+    f:note(note)
+    local m = K.get(f.owner, "memo", f.parent)
+    f:place(m, 200, 0)
+    K.setMemo(m, f.width, 200, text)
+    f:gap(4)
+    f:note("It's all selected: press Ctrl+C to copy it.")
+  end)
+end
+
 --- picks someone in the group (a sheet), then calls done("Name-Realm")
 function UI.pickPlayer(title, done)
   UI.openSheet(title, function(f, h)

@@ -69,6 +69,16 @@ end
 ---------------------------------------------------------------------- Gargul itself
 local function gargul() return type(_G.Gargul) == "table" and _G.Gargul or nil end
 
+--- Gargul's own +1s or boosted roll points, as its export writes them ("Name,Number" lines), when Gargul is
+--- loaded and has some: kind "plusOnes" or "boosted"
+function G.counts(kind)
+  local g = gargul()
+  local obj = g and (kind == "plusOnes" and g.PlusOnes or g.BoostedRolls)
+  if type(obj) ~= "table" or type(obj.export) ~= "function" then return nil end
+  local ok, csv = pcall(obj.export, obj, false)
+  if ok and type(csv) == "string" and csv:find("%S") then return csv end
+end
+
 function G.available()
   local g = gargul()
   return g and type(g.SoftRes) == "table" and type(g.SoftRes.import) == "function" or false

@@ -316,6 +316,15 @@ function LR.setExtra(s, player, n)
   if ok then leaderChanged(s) end
   return ok, lost
 end
+--- +1s brought in (from Gargul, say): everyone's set, and the +1 rule switched on
+function LR.importPlusOnes(s, list)
+  if not LR.isLeader(s) then return false end
+  local n = 0
+  for _, x in ipairs(list) do if S.setPlusOnes(s, x.p, x.n, U.now()) then n = n + 1 end end
+  S.setPlusOne(s, true, U.now())
+  leaderChanged(s)
+  return n
+end
 function LR.setSessionPrio(s, mode) if S.setPrio(s, mode, U.now()) then leaderChanged(s) end end
 -- GDKP (Core/Gdkp.lua): only the leader's changes count
 local function gdkp(fn)

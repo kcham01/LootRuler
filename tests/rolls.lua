@@ -264,6 +264,19 @@ out = P.export(pbook, "sheet", function() return "Signet, of Faith" end)
 check("out for a spreadsheet", out:find("^Item ID,Item,Player,Priority,Note\n28525,\"Signet, of Faith\",Ann,1,") ~= nil, out)
 check("places", P.place(1) == "1st" and P.place(2) == "2nd" and P.place(3) == "3rd" and P.place(4) == "4th" and P.place(11) == "11th" and P.place(22) == "22nd")
 
+print("== Gargul's +1s and boosted roll points")
+local counts = P.parseCounts('Ann,3\n"Bob-Faerlina",12,Bobalt,Bobalt2\ncara\t5\nDan 7\nnot a line\nAnn,9\nEve,-4')
+check("Gargul's lines (and a spreadsheet's), alts left out", #counts == 4 and counts[1].p == "Ann" and counts[1].n == 3 and counts[2].p == "Bob-Faerlina"
+  and counts[2].n == 12 and counts[3].p == "Cara" and counts[4].n == 7)
+check("nothing useful in it", P.parseCounts("hello") == nil and P.parseCounts("") == nil)
+check("a limit", #P.parseCounts("Ann,500\nBob,5", 99) == 1)
+check("written back out the same way", P.countsText({ { p = BOB, n = 12 }, { p = ANN, n = 3 } }) == "Ann,3\nBob,12")
+local ps2 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 800)
+S.award(ps2, 28525, ANN, "MS", 50, 801)
+check("setting +1s keeps what they won on top", S.setPlusOnes(ps2, ANN, 3, 802) and S.plusOnes(ps2, ANN) == 3
+  and S.setPlusOnes(ps2, ANN, 0, 803) and S.plusOnes(ps2, ANN) == 0 and S.setPlusOnes(ps2, BOB, 2, 804) and S.plusOnes(ps2, BOB) == 2)
+check("a sane number only", not S.setPlusOnes(ps2, BOB, -1, 805) and not S.setPlusOnes(ps2, BOB, 1.5, 805) and S.valid(ps2))
+
 print("== a priority roll")
 roll = R.new("k12", 28525, { mode = "PR", who = { BOB, DAN }, n = 2 })
 check("only the players who share the top place roll", table.concat(R.options(roll, BOB), ",") == "MS" and #R.options(roll, ANN) == 0

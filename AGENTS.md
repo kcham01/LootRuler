@@ -136,8 +136,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   it bids for them as little as it takes, says where the bidding ended up, and resends `R` so windows update.
 - **Cuts by role** (`s.gk.rp`: role -> percent of the pot each; `s.gk.role`: player -> "tank"/"healer"): paid out of
   the pot after the organiser's cut and bonuses, before the even split; scaled down if they'd ever be more than is left.
-- **Next:** the roadmap is done. Ideas from here: Gargul's boosted-roll and +1 imports,
-  and keeping an eye on WoW: Forever's new raids.
+- **From Gargul:** +1s and boosted roll points as "Name,Number" lines (`Prio.parseCounts`, `Prio.countsText`), read
+  straight from a loaded Gargul (`Gargul.counts`, its own export) or pasted. +1s set with `S.setPlusOnes`.
+- **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
+  tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
