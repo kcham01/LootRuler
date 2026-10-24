@@ -10,6 +10,7 @@
 --   out      "Name-Realm" -> true: left out of the split by the leader
 --   paid     "Name-Realm" -> gold handed over in trades: what they gave the organiser, less what they got
 --   prices   item id -> its lowest first bid, when it isn't min
+--   strict   bids must start with "bid" ("bid 150"), so someone saying "500" in raid chat doesn't bid
 -- Addons can't put gold in a trade, so LootRuler says who owes what and counts what changes hands.
 local _, LR = ...
 local U, S = LR.U, LR.Session
@@ -43,6 +44,16 @@ function G.option(s, key, value, now)
   value = num(value, limits[key][1], limits[key][2])
   if not value or s.gk[key] == value then return false end
   s.gk[key] = math.floor(value)
+  S.bump(s, now)
+  return true
+end
+
+--- whether a bid has to start with "bid"
+function G.setStrict(s, on, now)
+  if not s.gk then return false end
+  on = on and true or nil
+  if s.gk.strict == on then return false end
+  s.gk.strict = on
   S.bump(s, now)
   return true
 end
@@ -182,6 +193,7 @@ function G.valid(gk)
   if gk == nil then return true end
   if type(gk) ~= "table" then return false end
   for _, k in ipairs({ "min", "inc", "cut" }) do if type(gk[k]) ~= "number" then return false end end
+  if gk.strict ~= nil and type(gk.strict) ~= "boolean" then return false end
   local function map(t, keyType, valType)
     if type(t) ~= "table" then return false end
     local n = 0

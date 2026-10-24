@@ -126,6 +126,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   of kind `BID` with `r` = the price. Session settings and who's in the pot are `s.gk` (`Core/Gdkp.lua`); trades
   count the gold that changes hands (`Core/Drops.lua`). `Rolls.queue` puts items up one after another (any mode).
 - **Ending a GDKP session** with gold still owed (`Gdkp.unsettled`) asks first: ending it loses the list.
+- **Bids that must start with "bid"** (`s.gk.strict`, sent as `sb`): `R.parseBid(text, strict)`.
 - **Next:** the roadmap is done. Ideas from here: an in-game history of past raids, GDKP auction history and
   average prices, Gargul's boosted-roll and +1 imports, and keeping an eye on WoW: Forever's new raids.
 - **Feedback this plan follows** (an experienced player and engineer):

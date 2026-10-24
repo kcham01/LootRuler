@@ -98,8 +98,8 @@ local function howTo(roll, link, secs)
   elseif roll.mode == "TIE" then
     return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), roll.tie == "OS" and "/roll 99" or "/roll", t)
   elseif roll.mode == "BID" then
-    return ("Auction: %s. Bids start at %s, each at least %s more than the last. Type your bid in raid chat (just the number). %s."):format(
-      link, LR.Gdkp.gold(roll.min), LR.Gdkp.gold(roll.inc), t)
+    return ("Auction: %s. Bids start at %s, each at least %s more than the last. Type your bid in raid chat (%s). %s."):format(
+      link, LR.Gdkp.gold(roll.min), LR.Gdkp.gold(roll.inc), roll.strict and ("\"bid " .. roll.min .. "\"") or "just the number", t)
   elseif roll.mode == "PR" then
     return ("%s: %s share the top priority, so only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   end
@@ -147,7 +147,7 @@ local function wire(roll)
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
     m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, pn = roll.mode == "PR" and roll.n or nil,
-    mn = roll.min, inc = roll.inc, tb = roll.top and { roll.top.p, roll.top.n } or nil }
+    mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil }
 end
 
 ---------------------------------------------------------------------- the loot master's roll
@@ -207,7 +207,7 @@ function Rolls.start(id, opts)
     plan = R.plan(s, id, LR.roster())
     -- GDKP: it's auctioned (a hard reserve still comes first)
     if s and s.gdkp and s.gk and plan.mode ~= "HR" then
-      plan = { mode = "BID", min = LR.Gdkp.minFor(s, id), inc = s.gk.inc, who = {}, away = {} }
+      plan = { mode = "BID", min = LR.Gdkp.minFor(s, id), inc = s.gk.inc, strict = s.gk.strict, who = {}, away = {} }
     -- the guild's priority lists, when the session goes by them: the best priority here gets it (a hard
     -- reserve still comes first); with "only", reserves don't count
     elseif s and s.prio and plan.mode ~= "HR" then
@@ -514,7 +514,8 @@ function Rolls.follow(msg, sender)
     copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp,
       tie = msg.tie ~= "BID" and R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil),
       n = msg.m == "PR" and tonumber(msg.pn) or nil,
-      min = bid and math.max(0, math.min(R.MAX_BID, tonumber(msg.mn) or 0)) or nil, inc = bid and math.max(1, math.min(R.MAX_BID, tonumber(msg.inc) or 1)) or nil })
+      min = bid and math.max(0, math.min(R.MAX_BID, tonumber(msg.mn) or 0)) or nil, inc = bid and math.max(1, math.min(R.MAX_BID, tonumber(msg.inc) or 1)) or nil,
+      strict = bid and msg.sb == true or nil })
     copy.by = sender
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"
@@ -634,12 +635,12 @@ end
 --- a line in raid or party chat: a bid, when it's just an amount and an auction is open
 function Rolls.onChat(text, sender)
   if not sender or sender == "" then return end
-  local open = Rolls.current and Rolls.current.mode == "BID"
+  local open = Rolls.current and Rolls.current.mode == "BID" and Rolls.current
   if not open then
-    for _, k in ipairs(Rolls.order) do local c = Rolls.seen[k] if c and c.mode == "BID" and c.state == "open" then open = true break end end
+    for _, k in ipairs(Rolls.order) do local c = Rolls.seen[k] if c and c.mode == "BID" and c.state == "open" then open = c break end end
   end
   if not open then return end
-  local g = R.parseBid(text)
+  local g = R.parseBid(text, open.strict)
   if g then Rolls.onBid(U.full(sender), g) end
 end
 
@@ -648,7 +649,7 @@ function Rolls.bid(copy, g)
   if copy.mode ~= "BID" or copy.state ~= "open" then return false end
   local ch = LR.groupChannel()
   if not ch then Rolls.onBid(U.me(), g) return true end
-  LR.say(tostring(math.floor(g)), ch)
+  LR.say((copy.strict and "bid " or "") .. math.floor(g), ch)
   return true
 end
 

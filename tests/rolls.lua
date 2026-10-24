@@ -318,6 +318,8 @@ check("the highest bid wins", top.p == ANN and top.n == 200 and R.topBid(roll).n
 check("a bid after it closed doesn't count", R.bid(roll, DAN, 500, true).why == "late" and R.topBid(roll).n == 200)
 check("what counts as a bid in chat", R.parseBid("150") == 150 and R.parseBid(" 150g ") == 150 and R.parseBid("150 gold") == 150
   and R.parseBid("bid 200") == 200 and R.parseBid("1.5k") == 1500 and R.parseBid("2k") == 2000 and R.parseBid("1,250") == 1250)
+check("with bids that must start with \"bid\", only those count", R.parseBid("bid 150", true) == 150 and R.parseBid("BID 2k", true) == 2000
+  and R.parseBid("150", true) == nil and R.parseBid("500 dps lol", true) == nil)
 check("and what doesn't", R.parseBid("gg") == nil and R.parseBid("150 for sure") == nil and R.parseBid("0") == nil
   and R.parseBid("lol 5") == nil and R.parseBid("99999999") == nil)
 

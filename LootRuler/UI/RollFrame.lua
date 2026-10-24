@@ -50,8 +50,9 @@ local function bidStatus(copy)
   if copy.state == "closed" then return "Nobody bid." end
   if copy.state == "cancelled" then return "Called off." end
   if top and U.samePlayer(top.p, me()) then return ("|cff1eff00You have the highest bid: %s.|r"):format(G.gold(top.n)) end
-  if top then return ("Highest bid: %s, %s. Type a bid in raid chat, or click."):format(U.short(top.p), G.gold(top.n)) end
-  return ("Bids start at %s. Type an amount in raid chat, or click."):format(G.gold(copy.min or 0))
+  local how = copy.strict and "Type \"bid\" and an amount in raid chat, or click." or "Type a bid in raid chat, or click."
+  if top then return ("Highest bid: %s, %s. %s"):format(U.short(top.p), G.gold(top.n), how) end
+  return ("Bids start at %s. %s"):format(G.gold(copy.min or 0), how)
 end
 
 --- the line under the timer, for a raider's copy of a roll
@@ -318,8 +319,9 @@ local function fill(f, copy)
     f.dice.label:SetText(copy.state == "open" and LR.Gdkp.gold(a1) or "")
     f.coin.label:SetText(copy.state == "open" and LR.Gdkp.gold(a2) or "")
     f.dice.tipTitle, f.coin.tipTitle = "Bid " .. LR.Gdkp.gold(a1), "Bid " .. LR.Gdkp.gold(a2)
-    f.dice.tip = ("Types \"%d\" in raid chat: the least that beats the highest bid."):format(a1)
-    f.coin.tip = ("Types \"%d\" in raid chat. Any other amount: type it yourself."):format(a2)
+    local word = copy.strict and "bid " or ""
+    f.dice.tip = ("Types \"%s%d\" in raid chat: the least that beats the highest bid."):format(word, a1)
+    f.coin.tip = ("Types \"%s%d\" in raid chat. Any other amount: type it yourself."):format(word, a2)
     f.status:SetText(UI.rollStatus(copy))
     return
   end

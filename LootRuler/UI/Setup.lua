@@ -74,6 +74,7 @@ end
 
 local function manage(f, s)
   local raid = LR.raidOf(s)
+  if s.gdkp then UI.gdkpPanel(f, s) end          -- GDKP first: in a GDKP raid it's what matters
   f:panel("Your session", function(p)
     p:kv({
       { "Raid", raid.name },
@@ -152,8 +153,6 @@ local function manage(f, s)
       s.de and { label = "Nobody", click = function() LR.setDisenchanter(s, nil) end } or nil,
     }, "left")
   end)
-
-  if s.gdkp then UI.gdkpPanel(f, s) end
 
   if not s.gdkp and (s.prio or UI.prioAvailable()) then
     f:panel("Priority lists", function(p)
