@@ -114,7 +114,7 @@ p:close()
 
 -- functions Blizzard's own code calls (the C side has them even when the documentation doesn't list them)
 local called, calledMethods = {}, {}
-p = io.popen('grep -rhoE "[:.]?[A-Za-z_][A-Za-z0-9_]*\\(" "' .. src .. '/Interface" --include=*.lua')
+p = io.popen('grep -rhoE "[:.]?[A-Za-z_][A-Za-z0-9_]*\\(" "' .. src .. '/Interface" --include=*.lua --include=*.xml')
 for w in p:lines() do
   local sep, name = w:match("^([:.]?)([%w_]+)%($")
   if name then
@@ -123,6 +123,9 @@ for w in p:lines() do
 end
 p:close()
 
+-- made by the client itself rather than its interface code: the Enum tables (which Blizzard's code reads
+-- everywhere) and the translated strings of GlobalStrings.lua, which isn't in the interface source
+local CLIENT = { Enum = true, RANDOM_ROLL_RESULT = true }
 local own = { LootRulerDB = true, SLASH_LOOTRULER1 = true, SLASH_LOOTRULER2 = true, LootRulerFrame = true, LootRuler = true,
   -- read only to see whether they're there (other addons, and the game's newer chat API)
   Gargul = true, ChatFrameUtil = true, ChatFrame_AddMessageEventFilter = true,
@@ -145,7 +148,7 @@ local names = {}
 for g in pairs(used) do names[#names + 1] = g end
 table.sort(names)
 for _, g in ipairs(names) do
-  if not (builtins[g] or globals[g] or defined[g] or called[g] or own[g] or g:match("^LootRuler")) then
+  if not (builtins[g] or globals[g] or defined[g] or called[g] or own[g] or CLIENT[g] or g:match("^LootRuler")) then
     print(("global %s (in %s) is not something the client has"):format(g, used[g]))
     failures = failures + 1
   end

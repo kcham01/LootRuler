@@ -72,11 +72,11 @@ local function json(v)
 end
 os.execute("mkdir -p build/shots && rm -f build/shots/*.json build/shots/*.png")
 local shotN = 0
-local function shot(name, who)
+local function shot(name, who, focus)
   who = who or lead
   shotN = shotN + 1
   local f = assert(io.open(("build/shots/%02d-%s.json"):format(shotN, name), "w"))
-  f:write(json({ w = 1280, h = 800, ops = who.M.render() }))
+  f:write(json({ w = 1280, h = 800, ops = who.M.render(), focus = focus }))
   f:close()
 end
 
@@ -305,6 +305,88 @@ run("a raider's window", function()
   ann.LR.UI.go("session")
   check("raiders see the session's rules", visible("Session by Lead", ann))
   shot("raider-session", ann)
+end)
+
+run("rolling out loot", function()
+  -- the game's loot window, as a stand-in for the pictures (the panel sits beside it)
+  local lf = G.CreateFrame("Frame", "LootStandIn", G.LootFrame, "BackdropTemplate")
+  lf:SetAllPoints()
+  lf:SetBackdrop(LR.K.ROCK)
+  local t = lf:CreateFontString(nil, "OVERLAY") t:SetFontObject("GameFontNormal") t:SetPoint("TOPLEFT", 18, -16) t:SetText("Items")
+  local items = { { 28529, 4 }, { 28525, 4 }, { 28528, 4 }, { 28530, 4 } }
+  for i, it in ipairs(items) do
+    local ic = lf:CreateTexture(nil, "ARTWORK") ic:SetSize(34, 34) ic:SetPoint("TOPLEFT", 18, -40 - (i - 1) * 42) ic:SetTexture(G.C_Item.GetItemIconByID(it[1]))
+    local n = lf:CreateFontString(nil, "OVERLAY") n:SetFontObject("GameFontNormalSmall") n:SetPoint("LEFT", ic, "RIGHT", 6, 0) n:SetWidth(126)
+    n:SetText(srv.itemInfo(it[1]).link:gsub("|H.-|h%[(.-)%]|h", "%1"))
+  end
+  srv:setMasterLooter(lead)
+  if LR.UI.win then LR.UI.win:Hide() end
+  if ann.LR.UI.win then ann.LR.UI.win:Hide() end
+  srv:openLoot(lead, items)
+  srv:tick(0.5)
+  local panel = G.LootRulerLootPanel
+  check("the loot panel beside the loot window", panel and panel:IsShown() and #M.findText("Click an item to roll it out", true, panel) > 0)
+  check("with who reserved what", #M.findText("SR: Ann, Lead", true, panel) > 0 and #M.findText("Hard reserved for Ann", true, panel) > 0, s.res["Lead-Dreamscythe"] and s.res["Lead-Dreamscythe"].i[1])
+  shot("loot-panel", lead, { "LootStandIn", "LootRulerLootPanel" })
+  -- roll out the cloak Ann and the leader reserved
+  local hit
+  for _, x in ipairs(M.findText("Royal Cloak of Arathi Kings", true, panel)) do if x.clickable then hit = x.clickable end end
+  M.click(hit)
+  srv:tick(0.5)
+  local roll = LR.Rolls.mine()
+  check("clicking it rolls it out, for the reservers", roll and roll.mode == "SR" and roll.id == 28529)
+  local mine
+  for _, f in ipairs(ann.LR.UI.rollFrames()) do if f:IsShown() then mine = f end end
+  check("Ann's roll window", mine and mine.dice:IsEnabled() and mine.status:GetText():find("You reserved this", 1, true), mine and mine.status:GetText())
+  srv:willRoll(ann, 88)
+  srv:tick(2)
+  shot("roll-window", ann, { "LootRulerRollFrame1" })
+  ann.M.click(mine.dice)
+  srv:roll(pug, 1, 100, 99)
+  srv:willRoll(lead, 41)
+  for _, f in ipairs(LR.UI.rollFrames()) do if f:IsShown() then M.click(f.dice) end end
+  srv:tick(1)
+  check("the loot master sees the rolls", #M.findText("Ann", true, G.LootRulerMasterFrame) > 0 and #M.findText("didn't reserve it", true, G.LootRulerMasterFrame) > 0)
+  srv:tick(3)
+  check("everyone who reserved it rolled: it closes", roll.state == "closed")
+  check("Ann is picked to get it", #M.findText("Give to Ann", true, G.LootRulerMasterFrame) > 0)
+  shot("loot-master", lead, { "LootStandIn", "LootRulerLootPanel", "LootRulerMasterFrame" })
+  M.click(M.findText("Give to Ann", true, G.LootRulerMasterFrame)[1].clickable)
+  srv:tick(1)
+  check("given to Ann", srv.given and srv.given[1].id == 28529 and s.won and s.won[1].p == "Ann-Dreamscythe" and s.won[1].k == "SR")
+  -- the next item: nobody reserved it, so everyone rolls; Bob sees both windows
+  M.click(M.findText("Close", true, G.LootRulerMasterFrame)[1].clickable)
+  for _, x in ipairs(M.findText("Signet of Unshakable Faith", true, panel)) do if x.clickable then hit = x.clickable end end
+  M.click(hit)
+  srv:tick(0.5)
+  srv:roll(pug, 1, 100, 57)
+  srv:tick(4)
+  local shown = 0
+  for _, f in ipairs(bob.LR.UI.rollFrames()) do if f:IsShown() then shown = shown + 1 end end
+  check("Bob sees the finished roll and the new one", shown == 2)
+  shot("roll-windows", bob, { "LootRulerRollFrame1", "LootRulerRollFrame2" })
+  LR.Rolls.cancel()
+  srv:closeLoot(lead)
+  srv:tick(1)
+  check("the panel goes with the loot window", not panel:IsShown())
+  srv:tick(9)                                -- finished roll windows go after a few seconds
+  LR.UI.show("reserves")
+  srv:tick(0.3)
+  check("the Reserves tab lists loot given out", visible("Loot given out") and visible("To Ann (SR 88)"))
+  check("and a reserve that's won its item shows it", visible("Ann (won)"))
+  shot("loot-given")
+  M.click(rowFor("Royal Cloak of Arathi Kings").act)
+  srv:tick(0.3)
+  clickText("Take it off")
+  srv:tick(2)
+  check("the leader can take a mistake off the list", #s.won == 0 and not visible("Loot given out"))
+  check("raiders' copies agree", #(ann.LR.current().won or {}) == 0)
+  LR.UI.win:Hide()
+  ann.LR.UI.go("session")
+  ann.LR.UI.show()
+  srv:tick(0.3)
+  check("roll window settings on the Session tab", visible("Rolling out loot", ann) and visible("Show roll windows", ann))
+  ann.LR.UI.win:Hide()
 end)
 
 run("telling the raid how to SR without the addon", function()

@@ -65,7 +65,7 @@ function Server:login(p, db) self:client(p, db) self:rosterChanged() end
 
 ---------------------------------------------------------------------- the group
 function Server:setGroup(list, leader, raid)
-  self.group = { members = list, leader = leader, raid = raid ~= false }
+  self.group = { members = list, leader = leader, raid = raid ~= false, assists = {} }
   for _, p in ipairs(list) do p.inGroup = true end
   self:rosterChanged()
 end
@@ -194,7 +194,7 @@ function Server:install(p)
   G.UnitExists = function(unit) return unitPlayer(unit) ~= nil end
   G.UnitIsConnected = function(unit) local q = unitPlayer(unit) return q and q.online or false end
   G.UnitIsGroupLeader = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and srv.group.leader == q or false end
-  G.UnitIsGroupAssistant = function() return false end
+  G.UnitIsGroupAssistant = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and q and srv.group.assists[q] or false end
   G.UnitFactionGroup = function() return p.faction, p.faction end
   G.IsInGroup = function() return srv:inGroup(p) and true or false end
   G.IsInRaid = function() return srv:inGroup(p) and srv.group.raid or false end
@@ -203,10 +203,11 @@ function Server:install(p)
   G.GetRaidRosterInfo = function(i)
     local q = srv:inGroup(p) and srv.group.members[i]
     if not q then return nil end
-    return seenAs(q, p), srv.group.leader == q and 2 or 0, 1, 70, CLASS_NAME[q.class], q.class, "Karazhan", q.online, false, "NONE", false
+    return seenAs(q, p), srv.group.leader == q and 2 or (srv.group.assists[q] and 1 or 0), 1, 70, CLASS_NAME[q.class], q.class, "Karazhan", q.online, false, "NONE", false
   end
   G.GetFramerate = function() return 60 end
-  G.Enum = { SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
+  G.Enum = { LootMethod = { Freeforall = 0, Roundrobin = 1, Masterlooter = 2, Group = 3, Needbeforegreed = 4, Personal = 5 },
+    SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
     NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10 } }
   local function sendAddon(prefix, text, channel, target)
     if type(prefix) ~= "string" or #prefix > 16 then error("bad addon prefix " .. tostring(prefix) .. " " .. debug.traceback()) end
@@ -240,9 +241,97 @@ function Server:install(p)
   }
   G.IsModifiedClick = function() return false end
   G.ChatEdit_InsertLink = function() return false end
+  G.RandomRoll = function(lo, hi) srv:roll(p, tonumber(lo), tonumber(hi)) end
+  G.C_PartyInfo = {
+    GetLootMethod = function()
+      local ml = srv:inGroup(p) and srv.masterLooter
+      if not ml then return 3 end
+      if srv.group.raid then
+        for i, q in ipairs(srv.group.members) do if q == ml then return 2, nil, i end end
+        return 2
+      end
+      if ml == p then return 2, 0 end
+      local others = {}
+      for _, q in ipairs(members()) do if q ~= p then others[#others + 1] = q end end
+      for i, q in ipairs(others) do if q == ml then return 2, i end end
+      return 2
+    end,
+  }
+  -- a slot that's been given out stays empty (the others keep their places) until the corpse is opened again
+  local function lootItem(slot) local it = p.loot and p.loot[slot] return it and not it.taken and it or nil end
+  G.GetNumLootItems = function() return p.loot and #p.loot or 0 end
+  G.LootSlotHasItem = function(slot) return lootItem(slot) ~= nil end
+  G.GetLootSlotLink = function(slot)
+    local it = lootItem(slot)
+    if not it then return nil end
+    local info = srv.itemInfo and srv.itemInfo(it.id)
+    return info and info.link or ("|cffa335ee|Hitem:%d::::::::70:::::|h[item %d]|h|r"):format(it.id, it.id)
+  end
+  G.GetLootSlotInfo = function(slot)
+    local it = lootItem(slot)
+    if not it then return nil end
+    local info = srv.itemInfo and srv.itemInfo(it.id)
+    return 133000 + it.id % 1000, info and info.name or ("item " .. it.id), 1, nil, it.quality, false
+  end
+  G.GetMasterLootCandidate = function(slot, i)
+    if not lootItem(slot) or srv.masterLooter ~= p then return nil end
+    local q = srv:candidates()[i]
+    if q then return seenAs(q, p), CLASS_NAME[q.class], q.class end
+  end
+  G.GiveMasterLoot = function(slot, i)
+    local it = lootItem(slot)
+    local q = srv:candidates()[i]
+    if not it or not q or srv.masterLooter ~= p then error("GiveMasterLoot with nothing to give") end
+    srv.given = srv.given or {}
+    table.insert(srv.given, { id = it.id, to = q })
+    it.taken = true
+    srv:deliver(function() p.M.fire("LOOT_SLOT_CLEARED", slot) end)
+  end
   G.ChatFrameUtil = { AddMessageEventFilter = function(event, fn) p.filters = p.filters or {} p.filters[event] = p.filters[event] or {} table.insert(p.filters[event], fn) end }
   G.RAID_CLASS_COLORS = {}
   for token in pairs(CLASS_NAME) do G.RAID_CLASS_COLORS[token] = { r = 0.8, g = 0.8, b = 0.8, colorStr = "ffcccccc" } end
+end
+
+---------------------------------------------------------------------- rolling and master loot
+function Server:setAssist(p, on) self.group.assists[p] = on and true or nil self:rosterChanged() end
+--- master loot, with p as the master looter (nil: group loot)
+function Server:setMasterLooter(p) self.masterLooter = p self:rosterChanged() end
+
+--- p rolls lo-hi: everyone in the group (and p) sees "Name rolls n (lo-hi)". n: the result (else the next
+--- one the test queued for p with Server:willRoll, else a made-up one)
+function Server:roll(p, lo, hi, n)
+  lo, hi = lo or 1, hi or 100
+  if not n then
+    local q = self.rolls and self.rolls[p]
+    n = q and table.remove(q, 1)
+    if not n then self.rollSeed = ((self.rollSeed or 7) * 31 + 17) % 1000 n = lo + self.rollSeed % (hi - lo + 1) end
+  end
+  local everyone = self:inGroup(p) and self.group.members or { p }
+  for _, q in ipairs(everyone) do
+    self:deliver(function()
+      if q.client and q.online then q.M.fire("CHAT_MSG_SYSTEM", ("%s rolls %d (%d-%d)"):format(seenAs(p, q), n, lo, hi)) end
+    end)
+  end
+  return n
+end
+function Server:willRoll(p, ...) self.rolls = self.rolls or {} self.rolls[p] = self.rolls[p] or {} for _, n in ipairs({ ... }) do table.insert(self.rolls[p], n) end end
+
+--- p (the master looter) opens a corpse with these items: { { id, quality }, ... }
+function Server:openLoot(p, items)
+  p.loot = {}
+  for _, it in ipairs(items) do p.loot[#p.loot + 1] = { id = it[1], quality = it[2] or 4 } end
+  p.G.LootFrame:Show()
+  p.M.fire("LOOT_OPENED", 0, false)
+end
+function Server:closeLoot(p) p.loot = nil p.G.LootFrame:Hide() p.M.fire("LOOT_CLOSED") end
+
+--- who can be given loot: everyone in the group who's online and not out of range (Server.farAway)
+function Server:candidates()
+  local out = {}
+  for _, q in ipairs(self.group and self.group.members or {}) do
+    if q.online and not (self.farAway and self.farAway[q]) then out[#out + 1] = q end
+  end
+  return out
 end
 
 --- whether a client's chat filters would hide a message

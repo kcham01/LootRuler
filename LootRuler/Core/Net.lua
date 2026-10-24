@@ -12,6 +12,7 @@
 --   Q  anyone -> group / guild    "which sessions are open?" (leaders answer with T)
 --   P  raider -> leader           my picks for session id: { c = class, i = items }
 --   A  leader -> raider           the answer to P: ok, or why not, with the picks the leader now has
+--   R, X, N                       rolling out loot (Core/Rolls.lua)
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
 local _, LR = ...
@@ -47,6 +48,8 @@ function LR.loadDB()
   db.ui = db.ui or {}
   db.settings = db.settings or {}
   if db.settings.hideWhispers == nil then db.settings.hideWhispers = true end
+  if db.settings.rollWindow == nil then db.settings.rollWindow = true end        -- show roll windows
+  if db.settings.rollOnlyMine == nil then db.settings.rollOnlyMine = false end   -- only for items I may roll on
   -- forget sessions nobody has touched for a week
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do
@@ -96,13 +99,13 @@ function LR.groupChannel()
   if IsInGroup() then return "PARTY" end
 end
 
---- group members: { name = "Name-Realm", class = "PALADIN", online = bool, leader = bool }
+--- group members: { name = "Name-Realm", class = "PALADIN", online = bool, leader = bool, assist = bool }
 function LR.roster()
   local out = {}
   if IsInRaid() then
     for i = 1, GetNumGroupMembers() do
       local name, rank, _, _, _, class, _, online = GetRaidRosterInfo(i)
-      if name then out[#out + 1] = { name = U.full(name), class = class, online = online and true or false, leader = rank == 2 } end
+      if name then out[#out + 1] = { name = U.full(name), class = class, online = online and true or false, leader = rank == 2, assist = rank == 1 } end
     end
   else
     local units = { "player" }
@@ -112,7 +115,8 @@ function LR.roster()
         local name, realm = UnitName(unit)
         local _, class = UnitClass(unit)
         out[#out + 1] = { name = realm and realm ~= "" and (name .. "-" .. realm) or U.full(name), class = class,
-          online = UnitIsConnected(unit) and true or false, leader = UnitIsGroupLeader(unit) and true or false }
+          online = UnitIsConnected(unit) and true or false, leader = UnitIsGroupLeader(unit) and true or false,
+          assist = UnitIsGroupAssistant(unit) and true or false }
       end
     end
   end
@@ -146,6 +150,7 @@ local function send(msg, channel, target)
   if not channel then return end
   Net:SendCommMessage(LR.PREFIX, encode(msg), channel, target, "NORMAL")
 end
+Net.send = send
 
 --- where the leader's messages go: the group (if any) and the guild (when shared)
 local function publishTo(s)
@@ -248,6 +253,7 @@ function LR.setGuild(s, guild)
   leaderChanged(s)
 end
 function LR.leaderAdd(s, player, class, id) local ok, why = S.add(s, player, class, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
+function LR.unaward(s, index) if LR.isLeader(s) and S.unaward(s, index, U.now()) then leaderChanged(s) return true end return false end
 function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
 
 function LR.endSession(s)
@@ -302,6 +308,7 @@ end
 local queryAnswered = {}
 
 local handlers = {}
+Net.handlers = handlers          -- Core/Rolls.lua adds the messages for rolling out loot
 
 -- a session from its leader
 function handlers.T(msg, channel, sender)

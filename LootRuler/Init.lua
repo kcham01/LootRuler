@@ -7,7 +7,9 @@
 --   Core/Net.lua      keeping the leader and every raider with the addon in step over the addon channel
 --   Core/Whisper.lua  "!lr <item>" whispers for raiders without the addon
 --   Core/Gargul.lua   the reserves as a Gargul import, and handing them to Gargul
---   UI/*              the window
+--   Core/Roll.lua     the rules of rolling for an item (no game calls: tested on their own)
+--   Core/Rolls.lua    rolling loot out: the loot master's roll, raiders following it, master loot
+--   UI/*              the window; UI/RollFrame.lua the roll windows, UI/Master.lua the loot master's
 local ADDON, LR = ...
 LR.NAME = ADDON
 LR.PREFIX = "LootRuler"          -- addon message prefix (16 characters at most)

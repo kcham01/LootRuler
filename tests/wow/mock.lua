@@ -244,6 +244,8 @@ function Button:Click(button)
   local fn = self._scripts.OnClick
   if fn then fn(self, button or "LeftButton", false) end
 end
+function Button:SetMotionScriptsWhileDisabled(v) self._motionDisabled = v end
+function Button:GetMotionScriptsWhileDisabled() return self._motionDisabled end
 function Button:LockHighlight() end
 function Button:UnlockHighlight() end
 function Button:SetButtonState() end
@@ -610,7 +612,10 @@ function M.render()
     local myClip = clip
     if f._type == "ScrollFrame" and r then myClip = intersect(clip, r) end
     if f._clips and r then myClip = intersect(clip, r) end
-    local key = { STRATA[f:GetFrameStrata()] or 3, f._raised or 0, f:GetFrameLevel() }
+    -- Raise() lifts a frame with everything in it
+    local raised, up = 0, f
+    while up do raised = math.max(raised, up._raised or 0) up = up._parent end
+    local key = { STRATA[f:GetFrameStrata()] or 3, raised, f:GetFrameLevel() }
     if r and f._type == "GameTooltip" and f._lines then
       table.insert(ops, { kind = "backdrop", key = key, order = f._order, box = box(r), clip = myClip and box(myClip), alpha = alpha,
         bg = "Interface\\Tooltips\\UI-Tooltip-Background", edge = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 16, color = { 0, 0, 0, 0.9 }, border = { 0.6, 0.6, 0.6, 1 } })
@@ -916,6 +921,21 @@ function M.env(player)
   G.GetSpellInfo = function(id) return "Spell " .. tostring(id), nil, 136243 end
   G.GetSpellTexture = function() return 136243 end
   G.ChatFrame_OpenChat = function() end
+  -- rolling and master loot (tests/wow/server.lua makes these work between clients)
+  G.RANDOM_ROLL_RESULT = "%s rolls %d (%d-%d)"
+  G.RandomRoll = function(lo, hi) M.rolled = M.rolled or {} table.insert(M.rolled, { tonumber(lo), tonumber(hi) }) end
+  G.LootFrame = M.CreateFrame("Frame", "LootFrame", M.UIParent)
+  G.LootFrame:SetSize(192, 300)
+  G.LootFrame:SetPoint("TOPLEFT", M.UIParent, "TOPLEFT", 40, -120)
+  G.LootFrame:Hide()
+  G.GetLootThreshold = function() return 2 end
+  G.GetNumLootItems = function() return 0 end
+  G.LootSlotHasItem = function() return false end
+  G.GetLootSlotLink = function() return nil end
+  G.GetLootSlotInfo = function() return nil end
+  G.GetMasterLootCandidate = function() return nil end
+  G.GiveMasterLoot = function() end
+  G.C_PartyInfo = { GetLootMethod = function() return 3 end }
   G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, msg) table.insert(M.chat, msg) end }
   M.chat = {}
   -- print() goes to the chat frame in game: keep it for the test to read

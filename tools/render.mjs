@@ -15,7 +15,7 @@ const LOGO = fs.existsSync(logoFile) ? `data:image/png;base64,${fs.readFileSync(
 const files = fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort();
 
 const rgba = (c, a = 1) => c ? `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${(c[3] ?? 1) * a})` : 'transparent';
-const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 function richText(t, base) {
   // |cffRRGGBB ... |r colour codes and |T...|t inline textures
@@ -59,12 +59,14 @@ function opHtml(op) {
   if (op.kind === 'backdrop') {
     let bg = 'transparent', border = 'none', radius = 4, shadow = '';
     const tint = op.color || [1, 1, 1, 1];
-    if (/Background-Dark/i.test(op.bg || '')) bg = `rgba(${Math.round(16 * tint[0])},${Math.round(13 * tint[1])},${Math.round(10 * tint[2])},${tint[3] ?? 1})`;
+    if (/Gold-Background/i.test(op.bg || '')) bg = `rgba(${Math.round(24 * tint[0])},${Math.round(18 * tint[1])},${Math.round(8 * tint[2])},${tint[3] ?? 1})`;
+    else if (/Background-Dark/i.test(op.bg || '')) bg = `rgba(${Math.round(16 * tint[0])},${Math.round(13 * tint[1])},${Math.round(10 * tint[2])},${tint[3] ?? 1})`;
     else if (/Background/i.test(op.bg || '')) bg = `rgba(${Math.round(30 * tint[0])},${Math.round(26 * tint[1])},${Math.round(22 * tint[2])},${tint[3] ?? 1})`;
     else if (/WHITE8X8/i.test(op.bg || '')) bg = rgba(op.color || [0, 0, 0, 0]);
     else if (/SliderBar-Background/i.test(op.bg || '')) bg = '#0b0907';
     const bc = op.border || [1, 1, 1, 1];
-    if (/DialogBox-Border/i.test(op.edge || '')) { border = '3px solid #8a7550'; shadow = 'box-shadow: inset 0 0 0 2px #2a2216, 0 0 0 1px #000;'; radius = 8; }
+    if (/Gold-Border/i.test(op.edge || '')) { border = '3px solid #c9a227'; shadow = 'box-shadow: inset 0 0 0 2px #3a2a0a, 0 0 0 1px #000;'; radius = 8; }
+    else if (/DialogBox-Border/i.test(op.edge || '')) { border = '3px solid #8a7550'; shadow = 'box-shadow: inset 0 0 0 2px #2a2216, 0 0 0 1px #000;'; radius = 8; }
     else if (/Tooltip-Border/i.test(op.edge || '')) { border = `${op.edgeSize >= 16 ? 2 : 1}px solid ${rgba(bc)}`; radius = op.edgeSize >= 16 ? 5 : 4; }
     else if (/WHITE8X8/i.test(op.edge || '')) { border = `${op.edgeSize || 1}px solid ${rgba(bc)}`; radius = 2; }
     else if (/SliderBar-Border/i.test(op.edge || '')) { border = '1px solid #6b5530'; radius = 6; }
@@ -105,6 +107,15 @@ function opHtml(op) {
       const w = b.w / (c[1] - c[0]), h = b.h / (c[3] - c[2]);
       return `<div style="${base}overflow:hidden"><img src="${LOGO}" style="position:absolute;left:${-c[0] * w}px;top:${-c[2] * h}px;width:${w}px;height:${h}px"></div>`;
     }
+    // the group loot frame's art
+    if (/UI-EmptySlot/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:22%;background:#100d0a;border:1px solid #5a4a30;box-shadow:inset 0 0 6px #000"></div></div>`;
+    if (/Merchant-LabelSlots/i.test(tex)) return `<div style="${base}"><div style="position:absolute;left:2%;right:22%;top:10%;bottom:46%;background:rgba(0,0,0,.45);border:1px solid #6b5530;border-radius:3px"></div></div>`;
+    if (/Gold-Dragon|DialogBox-Corner|DialogBox-Gold-Corner/i.test(tex)) return '';
+    if (/GroupLoot-Dice-Up/i.test(tex)) return `<div style="${base}${desat}"><div style="position:absolute;inset:16%;background:linear-gradient(135deg,#fff,#cfc6b4);border-radius:5px;border:1px solid #4a3a20;box-shadow:1px 1px 0 #000"><i style="position:absolute;left:22%;top:22%;width:4px;height:4px;border-radius:50%;background:#7a1010"></i><i style="position:absolute;left:44%;top:44%;width:4px;height:4px;border-radius:50%;background:#7a1010"></i><i style="position:absolute;right:22%;bottom:22%;width:4px;height:4px;border-radius:50%;background:#7a1010"></i></div></div>`;
+    if (/GroupLoot-Coin-Up/i.test(tex)) return `<div style="${base}${desat}"><div style="position:absolute;inset:16%;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe9a0,#c9922a 60%,#7a5410);border:1px solid #4a3410;box-shadow:1px 1px 0 #000"></div></div>`;
+    if (/GroupLoot-(Dice|Coin)-(Down|Highlight)/i.test(tex)) return '';
+    if (/Skills-BarBorder/i.test(tex)) return `<div style="${base}"><div style="position:absolute;left:0;right:0;top:25%;bottom:25%;border:1px solid #9a8560;border-radius:2px;box-shadow:0 0 0 1px #000"></div></div>`;
+    if (/Skills-Bar/i.test(tex)) return `<div style="${base}background:linear-gradient(${rgba(tint)},${rgba([tint[0] * 0.6, tint[1] * 0.6, tint[2] * 0.6, tint[3] ?? 1])})"></div>`;
     if (/Indicator-Yellow/i.test(tex)) return `<div style="${base}border-radius:50%;background:radial-gradient(#ffe066,#c98a00)"></div>`;
     if (/ButtonHilight|QuestTitleHighlight/i.test(tex)) return '';
     return `<div style="${base}background:repeating-linear-gradient(45deg,#3a0040,#3a0040 4px,#200020 4px,#200020 8px)" title="${esc(tex)}"></div>`;
@@ -131,7 +142,16 @@ const page = await b.newPage({ viewport: { width: 1280, height: 800 }, deviceSca
 await page.route(/zamimg/, r => (process.env.ICONS ? r.continue() : r.abort()));
 for (const f of files) {
   const shot = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-  const win = shot.ops.find(o => o.kind === 'backdrop' && o.name === 'LootRulerFrame');
+  // the picture is cut to the window, or to the frames the test named (shot.focus)
+  let win = shot.ops.find(o => o.kind === 'backdrop' && o.name === 'LootRulerFrame');
+  if (shot.focus) {
+    const boxes = shot.ops.filter(o => o.kind === 'backdrop' && shot.focus.includes(o.name)).map(o => o.box);
+    if (boxes.length) {
+      const x = Math.min(...boxes.map(b => b.x)), y = Math.min(...boxes.map(b => b.y));
+      const r = Math.max(...boxes.map(b => b.x + b.w)), btm = Math.max(...boxes.map(b => b.y + b.h));
+      win = { box: { x: x - 6, y: y - 6, w: r - x + 12, h: btm - y + 12 } };
+    }
+  }
   const html = `<!doctype html><html><body style="margin:0;background:#2a3540;width:${shot.w}px;height:${shot.h}px;position:relative;overflow:hidden">${shot.ops.map(opHtml).join('\n')}</body></html>`;
   await page.setContent(html);
   await page.waitForTimeout(process.env.ICONS ? 800 : 50);

@@ -225,5 +225,6 @@ function UI.sessionView(f, s)
     end
     newSession(f)
   end
+  UI.rollingPanel(f)
   others(f, s)
 end

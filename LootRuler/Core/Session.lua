@@ -11,6 +11,9 @@
 --   locked   reserves can't be changed any more (the leader still can)
 --   hr       hard reserves: item id -> { f = who it's for (may be ""), n = note (may be "") }
 --   res      soft reserves: "Name-Realm" -> { c = class token ("PALADIN", may be nil), i = { item ids } }
+--   won      loot given out while the session was open (Core/Rolls.lua), oldest first:
+--            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time }
+--            A reserve that has won its item is used up: it doesn't count when another copy drops.
 --   created, updated   server times
 local _, LR = ...
 local U = LR.U
@@ -183,11 +186,60 @@ function S.players(s)
   return out
 end
 
+---------------------------------------------------------------------- loot given out
+S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true }
+
+--- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did)
+function S.award(s, id, player, kind, roll, now)
+  if type(id) ~= "number" or type(player) ~= "string" or not S.WON_KINDS[kind] then return false end
+  s.won = s.won or {}
+  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now }
+  bump(s, now)
+  return true
+end
+
+--- takes back a record of loot given out (a mistake), by its place in the list
+function S.unaward(s, index, now)
+  if not s.won or not s.won[index] then return false end
+  table.remove(s.won, index)
+  bump(s, now)
+  return true
+end
+
+--- how many times a player has won an item on a soft reserve
+function S.srWins(s, player, id)
+  local n = 0
+  for _, w in ipairs(s.won or {}) do
+    if w.i == id and w.k == "SR" and U.samePlayer(w.p, player) then n = n + 1 end
+  end
+  return n
+end
+
+--- a player's reserves on an item that haven't won it yet
+function S.claims(s, player, id)
+  local n = 0
+  for _, x in ipairs(S.reservesOf(s, player)) do if x == id then n = n + 1 end end
+  return math.max(0, n - S.srWins(s, player, id))
+end
+
+--- who has been given an item: { { name, kind }, ... } in the order it was given
+function S.winners(s, id)
+  local out = {}
+  for _, w in ipairs(s.won or {}) do if w.i == id then out[#out + 1] = { w.p, w.k } end end
+  return out
+end
+
 --- a session from another player, checked before it's trusted: right shape, known raid, sane numbers
 function S.valid(t)
   if type(t) ~= "table" or type(t.id) ~= "string" or type(t.leader) ~= "string" or type(t.rev) ~= "number" then return false end
   if not LR.raid(t.raid) or type(t.sr) ~= "number" or t.sr < S.MIN_SR or t.sr > S.MAX_SR then return false end
   if type(t.hr) ~= "table" or type(t.res) ~= "table" then return false end
+  if t.won ~= nil then
+    if type(t.won) ~= "table" then return false end
+    for _, w in ipairs(t.won) do
+      if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or not S.WON_KINDS[w.k] then return false end
+    end
+  end
   for id, h in pairs(t.hr) do if type(id) ~= "number" or type(h) ~= "table" then return false end end
   for name, r in pairs(t.res) do
     if type(name) ~= "string" or type(r) ~= "table" or type(r.i) ~= "table" then return false end

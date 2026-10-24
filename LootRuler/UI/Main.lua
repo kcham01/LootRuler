@@ -215,6 +215,7 @@ function UI.renderSoon()
   C_Timer.After(0.2, function() renderSoon = false UI.render() end)
 end
 LR.onChange(function(what)
+  if what == "roll" or what == "rolls" or what == "loot" then return end   -- the roll windows' business (UI/Roll*.lua)
   if what == "items" then UI.renderSoon() else UI.render() end
   if LR.minimapUpdate then LR.minimapUpdate() end
 end)
@@ -393,6 +394,11 @@ function UI.itemTooltip(owner, s, id, raidKey)
         GameTooltip:AddLine(U.short(w[1]) .. (w[2] > 1 and (" x" .. w[2]) or ""), r, g, b)
       end
     end
+    local won = S.winners(s, id)
+    if #won > 0 then
+      GameTooltip:AddLine(" ")
+      for _, w in ipairs(won) do GameTooltip:AddLine("Given to " .. U.short(w[1]) .. " (" .. (w[2] == "HR" and "hard reserved" or w[2]) .. ")", 0.12, 1, 0) end
+    end
     local from = LR.dropsFrom(s.raid, id)
     if #from > 0 then
       GameTooltip:AddLine(" ")
@@ -411,7 +417,11 @@ function UI.whoLine(s, id, limit, except)
   local parts = {}
   for i, w in ipairs(who) do
     if limit and i > limit then parts[#parts + 1] = "+" .. (#who - limit) break end
-    parts[#parts + 1] = U.classText(U.short(w[1]), s.res[w[1]] and s.res[w[1]].c) .. (w[2] > 1 and (" x" .. w[2]) or "")
+    local wins = S.srWins(s, w[1], id)
+    local name = U.classText(U.short(w[1]), s.res[w[1]] and s.res[w[1]].c) .. (w[2] > 1 and (" x" .. w[2]) or "")
+    if wins >= w[2] then name = "|cff9d9d9d" .. U.short(w[1]) .. (w[2] > 1 and (" x" .. w[2]) or "") .. " (won)|r"
+    elseif wins > 0 then name = name .. " |cff9d9d9d(won " .. wins .. ")|r" end
+    parts[#parts + 1] = name
   end
   return table.concat(parts, ", ")
 end
@@ -500,7 +510,8 @@ end)
 SLASH_LOOTRULER1 = "/lr"
 SLASH_LOOTRULER2 = "/lootruler"
 SlashCmdList.LOOTRULER = function(msg)
-  msg = U.trim(msg or ""):lower()
+  local raw = msg or ""                 -- item links keep their case
+  msg = U.trim(raw):lower()
   if msg == "minimap" then
     LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
     if LR.minimap then LR.minimap:SetShown(not LR.db.ui.hideMinimap) end
@@ -509,6 +520,12 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("session")
   elseif msg == "list" or msg == "reserves" then
     UI.show("reserves")
+  elseif msg == "loot" or msg == "master" then
+    UI.showMaster()
+  elseif msg == "test" then
+    UI.testRoll()
+  elseif msg:match("^roll") then
+    UI.rollCommand(raw:gsub("^%s*[Rr][Oo][Ll][Ll]%s*", ""))
   else
     UI.toggle()
   end

@@ -20,7 +20,7 @@
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/08-session.png" alt="Running the session" width="32%">
 </p>
 
-**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or whisper the leader if they don't have the addon; and it all goes into **Gargul** with one click.
+**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or whisper the leader if they don't have the addon; and when loot drops, everyone gets a **roll window** that knows who reserved it. Or send it all to **Gargul** with one click.
 
 Type **/lr** in game.
 
@@ -58,6 +58,25 @@ Already used softres.it? **Import from softres.it** brings in its "Gargul Export
 
 (`!sr` is left alone: Gargul answers that one.)
 
+## Rolling out loot
+
+When it's time to hand out loot, LootRuler pops up a roll window for everyone, like the game's own Need/Greed window, and it knows who reserved what.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/18-loot-master.png" alt="The loot master's panel and window" width="70%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/19-roll-windows.png" alt="Roll windows" width="28%">
+</p>
+
+- **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. Click one to roll it out (or type `/lr roll` and an item link).
+- **Everyone with LootRuler** gets a roll window: the dice is main spec (`/roll`), the coin is off spec (`/roll 99`), the x passes. It shows the timer and the highest roll so far, then who won.
+- **A soft reserved item** is only rolled for by the players who reserved it, and who are in the raid. Everyone else sees who reserved it, and their window won't let them roll. Once a reserve has won its item it's used up, so if a second one drops it goes to the next reserver.
+- **A hard reserved item** isn't rolled for at all: the loot master gets a "Give to" button.
+- **A tie** can be rolled again, just between the players who tied.
+- **Players without the addon** are told in raid chat what to roll, and their `/roll`s count the same.
+- **Giving it out:** the loot master's window lists every roll, best first, and the ones that don't count (wrong roll, didn't reserve it, too late) underneath. One click gives the item to the winner through master loot. The item, the winner and how they won it go on the Reserves tab's list of loot given out.
+
+The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Session tab can turn roll windows off, or show them only for items you can roll on.
+
 ## Install
 
 1. Download [LootRuler.zip](https://github.com/kcham01/LootRuler/raw/results/LootRuler.zip).
@@ -65,7 +84,7 @@ Already used softres.it? **Import from softres.it** brings in its "Gargul Export
 3. Restart the game (a new addon needs a full restart) and make sure it's ticked in the AddOns list.
 4. Type `/lr` or click the note on the minimap.
 
-`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr minimap` hides or shows the minimap button.
+`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr minimap` hides or shows the minimap button.
 
 ## How it's checked
 
@@ -73,6 +92,7 @@ Every build:
 
 - checks the session rules (limits, doubling up, hard reserves, locking, changing the rules part way);
 - runs a **whole raid of clients side by side** in a stand-in for the game: the leader, raiders on the same and other realms, a pug whispering, a guild member outside the group, the leader logging out and back in, people joining late, and messages from people who shouldn't be able to change things;
+- runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot;
 - loads **Gargul's own soft-reserve importer** and checks it reads LootRuler's reserves exactly (doubled reserves, classes, hard reserves, players from other realms);
 - checks the addon only uses what the TBC Anniversary client has, against Blizzard's own interface code;
 - clicks through every screen, checks nothing errors or leaks frames, and draws every screen.

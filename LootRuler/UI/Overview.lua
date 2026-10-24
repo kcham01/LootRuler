@@ -79,7 +79,30 @@ function UI.pickItem(s, title, done, filter)
   end, { full = true })
 end
 
+--- loot given out while the session's been open, newest first
+local function given(f, s, leader)
+  if not s.won or #s.won == 0 then return end
+  f:panel("Loot given out", function(p)
+    for i = #s.won, 1, -1 do
+      local w = s.won[i]
+      local how = w.k == "HR" and "hard reserved" or (LR.Roll.LABEL[w.k] .. (w.r and (" " .. w.r) or ""))
+      local b = K.get(p.owner, "item", p.parent)
+      K.setItem(b, p.width, LR.itemIcon(w.i), LR.coloredName(w.i),
+        "To " .. U.classText(U.short(w.p), LR.classOf(w.p) or (s.res[w.p] and s.res[w.p].c)) .. " (" .. how .. ")", w.k == "SR" and "SR" or "",
+        leader and { text = "x", tip = "Take this off the list (a mistake). The item itself stays where it is.", click = function()
+          UI.confirm("Take it off the list", ("%s to %s comes off the list of loot given out%s."):format(LR.itemName(w.i), U.short(w.p),
+            w.k == "SR" and ", and their reserve on it counts again" or ""), "Take it off", function() LR.unaward(s, i) end)
+        end } or nil)
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, w.i) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      p:place(b, 36)
+      p:gap(2)
+    end
+  end)
+end
+
 local function byItem(f, s, leader)
+  given(f, s, leader)
   local hr = U.keys(s.hr)
   if #hr > 0 then
     f:panel("Hard reserves", function(p)
