@@ -101,8 +101,26 @@ local bad = U.copy(s) bad.sr = 99
 check("a copy with nonsense is refused", not S.valid(bad))
 bad = U.copy(s) bad.res[A].i[1] = "x"
 check("a copy with a bad item is refused", not S.valid(bad))
-bad = U.copy(s) bad.raid = "Naxxramas"
-check("a copy for an unknown raid is refused", not S.valid(bad))
+local newer = U.copy(s) newer.raid = "Naxxramas" newer.raidName = "Naxxramas"
+check("a copy for a raid this version doesn't know is kept (a newer version's)", S.valid(newer) and LR.raidOf(newer).name == "Naxxramas" and LR.raidOf(newer).custom)
+bad = U.copy(s) bad.raid = 5
+check("a copy with a raid that isn't a name is refused", not S.valid(bad))
+
+print("== any item, and raids that aren't in the lists")
+local DRAGONSPINE = 28830
+local kz = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 300)
+check("a raid in the lists is named from them", kz.raidName == "Karazhan" and not kz.any)
+check("its own loot only, unless the leader says so", not S.add(kz, A, "PRIEST", DRAGONSPINE, false, 301) and select(2, S.check(kz, { DRAGONSPINE })) == "NOT_IN_RAID")
+check("a raider's addon leaves that to the leader's", S.check(kz, { DRAGONSPINE }, true))
+check("the leader allows any item", S.setAny(kz, true, 302) and S.add(kz, A, "PRIEST", DRAGONSPINE, false, 303))
+local bd = S.new("Lead-Dreamscythe", LR.CUSTOM, 3, false, 304, "  Barrow Deeps  ")
+check("a raid that isn't in the lists, by name", bd.raid == LR.CUSTOM and bd.raidName == "Barrow Deeps" and bd.any and LR.raidOf(bd).name == "Barrow Deeps")
+check("any item can be reserved for it", S.add(bd, A, "PRIEST", 123456, false, 305) and S.setHR(bd, 98765, "Ann", "", 306))
+check("and it stays that way", not S.setAny(bd, false, 307) and bd.any)
+check("but not something that isn't an item", not S.add(bd, A, "PRIEST", 1.5, false, 308) and not S.add(bd, A, "PRIEST", -3, false, 309))
+check("it's a valid session", S.valid(bd))
+check("item ids from links, item strings and numbers", LR.idFrom("|cffa335ee|Hitem:28830::::|h[Dragonspine Trophy]|h|r") == 28830
+  and LR.idFrom("item:123") == 123 and LR.idFrom(" 456 ") == 456 and LR.idFrom("[789]") == 789 and LR.idFrom("watch") == nil)
 
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))

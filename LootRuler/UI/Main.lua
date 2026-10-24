@@ -157,7 +157,7 @@ local function drawTop(s)
     top.count:Hide()
     return
   end
-  local raid = LR.raid(s.raid)
+  local raid = LR.raidOf(s)
   top.icon:SetTexture(LR.raidIcon(s.raid))
   top.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
   top.name:SetText(raid.name)
@@ -370,7 +370,7 @@ LR.RAID_ITEM = {
   Karazhan = 30480, GruulsLair = 28830, MagtheridonsLair = 32385, SerpentshrineCavern = 30627, TempestKeep = 32458,
   HyjalSummit = 30908, BlackTemple = 32837, ZulAman = 33467, SunwellPlateau = 34334, WorldBossesBC = 30729,
 }
-function LR.raidIcon(key) return LR.itemIcon(LR.RAID_ITEM[key] or 0) end
+function LR.raidIcon(key) return LR.RAID_ITEM[key] and LR.itemIcon(LR.RAID_ITEM[key]) or LR.LOGO end
 
 --- the game's tooltip for an item, with who reserved it underneath (and where it drops)
 function UI.itemTooltip(owner, s, id, raidKey)
@@ -475,7 +475,7 @@ local function minimapButton()
     GameTooltip:SetText("LootRuler")
     local s = LR.current()
     if s then
-      GameTooltip:AddLine(("%s soft reserves by %s"):format(LR.raid(s.raid).name, LR.isLeader(s) and "you" or U.short(s.leader)), 1, 1, 1)
+      GameTooltip:AddLine(("%s soft reserves by %s"):format(LR.raidOf(s).name, LR.isLeader(s) and "you" or U.short(s.leader)), 1, 1, 1)
       GameTooltip:AddLine(("You've used %d of %d."):format(#LR.myPicks(s), s.sr), 1, 1, 1)
     else
       GameTooltip:AddLine("No soft reserves open.", 1, 1, 1)

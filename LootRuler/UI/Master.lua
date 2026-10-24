@@ -400,7 +400,7 @@ function UI.rollCommand(text)
   if not id and text ~= "" then
     local s = Rolls.session()
     local found, close = nil, {}
-    if s then found, close = LR.findItem(s.raid, text, UnitFactionGroup("player")) end
+    if s then found, close = LR.findInSession(s, text, UnitFactionGroup("player")) end
     if not found and #close > 1 then LR.print("Which one? " .. table.concat(U.map(close, function(x) return LR.itemLink(x) end), " ", 1, math.min(#close, 5))) return end
     id = found
   end

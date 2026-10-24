@@ -37,7 +37,7 @@ local function myReserves(f, s)
     if LR.pending(s) then p:note(pendingNote(s), K.GOLD) end
     p:gap(2)
     if #picks == 0 then
-      p:note("Nothing reserved yet: pick from the list below.")
+      p:note(LR.raidOf(s).custom and "Nothing reserved yet: shift-click an item into the box below." or "Nothing reserved yet: pick from the list below.")
     end
     local counts, order = {}, {}
     for _, id in ipairs(picks) do
@@ -85,6 +85,7 @@ local function searchBox(f, placeholder)
   end)
   e:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.searchFocus = false end)
   e:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.searchFocus = false end)
+  K.takeLinks(e)
   if UI.searchFocus then K.refocus(e) end
   f:gap(8)
 end
@@ -97,6 +98,46 @@ local function matches(q, id, boss)
 end
 
 local LIMIT = 200
+
+--- one item to reserve: click reserves, right-click takes a reserve back (with a session); key: the raid
+--- it's listed under, for the tooltip
+function UI.reserveRow(f, s, id, key, picks)
+  picks = picks or (s and LR.myPicks(s) or {})
+  local b = K.get(f.owner, "item", f.parent)
+  local hr = s and s.hr[id]
+  local mine = U.count(picks, id)
+  local sub = LR.itemKind(id)
+  local who = s and UI.whoLine(s, id, 3)
+  if hr then sub = "|cffff5a4aHard reserved" .. (hr.f ~= "" and (" for " .. hr.f) or "") .. "|r"
+  elseif who then sub = (sub ~= "" and (sub .. "  -  ") or "") .. who end
+  local badge = hr and "|cffff5a4aHR|r" or (mine > 0 and ("|cff1eff00" .. (mine > 1 and ("x" .. mine) or "Yours") .. "|r") or "")
+  K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), sub, badge)
+  if hr then b.icon:SetDesaturated(true) b:SetBackdropColor(0.15, 0.03, 0.02, 0.5) end
+  if mine > 0 then b:SetBackdropColor(0.05, 0.18, 0.03, 0.6) b:SetBackdropBorderColor(0.12, 0.6, 0.1, 0.8) end
+  b:SetScript("OnClick", function(_, button)
+    if UI.modifiedClick(LR.itemLink(id)) then return end
+    if not s then return end
+    local ok, why
+    if button == "RightButton" then
+      if mine == 0 then return end
+      ok, why = LR.unreserve(s, id)
+    else
+      ok, why = LR.reserve(s, id)
+    end
+    if not ok then UI.refused(why) end
+  end)
+  b:SetScript("OnEnter", function(self)
+    UI.itemTooltip(self, s, id, key)
+    GameTooltip:AddLine(" ")
+    if not s then GameTooltip:AddLine("Shift-click to link it in chat, Ctrl-click to try it on.", 0.5, 0.8, 1, true)
+    else GameTooltip:AddLine(hr and "Hard reserved: it can't be soft reserved." or "Click to reserve, right-click to take a reserve back.", 0.5, 0.8, 1, true) end
+    GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  f:place(b, 36)
+  f:gap(3)
+  return b
+end
 
 --- the loot of one or more raids, boss by boss. With a session the rows reserve; without, they only show.
 local function lootList(f, keys, s)
@@ -131,40 +172,7 @@ local function lootList(f, keys, s)
         f:place(h, 22)
         f:gap(4)
         for _, id in ipairs(ids) do
-          local b = K.get(f.owner, "item", f.parent)
-          local hr = s and s.hr[id]
-          local mine = U.count(picks, id)
-          local sub = LR.itemKind(id)
-          local who = s and UI.whoLine(s, id, 3)
-          if hr then sub = "|cffff5a4aHard reserved" .. (hr.f ~= "" and (" for " .. hr.f) or "") .. "|r"
-          elseif who then sub = sub .. "  -  " .. who end
-          local badge = hr and "|cffff5a4aHR|r" or (mine > 0 and ("|cff1eff00" .. (mine > 1 and ("x" .. mine) or "Yours") .. "|r") or "")
-          K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), sub, badge)
-          if hr then b.icon:SetDesaturated(true) b:SetBackdropColor(0.15, 0.03, 0.02, 0.5) end
-          if mine > 0 then b:SetBackdropColor(0.05, 0.18, 0.03, 0.6) b:SetBackdropBorderColor(0.12, 0.6, 0.1, 0.8) end
-          b:SetScript("OnClick", function(_, button)
-            if IsModifiedClick and IsModifiedClick("CHATLINK") and ChatEdit_InsertLink then ChatEdit_InsertLink(LR.itemLink(id)) return end
-            if IsModifiedClick and IsModifiedClick("DRESSUP") and DressUpItemLink then DressUpItemLink(LR.itemLink(id)) return end
-            if not s then return end
-            local ok, why
-            if button == "RightButton" then
-              if mine == 0 then return end
-              ok, why = LR.unreserve(s, id)
-            else
-              ok, why = LR.reserve(s, id)
-            end
-            if not ok then UI.refused(why) end
-          end)
-          b:SetScript("OnEnter", function(self)
-            UI.itemTooltip(self, s, id, key)
-            GameTooltip:AddLine(" ")
-            if not s then GameTooltip:AddLine("Shift-click to link it in chat, Ctrl-click to try it on.", 0.5, 0.8, 1, true)
-            else GameTooltip:AddLine(hr and "Hard reserved: it can't be soft reserved." or "Click to reserve, right-click to take a reserve back.", 0.5, 0.8, 1, true) end
-            GameTooltip:Show()
-          end)
-          b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-          f:place(b, 36)
-          f:gap(3)
+          UI.reserveRow(f, s, id, key, picks)
           shown = shown + 1
         end
         f:gap(6)
@@ -210,11 +218,44 @@ function UI.reserveView(f, s)
   end
   myReserves(f, s)
   f:chips({
-    { label = "For my class", on = UI.usable, click = function() UI.usable = not UI.usable LR.db.ui.usable = UI.usable UI.render() end,
-      tip = "Only show what your class would reserve: tier tokens for your class, your kind of armour, weapons you can use." },
+    not LR.raidOf(s).custom and { label = "For my class", on = UI.usable, click = function() UI.usable = not UI.usable LR.db.ui.usable = UI.usable UI.render() end,
+      tip = "Only show what your class would reserve: tier tokens for your class, your kind of armour, weapons you can use." } or false,
     { label = "Reserved only", on = UI.reservedOnly, click = function() UI.reservedOnly = not UI.reservedOnly UI.render() end,
       tip = "Only show items someone has reserved." },
   })
-  searchBox(f, "Search " .. LR.raid(s.raid).name)
-  lootList(f, { s.raid }, s)
+  local raid = LR.raidOf(s)
+  searchBox(f, raid.custom and "Shift-click any item into here, or type its name" or
+    ("Search " .. raid.name .. (s.any and ", or shift-click any item" or "")))
+  -- an item linked (or its number typed) into the box: that item, whatever raid it's from
+  local linked = LR.idFrom(UI.q)
+  if linked then
+    if C_Item and C_Item.RequestLoadItemDataByID and not C_Item.GetItemInfo(linked) then C_Item.RequestLoadItemDataByID(linked) end
+    f:panel("Linked item", function(p)
+      UI.reserveRow(p, s, linked, s.raid)
+      if not LR.allowedItem(s, linked) then
+        p:note(("It doesn't drop in %s, and only its loot can be reserved: %s can allow any item."):format(raid.name, U.short(s.leader)), K.GOLD)
+      end
+    end)
+    return
+  end
+  if not raid.custom then lootList(f, { s.raid }, s) end
+  -- items the session knows of that aren't the raid's own loot (or everything, for a raid not in the lists)
+  local q = U.lower(U.trim(UI.q))
+  local others = U.filter(LR.sessionItems(s), function(id)
+    return not raid.has[id] and (q == "" or LR.itemName(id):lower():find(q, 1, true))
+      and (not UI.reservedOnly or S.byItem(s)[id] or s.hr[id])
+  end)
+  if #others > 0 then
+    local h = K.get(f.owner, "head", f.parent)
+    h.text:SetText(raid.custom and "Reserved and dropped" or "Other items")
+    h.right:SetText(U.plural(#others, "item"))
+    h:SetWidth(f.width)
+    f:place(h, 22)
+    f:gap(4)
+    local picks = LR.myPicks(s)
+    for _, id in ipairs(others) do UI.reserveRow(f, s, id, nil, picks) end
+  elseif raid.custom then
+    f:note(q ~= "" and "Nothing reserved or dropped has that name. Shift-click the item itself into the box." or
+      ("%s isn't in LootRuler's loot lists, so any item can be reserved: shift-click it into the box above (from your bags, a chat link, anywhere). Items others reserve, and items that drop, show up here."):format(raid.name))
+  end
 end

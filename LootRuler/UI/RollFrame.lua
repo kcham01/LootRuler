@@ -362,7 +362,7 @@ function UI.testRoll()
   local id = 28830                              -- Dragonspine Trophy
   local s = LR.current()
   if s then
-    local raid = LR.raid(s.raid)
+    local raid = LR.raidOf(s)
     id = raid and raid.order[1] or id
   end
   local k = "test:" .. GetTime()

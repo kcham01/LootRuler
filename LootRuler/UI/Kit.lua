@@ -41,6 +41,7 @@ function K.rgb(c) return c[1], c[2], c[3] end
 
 ---------------------------------------------------------------------- pools
 local pools, live = {}, {}
+local linkBoxes = setmetatable({}, { __mode = "k" })   -- text boxes that take item links (K.takeLinks)
 local makers, resets = {}, {}
 
 function K.define(kind, make, reset) makers[kind] = make resets[kind] = reset end
@@ -225,7 +226,24 @@ K.define("edit", function()
     end
   end)
   return e
-end, function(e) e:SetScript("OnTextChanged", nil) e:SetScript("OnEnterPressed", nil) e:SetText("") e:SetMaxLetters(0) e:ClearFocus() e.keepCursor = nil end)
+end, function(e) e:SetScript("OnTextChanged", nil) e:SetScript("OnEnterPressed", nil) e:SetText("") e:SetMaxLetters(0) e:ClearFocus() e.keepCursor = nil linkBoxes[e] = nil end)
+
+--- text boxes that take item links: shift-clicking an item (in your bags, chat, anywhere) while one has the
+--- focus puts the item's link in it, as it would in the chat box
+function K.takeLinks(e) linkBoxes[e] = true end
+if hooksecurefunc and ChatEdit_InsertLink then
+  hooksecurefunc("ChatEdit_InsertLink", function(text)
+    if type(text) ~= "string" or not text:find("|Hitem:", 1, true) then return end
+    for e in pairs(linkBoxes) do
+      if e:IsVisible() and e:HasFocus() then
+        e:SetText(text)
+        local fn = e:GetScript("OnTextChanged")
+        if fn then fn(e, true) end
+        return
+      end
+    end
+  end)
+end
 
 --- gives a text box the focus back without highlighting its text: the cursor goes to the end, as if you'd
 --- never stopped typing
@@ -371,12 +389,12 @@ function Flow:panel(title, fill)
   return p
 end
 
---- a row of chips (or other fixed-size buttons) that wraps onto more lines
+--- a row of chips (or other fixed-size buttons) that wraps onto more lines; `false` in the list is skipped
 function Flow:chips(list, opts)
   opts = opts or {}
   local x, rowH = 0, 0
   local lineY = self.y
-  for _, c in ipairs(list) do
+  for _, c in ipairs(list) do if c then
     local b
     if c.plain then
       b = K.get(self.owner, "label", self.parent)
@@ -397,7 +415,7 @@ function Flow:chips(list, opts)
     if c.tip then tooltipOn(b, function(tt) tt:SetText(c.tip, 1, 1, 1, 1, true) end) end
     x = x + w + 4
     rowH = max(rowH, b:GetHeight())
-  end
+  end end
   self.y = lineY + rowH + (opts.gap or 6)
   return self
 end
