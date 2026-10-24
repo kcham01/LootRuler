@@ -401,7 +401,7 @@ function UI.itemTooltip(owner, s, id, raidKey)
     local won = S.winners(s, id)
     if #won > 0 then
       GameTooltip:AddLine(" ")
-      for _, w in ipairs(won) do GameTooltip:AddLine("Given to " .. U.short(w[1]) .. " (" .. (w[2] == "HR" and "hard reserved" or w[2]) .. ")", 0.12, 1, 0) end
+      for _, w in ipairs(won) do GameTooltip:AddLine("Given to " .. U.short(w[1]) .. " (" .. (w[2] == "HR" and "hard reserved" or w[2] == "DE" and "to disenchant" or w[2]) .. ")", 0.12, 1, 0) end
     end
     local from = LR.dropsFrom(s.raid, id)
     if #from > 0 then
@@ -530,6 +530,15 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("settings")
   elseif msg == "help" or msg == "?" then
     UI.help()
+  elseif msg:match("^de%s") or msg:match("^disenchanter%s") then
+    local s = LR.current()
+    local name = U.trim(raw:gsub("^%s*%a+%s*", ""))
+    if not s or not LR.isLeader(s) then LR.print("Only the leader of the soft reserves picks the disenchanter.")
+    else
+      local m = LR.inGroup(name)
+      LR.setDisenchanter(s, m and m.name or name)
+      LR.print((m and m.name or U.full(name)) .. " is the disenchanter.")
+    end
   elseif msg == "master" then
     UI.showMaster()
   elseif msg == "test" then

@@ -99,6 +99,20 @@ function UI.pickItem(s, title, done, filter)
   end, { full = true })
 end
 
+--- picks someone in the group (a sheet), then calls done("Name-Realm")
+function UI.pickPlayer(title, done)
+  UI.openSheet(title, function(f, h)
+    local people = LR.roster()
+    if #people == 0 then people = { { name = U.me(), class = LR.myClass() } } end
+    table.sort(people, function(a, b) return a.name < b.name end)
+    local chips = {}
+    for _, m in ipairs(people) do
+      chips[#chips + 1] = { label = U.classText(U.short(m.name), m.class), click = function() h.close() done(m.name) end }
+    end
+    f:chips(chips)
+  end)
+end
+
 local function byItem(f, s, leader)
   local hr = U.keys(s.hr)
   if #hr > 0 then

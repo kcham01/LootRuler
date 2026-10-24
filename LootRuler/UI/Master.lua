@@ -231,7 +231,7 @@ function UI.masterDraw()
       { label = "Call off", click = function() Rolls.cancel() end },
     }, "left")
   elseif roll.state == "awarded" then
-    f:text("Given to " .. U.classText(U.short(roll.winner), LR.classOf(roll.winner)) .. ".", { font = "GameFontNormal" })
+    f:text("Given to " .. U.classText(U.short(roll.winner), LR.classOf(roll.winner)) .. (roll.de and ", to disenchant." or "."), { font = "GameFontNormal" })
     if roll.note then f:note(roll.note, K.GOLD) end
     if Rolls.session() then f:note(LR.isLeader(Rolls.session()) and "It's on the soft reserves' list of loot given out." or "The soft reserves' leader keeps a list of loot given out.") end
     f:buttons({ { label = "Close", click = function() Rolls.dismiss() end } }, "left")
@@ -250,7 +250,19 @@ function UI.masterDraw()
       end }
     end
     if tied then list[#list + 1] = { label = "Reroll the tie", click = function() Rolls.again("TIE") end } end
+    -- nobody wants it: the disenchanter
+    local s = Rolls.session()
+    if s and s.de and roll.mode ~= "HR" then
+      list[#list + 1] = { label = "Disenchant (" .. U.short(s.de) .. ")", click = function()
+        local ok, note = Rolls.disenchant()
+        if ok and note then roll.note = note end
+        if not ok then UI.masterNote(note) end
+      end }
+    end
     if #list > 0 then f:buttons(list, "left") end
+    if s and not s.de and roll.mode ~= "HR" and not pick then
+      f:note("Nobody to give it to? Pick a disenchanter on the Session tab and it's one click.")
+    end
     local more = {}
     if roll.mode == "SR" or roll.mode == "HR" or roll.mode == "TIE" then
       more[#more + 1] = { label = roll.mode == "HR" and "Roll it out anyway" or "Let everyone roll", click = function() Rolls.again("OPEN") end }

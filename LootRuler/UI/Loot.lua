@@ -17,7 +17,10 @@ function UI.duration(secs)
 end
 
 local function who(name, s) return U.classText(U.short(name), LR.classOf(name) or (s.res[name] and s.res[name].c)) end
-local function how(w) return w.k == "HR" and "hard reserved" or ((R.LABEL[w.k] or tostring(w.k)) .. (w.r and (" " .. w.r) or "")) end
+local function how(w)
+  if w.de then return "to disenchant" end
+  return w.k == "HR" and "hard reserved" or ((R.LABEL[w.k] or tostring(w.k)) .. (w.r and (" " .. w.r) or ""))
+end
 
 --- whether an item is being rolled for right now
 local function rolling(id)
@@ -34,6 +37,7 @@ function UI.dropLine(s, d)
   local state, w = S.dropState(s, d)
   local left = Drops.tradeLeft(d)
   local trade = left and (left > 0 and (UI.duration(left) .. " to trade") or "|cffff5a4atoo late to trade|r")
+  if state == "given" and w.de then return "Disenchanted by " .. who(w.p, s) end
   if state == "given" then return "Won by " .. who(w.p, s) .. " (" .. how(w) .. ")" end
   if state == "toTrade" then
     return "Won by " .. who(w.p, s) .. " (" .. how(w) .. "); " .. U.short(d.h) .. " has it to trade" .. (trade and (", " .. trade) or "")

@@ -307,18 +307,19 @@ local function candidate(slot, player)
 end
 
 --- records that a player won an item (on the session, when I'm its leader)
-local function record(s, id, player, kind, n, drop)
+local function record(s, id, player, kind, n, drop, de)
   if not s or not LR.isLeader(s) then return end
-  if S.award(s, id, player, kind, n, U.now(), drop) then LR.leaderChanged(s) end
+  if S.award(s, id, player, kind, n, U.now(), drop, de) then LR.leaderChanged(s) end
 end
 
 --- gives the item to a player: straight from the loot window when it's still there (master loot), else it's
 --- recorded and announced, for the loot master to trade it. kind and n: how they won it (from the rolls if
 --- not given). Returns true, and a note for the loot master when the item couldn't be handed over.
-function Rolls.award(player, kind, n)
+function Rolls.award(player, kind, n, de)
   local roll = Rolls.current
   if not roll or roll.state == "open" or roll.state == "cancelled" then return false, "There's no finished roll to give out." end
   player = U.full(player)
+  if de then kind, n = "OS", nil end
   if not kind then
     local e = roll.rolled[R.key(player)]
     kind, n = e and e.kind or (roll.mode == "HR" and "HR" or "MS"), e and e.n
@@ -332,18 +333,27 @@ function Rolls.award(player, kind, n)
   end
   roll.state = "awarded"
   roll.winner = player
+  roll.de = de
   local s = session()
-  record(s, roll.id, player, kind, n, roll.drop)
-  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop })
+  record(s, roll.id, player, kind, n, roll.drop, de)
+  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop, de = de or nil })
   -- it's in my bags (rolled out later): it goes over in a trade
   local held = not slot and s and roll.drop and S.drop(s, roll.drop)
   if not note and held and held.h and U.samePlayer(held.h, U.me()) and not U.samePlayer(player, U.me()) then
     note = ("Open a trade with %s: LootRuler puts %s in it for you."):format(U.short(player), U.plain(roll.link))
   end
   Rolls.ended(roll.k, "awarded", player, n, kind)
-  say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")))
+  if de then say(("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player)))
+  else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
   changed()
   return true, note
+end
+
+--- gives the item to the session's disenchanter
+function Rolls.disenchant()
+  local s = session()
+  if not s or not s.de then return false, "Pick a disenchanter first (Session tab)." end
+  return Rolls.award(s.de, nil, nil, true)
 end
 
 ---------------------------------------------------------------------- following a roll (every raider)
@@ -464,7 +474,7 @@ Net.handlers.X = function(msg, channel, sender)
   if msg.e == "awarded" and winner and kind and fromLooter(sender) then
     local s = msg.sid and LR.session(msg.sid) or session()
     local id = copy and copy.id or tonumber(msg.id)
-    if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil) end
+    if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil, msg.de == true) end
   end
 end
 

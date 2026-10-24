@@ -134,6 +134,18 @@ local function manage(f, s)
     end } }, "left")
   end)
 
+  f:panel("Disenchanter", function(p)
+    if s.de then
+      p:text(U.classText(U.short(s.de), LR.classOf(s.de)) .. " disenchants what nobody wants: the loot master's window has a Disenchant button.")
+    else
+      p:note("Nobody yet. Pick who disenchants items nobody wants, and the loot master's window gets a one-click Disenchant button.")
+    end
+    p:buttons({
+      { label = s.de and "Someone else" or "Pick a disenchanter", click = function() UI.pickPlayer("Who disenchants?", function(name) LR.setDisenchanter(s, name) end) end },
+      s.de and { label = "Nobody", click = function() LR.setDisenchanter(s, nil) end } or nil,
+    }, "left")
+  end)
+
   f:panel("More", function(p)
     p:buttons({
       { label = "Tell the raid how to SR without the addon", disabled = LR.groupChannel() == nil, click = function()

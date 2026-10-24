@@ -74,6 +74,7 @@ UI.COMMANDS = {
   { "/lr settings", "the Settings tab" },
   { "/lr roll [item]", "roll an item out" },
   { "/lr master", "bring back the loot master window" },
+  { "/lr de [name]", "who disenchants (the leader)" },
   { "/lr test", "a pretend roll window" },
   { "/lr minimap", "hide or show the minimap button" },
 }
