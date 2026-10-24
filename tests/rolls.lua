@@ -9,7 +9,7 @@ end
 local LR = {}
 local env = setmetatable({ bit = require("bit"), GetRealmName = function() return "Dreamscythe" end,
   GetNormalizedRealmName = function() return "Dreamscythe" end, RAID_CLASS_COLORS = {} }, { __index = _G })
-for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua" }) do
+for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua" }) do
   local chunk = assert(loadfile("LootRuler/" .. f))
   setfenv(chunk, env)
   chunk("LootRuler", LR)
@@ -164,6 +164,25 @@ check("and shows as disenchanted", S.winners(s4, 28525)[1][2] == "DE")
 check("nobody", S.setDisenchanter(s4, nil, 503) and s4.de == nil)
 local bad3 = U.copy(s4) bad3.de = 5
 check("a broken disenchanter isn't trusted", not S.valid(bad3))
+
+print("== exporting who won what")
+local s5 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+S.addDrop(s5, { k = "x1", i = 28525, b = "Moroes", at = 1760000000 }, 1760000000)
+S.award(s5, 28525, ANN, "MS", 77, 1760000000)
+S.award(s5, 32386, BOB, "SR", 12, 1760000100)
+S.award(s5, 28530, DAN, "OS", nil, 1760000200, nil, true)
+local csv = LR.Export.text(s5, "csv")
+local lines = {}
+for l in csv:gmatch("[^\n]+") do lines[#lines + 1] = l end
+check("a spreadsheet: a heading and a line each", #lines == 4 and lines[1] == "Date,Time,Item,Item ID,Player,How,Roll,Boss")
+check("with the item, player, how, roll and boss", lines[2]:find(",28525,Ann,MS,77,Moroes$") ~= nil, lines[2])
+check("a name with a comma is quoted", lines[2]:find('"Signet of Unshakable Faith"', 1, true) or lines[2]:find("Signet of Unshakable Faith,", 1, true))
+check("disenchanted", lines[4]:find(",Dan,disenchant,,", 1, true) ~= nil, lines[4])
+local tmb = LR.Export.text(s5, "tmb")
+check("thatsmybis: its columns, the name without the realm, and Magtheridon's head as TMB knows it",
+  tmb:find("^dateTime,character,itemID,offspec,id\n") and tmb:find("\n%d+%-%d+%-%d+,Bob,32385,0,") and tmb:find(",Dan,28530,1,"), tmb)
+local dft = LR.Export.text(s5, "dfteu")
+check("DFT: date;[item];player, without disenchanted items", select(2, dft:gsub("\n", "\n")) == 1 and dft:find(";%[28525%];Ann%-Dreamscythe") ~= nil, dft)
 
 print("== reading roll messages")
 local parse = R.parser("%s rolls %d (%d-%d)")

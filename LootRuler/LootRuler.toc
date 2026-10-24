@@ -26,6 +26,7 @@ Core\Net.lua
 Core\Whisper.lua
 Core\Rolls.lua
 Core\Drops.lua
+Core\Export.lua
 UI\Kit.lua
 UI\Main.lua
 UI\Reserve.lua

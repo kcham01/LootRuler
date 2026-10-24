@@ -228,6 +228,37 @@ K.define("edit", function()
   return e
 end, function(e) e:SetScript("OnTextChanged", nil) e:SetScript("OnEnterPressed", nil) e:SetText("") e:SetMaxLetters(0) e:ClearFocus() e.keepCursor = nil linkBoxes[e] = nil end)
 
+-- a box of many lines of text to copy (exports), scrolling when it's long
+K.define("memo", function()
+  local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  f:SetBackdrop(K.INSET)
+  f:SetBackdropColor(0, 0, 0, 0.8)
+  f:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+  f.scroll = K.scroller(f)
+  f.scroll:SetPoint("TOPLEFT", 6, -6)
+  f.scroll:SetPoint("BOTTOMRIGHT", -6, 6)
+  f.edit = CreateFrame("EditBox", nil, f.scroll.child)
+  f.edit:SetMultiLine(true)
+  f.edit:SetAutoFocus(false)
+  f.edit:SetFontObject("GameFontHighlightSmall")
+  f.edit:SetPoint("TOPLEFT")
+  f.edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  return f
+end, function(f) f.edit:SetText("") f.edit:SetScript("OnTextChanged", nil) f.edit:ClearFocus() end)
+
+--- fills a memo with text that can be copied but not changed; height: the box's height
+function K.setMemo(f, width, height, text)
+  f:SetSize(width, height)
+  f.edit:SetWidth(width - 20)
+  f.edit:SetText(text)
+  local lines = select(2, text:gsub("\n", "\n")) + 1
+  f.edit:SetHeight(math.max(height - 12, lines * 13 + 6))
+  f.scroll:setContentHeight(lines * 13 + 6)
+  f.edit:SetScript("OnTextChanged", function(self, user) if user then self:SetText(text) self:HighlightText() end end)
+  f.edit:SetFocus()
+  f.edit:HighlightText()
+end
+
 --- text boxes that take item links: shift-clicking an item (in your bags, chat, anywhere) while one has the
 --- focus puts the item's link in it, as it would in the chat box
 function K.takeLinks(e) linkBoxes[e] = true end

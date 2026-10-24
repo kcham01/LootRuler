@@ -636,7 +636,7 @@ function M.render()
         bg = f._backdrop.bgFile, edge = f._backdrop.edgeFile, edgeSize = f._backdrop.edgeSize, color = f._bdColor, border = f._bdBorder, name = f._name })
     end
     if r and f._type == "EditBox" then
-      table.insert(ops, { kind = "edit", key = key, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha, text = f._text or "", template = f._template })
+      table.insert(ops, { kind = "edit", key = key, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha, text = f._text or "", template = f._template, multi = f._multi })
     end
     if r and f._type == "Button" and f._template == "UIPanelButtonTemplate" then
       table.insert(ops, { kind = "panelbutton", key = key, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha, enabled = f._enabled ~= false })

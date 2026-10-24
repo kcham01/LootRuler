@@ -78,6 +78,9 @@ function opHtml(op) {
   if (op.kind === 'closebutton') {
     return `<div style="${base}"><div style="position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c2321e,#5e0a03);border:1px solid #b5893a;color:#ffd9b0;font:bold 12px Arial;text-align:center;line-height:20px">x</div></div>`;
   }
+  if (op.kind === 'edit' && op.multi) {
+    return `<div style="${base}color:#fff;font:11px/13px 'Friz Quadrata','Segoe UI',Arial;white-space:pre;overflow:hidden;background:rgba(80,120,200,.25)">${esc(op.text || '')}</div>`;
+  }
   if (op.kind === 'edit') {
     return `<div style="${base}box-sizing:border-box;border:1px solid #6b5530;background:#050403;border-radius:3px;color:#fff;font:12px 'Friz Quadrata','Segoe UI',Arial;line-height:${b.h}px;padding-left:6px;overflow:hidden;white-space:nowrap">${richText((op.text || '').replace(/\|H.-\|h(.-)\|h/g, '$1').replace(/\|H[^|]*\|h(.*?)\|h/g, '$1'), [1, 1, 1])}</div>`;
   }
