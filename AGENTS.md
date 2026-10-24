@@ -144,10 +144,19 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Alts** (`book.alts`: alt -> { m = main or "", t }): `B.points`/`B.setPoints` go through `B.mainOf`, so an alt rolls
   with and spends its main's points; raid points go to each main once. Linking an alt takes its own alts along.
   Older versions don't know links (an alt shows its own points there). Gargul's "Name,Points,Alt,Alt" keeps them.
+- **softres.it imports** (`Gargul.importInto`): the session remembers what the last import brought (`s.sx`, `s.hx`),
+  so importing an updated sheet replaces those (swaps, removals) and leaves reserves made in LootRuler alone; an
+  item reserved in both places counts once. (Before this, re-importing skipped changed picks: the old ones stayed.)
 - **From Gargul:** +1s and boosted roll points as "Name,Number" lines (`Prio.parseCounts`, `Prio.countsText`), read
   straight from a loaded Gargul (`Gargul.counts`, its own export) or pasted. +1s set with `S.setPlusOnes`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
+- **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
+  - Not yet tried in the real game: everything is tested in the stand-in only. Keep the version at 1.0.0-beta
+    until the owner's in-game test passes, then bump `LR.VERSION` and the TOC to 1.0.0.
+  - softres.it names must match characters exactly (other realms need "-Realm"); a typo becomes a phantom player.
+  - Party (5-man) master loot is coded and unit-tested but has had less whole-group testing than raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;

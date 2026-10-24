@@ -116,38 +116,106 @@ end
 ---------------------------------------------------------------------- softres.it into a session
 --- adds the reserves (and hard reserves) from a softres.it / Gargul export to a session the leader holds.
 --- Items the session doesn't allow (not its raid's loot, unless any item is allowed) are skipped. Returns a summary.
+--- brings a softres.it export into a session. Importing again (the sheet changed) updates the session: the
+--- reserves the last import brought are replaced by the sheet's picks now, and anything gone from the sheet
+--- comes off. Reserves made in LootRuler (the addon, or !lr) are never touched, and an item a player reserved
+--- in both places counts once (twice only if the sheet itself has it twice). Hard reserves from the sheet
+--- work the same way. s.sx: "Name-Realm" -> the items the sheet gave them; s.hx: the sheet's hard reserves.
+--- Returns a summary { players, items (from the sheet now), added, removed, hard, hardRemoved, skipped, over },
+--- or nil and what's wrong.
 function G.importInto(s, text)
   local data, err = G.decode(text)
   if not data then return nil, err end
-  local sum = { players = 0, items = 0, hard = 0, skipped = 0, over = 0 }
+  local now = U.now()
+  local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0 }
   local classes = {}
   for token, name in pairs(CLASS_NAME) do classes[name] = token end
+  s.sx = type(s.sx) == "table" and s.sx or {}
+
+  -- hard reserves: the sheet's now; the ones an earlier import brought and the sheet dropped come off
+  local sheetHR, order = {}, {}
   for _, h in ipairs(data.hardreserves or {}) do
     local id = tonumber(h.id)
     if id and LR.allowedItem(s, id) then
-      S.setHR(s, id, h["for"] or "", h.note or "", U.now())
-      sum.hard = sum.hard + 1
+      if not sheetHR[id] then order[#order + 1] = id end
+      sheetHR[id] = h
     elseif id then sum.skipped = sum.skipped + 1 end
   end
+  for _, id in ipairs(type(s.hx) == "table" and s.hx or {}) do
+    if not sheetHR[id] and s.hr[id] and S.clearHR(s, id, now) then sum.hardRemoved = sum.hardRemoved + 1 end
+  end
+  for _, id in ipairs(order) do
+    local h, cur = sheetHR[id], s.hr[id]
+    local f, n = U.trim(type(h["for"]) == "string" and h["for"] or ""), U.trim(type(h.note) == "string" and h.note or "")
+    if not cur or cur.f ~= f or cur.n ~= n then S.setHR(s, id, f, n, now) end
+    sum.hard = sum.hard + 1
+  end
+  s.hx = #order > 0 and order or nil
+
+  -- a multiset difference: how many of a's ids aren't matched in b
+  local function missing(a, b)
+    local left = {}
+    for _, id in ipairs(b) do left[id] = (left[id] or 0) + 1 end
+    local n = 0
+    for _, id in ipairs(a) do if (left[id] or 0) > 0 then left[id] = left[id] - 1 else n = n + 1 end end
+    return n
+  end
+  -- takes one of each of ids off a list
+  local function takeOff(list, ids)
+    for _, id in ipairs(ids) do
+      for k = #list, 1, -1 do if list[k] == id then table.remove(list, k) break end end
+    end
+  end
+
+  local seen = {}
   for _, e in ipairs(data.softreserves) do
     local name = type(e.name) == "string" and U.trim(e.name) or ""
     if name ~= "" then
       name = name:sub(1, 1):upper() .. name:sub(2)
       local player = U.full(name)
-      local class = classes[U.lower(e.class)]
-      local added = false
+      seen[player] = true
+      local class = classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
+      local before = s.sx[player] or {}
+      local mine = U.copy(S.reservesOf(s, player))
+      takeOff(mine, before)                          -- what the last import brought
+      local own = {}                                 -- what they reserved in LootRuler
+      for _, id in ipairs(mine) do own[id] = (own[id] or 0) + 1 end
+      local fromSheet, count = {}, {}
       for _, it in ipairs(type(e.items) == "table" and e.items or {}) do
         local id = tonumber(type(it) == "table" and it.id or it)
-        if id and LR.allowedItem(s, id) then
-          local ok, why = S.add(s, player, class, id, true, U.now())
-          if ok then sum.items = sum.items + 1 added = true
-          elseif why == "TOO_MANY" or why == "DUPLICATE" then sum.over = sum.over + 1
-          else sum.skipped = sum.skipped + 1 end
-        elseif id then sum.skipped = sum.skipped + 1 end
+        if not id or not LR.allowedItem(s, id) or s.hr[id] then
+          if id then sum.skipped = sum.skipped + 1 end
+        else
+          count[id] = (count[id] or 0) + 1
+          if count[id] <= (own[id] or 0) then
+            -- (reserved in LootRuler too: it counts once)
+          elseif #mine >= S.limit(s, player) or (not s.dupes and U.indexOf(mine, id)) then
+            sum.over = sum.over + 1
+          else
+            mine[#mine + 1] = id
+            fromSheet[#fromSheet + 1] = id
+          end
+        end
       end
-      if added then sum.players = sum.players + 1 end
+      if S.set(s, player, class, mine, true, now) then
+        sum.added = sum.added + missing(fromSheet, before)
+        sum.removed = sum.removed + missing(before, fromSheet)
+        s.sx[player] = #fromSheet > 0 and fromSheet or nil
+        sum.items = sum.items + #fromSheet
+        if #fromSheet > 0 then sum.players = sum.players + 1 end
+      end
     end
   end
+  -- players who aren't on the sheet any more: what it gave them comes off
+  for player, ids in pairs(s.sx) do
+    if not seen[player] then
+      local mine = U.copy(S.reservesOf(s, player))
+      takeOff(mine, ids)
+      if S.set(s, player, s.res[player] and s.res[player].c, mine, true, now) then sum.removed = sum.removed + #ids end
+      s.sx[player] = nil
+    end
+  end
+  if not next(s.sx) then s.sx = nil end
   LR.leaderChanged(s)
   return sum
 end

@@ -22,6 +22,8 @@
 --   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
 --   prio     the guild's priority lists decide loot: "both" (priority lists first, then reserves) or "only"
 --            (no reserves); nil: reserves only
+--   sx, hx   what the last import from softres.it brought: "Name-Realm" -> items, and hard reserved items
+--            (so importing an updated sheet replaces them; Core/Gargul.lua)
 --   xr       "Name-Realm" -> extra reserves the leader gave that player (tanks, healers...), on top of sr
 --   gdkp     items are auctioned for gold (Core/Gdkp.lua); gk: its settings, who's in the pot, what's been paid
 --   boost    boosted rolls are on: guild members roll with their guild points added (Core/Book.lua)
@@ -473,6 +475,20 @@ function S.valid(t)
     end
   end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
+  -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves
+  if t.sx ~= nil then
+    if type(t.sx) ~= "table" then return false end
+    local n = 0
+    for name, ids in pairs(t.sx) do
+      n = n + 1
+      if n > 200 or type(name) ~= "string" or type(ids) ~= "table" or #ids > 50 then return false end
+      for _, id in ipairs(ids) do if type(id) ~= "number" then return false end end
+    end
+  end
+  if t.hx ~= nil then
+    if type(t.hx) ~= "table" or #t.hx > 200 then return false end
+    for _, id in ipairs(t.hx) do if type(id) ~= "number" then return false end end
+  end
   if t.gdkp ~= nil and type(t.gdkp) ~= "boolean" then return false end
   if LR.Gdkp and not LR.Gdkp.valid(t.gk) then return false end
   -- (a way of deciding loot this version doesn't know is kept, and treated as reserves)
