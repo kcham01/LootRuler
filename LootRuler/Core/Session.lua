@@ -12,8 +12,13 @@
 --   hr       hard reserves: item id -> { f = who it's for (may be ""), n = note (may be "") }
 --   res      soft reserves: "Name-Realm" -> { c = class token ("PALADIN", may be nil), i = { item ids } }
 --   won      loot given out while the session was open (Core/Rolls.lua), oldest first:
---            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time }
+--            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time,
+--              d = the drop it was (its key, when known) }
 --            A reserve that has won its item is used up: it doesn't count when another copy drops.
+--   drops    every item that dropped while the session was open, in order (Core/Drops.lua):
+--            { k = key, i = item id, b = boss ("" when not known), at = when it dropped, by = who recorded it (the
+--              loot master), src = what it dropped from, h = who has it now (nil: still on the corpse),
+--              ht = when it went into h's bags (the game's 2 hours to trade it start then) }
 --   created, updated   server times
 local _, LR = ...
 local U = LR.U
@@ -189,11 +194,14 @@ end
 ---------------------------------------------------------------------- loot given out
 S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true }
 
---- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did)
-function S.award(s, id, player, kind, roll, now)
+--- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
+--- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
+function S.award(s, id, player, kind, roll, now, dropKey)
   if type(id) ~= "number" or type(player) ~= "string" or not S.WON_KINDS[kind] then return false end
+  local d = dropKey and S.drop(s, dropKey) or S.openDrops(s, id)[1]
+  if d and d.i ~= id then d = nil end
   s.won = s.won or {}
-  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now }
+  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now, d = d and d.k or nil }
   bump(s, now)
   return true
 end
@@ -229,6 +237,74 @@ function S.winners(s, id)
   return out
 end
 
+---------------------------------------------------------------------- the raid's drops
+S.MAX_DROPS = 300
+
+function S.drop(s, k)
+  for _, d in ipairs(s.drops or {}) do if d.k == k then return d end end
+end
+
+--- the last award of a drop, or nil
+function S.dropWin(s, k)
+  local won = s.won or {}
+  for i = #won, 1, -1 do if won[i].d == k then return won[i], i end end
+end
+
+--- drops of an item that nobody has won yet, in the order they dropped
+function S.openDrops(s, id)
+  local out = {}
+  for _, d in ipairs(s.drops or {}) do if d.i == id and not S.dropWin(s, d.k) then out[#out + 1] = d end end
+  return out
+end
+
+local function str(v) return type(v) == "string" and v or nil end
+
+--- adds a drop, or brings a known one (same key) up to date with who has it now. Returns whether anything changed.
+function S.addDrop(s, d, now)
+  if type(d) ~= "table" or type(d.k) ~= "string" or type(d.i) ~= "number" then return false end
+  local known = S.drop(s, d.k)
+  if known then
+    local h = str(d.h)
+    if not h or h == known.h then return false end
+    known.h, known.ht = h, tonumber(d.ht) or known.ht
+    bump(s, now)
+    return true
+  end
+  s.drops = s.drops or {}
+  if #s.drops >= S.MAX_DROPS then return false end
+  s.drops[#s.drops + 1] = { k = d.k, i = d.i, b = str(d.b) or "", at = tonumber(d.at) or now, by = str(d.by), src = str(d.src),
+    h = str(d.h), ht = tonumber(d.ht) }
+  bump(s, now)
+  return true
+end
+
+--- takes a drop off the list (a mistake); an award for it stays, without the link to it
+function S.removeDrop(s, k, now)
+  for i, d in ipairs(s.drops or {}) do
+    if d.k == k then
+      table.remove(s.drops, i)
+      for _, w in ipairs(s.won or {}) do if w.d == k then w.d = nil end end
+      bump(s, now)
+      return true
+    end
+  end
+  return false
+end
+
+--- where a drop is: "corpse" (nobody has it yet), "held" (the loot master has it, to roll out), "looted" (someone
+--- else has it, not through LootRuler), "toTrade" (won, and the loot master still has it to trade), "given".
+--- Also the award, when there is one.
+function S.dropState(s, d)
+  local w = S.dropWin(s, d.k)
+  if w then
+    if d.h and not U.samePlayer(d.h, w.p) and (not d.by or U.samePlayer(d.h, d.by)) then return "toTrade", w end
+    return "given", w
+  end
+  if not d.h then return "corpse" end
+  if d.by and U.samePlayer(d.h, d.by) then return "held" end
+  return "looted"
+end
+
 --- a session from another player, checked before it's trusted: right shape, known raid, sane numbers
 function S.valid(t)
   if type(t) ~= "table" or type(t.id) ~= "string" or type(t.leader) ~= "string" or type(t.rev) ~= "number" then return false end
@@ -238,6 +314,12 @@ function S.valid(t)
     if type(t.won) ~= "table" then return false end
     for _, w in ipairs(t.won) do
       if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or not S.WON_KINDS[w.k] then return false end
+    end
+  end
+  if t.drops ~= nil then
+    if type(t.drops) ~= "table" or #t.drops > S.MAX_DROPS then return false end
+    for _, d in ipairs(t.drops) do
+      if type(d) ~= "table" or type(d.k) ~= "string" or type(d.i) ~= "number" or type(d.b) ~= "string" then return false end
     end
   end
   for id, h in pairs(t.hr) do if type(id) ~= "number" or type(h) ~= "table" then return false end end

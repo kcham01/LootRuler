@@ -268,14 +268,14 @@ K.define("item", function()
 end, function(b)
   b.name:SetText("") b.sub:SetText("") b.badge:SetText("")
   b.name:SetTextColor(1, 1, 1) b.sub:SetTextColor(K.rgb(K.SUB)) b.badge:SetTextColor(K.rgb(K.GOLD))
-  b.act:Hide() b.act:SetScript("OnClick", nil) b.act:SetScript("OnEnter", nil) b.act:SetScript("OnLeave", nil)
+  b.act:Hide() b.act:SetWidth(20) b.act:SetScript("OnClick", nil) b.act:SetScript("OnEnter", nil) b.act:SetScript("OnLeave", nil)
   b.icon:SetDesaturated(false) b.icon:SetAlpha(1)
   b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.6)
   b:SetAlpha(1)
   b:Enable()
 end)
 
---- fills an item row; width is the row's width, act = { text, tip, click } for the small button
+--- fills an item row; width is the row's width, act = { text, tip, click, width } for the small button
 function K.setItem(b, width, icon, name, sub, badge, act)
   b:SetWidth(width)
   b.icon:SetTexture(icon)
@@ -285,16 +285,17 @@ function K.setItem(b, width, icon, name, sub, badge, act)
   local right = 8
   if act then
     b.act:Show()
+    b.act:SetWidth(act.width or 20)
     b.act.text:SetText(act.text)
     b.act:SetBackdropColor(0.15, 0.12, 0.08, 1)
     b.act:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
     b.act:SetScript("OnClick", act.click)
     if act.tip then tooltipOn(b.act, function(tt) tt:SetText(act.tip, 1, 1, 1, 1, true) end) end
-    right = 32
+    right = (act.width or 20) + 12
   end
   b.badge:ClearAllPoints()
   b.badge:SetPoint("RIGHT", b, "RIGHT", -right, 0)
-  local bw = (badge and badge ~= "") and (b.badge:GetStringWidth() + 8) or 0
+  local bw = (badge and badge ~= "") and (b.badge:GetStringWidth() + 12) or 0
   b.name:SetWidth(width - 44 - right - bw)
   b.sub:SetWidth(width - 44 - right - bw)
 end

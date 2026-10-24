@@ -82,7 +82,7 @@ local function build()
   end)
   K.tooltipOn(master.close, function(tt)
     local roll = Rolls.mine()
-    tt:SetText(roll and roll.state == "open" and "Hide (the roll goes on: /lr loot brings this back)" or "Close", 1, 1, 1, 1, true)
+    tt:SetText(roll and roll.state == "open" and "Hide (the roll goes on: /lr master brings this back)" or "Close", 1, 1, 1, 1, true)
   end)
 
   master.title = K.fs(master, "GameFontNormal")

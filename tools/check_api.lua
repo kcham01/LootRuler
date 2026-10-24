@@ -125,7 +125,8 @@ p:close()
 
 -- made by the client itself rather than its interface code: the Enum tables (which Blizzard's code reads
 -- everywhere) and the translated strings of GlobalStrings.lua, which isn't in the interface source
-local CLIENT = { Enum = true, RANDOM_ROLL_RESULT = true }
+local CLIENT = { Enum = true, RANDOM_ROLL_RESULT = true, ERR_TRADE_COMPLETE = true,
+  LOOT_ITEM = true, LOOT_ITEM_SELF = true, LOOT_ITEM_MULTIPLE = true, LOOT_ITEM_SELF_MULTIPLE = true }
 local own = { LootRulerDB = true, SLASH_LOOTRULER1 = true, SLASH_LOOTRULER2 = true, LootRulerFrame = true, LootRuler = true,
   -- read only to see whether they're there (other addons, and the game's newer chat API)
   Gargul = true, ChatFrameUtil = true, ChatFrame_AddMessageEventFilter = true,

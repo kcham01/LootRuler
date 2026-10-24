@@ -13,7 +13,7 @@ local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
 local win, top, view, tabsBar, toastFrame
-local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "session", "Session" } }
+local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" } }
 
 ---------------------------------------------------------------------- the window
 local function build()
@@ -197,7 +197,7 @@ function UI.render()
   end
   K.release("view")
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
-  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, session = UI.sessionView }
+  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView }
   local ok, err = pcall(screens[UI.tab], flow, s)
   if not ok then
     flow:text("|cffff5a4aSomething went wrong drawing this screen:|r " .. tostring(err), { font = "GameFontHighlightSmall" })
@@ -215,7 +215,11 @@ function UI.renderSoon()
   C_Timer.After(0.2, function() renderSoon = false UI.render() end)
 end
 LR.onChange(function(what)
-  if what == "roll" or what == "rolls" or what == "loot" then return end   -- the roll windows' business (UI/Roll*.lua)
+  -- rolls are the roll windows' business (UI/RollFrame.lua, UI/Master.lua), but the Loot tab says what's being rolled for
+  if what == "roll" or what == "rolls" or what == "loot" then
+    if UI.tab == "loot" and what ~= "roll" then UI.renderSoon() end
+    return
+  end
   if what == "items" then UI.renderSoon() else UI.render() end
   if LR.minimapUpdate then LR.minimapUpdate() end
 end)
@@ -520,7 +524,9 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("session")
   elseif msg == "list" or msg == "reserves" then
     UI.show("reserves")
-  elseif msg == "loot" or msg == "master" then
+  elseif msg == "loot" or msg == "drops" then
+    UI.show("loot")
+  elseif msg == "master" then
     UI.showMaster()
   elseif msg == "test" then
     UI.testRoll()

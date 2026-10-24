@@ -13,6 +13,7 @@
 --   P  raider -> leader           my picks for session id: { c = class, i = items }
 --   A  leader -> raider           the answer to P: ok, or why not, with the picks the leader now has
 --   R, X, N                       rolling out loot (Core/Rolls.lua)
+--   D                             the raid's drops (Core/Drops.lua)
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
 local _, LR = ...
@@ -50,6 +51,7 @@ function LR.loadDB()
   if db.settings.hideWhispers == nil then db.settings.hideWhispers = true end
   if db.settings.rollWindow == nil then db.settings.rollWindow = true end        -- show roll windows
   if db.settings.rollOnlyMine == nil then db.settings.rollOnlyMine = false end   -- only for items I may roll on
+  if db.settings.tradeHelp == nil then db.settings.tradeHelp = true end         -- put won loot in trades
   -- forget sessions nobody has touched for a week
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do
@@ -253,6 +255,7 @@ function LR.setGuild(s, guild)
   leaderChanged(s)
 end
 function LR.leaderAdd(s, player, class, id) local ok, why = S.add(s, player, class, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
+function LR.removeDrop(s, k) if LR.isLeader(s) and S.removeDrop(s, k, U.now()) then leaderChanged(s) return true end return false end
 function LR.unaward(s, index) if LR.isLeader(s) and S.unaward(s, index, U.now()) then leaderChanged(s) return true end return false end
 function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
 

@@ -31,7 +31,7 @@ end
 --- a player without the addon (they can whisper and be grouped)
 function Server:player(o)
   local p = { name = o.name, realm = o.realm or "Dreamscythe", class = o.class or "WARRIOR", guild = o.guild,
-    faction = o.faction or "Alliance", online = true, inbox = {}, client = false }
+    faction = o.faction or "Alliance", online = true, inbox = {}, client = false, bags = {}, tradeItems = {} }
   table.insert(self.players, p)
   return p
 end
@@ -185,13 +185,43 @@ function Server:install(p)
   G.GetRealmName = function() return p.realm end
   G.UnitFullName = function(unit) local q = unitPlayer(unit) if q then return q.name, q.realm end end
   G.UnitName = function(unit)
+    if unit == "target" and p.target then return p.target.name end
+    if unit == "NPC" or unit == "npc" then
+      local q = p.trading
+      if not q then return nil end
+      if q.realm == p.realm then return q.name, nil end
+      return q.name, q.realm
+    end
     local q = unitPlayer(unit)
     if not q then return nil end
     if q.realm == p.realm then return q.name, nil end
     return q.name, q.realm
   end
   G.UnitClass = function(unit) local q = unitPlayer(unit) if q then return CLASS_NAME[q.class], q.class, 1 end end
-  G.UnitExists = function(unit) return unitPlayer(unit) ~= nil end
+  G.UnitExists = function(unit) if unit == "target" then return p.target ~= nil end return unitPlayer(unit) ~= nil end
+  G.UnitIsDead = function(unit) return unit == "target" and p.target ~= nil and p.target.dead == true end
+  G.UnitGUID = function(unit) if unit == "target" and p.target then return p.target.guid end end
+  -- bags: the backpack only, 16 slots; { id, link, locked }
+  p.bags = p.bags or {}
+  local function bagItem(bag, slot) return bag == 0 and p.bags[slot] or nil end
+  G.C_Container = {
+    GetContainerNumSlots = function(bag) return bag == 0 and 16 or 0 end,
+    GetContainerItemID = function(bag, slot) local it = bagItem(bag, slot) return it and it.id or nil end,
+    GetContainerItemInfo = function(bag, slot)
+      local it = bagItem(bag, slot)
+      if it then return { itemID = it.id, hyperlink = it.link, isLocked = it.locked or false, stackCount = 1 } end
+    end,
+    UseContainerItem = function(bag, slot)
+      local it = bagItem(bag, slot)
+      if not it then error("UseContainerItem on an empty slot") end
+      if not (p.trading and G.TradeFrame:IsShown()) then error("used " .. it.id .. " with no trade open: the game would equip it") end
+      if #p.tradeItems >= 6 then return end
+      it.locked = true
+      table.insert(p.tradeItems, it)
+      srv:deliver(function() p.M.fire("TRADE_PLAYER_ITEM_CHANGED", #p.tradeItems) end)
+    end,
+  }
+  G.GetTradePlayerItemLink = function(i) local it = p.tradeItems and p.tradeItems[i] return it and it.link end
   G.UnitIsConnected = function(unit) local q = unitPlayer(unit) return q and q.online or false end
   G.UnitIsGroupLeader = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and srv.group.leader == q or false end
   G.UnitIsGroupAssistant = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and q and srv.group.assists[q] or false end
@@ -285,6 +315,7 @@ function Server:install(p)
     srv.given = srv.given or {}
     table.insert(srv.given, { id = it.id, to = q })
     it.taken = true
+    srv:lootTo(q, it.id)
     srv:deliver(function() p.M.fire("LOOT_SLOT_CLEARED", slot) end)
   end
   G.ChatFrameUtil = { AddMessageEventFilter = function(event, fn) p.filters = p.filters or {} p.filters[event] = p.filters[event] or {} table.insert(p.filters[event], fn) end }
@@ -324,6 +355,55 @@ function Server:openLoot(p, items)
   p.M.fire("LOOT_OPENED", 0, false)
 end
 function Server:closeLoot(p) p.loot = nil p.G.LootFrame:Hide() p.M.fire("LOOT_CLOSED") end
+
+--- puts an item in p's bags and tells the group "p receives loot: [item]" (master loot, or a roll won)
+function Server:link(id)
+  local info = self.itemInfo and self.itemInfo(id)
+  return info and info.link or ("|cffa335ee|Hitem:%d::::::::70:::::|h[item %d]|h|r"):format(id, id)
+end
+function Server:lootTo(p, id)
+  local link = self:link(id)
+  p.bags = p.bags or {}
+  local slot = 1
+  while p.bags[slot] do slot = slot + 1 end
+  p.bags[slot] = { id = id, link = link }
+  for _, q in ipairs(self:inGroup(p) and self.group.members or { p }) do
+    self:deliver(function()
+      if q.client and q.online then
+        q.M.fire("CHAT_MSG_LOOT", q == p and ("You receive loot: %s."):format(link) or ("%s receives loot: %s."):format(seenAs(p, q), link))
+      end
+    end)
+  end
+end
+--- p targets a dead boss (for the loot window)
+function Server:target(p, name, guid) p.target = name and { name = name, guid = guid or ("Creature-0-" .. name), dead = true } or nil end
+
+--- a opens a trade with b
+function Server:openTrade(a, b)
+  a.trading, b.trading = b, a
+  a.tradeItems, b.tradeItems = {}, {}
+  for _, p in ipairs({ a, b }) do if p.client then p.G.TradeFrame:Show() p.M.fire("TRADE_SHOW") end end
+end
+--- both accept: a's items go to b
+function Server:completeTrade(a)
+  local b = a.trading
+  for _, it in ipairs(a.tradeItems) do
+    for slot, x in pairs(a.bags) do if x == it then a.bags[slot] = nil end end
+    it.locked = nil
+    local slot = 1
+    while b.bags[slot] do slot = slot + 1 end
+    b.bags[slot] = it
+  end
+  for _, p in ipairs({ a, b }) do
+    if p.client then
+      p.M.fire("TRADE_ACCEPT_UPDATE", 1, 1)
+      p.M.fire("TRADE_CLOSED")
+      p.M.fire("UI_INFO_MESSAGE", 0, "Trade complete.")
+      p.G.TradeFrame:Hide()
+    end
+    p.trading, p.tradeItems = nil, {}
+  end
+end
 
 --- who can be given loot: everyone in the group who's online and not out of range (Server.farAway)
 function Server:candidates()

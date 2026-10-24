@@ -275,6 +275,102 @@ check("roll windows can be turned off", frameFor(bob, WATCH) == nil)
 Rolls.cancel()
 srv:tick(1)
 
+section("the raid's loot list")
+local function dropOf(id, n)
+  local seen = 0
+  for _, d in ipairs(s.drops or {}) do if d.i == id then seen = seen + 1 if seen == (n or 1) then return d end end end
+end
+local function stateOf(id, n) return lead.LR.Session.dropState(s, dropOf(id, n)) end
+check("everything from the first corpse is on it, in order", s.drops and s.drops[1].i == WATCH and s.drops[2].i == SIGNET and s.drops[3].i == HANDWRAPS and s.drops[4].i == BROOCH)
+check("not the grey", dropOf(22829) == nil)
+check("with the boss it dropped from", dropOf(WATCH).b == "Moroes")
+check("and who has it now (master loot)", dropOf(SIGNET).h == full(pug) and dropOf(WATCH).h == full(ann) and dropOf(HANDWRAPS).h == full(ann))
+check("the awards are tied to the drops", stateOf(SIGNET) == "given" and select(2, stateOf(SIGNET)).p == full(pug))
+check("an assistant running loot writes it down for the leader", dropOf(ROYAL) and dropOf(ROYAL).h == full(dan) and stateOf(ROYAL) == "given")
+check("raiders have the same list", #ann.LR.current().drops == #s.drops and #bob.LR.current().drops == #s.drops)
+local count = #s.drops
+srv:closeLoot(lead)
+srv:openLoot(lead, { { WATCH, 4 } })
+srv:tick(1)
+check("opening a corpse again doesn't list its items twice", #s.drops == count, #s.drops .. " vs " .. count)
+srv:closeLoot(lead)
+
+section("rolling out at the end of the raid")
+local PAULDRONS, SHOULDERS = 28612, 28647
+srv:target(lead, "The Curator")
+srv:openLoot(lead, { { PAULDRONS, 4 }, { SHOULDERS, 4 } })
+srv:tick(1)
+check("a new boss's loot is listed under it", dropOf(PAULDRONS) and dropOf(PAULDRONS).b == "The Curator" and dropOf(SHOULDERS).b == "The Curator")
+local function selfIndex(slot)
+  for i = 1, 40 do local n = lead.G.GetMasterLootCandidate(slot, i) if n == "Lead" then return i end end
+end
+lead.G.GiveMasterLoot(1, selfIndex(1))
+lead.G.GiveMasterLoot(2, selfIndex(2))
+srv:tick(1)
+check("the loot master keeps both, to roll out later", stateOf(PAULDRONS) == "held" and stateOf(SHOULDERS) == "held")
+check("the trade clock starts", dropOf(PAULDRONS).ht and lead.LR.Drops.tradeLeft(dropOf(PAULDRONS)) > 7000)
+check("raiders see who has them", ann.LR.UI.dropLine(ann.LR.current(), dropOf(PAULDRONS)):find("Lead has it, to roll out", 1, true) ~= nil,
+  ann.LR.UI.dropLine(ann.LR.current(), dropOf(PAULDRONS)))
+srv:closeLoot(lead)
+srv:target(lead, nil)
+srv:tick(60)
+roll = Rolls.start(PAULDRONS, { drop = dropOf(PAULDRONS).k })
+srv:tick(0.5)
+check("rolled out from the list, an hour later", roll and roll.drop == dropOf(PAULDRONS).k and frameFor(ann, PAULDRONS))
+srv:willRoll(ann, 70)
+ann.M.click(frameFor(ann, PAULDRONS).dice)
+srv:tick(22)
+local note
+ok, note = Rolls.award(full(ann))
+srv:tick(1)
+check("won by Ann: the loot master still has it to trade", stateOf(PAULDRONS) == "toTrade")
+check("and is told to trade it", note and note:find("Open a trade with Ann", 1, true))
+check("the list says so", ann.LR.UI.dropLine(ann.LR.current(), dropOf(PAULDRONS)):find("Lead has it to trade", 1, true) ~= nil)
+check("the loot master has one to hand over", #lead.LR.Drops.toDeliver() == 1)
+Rolls.dismiss()
+roll = Rolls.start(SHOULDERS, { drop = dropOf(SHOULDERS).k })
+srv:tick(0.5)
+srv:roll(bob, 1, 100, 40)                       -- (Bob turned his roll windows off: he types /roll)
+srv:tick(22)
+Rolls.award(full(bob))
+srv:tick(1)
+Rolls.dismiss()
+srv:openTrade(lead, ann)
+srv:tick(1)
+check("Ann opens a trade: her item goes in, and only hers", #lead.tradeItems == 1 and lead.tradeItems[1].id == PAULDRONS)
+srv:completeTrade(lead)
+srv:tick(1)
+check("the trade goes through: Ann has it", stateOf(PAULDRONS) == "given" and dropOf(PAULDRONS).h == full(ann))
+check("in her bags", ann.bags[1] and ann.bags[1].id == PAULDRONS or (function() for _, it in pairs(ann.bags) do if it.id == PAULDRONS then return true end end end)())
+lead.LR.db.settings.tradeHelp = false
+srv:openTrade(lead, bob)
+srv:tick(1)
+check("with trade help off, nothing is put in", #lead.tradeItems == 0)
+srv:completeTrade(lead)
+lead.LR.db.settings.tradeHelp = true
+srv:openTrade(bob, lead)
+srv:tick(1)
+check("it doesn't matter who opens the trade", #lead.tradeItems == 1 and lead.tradeItems[1].id == SHOULDERS)
+srv:completeTrade(lead)
+srv:tick(1)
+check("Bob has his", stateOf(SHOULDERS) == "given" and dropOf(SHOULDERS).h == full(bob))
+check("nothing left to hand over", #lead.LR.Drops.toDeliver() == 0)
+
+section("group loot")
+srv:setMasterLooter(nil)
+srv:tick(1)
+local DRAPE = 28672
+srv:lootTo(bob, DRAPE)
+srv:lootTo(dan, 22829)
+srv:tick(1)
+check("an epic someone loots goes on the list", dropOf(DRAPE) and dropOf(DRAPE).h == full(bob) and stateOf(DRAPE) == "looted" and dropOf(DRAPE).b == "Shade of Aran")
+check("a grey doesn't", dropOf(22829) == nil)
+
+section("ending the session")
+lead.LR.endSession(s)
+srv:tick(2)
+check("the loot list goes with it, everywhere", lead.LR.current() == nil and ann.LR.current() == nil and bob.LR.current() == nil)
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end

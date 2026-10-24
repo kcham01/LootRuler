@@ -101,6 +101,36 @@ check("and something nonsensical isn't recorded", not S.award(s, WATCH, ANN, "BE
 local bad1 = U.copy(s) bad1.won = { { i = "x", p = ANN, k = "SR" } }
 check("a session with a broken record isn't trusted", not S.valid(bad1))
 
+print("== the raid's drops")
+local s2 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 200)
+S.set(s2, ANN, "PRIEST", { WATCH }, false, 201)
+local LEAD = "Lead-Dreamscythe"
+check("a drop goes on the list", S.addDrop(s2, { k = "a", i = WATCH, b = "Moroes", at = 202, by = LEAD, src = "g1" }, 202) and #s2.drops == 1)
+check("the same drop again doesn't", not S.addDrop(s2, { k = "a", i = WATCH, b = "Moroes" }, 203) and #s2.drops == 1)
+S.addDrop(s2, { k = "b", i = WATCH, b = "Moroes", by = LEAD }, 204)
+check("still on the corpse", S.dropState(s2, s2.drops[1]) == "corpse")
+local rev = s2.rev
+check("who has it is brought up to date", S.addDrop(s2, { k = "a", i = WATCH, h = LEAD, ht = 205 }, 205) and s2.drops[1].h == LEAD and s2.rev == rev + 1)
+check("the loot master holding it, to roll out", S.dropState(s2, s2.drops[1]) == "held")
+S.award(s2, WATCH, ANN, "SR", 80, 206)
+check("an award goes to the first drop nobody's won", s2.won[1].d == "a" and #S.openDrops(s2, WATCH) == 1 and S.openDrops(s2, WATCH)[1].k == "b")
+check("won, and the loot master still has it to trade", S.dropState(s2, s2.drops[1]) == "toTrade")
+S.addDrop(s2, { k = "a", i = WATCH, h = ANN }, 207)
+check("traded: given", S.dropState(s2, s2.drops[1]) == "given")
+S.award(s2, WATCH, BOB, "SR", 30, 208, "b")
+check("an award can name its drop", s2.won[2].d == "b" and S.dropState(s2, s2.drops[2]) == "given")
+S.addDrop(s2, { k = "c", i = BROOCH, h = DAN, by = LEAD }, 209)
+check("someone else looted it, not through LootRuler", S.dropState(s2, s2.drops[3]) == "looted")
+S.addDrop(s2, { k = "d", i = BROOCH, h = DAN }, 210)
+check("with no loot master (group loot) whoever has it looted it", S.dropState(s2, s2.drops[4]) == "looted")
+check("a session with drops is valid", S.valid(s2))
+check("a drop off the list keeps its award, unlinked", S.removeDrop(s2, "b", 211) and #s2.drops == 3 and s2.won[2].d == nil)
+local bad2 = U.copy(s2) bad2.drops = { { k = 1, i = WATCH, b = "" } }
+check("a broken drop isn't trusted", not S.valid(bad2))
+check("names from the loot message", ("Bob receives loot: [X]."):match(U.pattern("%s receives loot: %s.")) == "Bob")
+check("the x2 kind", select(3, ("You receive loot: [X]x2."):match(U.pattern("You receive loot: %sx%d."))) == nil
+  and select(2, ("You receive loot: [X]x2."):match(U.pattern("You receive loot: %sx%d."))) == "2")
+
 print("== reading roll messages")
 local parse = R.parser("%s rolls %d (%d-%d)")
 local name, n, lo, hi = parse("Bob-Faerlina rolls 57 (1-100)")

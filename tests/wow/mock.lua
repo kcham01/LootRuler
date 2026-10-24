@@ -923,6 +923,14 @@ function M.env(player)
   G.ChatFrame_OpenChat = function() end
   -- rolling and master loot (tests/wow/server.lua makes these work between clients)
   G.RANDOM_ROLL_RESULT = "%s rolls %d (%d-%d)"
+  G.LOOT_ITEM, G.LOOT_ITEM_SELF = "%s receives loot: %s.", "You receive loot: %s."
+  G.LOOT_ITEM_MULTIPLE, G.LOOT_ITEM_SELF_MULTIPLE = "%s receives loot: %sx%d.", "You receive loot: %sx%d."
+  G.ERR_TRADE_COMPLETE = "Trade complete."
+  G.TradeFrame = M.CreateFrame("Frame", "TradeFrame", M.UIParent)
+  G.TradeFrame:Hide()
+  G.UnitGUID = function() return nil end
+  G.UnitIsDead = function() return false end
+  G.GetTradePlayerItemLink = function() return nil end
   G.RandomRoll = function(lo, hi) M.rolled = M.rolled or {} table.insert(M.rolled, { tonumber(lo), tonumber(hi) }) end
   G.LootFrame = M.CreateFrame("Frame", "LootFrame", M.UIParent)
   G.LootFrame:SetSize(192, 300)

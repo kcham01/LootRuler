@@ -148,11 +148,7 @@ end
 --- "Name rolls 57 (1-100)" as a pattern, from the game's own (translated) RANDOM_ROLL_RESULT; returns a
 --- function that gives name, roll, low, high for a chat line, or nil
 function R.parser(format)
-  format = format or "%s rolls %d (%d-%d)"
-  local p = format:gsub("%%%d%$", "%%")                      -- "%1$s" (some translations) -> "%s"
-  p = p:gsub("%%s", "\1"):gsub("%%d", "\2")
-  p = p:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
-  p = "^" .. p:gsub("\1", "(.+)"):gsub("\2", "(%%d+)") .. "$"
+  local p = U.pattern(format or "%s rolls %d (%d-%d)")
   return function(line)
     local name, n, lo, hi = tostring(line or ""):match(p)
     if not name then return nil end

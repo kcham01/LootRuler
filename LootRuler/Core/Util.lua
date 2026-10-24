@@ -57,6 +57,14 @@ end
 
 ---------------------------------------------------------------------- text
 function U.trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
+--- a Lua pattern that matches what a game string (GlobalStrings: "%s receives loot: %s.") makes, capturing
+--- each %s and %d; translations that number their places ("%1$s") work too
+function U.pattern(format)
+  local p = tostring(format):gsub("%%%d%$", "%%")
+  p = p:gsub("%%s", "\1"):gsub("%%d", "\2")
+  p = p:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+  return "^" .. p:gsub("\1", "(.+)"):gsub("\2", "(%%d+)") .. "$"
+end
 function U.plural(n, one, many) return n .. " " .. (n == 1 and one or (many or one .. "s")) end
 function U.hex(r, g, b) return ("%02x%02x%02x"):format(floor(r * 255 + 0.5), floor(g * 255 + 0.5), floor(b * 255 + 0.5)) end
 function U.color(text, r, g, b) return "|cff" .. U.hex(r, g, b) .. text .. "|r" end

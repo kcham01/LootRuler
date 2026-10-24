@@ -25,10 +25,12 @@ Core\Gargul.lua
 Core\Net.lua
 Core\Whisper.lua
 Core\Rolls.lua
+Core\Drops.lua
 UI\Kit.lua
 UI\Main.lua
 UI\Reserve.lua
 UI\Overview.lua
+UI\Loot.lua
 UI\Setup.lua
 UI\RollFrame.lua
 UI\Master.lua

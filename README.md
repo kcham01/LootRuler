@@ -20,7 +20,7 @@
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/08-session.png" alt="Running the session" width="32%">
 </p>
 
-**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or whisper the leader if they don't have the addon; and when loot drops, everyone gets a **roll window** that knows who reserved it. Or send it all to **Gargul** with one click.
+**Soft reserves inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord: the raid leader picks the raid, how many soft reserves everyone gets and what's hard reserved; raiders pick their reserves from the raid's loot in the game, or whisper the leader if they don't have the addon; and when loot drops, everyone gets a **roll window** that knows who reserved it, and a **loot list** of everything that's dropped and who has it. Or send it all to **Gargul** with one click.
 
 Type **/lr** in game.
 
@@ -75,6 +75,19 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 - **Players without the addon** are told in raid chat what to roll, and their `/roll`s count the same.
 - **Giving it out:** the loot master's window lists every roll, best first, and the ones that don't count (wrong roll, didn't reserve it, too late) underneath. One click gives the item to the winner through master loot. The item, the winner and how they won it go on the Reserves tab's list of loot given out.
 
+## The raid's loot list
+
+The **Loot** tab lists everything that has dropped this raid, boss by boss, for the whole raid to see, with the game's icons, tooltips and quality colours: who reserved it, whether it's still on the corpse or being rolled for, who won it and how, and who has it now. Your own wins and reserves stand out. It's part of the soft reserves, so it's cleared when the session ends.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/20-loot-tab.png" alt="The Loot tab" width="40%">
+</p>
+
+- **Roll now or at the end.** The loot master can roll an item out as soon as it drops, or give it to themselves, keep going, and roll it out from the Loot tab later. The game lets you trade raid loot for 2 hours after you loot it, so the list shows how long is left.
+- **Trade help.** When the winner of an item the loot master is holding opens a trade (either of them can open it), LootRuler puts their item in the trade window. When the trade goes through, the list shows they have it. A "To trade" list shows the loot master what they still have to hand over. You can turn this off.
+- **Any loot method.** With master loot the loot master's addon writes down each corpse's loot (opening a corpse again doesn't list it twice). With group loot the leader's addon writes down the epics people loot.
+- **Mistakes:** the leader can right-click an item to take it off the list, or take an award off.
+
 The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Session tab can turn roll windows off, or show them only for items you can roll on.
 
 ## Install
@@ -84,7 +97,7 @@ The loot master (or the raid leader, or an assistant) needs LootRuler; raiders d
 3. Restart the game (a new addon needs a full restart) and make sure it's ticked in the AddOns list.
 4. Type `/lr` or click the note on the minimap.
 
-`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr minimap` hides or shows the minimap button.
+`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr minimap` hides or shows the minimap button.
 
 ## How it's checked
 
@@ -92,7 +105,7 @@ Every build:
 
 - checks the session rules (limits, doubling up, hard reserves, locking, changing the rules part way);
 - runs a **whole raid of clients side by side** in a stand-in for the game: the leader, raiders on the same and other realms, a pug whispering, a guild member outside the group, the leader logging out and back in, people joining late, and messages from people who shouldn't be able to change things;
-- runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot;
+- runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot; then the raid's loot list: what each corpse dropped, who has it, items kept to roll out later and handed over in trades, and group loot;
 - loads **Gargul's own soft-reserve importer** and checks it reads LootRuler's reserves exactly (doubled reserves, classes, hard reserves, players from other realms);
 - checks the addon only uses what the TBC Anniversary client has, against Blizzard's own interface code;
 - clicks through every screen, checks nothing errors or leaks frames, and draws every screen.

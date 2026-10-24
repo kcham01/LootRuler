@@ -179,6 +179,9 @@ function Rolls.start(id, opts)
   roll.by = U.me()
   roll.link = opts.link or LR.itemLink(id)
   roll.slot = opts.slot
+  -- which of the raid's drops this is: the one asked for, the one in that loot slot, else the first not given out
+  roll.drop = opts.drop or (opts.slot and LR.Drops.forSlot(opts.slot)) or nil
+  if not roll.drop and s then local d = S.openDrops(s, id)[1] roll.drop = d and d.k end
   roll.secs = math.max(5, math.min(120, tonumber(opts.secs) or LR.db.settings.rollSeconds or Rolls.DEFAULT_SECONDS))
   roll.started = now()
   roll.ends = now() + roll.secs
@@ -264,7 +267,7 @@ end
 function Rolls.again(mode)
   local roll = Rolls.current
   if not roll or roll.state == "open" then return nil end
-  local opts = { link = roll.link, slot = roll.slot, secs = roll.secs }
+  local opts = { link = roll.link, slot = roll.slot, secs = roll.secs, drop = roll.drop }
   if mode == "TIE" and roll.tied then
     -- they roll the way they rolled before (a tie between reservers is still for the reserve)
     opts.tie = { kind = R.result(roll).kind, names = roll.tied }
@@ -301,9 +304,9 @@ local function candidate(slot, player)
 end
 
 --- records that a player won an item (on the session, when I'm its leader)
-local function record(s, id, player, kind, n)
+local function record(s, id, player, kind, n, drop)
   if not s or not LR.isLeader(s) then return end
-  if S.award(s, id, player, kind, n, U.now()) then LR.leaderChanged(s) end
+  if S.award(s, id, player, kind, n, U.now(), drop) then LR.leaderChanged(s) end
 end
 
 --- gives the item to a player: straight from the loot window when it's still there (master loot), else it's
@@ -327,8 +330,13 @@ function Rolls.award(player, kind, n)
   roll.state = "awarded"
   roll.winner = player
   local s = session()
-  record(s, roll.id, player, kind, n)
-  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id })
+  record(s, roll.id, player, kind, n, roll.drop)
+  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop })
+  -- it's in my bags (rolled out later): it goes over in a trade
+  local held = not slot and s and roll.drop and S.drop(s, roll.drop)
+  if not note and held and held.h and U.samePlayer(held.h, U.me()) and not U.samePlayer(player, U.me()) then
+    note = ("Open a trade with %s: LootRuler puts %s in it for you."):format(U.short(player), U.plain(roll.link))
+  end
   Rolls.ended(roll.k, "awarded", player, n, kind)
   say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. R.LABEL[kind] .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")))
   changed()
@@ -442,7 +450,7 @@ Net.handlers.X = function(msg, channel, sender)
   if msg.e == "awarded" and winner and kind and fromLooter(sender) then
     local s = msg.sid and LR.session(msg.sid) or session()
     local id = copy and copy.id or tonumber(msg.id)
-    if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n) end
+    if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil) end
   end
 end
 
@@ -465,6 +473,8 @@ events:SetScript("OnEvent", function(_, event, ...)
     if not ok then geterrorhandler()(err) end
   elseif event == "LOOT_OPENED" then
     Rolls.lootOpen = true
+    local ok, err = pcall(LR.Drops.lootOpened)            -- the raid's loot list (Core/Drops.lua)
+    if not ok then geterrorhandler()(err) end
     LR.changed("loot")
   elseif event == "LOOT_CLOSED" then
     Rolls.lootOpen = false
