@@ -155,6 +155,17 @@ function G.split(s)
   return { pot = pot, cut = cut, bonuses = bonuses, share = share, players = players, rows = rows }
 end
 
+--- who still owes the organiser or is owed by them: { { name, owed } }, biggest first (not the organiser)
+function G.unsettled(s)
+  local out = {}
+  if not s.gdkp or not s.gk then return out end
+  for name, row in pairs(G.split(s).rows) do
+    if math.abs(row.owed) >= 0.01 and not U.samePlayer(name, s.leader) then out[#out + 1] = { name, row.owed } end
+  end
+  table.sort(out, function(a, b) return math.abs(a[2]) > math.abs(b[2]) end)
+  return out
+end
+
 --- "1,250g" (whole gold; silver and copper as "12g 50s" when there are any)
 function G.gold(g)
   g = tonumber(g) or 0
