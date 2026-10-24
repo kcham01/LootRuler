@@ -22,6 +22,7 @@
 --   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
 --   prio     the guild's priority lists decide loot: "both" (priority lists first, then reserves) or "only"
 --            (no reserves); nil: reserves only
+--   xr       "Name-Realm" -> extra reserves the leader gave that player (tanks, healers...), on top of sr
 --   gdkp     items are auctioned for gold (Core/Gdkp.lua); gk: its settings, who's in the pot, what's been paid
 --   boost    boosted rolls are on: guild members roll with their guild points added (Core/Book.lua)
 --   po       +1 changes the leader made by hand: "Name-Realm" -> number (added to the counted ones)
@@ -70,10 +71,17 @@ local function bump(s, now)
 end
 S.bump = bump
 
+--- how many reserves a player gets: everyone's, plus any extra the leader gave them
+function S.limit(s, player)
+  local extra = player and s.xr and s.xr[U.full(player)] or 0
+  return s.sr + extra
+end
+function S.extra(s, player) return s.xr and s.xr[U.full(player)] or 0 end
+
 --- whether a list of item ids is allowed for one player; false, reason, item id when not. lenient: leave
 --- which items are allowed to the leader's addon (a raider's addon checking before it asks)
-function S.check(s, items, lenient)
-  if #items > s.sr then return false, "TOO_MANY" end
+function S.check(s, items, lenient, player)
+  if #items > S.limit(s, player) then return false, "TOO_MANY" end
   local seen = {}
   for _, id in ipairs(items) do
     if not LR.allowedItem(s, id, lenient) then return false, "NOT_IN_RAID", id end
@@ -95,7 +103,7 @@ function S.set(s, player, class, items, byLeader, now)
   if s.locked and not byLeader then return false, "LOCKED" end
   if s.prio == "only" and #items > 0 and not byLeader then return false, "PRIO_ONLY" end
   if s.gdkp and #items > 0 and not byLeader then return false, "GDKP" end
-  local ok, why, id = S.check(s, items)
+  local ok, why, id = S.check(s, items, nil, player)
   if not ok then return false, why, id end
   local cur = s.res[player]
   if #items == 0 then
@@ -118,7 +126,7 @@ function S.add(s, player, class, id, byLeader, now)
   if s.gdkp and not byLeader then return false, "GDKP" end
   if not LR.allowedItem(s, id) then return false, "NOT_IN_RAID", id end
   if s.hr[id] then return false, "HARD_RESERVED", id end
-  if #items >= s.sr then return false, "TOO_MANY", id end
+  if #items >= S.limit(s, player) then return false, "TOO_MANY", id end
   if not s.dupes and U.indexOf(items, id) then return false, "DUPLICATE", id end
   items[#items + 1] = id
   return S.set(s, player, class, items, byLeader, now)
@@ -162,6 +170,27 @@ function S.clearHR(s, id, now)
   return true
 end
 
+S.MAX_EXTRA = 5
+
+--- gives a player extra reserves (0 takes them away; their last picks over the new limit go). Returns whether
+--- anything changed, and whether they lost reserves.
+function S.setExtra(s, player, n, now)
+  n = tonumber(n)
+  if not n or n % 1 ~= 0 or n < 0 or n > S.MAX_EXTRA then return false end
+  player = U.full(player)
+  if S.extra(s, player) == n then return false end
+  s.xr = s.xr or {}
+  s.xr[player] = n > 0 and n or nil
+  local lost = false
+  local r = s.res[player]
+  if r and #r.i > S.limit(s, player) then
+    while #r.i > S.limit(s, player) do table.remove(r.i) end
+    lost = true
+  end
+  bump(s, now)
+  return true, lost
+end
+
 --- changes how many reserves each player gets and whether they can double up. Lists over the new limit lose
 --- their last picks, and doubled-up picks go when doubling is switched off; returns the players affected.
 function S.configure(s, sr, dupes, now)
@@ -171,8 +200,9 @@ function S.configure(s, sr, dupes, now)
   s.sr, s.dupes = sr, dupes and true or false
   for player, r in pairs(s.res) do
     local keep, seen = {}, {}
+    local limit = S.limit(s, player)
     for _, id in ipairs(r.i) do
-      if #keep < sr and (s.dupes or not seen[id]) then keep[#keep + 1] = id end
+      if #keep < limit and (s.dupes or not seen[id]) then keep[#keep + 1] = id end
       seen[id] = true
     end
     if #keep ~= #r.i then touched[#touched + 1] = player r.i = keep end
@@ -217,7 +247,7 @@ end
 --- players (sorted) and how many reserves each has left
 function S.players(s)
   local out = {}
-  for player, r in pairs(s.res) do out[#out + 1] = { name = player, class = r.c, items = r.i, left = s.sr - #r.i } end
+  for player, r in pairs(s.res) do out[#out + 1] = { name = player, class = r.c, items = r.i, left = S.limit(s, player) - #r.i } end
   table.sort(out, function(a, b) return a.name < b.name end)
   return out
 end
@@ -421,6 +451,14 @@ function S.valid(t)
     end
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
+  if t.xr ~= nil then
+    if type(t.xr) ~= "table" then return false end
+    local n = 0
+    for name, x in pairs(t.xr) do
+      n = n + 1
+      if n > 80 or type(name) ~= "string" or type(x) ~= "number" or x < 0 or x > 40 then return false end
+    end
+  end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
   if t.gdkp ~= nil and type(t.gdkp) ~= "boolean" then return false end
   if LR.Gdkp and not LR.Gdkp.valid(t.gk) then return false end

@@ -167,7 +167,7 @@ local function drawTop(s)
     top.count:Show()
     top.count:SetBackdropColor(0.1, 0.08, 0.06, 0.9) top.count:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
     top.count.num:SetText(LR.Gdkp.gold(LR.Gdkp.pot(s)))
-    top.count.word:SetText("THE POT") top.count.word:SetTextColor(1, 0.82, 0)
+    top.count.word:SetText("POT") top.count.word:SetTextColor(1, 0.82, 0)
     return
   end
   if s.prio == "only" then
@@ -182,8 +182,9 @@ local function drawTop(s)
   top.sub:SetText(table.concat(bits, " - "))
   top.count:Show()
   local used = #LR.myPicks(s)
-  top.count.num:SetText(used .. " / " .. s.sr)
-  local done = used >= s.sr
+  local limit = S.limit(s, U.me())
+  top.count.num:SetText(used .. " / " .. limit)
+  local done = used >= limit
   if LR.pending(s) then
     top.count:SetBackdropColor(0.25, 0.2, 0.03, 0.9) top.count:SetBackdropBorderColor(1, 0.82, 0, 1)
     top.count.word:SetText("NOT SENT YET") top.count.word:SetTextColor(1, 0.82, 0)
@@ -192,7 +193,7 @@ local function drawTop(s)
     top.count.word:SetText("RESERVED") top.count.word:SetTextColor(0.12, 1, 0)
   else
     top.count:SetBackdropColor(0.1, 0.08, 0.06, 0.9) top.count:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
-    top.count.word:SetText((s.sr - used) .. " LEFT")
+    top.count.word:SetText((limit - used) .. " LEFT")
     top.count.word:SetTextColor(1, 0.82, 0)
   end
 end
@@ -512,7 +513,7 @@ local function minimapButton()
     local s = LR.current()
     if s then
       GameTooltip:AddLine(("%s soft reserves by %s"):format(LR.raidOf(s).name, LR.isLeader(s) and "you" or U.short(s.leader)), 1, 1, 1)
-      GameTooltip:AddLine(("You've used %d of %d."):format(#LR.myPicks(s), s.sr), 1, 1, 1)
+      GameTooltip:AddLine(("You've used %d of %d."):format(#LR.myPicks(s), S.limit(s, U.me())), 1, 1, 1)
     else
       GameTooltip:AddLine("No soft reserves open.", 1, 1, 1)
     end
@@ -524,7 +525,7 @@ local function minimapButton()
   if db.ui.hideMinimap then b:Hide() end
   function LR.minimapUpdate()
     local s = LR.current()
-    dot:SetShown(s ~= nil and not s.locked and #LR.myPicks(s) < s.sr)
+    dot:SetShown(s ~= nil and not s.locked and #LR.myPicks(s) < S.limit(s, U.me()))
   end
   LR.minimapUpdate()
   LR.minimap = b

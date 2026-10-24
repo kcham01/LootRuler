@@ -99,6 +99,50 @@ function UI.pickItem(s, title, done, filter)
   end, { full = true })
 end
 
+--- extra reserves (tanks, healers, whoever the leader likes): pick players, then how many extra each
+function UI.extraSheet(s, preset)
+  local picked, n = {}, 1
+  for _, name in ipairs(preset or {}) do picked[U.full(name)] = true n = math.max(1, S.extra(s, name)) end
+  UI.openSheet("Extra reserves", function(f, h)
+    f:note(("Everyone gets %s. Pick who gets more (tanks and healers, say), and how many more."):format(U.plural(s.sr, "reserve")))
+    local people = LR.roster()
+    local seen = {}
+    for _, m in ipairs(people) do seen[U.full(m.name)] = true end
+    -- (players who reserved but aren't in the group yet, and anyone already given extra)
+    for _, pl in ipairs(S.players(s)) do if not seen[pl.name] then people[#people + 1] = { name = pl.name, class = pl.class } seen[pl.name] = true end end
+    for name in pairs(s.xr or {}) do if not seen[name] then people[#people + 1] = { name = name } seen[name] = true end end
+    for name in pairs(picked) do if not seen[name] then people[#people + 1] = { name = name } seen[name] = true end end
+    table.sort(people, function(a, b) return a.name < b.name end)
+    local chips = {}
+    for _, m in ipairs(people) do
+      local on = picked[U.full(m.name)]
+      local x = S.extra(s, m.name)
+      chips[#chips + 1] = { label = (on and "[x] " or "[  ] ") .. U.classText(U.short(m.name), m.class or LR.classOf(m.name)) .. (x > 0 and ("  +" .. x) or ""), on = on,
+        click = function() picked[U.full(m.name)] = not on or nil h.redraw(true) end }
+    end
+    if #chips == 0 then f:note("Nobody in the group yet.") else f:chips(chips) end
+    local amounts = { { plain = true, label = "Extra each:" } }
+    for i = 0, 3 do amounts[#amounts + 1] = { label = i == 0 and "None" or ("+" .. i), width = i == 0 and 48 or 36, on = n == i, click = function() n = i h.redraw(true) end } end
+    f:chips(amounts)
+    if n == 0 then f:note("None takes extra reserves away: the last ones they picked over the limit go.", K.GOLD) end
+    f:gap(4)
+    local count = 0
+    for _ in pairs(picked) do count = count + 1 end
+    f:buttons({
+      { label = "Cancel", click = function() h.close() end },
+      { label = count > 0 and ("Save for " .. U.plural(count, "player")) or "Save", disabled = count == 0, click = function()
+        h.close()
+        local lost = {}
+        for name in pairs(picked) do
+          local _, l = LR.setExtra(s, name, n)
+          if l then lost[#lost + 1] = U.short(name) end
+        end
+        if #lost > 0 then LR.print(("%s lost the reserves they had over their new limit."):format(table.concat(lost, ", "))) end
+      end },
+    })
+  end)
+end
+
 --- picks someone in the group (a sheet), then calls done("Name-Realm")
 function UI.pickPlayer(title, done)
   UI.openSheet(title, function(f, h)
@@ -211,7 +255,9 @@ local function byPlayer(f, s, leader)
     local inGroup = LR.inGroup(person.name)
     hd.text:SetText(U.classText(U.short(person.name), class) .. ((inGroup and not LR.versionOf(person.name)) and "  |cff9d9d9dno addon|r" or ""))
     local po = s.plusOne and S.plusOnes(s, person.name) or 0
-    hd.right:SetText((person.none and "|cffffd100nothing reserved|r" or (#items .. " / " .. s.sr)) .. (po > 0 and ("  |cff1eff00+" .. po .. "|r") or ""))
+    local limit, extra = S.limit(s, person.name), S.extra(s, person.name)
+    hd.right:SetText((person.none and "|cffffd100nothing reserved|r" or (#items .. " / " .. limit)) .. (extra > 0 and ("  |cff69ccf0+" .. extra .. " extra|r") or "")
+      .. (po > 0 and ("  |cff1eff00+" .. po .. "|r") or ""))
     hd:SetWidth(f.width)
     f:place(hd, 22)
     f:gap(3)
@@ -229,7 +275,7 @@ local function byPlayer(f, s, leader)
     end
     if leader then
       local list = {}
-      if #items < s.sr then
+      if #items < limit then
         list[#list + 1] = { label = "Add a reserve for " .. U.short(person.name), click = function()
           UI.pickItem(s, "Reserve for " .. U.short(person.name), function(id)
             local ok, why = LR.leaderAdd(s, person.name, class, id)
@@ -237,6 +283,8 @@ local function byPlayer(f, s, leader)
           end, function(id) return not s.hr[id] end)
         end }
       end
+      local extra = S.extra(s, person.name)
+      list[#list + 1] = { label = extra > 0 and ("Extra reserves: " .. extra) or "Extra reserves", click = function() UI.extraSheet(s, { person.name }) end }
       if s.plusOne then
         list[#list + 1] = { label = "+1", width = 44, click = function() LR.adjustPlusOne(s, person.name, 1) end }
         list[#list + 1] = { label = "-1", width = 44, disabled = po == 0, click = function() LR.adjustPlusOne(s, person.name, -1) end }

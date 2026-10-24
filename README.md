@@ -37,10 +37,11 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 1. **Open reserves** on the Session tab: pick the raid, how many soft reserves each player gets, whether a player can put more than one on the same item (on by default), and whether to share the session with your guild so people can reserve before the group is even made.
 2. **Hard reserve** anything: say who it's for and add a note if you like. Anyone who had soft reserved it gets that reserve back.
-3. **Reserve yourself** on the Reserve tab, like everyone else.
-4. **Post in raid chat** tells everyone how to reserve, addon or not.
-5. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't.
-6. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
+3. **Extra reserves** for tanks, healers or anyone: on the Session tab (or a player's line on the Reserves tab), pick the players and how many more they get. `!lr` tells players without the addon how many they have.
+4. **Reserve yourself** on the Reserve tab, like everyone else.
+5. **Post in raid chat** tells everyone how to reserve, addon or not.
+6. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't.
+7. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
 
 Already used softres.it? **Import from softres.it** brings in its "Gargul Export".
 
@@ -108,10 +109,11 @@ Turn on **GDKP auctions** for a session (Session tab) and every item is auctione
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/34-payouts.png" alt="The payouts" width="40%">
 </p>
 
-- **Auctions:** the loot master clicks an item, or **Auction them all** to put every item up one after another. The raid is told where bids start and by how much each must go up. Players bid by **typing an amount in raid chat** ("150", "150g", "1.5k"), by whispering `!lr bid 150`, or by clicking one of the two bids in their auction window. A bid in the last few seconds gives everyone a few more. A bid that's too low doesn't count, and its bidder is told the lowest that would.
+- **Auctions:** the loot master clicks an item, or **Auction them all** to put every item up one after another. The raid is told where bids start and by how much each must go up. Players bid by **typing an amount in raid chat** ("150", "150g", "1.5k"), by whispering `!lr bid 150`, or by clicking one of the two bids in their auction window. A bid in the last few seconds gives everyone a few more. A bid that's too low doesn't count, and its bidder is told the lowest that would. If people chat numbers during auctions, switch on **Bids start with "bid"**: then only "bid 150" counts, not "150".
 - **Sold:** the highest bid when time is up buys the item, which goes to them through master loot (or is marked for a trade). Nobody bids: it stays on the Loot tab to roll out or disenchant later, and the next item comes up. A hard reserve still comes first.
 - **Prices:** where bids start and the least raise, for the whole raid, and a different start for any item you like.
 - **The pot:** the organiser's cut (0 to 20%), bonuses for anyone you like (tanks, healers), and an even split between everyone who was in the group, plus anyone who bought something. Anyone can be left out of the split.
+- **Ending the raid:** while anyone still owes gold or is owed some, ending the session asks first, since it would lose the list. It stays for a week until you've paid everyone.
 - **Payouts:** addons can't put gold in a trade, so when the organiser opens a trade LootRuler says what to give or take, and counts the gold that changes hands. **Tell the raid** posts the pot in raid chat; **Whisper everyone** tells each player what they owe or are owed; `!lr pot` asks for it.
 
 ## For guilds
