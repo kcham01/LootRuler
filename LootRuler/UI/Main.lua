@@ -167,7 +167,7 @@ local function drawTop(s)
     top.count:Show()
     top.count:SetBackdropColor(0.1, 0.08, 0.06, 0.9) top.count:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
     top.count.num:SetText(LR.Gdkp.gold(LR.Gdkp.pot(s)))
-    top.count.word:SetText("THE POT") top.count.word:SetTextColor(1, 0.82, 0)
+    top.count.word:SetText("POT") top.count.word:SetTextColor(1, 0.82, 0)
     return
   end
   if s.prio == "only" then
