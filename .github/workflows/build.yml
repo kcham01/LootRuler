@@ -1,6 +1,7 @@
 name: Build and test LootRuler
-# Tests the session rules, a whole raid of clients side by side, Gargul's importer reading the export and
-# the window; checks the addon only uses what the TBC Anniversary client has; draws every screen. On main the
+# Tests the session rules, whole raids of clients side by side, the reserves handed to Gargul (checked with
+# LootRuler's own code: no part of Gargul is downloaded or run) and the window; checks the addon only uses
+# what the TBC Anniversary client has; draws every screen. On main the
 # zip, pictures and logs go on the "results" branch; on a pull request they're a download on the run.
 on:
   push:
@@ -26,10 +27,6 @@ jobs:
           ref: classic_anniversary
           path: wowui
           sparse-checkout: Interface
-      - uses: actions/checkout@v4
-        with:
-          repository: papa-smurf/Gargul
-          path: gargul
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
