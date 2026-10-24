@@ -398,6 +398,13 @@ function UI.itemTooltip(owner, s, id, raidKey)
       GameTooltip:AddLine(LR.raid(raidKey).name .. ": " .. table.concat(from, ", "), 0.7, 0.7, 0.7, true)
     end
   end
+  -- the guild's priority list for it (Guild tab)
+  local book = IsInGuild() and LR.book()
+  local plist = book and LR.Book.prio(book, id)
+  if plist and #plist > 0 then
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Priority list: " .. UI.prioLine(plist, 6), 0.12, 1, 0, true)
+  end
   if s then
     local hr = s.hr[id]
     if hr then

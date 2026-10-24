@@ -75,8 +75,10 @@ function Region:SetPoint(point, rel, relPoint, x, y)
   if rel == self then fail("anchored to itself") end
   for i, p in ipairs(self._points) do if p.point == point then table.remove(self._points, i) break end end
   table.insert(self._points, { point = point, rel = rel, relPoint = relPoint, x = x or 0, y = y or 0 })
+  M.invalidate()
 end
-function Region:ClearAllPoints() self._points = {} end
+-- (a frame moved or resized: where everything is gets worked out again, as the game does)
+function Region:ClearAllPoints() self._points = {} M.invalidate() end
 function Region:SetAllPoints(rel)
   rel = rel or self._parent
   self._points = {}
@@ -89,9 +91,9 @@ function Region:GetPoint(i)
   if not p then return nil end
   return p.point, p.rel, p.relPoint, p.x, p.y
 end
-function Region:SetSize(w, h) self._w, self._h = w, h end
-function Region:SetWidth(w) self._w = w end
-function Region:SetHeight(h) self._h = h end
+function Region:SetSize(w, h) self._w, self._h = w, h M.invalidate() end
+function Region:SetWidth(w) self._w = w M.invalidate() end
+function Region:SetHeight(h) self._h = h M.invalidate() end
 function Region:GetSize() return self:GetWidth(), self:GetHeight() end
 function Region:GetWidth() local r = M.rect(self) return r and (r.r - r.l) or (self._w or 0) end
 function Region:GetHeight() local r = M.rect(self) return r and (r.t - r.b) or (self._h or 0) end

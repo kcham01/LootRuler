@@ -73,6 +73,14 @@ function UI.rollStatus(copy)
     local others = U.filter(copy.who, function(w) return not U.samePlayer(R.nameOf(w), me()) end)
     return "A tie: you and " .. R.names(others, 3) .. " roll again."
   end
+  if copy.mode == "PR" then
+    local place = copy.n and (LR.Prio.place(copy.n) .. " ") or ""
+    if R.inList(copy.who, me()) then
+      local others = U.filter(copy.who, function(w) return not U.samePlayer(R.nameOf(w), me()) end)
+      return ("|cff1eff00You're %son the priority list|r, with %s: you roll for it."):format(place, R.names(others, 3))
+    end
+    return ("Priority list: %s (%s) roll for this."):format(R.names(copy.who, 4), place ~= "" and U.trim(place) or "first")
+  end
   if highest then return highest .. "." end
   local it = LR.ITEMS[copy.id]
   if it and not LR.usableBy(copy.id, LR.myClass()) then return "|cff9d9d9dYour class can't use this.|r" end
@@ -310,6 +318,9 @@ local function fill(f, copy)
   elseif copy.mode == "TIE" then
     f.dice.tipTitle = "Roll again"
     f.dice.tip = "/roll, for the tie."
+  elseif copy.mode == "PR" then
+    f.dice.tipTitle = "Priority"
+    f.dice.tip = "Only " .. R.names(copy.who, 4) .. ", who share the top priority, roll for this."
   else
     f.dice.tip = "/roll" .. (srMine and ": only players who reserved it roll." or " (1-100).")
   end

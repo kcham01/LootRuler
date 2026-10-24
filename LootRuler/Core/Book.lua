@@ -22,6 +22,13 @@ LR.Book = B
 B.DEFAULT_PER_RAID = 10
 B.MAX_POINTS = 1000
 
+--- when an entry changes: now, or just after its last change (two changes in the same second still spread)
+local function stamp(old, now)
+  local last = old and old.t or 0
+  return now > last and now or last + 0.001
+end
+B.stamp = stamp
+
 function B.new(guild)
   return { guild = guild, editRank = 1, et = 0, boost = { on = false, perRaid = B.DEFAULT_PER_RAID, t = 0 }, points = {}, prio = {} }
 end
@@ -37,7 +44,7 @@ function B.setPoints(book, player, n, now)
   n = math.max(0, math.min(B.MAX_POINTS, math.floor(tonumber(n) or 0)))
   player = U.full(player)
   if B.points(book, player) == n then return nil end
-  book.points[player] = { n = n, t = now }
+  book.points[player] = { n = n, t = stamp(book.points[player], now) }
   return { points = { [player] = book.points[player] } }
 end
 
@@ -47,14 +54,14 @@ function B.raidAttended(book, players, now)
   for _, p in ipairs(players) do
     p = U.full(p)
     local n = math.min(B.MAX_POINTS, B.points(book, p) + (book.boost.perRaid or B.DEFAULT_PER_RAID))
-    book.points[p] = { n = n, t = now }
+    book.points[p] = { n = n, t = stamp(book.points[p], now) }
     change.points[p] = book.points[p]
   end
   return change
 end
 
 function B.setBoost(book, on, perRaid, now)
-  book.boost = { on = on and true or false, perRaid = math.max(1, math.min(100, math.floor(tonumber(perRaid) or B.DEFAULT_PER_RAID))), t = now }
+  book.boost = { on = on and true or false, perRaid = math.max(1, math.min(100, math.floor(tonumber(perRaid) or B.DEFAULT_PER_RAID))), t = stamp(book.boost, now) }
   return { boost = book.boost }
 end
 
@@ -80,7 +87,7 @@ function B.setPrio(book, id, list, now)
       clean[#clean + 1] = { p = U.full(x.p), n = math.max(1, math.floor(tonumber(x.n) or 1)), note = type(x.note) == "string" and x.note:sub(1, 60) or nil }
     end
   end
-  book.prio[id] = { list = clean, t = now }
+  book.prio[id] = { list = clean, t = stamp(book.prio[id], now) }
   return { prio = { [id] = book.prio[id] } }
 end
 

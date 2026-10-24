@@ -44,8 +44,12 @@ end, function(b)
 end)
 
 ---------------------------------------------------------------------- the loot master window
+--- a roll nobody rolls in: hard reserved, or one player first on the priority list
+local function noRoll(roll) return roll.mode == "HR" or (roll.mode == "PR" and #roll.who == 1) end
+
 local function selectedPlayer(roll)
   if roll.pick then return roll.pick end
+  if roll.mode == "PR" and #roll.who == 1 then return roll.who[1] end
   if roll.mode == "HR" then
     local f = roll.f or ""
     for _, m in ipairs(LR.roster()) do
@@ -143,7 +147,7 @@ function UI.masterTick()
   else
     master.bar.fill:SetWidth(full)
     master.bar.fill:SetVertexColor(0.45, 0.45, 0.45)
-    master.secs:SetText(roll.state == "awarded" and "Given out" or roll.mode == "HR" and "No roll" or "Closed")
+    master.secs:SetText(roll.state == "awarded" and "Given out" or noRoll(roll) and "No roll" or "Closed")
   end
 end
 
@@ -154,6 +158,10 @@ local function modeLine(roll)
     return "|cffffd100Soft reserved:|r " .. R.names(roll.who, 6) .. (#roll.away > 0 and ("; " .. R.names(roll.away, 2) .. " isn't here") or "")
   elseif roll.mode == "TIE" then
     return "|cffffd100Tie:|r " .. R.names(roll.who, 6) .. " roll again"
+  elseif roll.mode == "PR" then
+    local place = roll.n and LR.Prio.place(roll.n) or "first"
+    if #roll.who == 1 then return ("|cff1eff00Priority list:|r %s is %s"):format(U.short(roll.who[1]), place) end
+    return ("|cff1eff00Priority list:|r %s share %s, and roll"):format(R.names(roll.who, 6), place)
   end
   return "Everyone rolls: MS beats OS" .. (#roll.away > 0 and ("; reserved by " .. R.names(roll.away, 2) .. ", who isn't here") or "")
 end
@@ -208,7 +216,7 @@ function UI.masterDraw()
   local f = K.flow("master", master.body, 0, 0, MW - 32)
   local good, bad = R.standings(roll)
   local pick = selectedPlayer(roll)
-  if roll.mode ~= "HR" then
+  if not noRoll(roll) then
     if #good == 0 and #bad == 0 then
       f:note(roll.state == "open" and "No rolls yet." or "Nobody rolled.")
     end
@@ -252,7 +260,7 @@ function UI.masterDraw()
     if tied then list[#list + 1] = { label = "Reroll the tie", click = function() Rolls.again("TIE") end } end
     -- nobody wants it: the disenchanter
     local s = Rolls.session()
-    if s and s.de and roll.mode ~= "HR" then
+    if s and s.de and not noRoll(roll) then
       list[#list + 1] = { label = "Disenchant (" .. U.short(s.de) .. ")", click = function()
         local ok, note = Rolls.disenchant()
         if ok and note then roll.note = note end
@@ -260,12 +268,12 @@ function UI.masterDraw()
       end }
     end
     if #list > 0 then f:buttons(list, "left") end
-    if s and not s.de and roll.mode ~= "HR" and not pick then
+    if s and not s.de and not noRoll(roll) and not pick then
       f:note("Nobody to give it to? Pick a disenchanter on the Session tab and it's one click.")
     end
     local more = {}
-    if roll.mode == "SR" or roll.mode == "HR" or roll.mode == "TIE" then
-      more[#more + 1] = { label = roll.mode == "HR" and "Roll it out anyway" or "Let everyone roll", click = function() Rolls.again("OPEN") end }
+    if roll.mode == "SR" or roll.mode == "HR" or roll.mode == "TIE" or roll.mode == "PR" then
+      more[#more + 1] = { label = noRoll(roll) and "Roll it out anyway" or "Let everyone roll", click = function() Rolls.again("OPEN") end }
     else
       more[#more + 1] = { label = "Roll again", click = function() Rolls.again("OPEN") end }
     end

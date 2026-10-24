@@ -91,8 +91,39 @@ function W.handle(text, sender)
   local now = U.now()
 
   if lower == "" or lower == "list" or lower == "help" or lower == "?" then
-    W.reply(player, ("Soft reserves for %s: %d each%s. %s Type \"!lr <item link>\" in raid chat or whisper me to reserve, \"!lr remove <item>\" to take one back."):format(
-      LR.raidOf(s).name, s.sr, s.dupes and "" or " (one per item)", status(s, player)))
+    local extra = (s.prio and " \"!lr prio\": your place on the guild's priority lists." or "") .. (s.boost and " \"!lr points\": your points for boosted rolls." or "")
+    if s.prio == "only" then
+      W.reply(player, ("%s goes by the guild's priority lists, not reserves.%s"):format(LR.raidOf(s).name, extra))
+      return
+    end
+    W.reply(player, ("Soft reserves for %s: %d each%s. %s Type \"!lr <item link>\" in raid chat or whisper me to reserve, \"!lr remove <item>\" to take one back.%s"):format(
+      LR.raidOf(s).name, s.sr, s.dupes and "" or " (one per item)", status(s, player), extra))
+    return
+  end
+
+  -- the guild's priority lists: theirs, or an item's
+  local prioArg = lower:match("^prio%s*(.*)$") or lower:match("^priority%s*(.*)$")
+  if prioArg then
+    local book = LR.book and LR.book()
+    if not (s.prio and book) then W.reply(player, "This raid doesn't go by priority lists.") return end
+    local P, B = LR.Prio, LR.Book
+    if prioArg == "" then
+      local mine = B.prioOf(book, player)
+      if #mine == 0 then W.reply(player, "You're not on any priority list. Ask an officer if you think you should be.") return end
+      local parts = {}
+      for i, x in ipairs(mine) do
+        if i > 6 then parts[#parts + 1] = ("and %d more"):format(#mine - 6) break end
+        parts[#parts + 1] = LR.itemLink(x[1]) .. " " .. P.place(x[2])
+      end
+      W.reply(player, "Your priorities: " .. table.concat(parts, ", ") .. ". \"!lr prio <item>\" says who else is on an item's list.")
+      return
+    end
+    local itemText = U.trim(args:sub(#args - #prioArg + 1))
+    local id = LR.idFrom(itemText) or pick(s, player, itemText)
+    if not id then return end
+    local list = B.prio(book, id)
+    if #list == 0 then W.reply(player, ("%s has no priority list: it's rolled for as usual."):format(LR.itemLink(id))) return end
+    W.reply(player, ("Priority for %s: %s."):format(LR.itemLink(id), LR.UI.prioLine(list, 8)))
     return
   end
 

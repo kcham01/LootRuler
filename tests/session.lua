@@ -128,6 +128,19 @@ check("it's a valid session", S.valid(bd))
 check("item ids from links, item strings and numbers", LR.idFrom("|cffa335ee|Hitem:28830::::|h[Dragonspine Trophy]|h|r") == 28830
   and LR.idFrom("item:123") == 123 and LR.idFrom(" 456 ") == 456 and LR.idFrom("[789]") == 789 and LR.idFrom("watch") == nil)
 
+print("== priority lists instead of reserves")
+local ps = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 400)
+check("reserves to start with", ps.prio == nil and S.add(ps, A, "PRIEST", 28525, false, 401))
+check("priority lists, then reserves: reserving still works", S.setPrio(ps, "both", 402) and ps.prio == "both" and S.add(ps, A, "PRIEST", 28530, false, 403))
+check("priority lists only: nobody reserves", S.setPrio(ps, "only", 404) and not S.add(ps, A, "PRIEST", 28528, false, 405)
+  and select(2, S.add(ps, A, "PRIEST", 28528, false, 405)) == "PRIO_ONLY")
+check("taking reserves back still works", S.set(ps, A, "PRIEST", {}, false, 406))
+check("nothing else is a way to decide loot", S.setPrio(ps, "nonsense", 407) and ps.prio == nil)
+ps.prio = "auction"
+check("a way this version doesn't know is kept", S.valid(ps))
+ps.prio = 5
+check("but not nonsense", not S.valid(ps))
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)
