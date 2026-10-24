@@ -845,6 +845,32 @@ run("max bids", function()
   srv:tick(1)
 end)
 
+run("tanks and healers in a GDKP", function()
+  local s10 = LR.startSession("Karazhan", 2, true, false)
+  LR.setGdkp(s10, true)
+  srv:tick(1)
+  LR.UI.go("session")
+  check("role cuts on the GDKP panel", visible("Tanks each get:") and visible("Healers each get:") and visible("Tanks and healers"))
+  clickText("2%", 1)
+  srv:tick(0.5)
+  check("the leader picks the tanks' cut", s10.gk.rp and s10.gk.rp.tank == 2)
+  clickText("Tanks and healers")
+  check("each player, tank or healer", visible("Pick who tanks and who heals") and visible("Ann") and visible("Healer"))
+  local hit
+  for _, x in ipairs(find("Tank")) do if x.clickable and M.plain(x.fs:GetText()) == "Tank" then hit = x.clickable break end end
+  M.click(hit)
+  srv:tick(0.5)
+  local tanks = 0
+  for _, r in pairs(s10.gk.role or {}) do if r == "tank" then tanks = tanks + 1 end end
+  check("clicking Tank puts them in the role", tanks == 1)
+  shot("tanks-and-healers")
+  LR.UI.closeAll()
+  LR.setGdkp(s10, false)
+  LR.endSession(s10)
+  srv:tick(1)
+  LR.UI.go("reserve")
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)

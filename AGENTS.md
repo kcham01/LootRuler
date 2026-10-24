@@ -134,7 +134,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   session. Trades and `!lr pot` find a past GDKP still owing (`History.owing`). Kept per character, 30 at most.
 - **Max bids** (`R.resolve`): kept only by the loot master's addon (`roll.maxes`, sent as `M` or whispered `!lr max`);
   it bids for them as little as it takes, says where the bidding ended up, and resends `R` so windows update.
-- **Next:** the roadmap is done. Ideas from here: GDKP cuts by role, Gargul's boosted-roll and +1 imports,
+- **Cuts by role** (`s.gk.rp`: role -> percent of the pot each; `s.gk.role`: player -> "tank"/"healer"): paid out of
+  the pot after the organiser's cut and bonuses, before the even split; scaled down if they'd ever be more than is left.
+- **Next:** the roadmap is done. Ideas from here: Gargul's boosted-roll and +1 imports,
   and keeping an eye on WoW: Forever's new raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
