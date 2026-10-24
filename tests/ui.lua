@@ -37,7 +37,7 @@ local lead = srv:client({ name = "Lead", class = "PALADIN", guild = "Kings" })
 local ann = srv:client({ name = "Ann", class = "PRIEST", guild = "Kings" })
 local bob = srv:client({ name = "Bob", class = "MAGE", realm = "Faerlina" })
 local pug = srv:player({ name = "Pug", class = "WARRIOR" })
-for _, p in ipairs({ lead, ann }) do
+local function icons(p)
   p.G.C_Item.GetItemIconByID = function(id) return ICONS[id] and ("Interface\\Icons\\" .. ICONS[id]) or 134400 end
   p.M.describeLink = function(link)
     local id = tonumber(link:match("item:(%d+)"))
@@ -47,6 +47,7 @@ for _, p in ipairs({ lead, ann }) do
     return { { it[1], tonumber(hex:sub(1, 2), 16) / 255, tonumber(hex:sub(3, 4), 16) / 255, tonumber(hex:sub(5, 6), 16) / 255 }, { "Item Level " .. it[6], 1, 0.82, 0 } }
   end
 end
+for _, p in ipairs({ lead, ann, bob }) do icons(p) end
 srv:setGroup({ lead, ann, bob, pug }, lead, true)
 srv:tick(6)
 
@@ -298,6 +299,7 @@ run("a raider's window", function()
   check("with the leader away the picks wait", ann.LR.pending(ann.LR.current()) and visible("NOT SENT YET", ann))
   shot("raider-waiting", ann)
   srv:login(lead, db)
+  icons(lead)
   M, G, LR = lead.M, lead.G, lead.LR
   srv:tick(8)
   s = LR.current()
