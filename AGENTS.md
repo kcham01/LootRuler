@@ -151,6 +151,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   straight from a loaded Gargul (`Gargul.counts`, its own export) or pasted. +1s set with `S.setPlusOnes`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
+- **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
+  - Not yet tried in the real game: everything is tested in the stand-in only. Keep the version at 1.0.0-beta
+    until the owner's in-game test passes, then bump `LR.VERSION` and the TOC to 1.0.0.
+  - softres.it names must match characters exactly (other realms need "-Realm"); a typo becomes a phantom player.
+  - Party (5-man) master loot is coded and unit-tested but has had less whole-group testing than raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
