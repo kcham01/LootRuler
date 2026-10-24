@@ -22,7 +22,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. `Gdkp.lua` is GDKP's money (no game calls), `Pot.lua` does it in the game. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `guild.lua`, `gdkp.lua` (whole raids), `gargul.lua`, `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `guild.lua`, `gdkp.lua` (whole raids), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
@@ -38,6 +38,11 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
   `tests/session.lua`, anything between players in a whole-raid test, anything on screen in `tests/ui.lua`
   with a picture.
 - **Plain English** in everything players read: short sentences, no jargon, no internal names.
+- **Never copy other projects' code or art.** Gargul is "All Rights Reserved": nothing from it goes into this
+  repository, the zip, the tests or CI (not even downloaded to test against). Work alongside it only by calling
+  its functions in the game, and by writing and reading text layouts (softres.it's, Gargul's import boxes) with
+  LootRuler's own code. Anything else reused must have a licence that allows it (GPL-2.0 compatible), be
+  credited in the README, and keep its licence file (`LootRuler/Libs/*`).
 
 ## Design rules (every feature)
 
@@ -91,7 +96,7 @@ Players don't update their addons, so every version has to work with every other
 
 ```sh
 lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
-GARGUL=<Gargul checkout> lua5.1 tests/gargul.lua
+lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
 ```

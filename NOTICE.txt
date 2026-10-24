@@ -1,0 +1,21 @@
+LootRuler, a raid loot addon for World of Warcraft (TBC Anniversary).
+Copyright the LootRuler author (Jamesthefishguy). Licensed under the GNU General Public License,
+version 2 (see LICENSE).
+
+LootRuler's code is its own. It also contains:
+
+- Loot lists (Data/Loot.lua), built from AtlasLootClassic's raid tables
+  (https://github.com/Hoizame/AtlasLootClassic, GPL-2.0) and the cmangos TBC world database
+  (https://github.com/cmangos/tbc-db, GPL-2.0).
+- Libraries in Libs/, each under its own licence, with its licence file included:
+  LibStub (public domain), CallbackHandler-1.0, AceComm-3.0 and ChatThrottleLib (Ace3, BSD; see
+  Libs/Ace3-LICENSE.txt), LibSerialize (MIT; Libs/LibSerialize/LICENSE) and LibDeflate (zlib;
+  Libs/LibDeflate/LICENSE.txt).
+
+LootRuler contains no code from Gargul. It works alongside Gargul only by handing it soft reserves in
+the layout softres.it publishes and by calling Gargul's own functions when a player has both addons.
+Gargul is a separate addon by its own authors.
+
+World of Warcraft and The Burning Crusade are trademarks or registered trademarks of Blizzard
+Entertainment, Inc. LootRuler is a fan-made addon and is not made, endorsed or supported by Blizzard
+Entertainment.

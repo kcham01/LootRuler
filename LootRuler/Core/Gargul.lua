@@ -3,6 +3,10 @@
 -- same string, so it can go into Gargul's own importer by hand, or straight in with one click through the
 -- hook Gargul opens for other addons (Gargul.SoftRes:import). LootRuler also reads that string, to bring
 -- reserves made on softres.it into a session.
+--
+-- None of Gargul's code is in LootRuler (Gargul's licence reserves all rights). LootRuler only writes and reads
+-- the layout softres.it publishes, and calls Gargul's own functions when a player has both addons, the way any
+-- addon works alongside another.
 local _, LR = ...
 local U, S = LR.U, LR.Session
 local LibDeflate = LibStub("LibDeflate")

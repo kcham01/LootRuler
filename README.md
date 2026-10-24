@@ -186,7 +186,7 @@ Every build:
 - runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot; then the raid's loot list: what each corpse dropped, who has it, items kept to roll out later and handed over in trades, group loot, and the raid kept under past raids once it ends;
 - runs a **GDKP raid**: everything auctioned one after another, bids clicked, typed in raid chat and whispered, a bid that's too low, a bid at the last moment, max bids against each other, an item nobody bids on, a hard reserved item, bids that must start with "bid", the cut, tank and healer cuts and the split, gold changing hands in trades, everyone told their payout, and payouts finished after the raid has ended;
 - runs a **guild raid**: the guild master, officers, members with and without the addon and someone logging in later; only the ranks the guild master picked can change points (even sending the change themselves doesn't work), raid points reach everyone in the guild, and boosted rolls, clicked and typed, win and spend their points, ties included; priority lists brought in, an item going straight to the first on its list, two who share a place rolling, winners coming off the lists everywhere, a raid that goes by priority lists only, alts sharing their main's points, and points and alts brought in from Gargul;
-- loads **Gargul's own soft-reserve importer** and checks it reads LootRuler's reserves exactly (doubled reserves, classes, hard reserves, players from other realms);
+- checks the reserves LootRuler hands to **Gargul** are in exactly the layout softres.it publishes for it (doubled reserves, classes, hard reserves, players from other realms), and reads softres.it's exports back;
 - checks the addon only uses what the TBC Anniversary client has, against Blizzard's own interface code;
 - clicks through every screen, checks nothing errors or leaks frames, and draws every screen.
 
@@ -195,6 +195,8 @@ The loot lists were made from AtlasLoot's raid tables and checked boss by boss a
 ## Licence
 
 GPL-2.0. See [LICENSE](LICENSE).
+
+LootRuler's code is its own. The loot lists are built from AtlasLootClassic's and cmangos' tables, both GPL-2.0 like LootRuler. The libraries in `LootRuler/Libs` keep their own licences (their licence files are included). Nothing from Gargul is used: LootRuler only works alongside it. The download includes the licence and a [NOTICE](NOTICE.txt) listing all of this.
 
 ## Credits
 
@@ -205,8 +207,8 @@ GPL-2.0. See [LICENSE](LICENSE).
 | [Ace3](https://www.wowace.com/projects/ace3) (AceComm, CallbackHandler, LibStub, ChatThrottleLib) | Addon messages | BSD |
 | [LibSerialize](https://github.com/rossnichols/LibSerialize) | Packing addon messages | MIT |
 | [LibDeflate](https://github.com/SafeteeWoW/LibDeflate) | Compression for addon messages and Gargul strings | zlib |
-| [Gargul](https://github.com/papa-smurf/Gargul) | Its importer is used in the tests (not shipped) | |
-| [wowsims/tbc](https://github.com/wowsims/tbc) | Icon names for the test pictures (not shipped) | MIT |
+| [Gargul](https://github.com/papa-smurf/Gargul) | Nothing: LootRuler contains none of its code, and doesn't download or run it to test. It only works alongside Gargul in the game (handing it reserves, reading its exports) | All rights reserved (its own) |
+| [wowsims/tbc](https://github.com/wowsims/tbc) | Icon names for the test pictures (not shipped; `tests/fixtures/icons.lua`) | MIT |
 | [Gethe/wow-ui-source](https://github.com/Gethe/wow-ui-source) | Checking the addon against the client's interface code (not shipped) | Blizzard's |
 
 World of Warcraft and The Burning Crusade are trademarks or registered trademarks of Blizzard Entertainment, Inc. LootRuler is a fan-made addon and is not made, endorsed or supported by Blizzard Entertainment. Gargul is a separate addon by its own authors.
