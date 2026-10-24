@@ -41,9 +41,12 @@ local function list(s, player)
 end
 
 local function status(s, player)
-  local left = s.sr - #S.reservesOf(s, player)
+  local limit = S.limit(s, player)
+  local left = limit - #S.reservesOf(s, player)
+  local extra = S.extra(s, player)
   local po = s.plusOne and (" You have %s."):format(S.plusOnes(s, player) == 1 and "a +1" or (S.plusOnes(s, player) .. " +1s")) or ""
-  return ("You have reserved %s (%d of %d used%s).%s"):format(list(s, player), s.sr - left, s.sr, s.locked and ", reserves are locked" or "", po)
+  return ("You have reserved %s (%d of %d used%s%s).%s"):format(list(s, player), limit - left, limit,
+    extra > 0 and (", with " .. U.plural(extra, "extra reserve")) or "", s.locked and ", reserves are locked" or "", po)
 end
 
 local function nameOf(s, id) return LR.itemLink(id) end

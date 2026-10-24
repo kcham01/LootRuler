@@ -142,6 +142,20 @@ local function manage(f, s)
     end } }, "left")
   end)
 
+  if not s.gdkp and s.prio ~= "only" then
+    f:panel("Extra reserves", function(p)
+      local list = {}
+      for name, n in pairs(s.xr or {}) do list[#list + 1] = { name, n } end
+      table.sort(list, function(a, b) return a[1] < b[1] end)
+      if #list == 0 then
+        p:note("Everyone gets the same. Give tanks and healers (or anyone) extra reserves here.")
+      else
+        p:text(table.concat(U.map(list, function(x) return U.classText(U.short(x[1]), LR.classOf(x[1])) .. " +" .. x[2] end), ", "))
+      end
+      p:buttons({ { label = "Give extra reserves", click = function() UI.extraSheet(s) end } }, "left")
+    end)
+  end
+
   f:panel("Disenchanter", function(p)
     if s.de then
       p:text(U.classText(U.short(s.de), LR.classOf(s.de)) .. " disenchants what nobody wants: the loot master's window has a Disenchant button.")
