@@ -66,6 +66,18 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
   invites or anything else on the player's behalf.
 - **Saved data is checked when loaded**, like messages are.
 
+## Versions
+
+Players don't update their addons, so every version has to work with every other:
+- Change messages by **adding** fields and message types, never by changing what an old one means.
+  `v` stays 1 (the first release drops anything higher); a message only newer versions can handle carries
+  `mv` (the oldest protocol that understands it) and older ones leave it alone (`Core/Net.lua`, at the top).
+- **Keep what you don't understand**: a raid, a kind of award or a field this version doesn't know is shown
+  as it is or ignored, never a reason to throw a whole session away (`Session.valid`).
+- Only the leader's addon decides what's allowed, so raiders' older data can't block anything.
+- Every message carries the sender's version (`av`): players are told once when someone has a newer one,
+  and the leader sees who in the group has no LootRuler at all (they whisper instead).
+
 ## Speed rules
 
 - **No work every frame** except timer bars that are on screen. Use events and `C_Timer`.
@@ -100,9 +112,9 @@ One pull request per feature, in this order. Mark items done here as they merge.
 up to Zul'Aman, roll windows and the loot master window, the raid's loot list with trade help.
 
 **Groundwork**
-- [ ] This file, and pull-request checks in CI
-- [ ] Reserve or roll out any item by link; raids that aren't in the built-in lists (Forever)
-- [ ] Older and newer versions working together
+- [x] This file, and pull-request checks in CI
+- [x] Reserve or roll out any item by link; raids that aren't in the built-in lists (Forever)
+- [x] Older and newer versions working together
 - [ ] A Settings tab: one home for options, advanced features off until turned on
 
 **Pug essentials**

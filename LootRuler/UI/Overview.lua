@@ -182,12 +182,20 @@ local function byPlayer(f, s, leader)
     if (a.none or false) ~= (b.none or false) then return b.none == true end
     return a.name < b.name
   end)
-  if missing > 0 then f:note(("%s in the group haven't reserved anything yet."):format(U.plural(missing, "player")), K.GOLD) end
+  if missing > 0 then f:note(("%s in the group %s reserved anything yet."):format(U.plural(missing, "player"), missing == 1 and "hasn't" or "haven't"), K.GOLD) end
+  -- who in the group we haven't heard from a LootRuler of: they reserve by whisper
+  local without = 0
+  for _, m in ipairs(LR.roster()) do if not LR.versionOf(m.name) then without = without + 1 end end
+  if without > 0 then
+    f:note(("%s in the group %s LootRuler, as far as your addon can tell: they can whisper %s \"!lr [item]\"."):format(
+      U.plural(without, "player"), without == 1 and "doesn't have" or "don't have", leader and "you" or U.short(s.leader)))
+  end
   for _, person in ipairs(people) do
     local items = S.reservesOf(s, person.name)
     local class = person.class or LR.classOf(person.name)
     local hd = K.get(f.owner, "head", f.parent)
-    hd.text:SetText(U.classText(U.short(person.name), class))
+    local inGroup = LR.inGroup(person.name)
+    hd.text:SetText(U.classText(U.short(person.name), class) .. ((inGroup and not LR.versionOf(person.name)) and "  |cff9d9d9dno addon|r" or ""))
     hd.right:SetText(person.none and "|cffffd100nothing reserved|r" or (#items .. " / " .. s.sr))
     hd:SetWidth(f.width)
     f:place(hd, 22)

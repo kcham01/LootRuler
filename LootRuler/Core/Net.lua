@@ -14,8 +14,16 @@
 --   A  leader -> raider           the answer to P: ok, or why not, with the picks the leader now has
 --   R, X, N                       rolling out loot (Core/Rolls.lua)
 --   D                             the raid's drops (Core/Drops.lua)
+--   V  anyone -> group            "I have LootRuler, this version" (on joining a group, and when asked)
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
+--
+-- Older and newer versions work together. Every message says which version sent it (av). A version
+-- ignores message types and fields it doesn't know, and keeps what it doesn't understand (a raid it
+-- doesn't know, a kind of award it doesn't know) instead of throwing the whole thing away. A message only
+-- an up-to-date version can handle says so (mv: the oldest protocol that understands it) and older
+-- versions leave it alone. Changes should be new fields and new message types, never new meanings for old
+-- ones; `v` stays 1 because the first release ignores anything with a higher one.
 local _, LR = ...
 local U, S = LR.U, LR.Session
 
@@ -136,7 +144,8 @@ end
 
 ---------------------------------------------------------------------- sending
 local function encode(msg)
-  msg.v = PROTOCOL
+  msg.v = 1                                         -- see the top: never raised
+  msg.av = LR.VERSION
   return LibDeflate:EncodeForWoWAddonChannel(LibDeflate:CompressDeflate(LibSerialize:Serialize(msg)))
 end
 local function decode(text)
@@ -359,8 +368,10 @@ function handlers.E(msg, channel, sender)
   LR.changed("session")
 end
 
--- someone asks which sessions are open: leaders answer (once every few seconds per channel)
+-- someone asks which sessions are open: leaders answer (once every few seconds per channel), and everyone
+-- in the group says they have the addon
 function handlers.Q(msg, channel, sender)
+  if channel ~= "GUILD" then LR.hello(channel == "WHISPER" and sender or nil) end
   local now = GetTime()
   for _, s in pairs(db.sessions) do
     if LR.isLeader(s) and (channel ~= "GUILD" or s.guild) then
@@ -413,13 +424,51 @@ function Net:OnComm(prefix, text, channel, sender)
   sender = U.full(sender)
   if U.samePlayer(sender, U.me()) then return end
   local msg = decode(text)
-  if not msg or (msg.v or 0) > PROTOCOL then return end
+  if not msg or (msg.mv and (tonumber(msg.mv) or 0) > PROTOCOL) then return end
+  LR.heardFrom(sender, msg.av)
   local fn = handlers[msg.t]
   if fn then
     local ok, err = pcall(fn, msg, channel, sender)
     if not ok then geterrorhandler()(err) end
   end
 end
+
+---------------------------------------------------------------------- who has the addon, which version
+local versions = {}            -- "name-realm" (lower case) -> version string
+local toldNewer = false
+
+--- something came from a player's addon: remember its version; say once when there's a newer one
+function LR.heardFrom(sender, version)
+  if not sender then return end
+  version = type(version) == "string" and version:sub(1, 20) or "1.0.0-beta"
+  versions[U.full(sender):lower()] = version
+  if not toldNewer and U.compareVersions(LR.VERSION, version) < 0 then
+    toldNewer = true
+    LR.print(("%s has a newer LootRuler (%s; you have %s). It works with yours, but update when you can."):format(U.short(sender), version, LR.VERSION))
+  end
+  LR.changed("versions")
+end
+
+--- the version of LootRuler a player has, if we've heard from them (and nil if not)
+function LR.versionOf(name)
+  if U.samePlayer(name, U.me()) then return LR.VERSION end
+  return name and versions[U.full(name):lower()] or nil
+end
+
+--- tells the group (or one player) we have the addon; not more than once every few seconds
+local lastHello = {}
+function LR.hello(target)
+  local key = target or "group"
+  if lastHello[key] and GetTime() - lastHello[key] < 10 then return end
+  lastHello[key] = GetTime()
+  if target then send({ t = "V" }, "WHISPER", target) return end
+  local g = LR.groupChannel()
+  if g then
+    -- a few seconds' spread, so a raid answering the same question doesn't all speak at once
+    C_Timer.After(math.random() * 2, function() send({ t = "V" }, LR.groupChannel()) end)
+  end
+end
+function handlers.V() end       -- heardFrom has done the work
 
 ---------------------------------------------------------------------- start up
 function LR.toast(text) if LR.UI and LR.UI.toast then LR.UI.toast(text) end end
@@ -438,6 +487,7 @@ events:SetScript("OnEvent", function(_, event)
     -- once the game has settled: ask what's open, re-send our own sessions and anything we picked meanwhile
     C_Timer.After(5, function()
       LR.query()
+      LR.hello()
       for _, s in pairs(db.sessions) do
         if LR.isLeader(s) then LR.publish(s, true) else LR.sendPicks(s) end
       end
@@ -448,6 +498,7 @@ events:SetScript("OnEvent", function(_, event)
     if grouped and not wasGrouped then
       C_Timer.After(2, function()
         LR.query()
+        LR.hello()
         for _, s in pairs(db.sessions) do
           if LR.isLeader(s) then LR.publish(s, true) else LR.sendPicks(s) end
         end

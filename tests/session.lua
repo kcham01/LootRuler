@@ -99,6 +99,12 @@ check("players", #S.players(s) == 2 and S.players(s)[1].name == A)
 check("valid copy", S.valid(U.copy(s)))
 local bad = U.copy(s) bad.sr = 99
 check("a copy with nonsense is refused", not S.valid(bad))
+local more = U.copy(s) more.sr = 12
+check("a newer version allowing more reserves than this one offers is fine", S.valid(more))
+local newKind = U.copy(s) newKind.won = { { i = 28528, p = A, k = "DE" } } newKind.somethingNew = { 1, 2 }
+check("so are kinds of award and fields this version doesn't know", S.valid(newKind))
+check("versions in order", U.compareVersions("1.0.0-beta", "1.0.0") == -1 and U.compareVersions("1.2.0", "1.10.0") == -1
+  and U.compareVersions("1.1.0-beta", "1.0.9") == 1 and U.compareVersions("2.0.0", "2.0.0") == 0)
 bad = U.copy(s) bad.res[A].i[1] = "x"
 check("a copy with a bad item is refused", not S.valid(bad))
 local newer = U.copy(s) newer.raid = "Naxxramas" newer.raidName = "Naxxramas"

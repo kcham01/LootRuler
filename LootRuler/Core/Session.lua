@@ -326,12 +326,14 @@ function S.valid(t)
   if type(t) ~= "table" or type(t.id) ~= "string" or type(t.leader) ~= "string" or type(t.rev) ~= "number" then return false end
   -- a raid this version doesn't know (a newer version's, or one the leader named) is fine: it's shown by name
   if type(t.raid) ~= "string" or (t.raidName ~= nil and type(t.raidName) ~= "string") then return false end
-  if type(t.sr) ~= "number" or t.sr < S.MIN_SR or t.sr > S.MAX_SR then return false end
+  -- a newer version may allow more reserves than this one offers: only nonsense is refused
+  if type(t.sr) ~= "number" or t.sr < S.MIN_SR or t.sr > 40 or t.sr % 1 ~= 0 then return false end
   if type(t.hr) ~= "table" or type(t.res) ~= "table" then return false end
   if t.won ~= nil then
     if type(t.won) ~= "table" then return false end
     for _, w in ipairs(t.won) do
-      if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or not S.WON_KINDS[w.k] then return false end
+      -- a kind this version doesn't know (a newer version's) is kept and shown as it is
+      if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or type(w.k) ~= "string" or #w.k > 12 then return false end
     end
   end
   if t.drops ~= nil then
