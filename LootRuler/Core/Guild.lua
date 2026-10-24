@@ -94,17 +94,38 @@ function Guild.prioPlan(id)
   return { mode = "PR", who = first, n = n, away = {} }
 end
 
---- boosted roll points brought in (from Gargul, say): everyone's set, in one change
+--- boosted roll points brought in (from Gargul, say): everyone's set, and their alts linked, in one change
 function Guild.importPoints(list)
   return Guild.edit(function(book, now)
-    local change = { points = {} }
+    local change = { points = {}, alts = {} }
     for _, x in ipairs(list) do
+      -- (a main named on the line is a main: if it was someone's alt, it isn't any more)
+      local un = B.unlinkAlt(book, x.p, now)
+      if un then for k, v in pairs(un.alts) do change.alts[k] = v end end
       local c = B.setPoints(book, x.p, x.n, now)
       if c then for k, v in pairs(c.points) do change.points[k] = v end end
+      for _, alt in ipairs(x.alts or {}) do
+        local a = B.setAlt(book, alt, x.p, now)
+        if a then for k, v in pairs(a.alts) do change.alts[k] = v end end
+      end
     end
-    return next(change.points) and change or nil
+    return (next(change.points) or next(change.alts)) and change or nil
   end)
 end
+
+--- links or unlinks an alt (editors)
+function Guild.linkAlt(alt, main)
+  local why
+  local ok, err = Guild.edit(function(book, now)
+    local c
+    c, why = B.setAlt(book, alt, main, now)
+    return c
+  end)
+  if not ok then return false, err end
+  if why then return false, why end
+  return true
+end
+function Guild.unlinkAlt(alt) return Guild.edit(function(book, now) return B.unlinkAlt(book, alt, now) end) end
 
 ---------------------------------------------------------------------- raid points
 --- who in the group is in my guild (names)
@@ -166,7 +187,7 @@ Net.handlers.GQ = function(msg, channel, sender)
   local book = LR.book()
   -- a little later, so several officers asked at once don't all answer at the same moment
   C_Timer.After(math.random() * 3, function()
-    Net.send({ t = "GB", g = book.guild, c = { points = book.points, prio = book.prio, boost = book.boost, editRank = book.editRank, et = book.et } }, "WHISPER", sender)
+    Net.send({ t = "GB", g = book.guild, c = { points = book.points, prio = book.prio, alts = book.alts, boost = book.boost, editRank = book.editRank, et = book.et } }, "WHISPER", sender)
   end)
 end
 

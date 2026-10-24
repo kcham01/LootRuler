@@ -54,6 +54,31 @@ local function pointsSheet(name)
     e2:SetText(n)
     e2:SetScript("OnTextChanged", function(self) n = self:GetText() end)
     f:note(("0 to %d. A boosted roll is 1 to 100 plus the points."):format(B.MAX_POINTS))
+    -- alts share their main's points: they roll with them and spend them
+    if name then
+      local book = LR.book()
+      f:gap(4)
+      f:text("Alts", { font = "GameFontNormal", gap = 2 })
+      f:note("An alt rolls with " .. U.short(name) .. "'s points, and spends them if it wins.")
+      for _, alt in ipairs(B.altsOf(book, name)) do
+        f:chips({
+          { plain = true, width = f.width - 120, label = U.classText(U.short(alt), LR.classOf(alt)) },
+          { label = "Unlink", width = 60, tip = U.short(alt) .. " gets its own points again", click = function() Guild.unlinkAlt(alt) h.redraw(true) end },
+        }, { gap = 2 })
+      end
+      f:note("Another alt's name:")
+      local e3 = K.get(f.owner, "edit", f.parent)
+      f:place(e3, 22, 6, 150)
+      e3:SetMaxLetters(40)
+      e3:SetText(h.altName or "")
+      e3:SetScript("OnTextChanged", function(self) h.altName = self:GetText() end)
+      f:buttons({ { label = "Link this alt", click = function()
+        local alt = U.trim(h.altName or "")
+        if alt == "" then UI.toast("Type the alt's name.") return end
+        local ok, why = Guild.linkAlt(alt, name)
+        if ok then h.altName = "" h.redraw(true) else UI.toast(why) end
+      end } }, "left")
+    end
     f:gap(6)
     f:buttons({
       { label = "Cancel", click = function() h.close() end },
@@ -110,20 +135,25 @@ local function boostPanel(f, book, editor)
     end
     local mine = B.points(book, U.me())
     p:gap(4)
-    p:kv({ { "Your points", mine > 0 and ("%d (a boosted roll is %d to %d)"):format(mine, B.boostRange(mine)) or "None yet", K.TEXT, K.GOLD } })
+    local main = B.mainOf(book, U.me())
+    p:kv({ { "Your points", (mine > 0 and ("%d (a boosted roll is %d to %d)"):format(mine, B.boostRange(mine)) or "None yet")
+      .. (U.samePlayer(main, U.me()) and "" or (", " .. U.short(main) .. "'s")), K.TEXT, K.GOLD } })
   end)
 end
 
 local function pointsPanel(f, book, editor)
   f:panel("Points", function(p)
     local list = {}
-    for name, e in pairs(book.points) do if e.n > 0 then list[#list + 1] = { name, e.n } end end
+    -- (a linked alt is listed under its main)
+    for name, e in pairs(book.points) do if e.n > 0 and B.mainOf(book, name) == name then list[#list + 1] = { name, e.n } end end
     table.sort(list, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
     if #list == 0 then p:note("Nobody has points yet. They come from raids (Give raid points), or an officer can set them here.") end
     for _, x in ipairs(list) do
       local b = K.get(p.owner, "item", p.parent)
       local class = LR.classOf(x[1])
-      K.setItem(b, p.width, LR.LOGO, U.classText(U.short(x[1]), class), ("Boosted roll: /roll %d %d"):format(B.boostRange(x[2])),
+      local alts = B.altsOf(book, x[1])
+      K.setItem(b, p.width, LR.LOGO, U.classText(U.short(x[1]), class), ("Boosted roll: /roll %d %d"):format(B.boostRange(x[2]))
+        .. (#alts > 0 and ("  -  alts: " .. table.concat(U.map(alts, U.short), ", ")) or ""),
         "|cff1eff00" .. x[2] .. "|r", editor and { text = "Edit", width = 40, tip = "Change " .. U.short(x[1]) .. "'s points", click = function() pointsSheet(x[1]) end } or nil)
       p:place(b, 36)
       p:gap(2)
@@ -133,7 +163,7 @@ local function pointsPanel(f, book, editor)
       p:buttons({
         { label = "Bring in from Gargul", click = function()
           UI.countsSheet({ title = "Boosted roll points from Gargul", gargul = "boosted", max = B.MAX_POINTS,
-            note = "Paste Gargul's boosted roll export (\"Name,Points\" lines; Gargul: /gl br, Export), or read it straight from Gargul if it's loaded. Each player's points are set to these.",
+            note = "Paste Gargul's boosted roll export (\"Name,Points,Alt,Alt\" lines; Gargul: /gl br, Export), or read it straight from Gargul if it's loaded. Each player's points are set to these, and their alts are linked to them.",
             apply = function(list)
               local ok, why = Guild.importPoints(list)
               if ok then UI.toast(("Points for %s are in, and shared with the guild."):format(U.plural(#list, "player"))) else UI.refused(why) end
@@ -141,7 +171,7 @@ local function pointsPanel(f, book, editor)
         end },
         { label = "Copy out", disabled = #list == 0, click = function()
           UI.textSheet("Boosted roll points", "For Gargul's boosted roll importer, or a spreadsheet.",
-            LR.Prio.countsText(U.map(list, function(x) return { p = x[1], n = x[2] } end)))
+            LR.Prio.countsText(U.map(list, function(x) return { p = x[1], n = x[2], alts = B.altsOf(book, x[1]) } end)))
         end },
       }, "left")
     end

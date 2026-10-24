@@ -12,6 +12,8 @@
 --              changes this (et: when)
 --   boost      { on = bool, perRaid = points for each raid, t }
 --   points     "Name-Realm" -> { n = points, t }
+--   alts       "Alt-Realm" -> { m = "Main-Realm" (or "" when unlinked), t }: an alt rolls with, and spends, its
+--              main's points (as Gargul's boosted roll aliases do)
 --   prio       item id -> { list = { { p = "Name-Realm", n = priority (1 first), note }, ... }, t }
 local _, LR = ...
 local U = LR.U
@@ -30,19 +32,77 @@ end
 B.stamp = stamp
 
 function B.new(guild)
-  return { guild = guild, editRank = 1, et = 0, boost = { on = false, perRaid = B.DEFAULT_PER_RAID, t = 0 }, points = {}, prio = {} }
+  return { guild = guild, editRank = 1, et = 0, boost = { on = false, perRaid = B.DEFAULT_PER_RAID, t = 0 }, points = {}, prio = {}, alts = {} }
+end
+
+---------------------------------------------------------------------- alts
+--- the character whose points a player uses: their main when they're a linked alt, else themselves
+function B.mainOf(book, player)
+  player = U.full(player)
+  local e = book.alts and book.alts[player]
+  if e and e.m ~= "" then return e.m end
+  -- (names typed in another case: "annalt" is Annalt)
+  if book.alts then
+    for alt, x in pairs(book.alts) do if x.m ~= "" and U.samePlayer(alt, player) then return x.m end end
+  end
+  return player
+end
+
+--- a main's alts (names), sorted
+function B.altsOf(book, main)
+  main = U.full(main)
+  local out = {}
+  for alt, e in pairs(book.alts or {}) do if e.m ~= "" and U.samePlayer(e.m, main) then out[#out + 1] = alt end end
+  table.sort(out)
+  return out
+end
+
+--- links an alt to a main (an alt of an alt is linked to the top main; a main's own alts follow it).
+--- Returns the change, or nil and why not.
+function B.setAlt(book, alt, main, now)
+  alt, main = U.full(alt), B.mainOf(book, main)
+  if U.samePlayer(alt, main) then return nil, "That's the same character." end
+  book.alts = book.alts or {}
+  local change = { alts = {} }
+  -- whatever was linked to the alt now goes with it, to the main
+  for _, a in ipairs(B.altsOf(book, alt)) do
+    book.alts[a] = { m = main, t = stamp(book.alts[a], now) }
+    change.alts[a] = book.alts[a]
+  end
+  local cur = book.alts[alt]
+  if cur and cur.m ~= "" and U.samePlayer(cur.m, main) and not next(change.alts) then return nil, "It's linked already." end
+  book.alts[alt] = { m = main, t = stamp(cur, now) }
+  change.alts[alt] = book.alts[alt]
+  return change
+end
+
+--- unlinks an alt: it has its own points again. Returns the change, or nil.
+function B.unlinkAlt(book, alt, now)
+  alt = U.full(alt)
+  local cur = book.alts and book.alts[alt]
+  if not cur or cur.m == "" then return nil end
+  book.alts[alt] = { m = "", t = stamp(cur, now) }
+  return { alts = { [alt] = book.alts[alt] } }
 end
 
 ---------------------------------------------------------------------- points
+--- a player's points (their main's, for a linked alt)
 function B.points(book, player)
+  local e = book.points[B.mainOf(book, player)]
+  return e and e.n or 0
+end
+
+--- a character's own points, even when it's an alt (shown when it's unlinked again)
+function B.ownPoints(book, player)
   local e = book.points[U.full(player)]
   return e and e.n or 0
 end
 
---- sets a player's points (0 to MAX_POINTS); returns the change to send, or nil when nothing changed
+--- sets a player's points (their main's, for a linked alt; 0 to MAX_POINTS); returns the change to send, or
+--- nil when nothing changed
 function B.setPoints(book, player, n, now)
   n = math.max(0, math.min(B.MAX_POINTS, math.floor(tonumber(n) or 0)))
-  player = U.full(player)
+  player = B.mainOf(book, player)
   if B.points(book, player) == n then return nil end
   book.points[player] = { n = n, t = stamp(book.points[player], now) }
   return { points = { [player] = book.points[player] } }
@@ -51,11 +111,16 @@ end
 --- gives every player in a list the points for a raid; returns the change
 function B.raidAttended(book, players, now)
   local change = { points = {} }
+  local done = {}
   for _, p in ipairs(players) do
-    p = U.full(p)
-    local n = math.min(B.MAX_POINTS, B.points(book, p) + (book.boost.perRaid or B.DEFAULT_PER_RAID))
-    book.points[p] = { n = n, t = stamp(book.points[p], now) }
-    change.points[p] = book.points[p]
+    p = B.mainOf(book, p)
+    -- (a main and an alt both here get the raid's points once)
+    if not done[p:lower()] then
+      done[p:lower()] = true
+      local n = math.min(B.MAX_POINTS, B.points(book, p) + (book.boost.perRaid or B.DEFAULT_PER_RAID))
+      book.points[p] = { n = n, t = stamp(book.points[p], now) }
+      change.points[p] = book.points[p]
+    end
   end
   return change
 end
@@ -145,6 +210,14 @@ function B.valid(c)
       for _, x in ipairs(e.list) do if type(x) ~= "table" or type(x.p) ~= "string" or type(x.n) ~= "number" then return false end end
     end
   end
+  if c.alts ~= nil then
+    if type(c.alts) ~= "table" then return false end
+    local n = 0
+    for a, e in pairs(c.alts) do
+      n = n + 1
+      if n > 2000 or type(a) ~= "string" or type(e) ~= "table" or type(e.m) ~= "string" or type(e.t) ~= "number" then return false end
+    end
+  end
   if c.boost ~= nil and (type(c.boost) ~= "table" or type(c.boost.t) ~= "number") then return false end
   if c.editRank ~= nil and (type(c.editRank) ~= "number" or type(c.et) ~= "number") then return false end
   return true
@@ -164,6 +237,16 @@ function B.merge(book, c, fromGM)
     p = U.full(p)
     local mine = book.points[p]
     if not mine or e.t > mine.t then book.points[p] = { n = math.max(0, math.min(B.MAX_POINTS, math.floor(e.n))), t = e.t } changed = true end
+  end
+  book.alts = book.alts or {}
+  for a, e in pairs(c.alts or {}) do
+    a = U.full(a)
+    local mine = book.alts[a]
+    if not mine or e.t > mine.t then
+      -- (never an alt of itself)
+      book.alts[a] = { m = (e.m ~= "" and not U.samePlayer(e.m, a)) and U.full(e.m) or "", t = e.t }
+      changed = true
+    end
   end
   for id, e in pairs(c.prio or {}) do
     local mine = book.prio[id]

@@ -183,8 +183,9 @@ function P.export(book, format, itemName)
 end
 
 ---------------------------------------------------------------------- Gargul's +1s and boosted roll points
---- reads "Name,Number" lines (Gargul's +1 and boosted roll exports; also tabs or spaces, from a spreadsheet;
---- anything after the number, like Gargul's alts, is left out): { { p = "Name", n }, ... }, or nil and why
+--- reads "Name,Number" lines (Gargul's +1 and boosted roll exports; also tabs or spaces, from a spreadsheet).
+--- Names after the number are the player's alts, as in Gargul's boosted roll export ("Ann,40,Annalt").
+--- Returns { { p = "Name", n, alts = { names } }, ... }, or nil and why
 function P.parseCounts(text, max)
   local out, seen = {}, {}
   for line in tostring(text or ""):gsub('"', ""):gmatch("[^\r\n]+") do
@@ -192,7 +193,13 @@ function P.parseCounts(text, max)
     who, n = name(who), tonumber(n)
     if who and n and n >= 0 and n <= (max or 100000) and not seen[who:lower()] and #out < 2000 then
       seen[who:lower()] = true
-      out[#out + 1] = { p = who, n = math.floor(n) }
+      local alts = {}
+      local rest = line:match("^%s*[^,;\t%s]+[,;\t%s]+[%d%.]+(.*)$") or ""
+      for a in rest:gmatch("[^,;\t%s]+") do
+        a = name(a)
+        if a and not seen[a:lower()] and #alts < 20 then seen[a:lower()] = true alts[#alts + 1] = a end
+      end
+      out[#out + 1] = { p = who, n = math.floor(n), alts = alts }
     end
   end
   if #out == 0 then return nil, "Nothing in that is a name and a number on a line (\"Ann,3\")." end
@@ -203,7 +210,10 @@ end
 function P.countsText(list)
   local lines = {}
   table.sort(list, function(a, b) return a.p < b.p end)
-  for _, x in ipairs(list) do lines[#lines + 1] = ("%s,%d"):format(U.bare(x.p), x.n) end
+  for _, x in ipairs(list) do
+    local alts = U.map(x.alts or {}, function(a) return "," .. U.bare(a) end)
+    lines[#lines + 1] = ("%s,%d%s"):format(U.bare(x.p), x.n, table.concat(alts))
+  end
   return table.concat(lines, "\n")
 end
 

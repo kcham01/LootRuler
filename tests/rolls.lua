@@ -231,6 +231,29 @@ check("someone who gets the item comes off its list", B.received(book, WATCH, BO
   and B.received(book, WATCH, CARA, 72) == nil)
 check("everything a player has priority on", #B.prioOf(book, ANN) == 1 and B.prioOf(book, ANN)[1][1] == WATCH)
 
+print("== alts (sharing their main's points)")
+local ab = B.new("Night Watch")
+B.setPoints(ab, ANN, 40, 1)
+B.setPoints(ab, "Annalt", 7, 2)
+local link = B.setAlt(ab, "Annalt", "Ann", 3)
+check("an alt uses its main's points", link and link.alts["Annalt-Dreamscythe"].m == ANN and B.points(ab, "Annalt") == 40 and B.mainOf(ab, "annalt") == ANN)
+check("spending them spends the main's", B.setPoints(ab, "Annalt", 0, 4) and B.points(ab, ANN) == 0 and B.ownPoints(ab, "Annalt") == 7)
+B.setPoints(ab, ANN, 20, 5)
+B.raidAttended(ab, { ANN, "Annalt", DAN }, 6)
+check("a main and their alt in the same raid get its points once", B.points(ab, ANN) == 30 and B.points(ab, DAN) == 10)
+check("not an alt of itself, or linked twice", B.setAlt(ab, ANN, "Ann", 7) == nil and B.setAlt(ab, "Annalt", ANN, 7) == nil)
+B.setAlt(ab, "Annbank", "Annalt", 8)
+check("an alt's alt goes to the main", B.mainOf(ab, "Annbank") == ANN and #B.altsOf(ab, ANN) == 2)
+B.setAlt(ab, ANN, DAN, 9)
+check("a main made someone's alt takes its alts along", B.mainOf(ab, "Annalt") == DAN and B.mainOf(ab, "Annbank") == DAN and B.mainOf(ab, ANN) == DAN)
+check("unlinking: its own points again", B.unlinkAlt(ab, "Annalt", 10) and B.points(ab, "Annalt") == 7 and B.unlinkAlt(ab, "Annalt", 11) == nil)
+local other = B.new("Night Watch")
+check("links spread like everything else", B.merge(other, { alts = ab.alts }) and B.mainOf(other, ANN) == DAN and B.mainOf(other, "Annalt") == "Annalt-Dreamscythe")
+check("and the newest wins", not B.merge(other, { alts = { [ANN] = { m = "", t = 1 } } }) and B.mainOf(other, ANN) == DAN)
+check("never an alt of itself, even from someone else", B.merge(other, { alts = { [CARA] = { m = CARA, t = 50 } } }) and B.mainOf(other, CARA) == CARA)
+check("nonsense isn't a link", not B.valid({ alts = { [ANN] = { m = 5, t = 1 } } }) and not B.valid({ alts = "x" }) and B.valid({ alts = ab.alts }))
+check("a saved book with links is fine", B.validBook(ab))
+
 print("== priority lists in and out")
 local P = LR.Prio
 local lists, kind = P.parse("28525,ann,bob|cara,dan\n28530,Bob-Faerlina[1],Ann[3]\n\nnot a line")
@@ -266,11 +289,12 @@ check("places", P.place(1) == "1st" and P.place(2) == "2nd" and P.place(3) == "3
 
 print("== Gargul's +1s and boosted roll points")
 local counts = P.parseCounts('Ann,3\n"Bob-Faerlina",12,Bobalt,Bobalt2\ncara\t5\nDan 7\nnot a line\nAnn,9\nEve,-4')
-check("Gargul's lines (and a spreadsheet's), alts left out", #counts == 4 and counts[1].p == "Ann" and counts[1].n == 3 and counts[2].p == "Bob-Faerlina"
-  and counts[2].n == 12 and counts[3].p == "Cara" and counts[4].n == 7)
+check("Gargul's lines (and a spreadsheet's)", #counts == 4 and counts[1].p == "Ann" and counts[1].n == 3 and counts[2].p == "Bob-Faerlina"
+  and counts[2].n == 12 and counts[3].p == "Cara" and counts[4].n == 7 and #counts[1].alts == 0)
+check("with the alts after the number", #counts[2].alts == 2 and counts[2].alts[1] == "Bobalt" and counts[2].alts[2] == "Bobalt2")
 check("nothing useful in it", P.parseCounts("hello") == nil and P.parseCounts("") == nil)
 check("a limit", #P.parseCounts("Ann,500\nBob,5", 99) == 1)
-check("written back out the same way", P.countsText({ { p = BOB, n = 12 }, { p = ANN, n = 3 } }) == "Ann,3\nBob,12")
+check("written back out the same way", P.countsText({ { p = BOB, n = 12, alts = { "Bobalt-Dreamscythe" } }, { p = ANN, n = 3 } }) == "Ann,3\nBob,12,Bobalt")
 local ps2 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 800)
 S.award(ps2, 28525, ANN, "MS", 50, 801)
 check("setting +1s keeps what they won on top", S.setPlusOnes(ps2, ANN, 3, 802) and S.plusOnes(ps2, ANN) == 3

@@ -916,6 +916,29 @@ run("+1s and boosted roll points from Gargul", function()
   LR.UI.go("reserve")
 end)
 
+run("alts", function()
+  LR.UI.go("guild")
+  -- Ann has points from the Gargul import above: her Edit opens her points, and her alts
+  local annRow
+  for _, x in ipairs(find("Ann")) do if x.frame._kind == "item" and M.plain(x.fs:GetText()) == "Ann" and x.frame.act:IsShown() then annRow = x.frame end end
+  M.click(annRow.act)
+  srv:tick(0.3)
+  check("a player's points sheet has their alts", visible("Points for Ann") and visible("Alts") and visible("Link this alt"))
+  local box
+  local function walk(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() and math.abs(c:GetWidth() - 150) < 1 then box = c end walk(c) end end
+  walk(LR.UI.topSheet())
+  check("the alt from Gargul's export is there already", visible("Annalt") and visible("Unlink"))
+  box:SetText("Annbank") box._scripts.OnTextChanged(box, true)
+  clickText("Link this alt")
+  srv:tick(1)
+  check("an officer links another, for the whole guild", LR.Book.mainOf(LR.book(), "Annbank") == "Ann-Dreamscythe" and ann.LR.Book.mainOf(ann.LR.book(), "Annbank") == "Ann-Dreamscythe")
+  check("it's listed too", visible("Annbank") and #LR.Book.altsOf(LR.book(), "Ann") == 2)
+  shot("alts")
+  LR.UI.closeAll()
+  check("the points list shows them under Ann", visible("alts: Annalt, Annbank"))
+  LR.UI.go("reserve")
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)
