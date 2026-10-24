@@ -343,7 +343,12 @@ local function linkLines(l)
   return { { "link " .. tostring(l) } }
 end
 function GameTooltipM:SetOwner(o) self._owner = o self._lines = {} self._minW = 0 end
-function GameTooltipM:SetHyperlink(l) self._lines = linkLines(l) end
+function GameTooltipM:SetHyperlink(l)
+  self._lines = linkLines(l)
+  -- the game runs tooltip post-calls (TooltipDataProcessor) with the item's data
+  local id = tonumber(tostring(l):match("item:(%d+)"))
+  if id then for _, fn in ipairs(M.tooltipCalls or {}) do fn(self, { type = 0, id = id }) end end
+end
 function GameTooltipM:SetText(t, r, g, b) self._lines = { { t, r or 1, g or 0.82, b or 0 } } end
 function GameTooltipM:AddLine(t, r, g, b) table.insert(self._lines, { t, r or 1, g or 0.82, b or 0 }) end
 function GameTooltipM:AddDoubleLine(a, b) table.insert(self._lines, { a .. "    " .. b, 1, 1, 1 }) end
@@ -931,6 +936,30 @@ function M.env(player)
   G.UnitGUID = function() return nil end
   G.UnitIsDead = function() return false end
   G.GetTradePlayerItemLink = function() return nil end
+  -- the game's loot window buttons and a group loot (need/greed) window
+  for i = 1, 4 do
+    local b = M.CreateFrame("Button", "LootButton" .. i, G.LootFrame)
+    b:SetSize(34, 34)
+    b:SetPoint("TOPLEFT", G.LootFrame, "TOPLEFT", 18, -40 - (i - 1) * 42)
+    local ic = b:CreateTexture("LootButton" .. i .. "IconTexture", "ARTWORK")
+    ic:SetAllPoints()
+    G["LootButton" .. i .. "IconTexture"] = ic
+    G["LootButton" .. i] = b
+    b:Hide()
+  end
+  G.LootFrame_UpdateButton = function(index)
+    local b = G["LootButton" .. index]
+    b.slot = index
+    b:SetShown(G.LootSlotHasItem(index))
+  end
+  G.GroupLootFrame1 = M.CreateFrame("Frame", "GroupLootFrame1", M.UIParent)
+  G.GroupLootFrame1.IconFrame = M.CreateFrame("Button", nil, G.GroupLootFrame1)
+  G.GroupLootFrame1.IconFrame:SetSize(34, 34)
+  G.GroupLootFrame1.IconFrame:SetPoint("TOPLEFT", 18, -18)
+  G.GroupLootFrame_OnShow = function(self) end
+  G.GetLootRollItemLink = function(rollID) return M.lootRolls and M.lootRolls[rollID] end
+  M.tooltipCalls = {}
+  G.TooltipDataProcessor = { AllTypes = "ALL", AddTooltipPostCall = function(kind, fn) table.insert(M.tooltipCalls, fn) end }
   G.GetTradeTargetItemLink = function() return nil end
   G.GetPlayerTradeMoney = function() return 0 end
   G.GetTargetTradeMoney = function() return 0 end

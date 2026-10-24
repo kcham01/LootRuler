@@ -38,3 +38,4 @@ UI\Setup.lua
 UI\RollFrame.lua
 UI\Master.lua
 UI\Settings.lua
+UI\Highlight.lua

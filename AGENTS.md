@@ -146,7 +146,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 **Less clicking**
 - [x] Auto-loot rules for the loot master (greens to the disenchanter, patterns to me; `Core/AutoLoot.lua`)
 - [x] Auto-roll rules for raiders (always pass on X; `Core/AutoRoll.lua`)
-- [ ] Highlighting reserved items in the game's loot window
+- [x] Highlighting reserved items in the game's loot window, and reserves in item tooltips (`UI/Highlight.lua`)
 - [ ] Shortcut keys that don't clash with Gargul's
 
 **Guild features**
