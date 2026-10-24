@@ -130,7 +130,7 @@ local CLIENT = { Enum = true, RANDOM_ROLL_RESULT = true, ERR_TRADE_COMPLETE = tr
 local own = { LootRulerDB = true, SLASH_LOOTRULER1 = true, SLASH_LOOTRULER2 = true, LootRulerFrame = true, LootRuler = true,
   -- read only to see whether they're there (other addons, and the game's newer chat API)
   Gargul = true, ChatFrameUtil = true, ChatFrame_AddMessageEventFilter = true,
-  LibStub = true }   -- from the bundled libraries
+  LibStub = true, ChatThrottleLib = true }   -- from the bundled libraries
 local files = {}
 for line in io.lines("LootRuler/LootRuler.toc") do
   line = line:gsub("\r", "")

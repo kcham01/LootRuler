@@ -138,7 +138,7 @@ local function manage(f, s)
         if LR.Whisper.postHowTo() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
       end },
     }, "left")
-    p:note("Posts: \"" .. LR.Whisper.HOW_TO .. "\"")
+    p:note("Posts: \"" .. LR.Whisper.howTo() .. "\"")
     p:buttons({
       { label = "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()

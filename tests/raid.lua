@@ -125,6 +125,50 @@ check("the leader's chat hides !lr whispers", srv:hidden(lead, "CHAT_MSG_WHISPER
 check("and the answers", srv:hidden(lead, "CHAT_MSG_WHISPER_INFORM", "[LootRuler] Reserved"))
 check("raiders see whispered reserves", same(ann.LR.Session.reservesOf(cur(ann), full(pug)), { WATCH }))
 
+section("!lr in raid chat")
+local before = #pug.inbox
+srv:chatMessage(pug, "!lr remove watch", "RAID")
+srv:tick(1)
+local answer
+for i = before + 1, #pug.inbox do if pug.inbox[i].from == full(lead) and not pug.inbox[i].channel then answer = pug.inbox[i].text end end
+check("typed in raid chat, it works like a whisper", #lead.LR.Session.reservesOf(s, full(pug)) == 0, answer)
+check("and the answer comes by whisper, not in raid chat", answer and answer:find("Removed", 1, true) ~= nil)
+local raidLines = 0
+for i = before + 1, #pug.inbox do if pug.inbox[i].channel == "RAID" and pug.inbox[i].from == full(lead) then raidLines = raidLines + 1 end end
+check("raid chat isn't flooded with answers", raidLines == 0)
+srv:chatMessage(pug, "!lr |cffa335ee|Hitem:28528::::::::70:::::|h[Moroes' Lucky Pocket Watch]|h|r", "RAID")
+srv:tick(1)
+check("reserving in raid chat", same(lead.LR.Session.reservesOf(s, full(pug)), { WATCH }))
+check("raiders with the addon don't see the !lr lines", srv:hidden(ann, "CHAT_MSG_RAID", "!lr watch") and not srv:hidden(ann, "CHAT_MSG_RAID", "pull in 10"))
+lead.LR.db.settings.raidCommands = false
+srv:chatMessage(pug, "!lr clear", "RAID")
+srv:tick(1)
+check("the leader can switch it off", same(lead.LR.Session.reservesOf(s, full(pug)), { WATCH }))
+lead.LR.db.settings.raidCommands = true
+-- a whole pug at once: every answer gets there, spaced out so the leader isn't muted for spam
+local crowd = {}
+for i = 1, 12 do
+  local q = srv:player({ name = "Crowd" .. i, class = "HUNTER" })
+  table.insert(srv.group.members, q) q.inGroup = true
+  crowd[#crowd + 1] = q
+end
+srv:rosterChanged()
+srv:tick(1)
+for _, q in ipairs(crowd) do srv:chatMessage(q, "!lr |cffa335ee|Hitem:28525::::::::70:::::|h[Signet of Unshakable Faith]|h|r", "RAID") end
+srv:tick(1)
+srv:tick(15)
+local answered = 0
+for _, q in ipairs(crowd) do for _, m in ipairs(q.inbox) do if m.text:find("Reserved", 1, true) then answered = answered + 1 break end end end
+check("twelve people reserving at once all get in", #lead.LR.Session.players(s) >= 12 + 3)
+check("and all get an answer", answered == 12, answered)
+for _, q in ipairs(crowd) do
+  for i, m in ipairs(srv.group.members) do if m == q then table.remove(srv.group.members, i) break end end
+  q.inGroup = false
+  lead.LR.leaderRemove(s, full(q), 28525)
+end
+srv:rosterChanged()
+srv:tick(2)
+
 section("the leader goes offline")
 local leadDB = srv:logout(lead)
 srv:tick(1)

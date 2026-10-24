@@ -402,7 +402,7 @@ run("settings", function()
   ann.LR.UI.show("settings")
   srv:tick(0.3)
   check("every option is on the Settings tab", visible("Show roll windows", ann) and visible("Seconds to roll:", ann)
-    and visible("Put won items in trades for me", ann) and visible("Hide !lr whispers in my chat", ann) and visible("Minimap button", ann))
+    and visible("Put won items in trades for me", ann) and visible("Hide !lr messages in my chat", ann) and visible("!lr in raid chat", ann) and visible("Minimap button", ann))
   check("each says what it does", visible("Leaves out items other players reserved", ann))
   shot("settings", ann)
   clickText("Only for items I can roll on", nil, ann)
@@ -434,7 +434,7 @@ run("telling the raid how to SR without the addon", function()
   srv:tick(1)
   local got = pug.inbox[#pug.inbox]
   check("the raid gets the how-to", #pug.inbox == before + 1 and got.channel == "RAID"
-    and got.text == "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon.", got and got.text)
+    and got.text == "Type !lr [linked item] in raid chat to SR if you do not have the LootRuler addon.", got and got.text)
   check("and the leader is told it went", visible("Posted in raid chat."))
 end)
 

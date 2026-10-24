@@ -83,7 +83,7 @@ local function say(text, warning)
   local ch = chatChannel()
   if not ch then LR.print(U.plain(text)) return end
   if warning and ch == "RAID" and LR.db.settings.raidWarning and (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")) then ch = "RAID_WARNING" end
-  for _, line in ipairs(U.chatLines(LR.TAG .. " " .. text)) do SendChatMessage(line, ch) end
+  for _, line in ipairs(U.chatLines(LR.TAG .. " " .. text)) do LR.say(line, ch) end
 end
 Rolls.say = say
 
