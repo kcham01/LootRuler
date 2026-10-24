@@ -201,11 +201,47 @@ lead.LR.endSession(s)
 srv:tick(2)
 check("ended", lead.LR.current() == nil and ann.LR.current() == nil)
 
+section("past raids")
+local H = lead.LR.History
+local past = H.all()[1]
+check("the raid is kept, with its sales", past and past.id == s.id and past.archived and #G.sales(past) == 2 and G.pot(past) == 1700)
+check("raiders keep it too", ann.LR.History.all()[1] and ann.LR.History.all()[1].id == s.id)
+check("Dan is still owed his share", G.split(past).rows[full(dan)].owed == 306 and H.owing(full(dan)) == past)
+srv:whisper(dan, lead, "!lr pot")
+srv:tick(1)
+check("!lr pot still answers after the raid", whisperTo(dan, "Lead gives you 306g") ~= nil)
+srv:openTrade(lead, dan)
+srv:tick(0.5)
+check("a trade with Dan: what to give him, from which raid", lead.M.chat[#lead.M.chat]:find("put 306g in the trade for Dan (their payout (from Karazhan", 1, true), lead.M.chat[#lead.M.chat])
+srv:setTradeMoney(lead, 306 * 10000)
+srv:tick(0.5)
+srv:completeTrade(lead)
+srv:tick(1)
+check("the gold counts on the past raid", math.abs(G.split(past).rows[full(dan)].owed) < 0.01 and H.owing(full(dan)) == nil)
+
+section("what items usually sell for")
+local s2 = lead.LR.startSession("Karazhan", 2, true, false)
+lead.LR.setGdkp(s2, true)
+srv:tick(1)
+check("a past sale's price", H.usualPrice(WATCH, s2) == 1200 and H.usualPrice(SIGNET, s2) == nil)
+srv:openLoot(lead, { { WATCH, 4 }, { SIGNET, 4 } })
+srv:tick(0.5)
+check("the loot panel says what it sold for before", found(lead, "(sold for 1,200g before)", lead.G.LootRulerLootPanel))
+srv:closeLoot(lead)
+lead.LR.endSession(s2)
+srv:tick(1)
+check("a raid that gave nothing out isn't kept", H.all()[1].id == s.id)
+
+section("saved past raids are checked")
+local old = srv:client({ name = "Old", class = "WARRIOR" }, { history = { { archived = true, ended = 5, id = "x" }, "junk", past } })
+srv:tick(1)
+check("broken ones are thrown away", #old.LR.History.all() == 1 and old.LR.History.all()[1].id == s.id)
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
 check("every chat line fits", longest <= 255, longest)
-for _, p in ipairs({ lead, ann, bob, dan }) do
+for _, p in ipairs({ lead, ann, bob, dan, old }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
 

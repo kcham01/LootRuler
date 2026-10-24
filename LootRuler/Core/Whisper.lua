@@ -86,7 +86,13 @@ end
 
 function W.handle(text, sender)
   local s = W.session()
-  if not s then return end
+  if not s then
+    -- a GDKP that's over, with payouts still to do: "!lr pot" still answers
+    local lower = U.trim(text:sub(#COMMAND + 1)):lower()
+    local past = (lower == "pot" or lower == "gdkp") and LR.History.owing(sender)
+    if past then W.reply(U.full(sender), LR.Pot.line(past, U.full(sender))) end
+    return
+  end
   local player = U.full(sender)
   local class = LR.classOf(player)
   local args = U.trim(text:sub(#COMMAND + 1))

@@ -287,11 +287,15 @@ function Drops.tradeDone()
   local gaveMoney, gotMoney = trade.gaveMoney or 0, trade.gotMoney or 0
   trade.gave, trade.got, trade.gaveMoney, trade.gotMoney = {}, {}, 0, 0
   local s = Rolls.session()
-  if not s or not partner then return end
-  -- GDKP: gold that changed hands counts towards what they owe, or what they're owed (Core/Gdkp.lua)
-  if s.gdkp and LR.isLeader(s) and gotMoney ~= gaveMoney and LR.Gdkp.paid(s, partner, (gotMoney - gaveMoney) / 10000, U.now()) then
-    LR.leaderChanged(s)
+  -- GDKP: gold that changed hands counts towards what they owe, or what they're owed (Core/Gdkp.lua), in the
+  -- raid going on, or one that ended with payouts left to do (Core/History.lua)
+  if partner and gotMoney ~= gaveMoney then
+    local pot = (s and s.gdkp and LR.isLeader(s)) and s or LR.History.owing(partner)
+    if pot and LR.Gdkp.paid(pot, partner, (gotMoney - gaveMoney) / 10000, U.now()) then
+      if pot.archived then LR.changed("history") else LR.leaderChanged(pot) end
+    end
   end
+  if not s or not partner then return end
   local list, used = {}, {}
   for _, id in ipairs(trade.items or {}) do
     local pick

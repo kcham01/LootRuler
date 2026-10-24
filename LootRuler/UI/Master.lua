@@ -318,7 +318,10 @@ end
 local function lootSub(s, it)
   if not s then return LR.itemKind(it.id) end
   if s.hr[it.id] then return "|cffff5a4aHard reserved|r" .. (s.hr[it.id].f ~= "" and (" for " .. s.hr[it.id].f) or "") end
-  if s.gdkp and s.gk then return "Auction: bids from " .. LR.Gdkp.gold(LR.Gdkp.minFor(s, it.id)) end
+  if s.gdkp and s.gk then
+    local usual, n = LR.History.usualPrice(it.id, s)
+    return "Auction: bids from " .. LR.Gdkp.gold(LR.Gdkp.minFor(s, it.id)) .. (usual and (" (sold for " .. LR.Gdkp.gold(usual) .. (n > 1 and " on average" or "") .. " before)") or "")
+  end
   local pr = s.prio and LR.Guild.prioPlan(it.id)
   if pr then return ("|cff1eff00Priority %s:|r %s"):format(LR.Prio.place(pr.n), R.names(pr.who, 4)) end
   local plan = R.plan(s, it.id, LR.roster())

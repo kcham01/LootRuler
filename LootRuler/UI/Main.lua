@@ -563,6 +563,9 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("reserves")
   elseif msg == "loot" or msg == "drops" then
     UI.show("loot")
+  elseif msg == "history" or msg == "past" then
+    UI.show("loot")
+    UI.historySheet()
   elseif msg == "guild" or msg == "points" then
     if IsInGuild() then UI.show("guild") else LR.print("you're not in a guild.") end
   elseif msg == "settings" or msg == "options" or msg == "config" then
