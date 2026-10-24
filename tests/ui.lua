@@ -426,6 +426,31 @@ run("settings", function()
   ann.LR.UI.win:Hide()
 end)
 
+run("the +1 rule", function()
+  LR.UI.show("session")
+  srv:tick(0.3)
+  clickText("+1 rule")
+  srv:tick(1)
+  check("the leader turns the +1 rule on", s.plusOne == true and ann.LR.current().plusOne == true)
+  LR.UI.go("reserves")
+  clickText("By player")
+  check("+1 buttons for each player", #find("+1") > 0 and #find("-1") > 0)
+  local plusButtons = {}
+  for _, x in ipairs(find("+1")) do if x.clickable and M.plain(x.fs:GetText()) == "+1" then plusButtons[#plusButtons + 1] = x.clickable end end
+  M.click(plusButtons[1])
+  srv:tick(1)
+  local given = 0
+  for name in pairs(s.po or {}) do given = given + 1 end
+  check("giving someone a +1 shows next to their name", given == 1 and visible("+1"))
+  shot("plus-ones")
+  LR.UI.go("session")
+  clickText("+1 rule")
+  srv:tick(1)
+  LR.UI.go("reserves")
+  clickText("By item")
+  LR.UI.win:Hide()
+end)
+
 run("telling the raid how to SR without the addon", function()
   LR.UI.show("session")
   srv:tick(0.3)

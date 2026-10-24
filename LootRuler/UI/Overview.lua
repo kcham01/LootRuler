@@ -196,7 +196,8 @@ local function byPlayer(f, s, leader)
     local hd = K.get(f.owner, "head", f.parent)
     local inGroup = LR.inGroup(person.name)
     hd.text:SetText(U.classText(U.short(person.name), class) .. ((inGroup and not LR.versionOf(person.name)) and "  |cff9d9d9dno addon|r" or ""))
-    hd.right:SetText(person.none and "|cffffd100nothing reserved|r" or (#items .. " / " .. s.sr))
+    local po = s.plusOne and S.plusOnes(s, person.name) or 0
+    hd.right:SetText((person.none and "|cffffd100nothing reserved|r" or (#items .. " / " .. s.sr)) .. (po > 0 and ("  |cff1eff00+" .. po .. "|r") or ""))
     hd:SetWidth(f.width)
     f:place(hd, 22)
     f:gap(3)
@@ -212,13 +213,21 @@ local function byPlayer(f, s, leader)
       f:place(b, 36)
       f:gap(2)
     end
-    if leader and #items < s.sr then
-      f:buttons({ { label = "Add a reserve for " .. U.short(person.name), click = function()
-        UI.pickItem(s, "Reserve for " .. U.short(person.name), function(id)
-          local ok, why = LR.leaderAdd(s, person.name, class, id)
-          if not ok then UI.refused(why) end
-        end, function(id) return not s.hr[id] end)
-      end } }, "left")
+    if leader then
+      local list = {}
+      if #items < s.sr then
+        list[#list + 1] = { label = "Add a reserve for " .. U.short(person.name), click = function()
+          UI.pickItem(s, "Reserve for " .. U.short(person.name), function(id)
+            local ok, why = LR.leaderAdd(s, person.name, class, id)
+            if not ok then UI.refused(why) end
+          end, function(id) return not s.hr[id] end)
+        end }
+      end
+      if s.plusOne then
+        list[#list + 1] = { label = "+1", width = 44, click = function() LR.adjustPlusOne(s, person.name, 1) end }
+        list[#list + 1] = { label = "-1", width = 44, disabled = po == 0, click = function() LR.adjustPlusOne(s, person.name, -1) end }
+      end
+      if #list > 0 then f:buttons(list, "left") end
     end
     f:gap(6)
   end
