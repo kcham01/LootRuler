@@ -34,6 +34,23 @@ function UI.settingsView(f)
     p:note("Drag a roll window to move them all.")
   end)
 
+  f:panel("Auto-roll", function(p)
+    p:note("Your own rules for roll windows: LootRuler rolls or passes for you, and says so.")
+    toggle(p, "autoPassUnusable", "Pass on items my class can't use", "Only for items everyone can roll on (not reserved ones).")
+    local ids = {}
+    for id in pairs(set.autoRollRules) do ids[#ids + 1] = id end
+    table.sort(ids)
+    for _, id in ipairs(ids) do
+      local b = K.get(p.owner, "item", p.parent)
+      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), "Always: " .. LR.AutoRoll.ACTIONS[set.autoRollRules[id]], "",
+        { text = "x", tip = "Remove this rule", click = function() LR.AutoRoll.set(id, nil) UI.render() end })
+      p:place(b, 36)
+      p:gap(2)
+    end
+    if #ids == 0 then p:note("No item rules yet. Shift-click a roll window's dice, coin or x to always do that for its item, or add one here.") end
+    p:buttons({ { label = "Add an item rule", click = function() UI.addRollRule() end } }, "left")
+  end)
+
   f:panel("Running loot", function(p)
     p:note("For the raid leader, an assistant or the master looter.")
     local chips = { { plain = true, label = "Seconds to roll:" } }
@@ -117,6 +134,33 @@ function UI.addLootRule()
     end
     f:buttons({ { label = "Cancel", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and to), click = function() LR.AutoLoot.add(what, to) h.close() UI.render() end } })
+  end)
+end
+
+--- a sheet to make an auto-roll rule: an item, then pass / main spec / off spec
+function UI.addRollRule()
+  local id, action, text = nil, nil, ""
+  UI.openSheet("Add an auto-roll rule", function(f, h)
+    f:note("Shift-click the item into the box (from your bags, a chat link, anywhere).")
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetText(text)
+    K.takeLinks(e)
+    e:SetScript("OnTextChanged", function(self, user)
+      if not user then return end
+      text = self:GetText()
+      id = LR.idFrom(text)
+      h.redraw(true)
+    end)
+    f:gap(6)
+    if id then f:text(LR.coloredName(id), { gap = 4 }) end
+    f:chips({
+      { label = "Always pass", on = action == "pass", click = function() action = "pass" h.redraw(true) end },
+      { label = "Always main spec", on = action == "MS", click = function() action = "MS" h.redraw(true) end },
+      { label = "Always off spec", on = action == "OS", click = function() action = "OS" h.redraw(true) end },
+    })
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Add the rule", disabled = not (id and action), click = function() LR.AutoRoll.set(id, action) h.close() UI.render() end } })
   end)
 end
 

@@ -175,6 +175,7 @@ local function makeFrame(i)
   f.pass:SetPoint("TOPRIGHT", f.corner, "TOPRIGHT", 5, 5)
   f.pass:SetScript("OnClick", function()
     local copy = f.copy
+    if copy and IsShiftKeyDown() then UI.alwaysDo(copy, "pass") end
     if copy and copy.state == "open" and not copy.rolled[R.key(me())] then LR.Rolls.pass(copy) end
     if copy then copy.closedByMe = true end
     UI.rollWindows()
@@ -190,12 +191,17 @@ local function makeFrame(i)
   f.coin:SetPoint("TOP", f.dice, "BOTTOM", -2, 2)
   for _, b in ipairs({ f.dice, f.coin }) do
     b:SetScript("OnClick", function(self)
-      if f.copy and self.kind then LR.Rolls.roll(f.copy, self.kind) UI.rollWindows() end
+      if f.copy and self.kind then
+        if IsShiftKeyDown() then UI.alwaysDo(f.copy, self.kind == "OS" and "OS" or "MS") end
+        LR.Rolls.roll(f.copy, self.kind)
+        UI.rollWindows()
+      end
     end)
     b:SetScript("OnEnter", function(self)
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       GameTooltip:SetText(self.tipTitle or "", 1, 1, 1)
       if self.tip then GameTooltip:AddLine(self.tip, 1, 0.82, 0, true) end
+      GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true)
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -300,6 +306,13 @@ function UI.rollTick(f)
     f.secs:SetText("")
     if copy.endedAt and t - copy.endedAt > HIDE_AFTER and f:IsShown() then copy.closedByMe = true UI.rollWindows() end
   end
+end
+
+--- shift-click on a button: remember it as my rule for the item (Core/AutoRoll.lua)
+function UI.alwaysDo(copy, action)
+  LR.AutoRoll.set(copy.id, action)
+  LR.print(("from now on, LootRuler will %s on %s for you. (Settings tab, Auto-roll, to change it.)"):format(
+    action == "pass" and "pass" or ("roll " .. (action == "OS" and "off spec" or "main spec")), copy.link))
 end
 
 ---------------------------------------------------------------------- which windows are up

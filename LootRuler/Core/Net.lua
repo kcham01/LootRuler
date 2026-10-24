@@ -61,6 +61,8 @@ LR.DEFAULTS = {
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
   autoLoot = false,        -- the master looter's loot rules hand out what they match (Core/AutoLoot.lua)
   autoLootRules = {},      -- { { what, to } }, first match wins
+  autoRollRules = {},      -- item id -> "pass" / "MS" / "OS": what my roll windows do on their own
+  autoPassUnusable = false, -- pass on items my class can't use
 }
 function LR.loadDB()
   LootRulerDB = LootRulerDB or {}
@@ -76,6 +78,9 @@ function LR.loadDB()
   db.settings.autoLootRules = U.filter(db.settings.autoLootRules, function(r)
     return type(r) == "table" and type(r.what) == "string" and type(r.to) == "string"
   end)
+  for id, action in pairs(db.settings.autoRollRules) do
+    if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
+  end
   -- forget sessions nobody has touched for a week
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do
