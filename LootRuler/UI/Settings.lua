@@ -49,6 +49,23 @@ function UI.settingsView(f)
     toggle(p, "hideWhispers", "Hide !lr messages in my chat", "\"!lr\" whispers, \"!lr\" lines in raid chat and LootRuler's answers stay out of your chat while soft reserves are open.")
   end)
 
+  f:panel("Loot rules (master looter)", function(p)
+    toggle(p, "autoLoot", "Hand out loot by my rules", "When you open a corpse with master loot, items your rules match go straight to whoever the rule says. Anything someone reserved is always rolled for instead.")
+    local s = LR.Rolls.session()
+    if #set.autoLootRules == 0 then
+      p:note("No rules yet.")
+    end
+    for i, rule in ipairs(set.autoLootRules) do
+      local b = K.get(p.owner, "item", p.parent)
+      local id = tonumber(rule.what:match("^item:(%d+)$"))
+      K.setItem(b, p.width, id and LR.itemIcon(id) or "Interface\\Icons\\INV_Misc_Bag_10", LR.AutoLoot.whatText(rule.what),
+        "Goes to " .. LR.AutoLoot.toText(rule.to, s), "", { text = "x", tip = "Remove this rule", click = function() LR.AutoLoot.remove(i) UI.render() end })
+      p:place(b, 36)
+      p:gap(2)
+    end
+    p:buttons({ { label = "Add a rule", click = function() UI.addLootRule() end } }, "left")
+  end)
+
   f:panel("This window", function(p)
     p:chips({ { label = (LR.db.ui.hideMinimap and "[  ] " or "[x] ") .. "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
@@ -63,6 +80,43 @@ function UI.settingsView(f)
     p:gap(4)
     p:note("/lr opens this window. /lr help lists the rest.")
     p:note("Bugs and ideas: github.com/kcham01/LootRuler")
+  end)
+end
+
+--- a sheet to make a loot rule: what it's about, then who gets it
+function UI.addLootRule()
+  local what, to, linked = nil, nil, ""
+  UI.openSheet("Add a loot rule", function(f, h)
+    f:text("Which items?", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local chips = {}
+    for _, w in ipairs(LR.AutoLoot.WHAT) do
+      chips[#chips + 1] = { label = w[2], on = what == w[1], click = function() what = w[1] h.redraw(true) end }
+    end
+    f:chips(chips)
+    f:note("Or one item: shift-click it into the box.")
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetText(linked)
+    K.takeLinks(e)
+    e:SetScript("OnTextChanged", function(self, user)
+      if not user then return end
+      linked = self:GetText()
+      local id = LR.idFrom(linked)
+      if id then what = "item:" .. id h.redraw(true) end
+    end)
+    f:gap(6)
+    f:text("Who gets them?", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    f:chips({
+      { label = "The disenchanter", on = to == "de", click = function() to = "de" h.redraw(true) end },
+      { label = "Me", on = to == "me", click = function() to = "me" h.redraw(true) end },
+      { label = (to and to ~= "de" and to ~= "me") and U.short(to) or "Someone in the group...", on = to ~= nil and to ~= "de" and to ~= "me",
+        click = function() UI.pickPlayer("Who gets them?", function(name) to = name h.redraw(true) end) end },
+    })
+    if what and to then
+      f:note(("%s will go to %s."):format(LR.AutoLoot.whatText(what), LR.AutoLoot.toText(to, LR.Rolls.session())), K.GREEN)
+    end
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Add the rule", disabled = not (what and to), click = function() LR.AutoLoot.add(what, to) h.close() UI.render() end } })
   end)
 end
 

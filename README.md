@@ -91,6 +91,7 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 - **Trade help.** When the winner of an item the loot master is holding opens a trade (either of them can open it), LootRuler puts their item in the trade window. When the trade goes through, the list shows they have it. A "To trade" list shows the loot master what they still have to hand over. You can turn this off.
 - **Any loot method.** With master loot the loot master's addon writes down each corpse's loot (opening a corpse again doesn't list it twice). With group loot the leader's addon writes down the epics people loot.
 - **Mistakes:** the leader can right-click an item to take it off the list, or take an award off.
+- **Loot rules** for the master looter (Settings tab, off until you turn them on): "green items to the disenchanter", "recipes and patterns to me", "this item to Ann". They're applied when you open a corpse; anything someone reserved is always rolled for instead.
 - **Trade announcements:** while you're running loot, a line in raid chat says what you traded and to whom ("Traded [item] to Ann for 150g."), so nobody wonders where an item went. You can turn it off.
 - **Export** who won what, to paste into a spreadsheet, thatsmybis or a DFT sheet, or **post it in raid chat** so everyone (addon or not) sees the list.
 
