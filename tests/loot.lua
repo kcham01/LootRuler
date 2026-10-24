@@ -496,6 +496,29 @@ check("shift-clicking the dice rolls and remembers it", roll.rolled["ann-dreamsc
 Rolls.cancel()
 srv:tick(0.5)
 
+section("reserves where you see items")
+srv:openLoot(ann, { { WATCH, 4 }, { SIGNET, 4 } })
+for i = 1, 2 do ann.G.LootFrame_UpdateButton(i) end
+local g1, g2 = ann.G.LootButton1.lrGlow, ann.G.LootButton2.lrGlow
+check("the game's loot window glows on an item Ann reserved", g1 and g1:IsShown())
+check("not on one she didn't", not (g2 and g2:IsShown()))
+srv:closeLoot(ann)
+ann.M.lootRolls = { [7] = srv:link(WATCH) }
+ann.G.GroupLootFrame1.rollID = 7
+ann.G.GroupLootFrame_OnShow(ann.G.GroupLootFrame1)
+check("so does a need/greed window", ann.G.GroupLootFrame1.IconFrame.lrGlow and ann.G.GroupLootFrame1.IconFrame.lrGlow:IsShown())
+local function tooltipHas(p, text)
+  p.G.GameTooltip:SetOwner(p.G.UIParent)
+  p.G.GameTooltip:SetHyperlink(srv:link(WATCH))
+  for _, l in ipairs(p.G.GameTooltip._lines) do if tostring(l[1]):find(text, 1, true) then return true end end
+  return false
+end
+check("item tooltips say who reserved it", tooltipHas(dan, "LootRuler: soft reserved by"))
+check("and who it went to", tooltipHas(dan, "LootRuler: given to Ann"))
+dan.LR.db.settings.tooltipInfo = false
+check("which can be turned off", not tooltipHas(dan, "LootRuler:"))
+dan.LR.db.settings.tooltipInfo = true
+
 section("ending the session")
 lead.LR.endSession(s)
 srv:tick(2)

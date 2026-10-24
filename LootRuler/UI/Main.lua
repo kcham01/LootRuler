@@ -375,7 +375,9 @@ function LR.raidIcon(key) return LR.RAID_ITEM[key] and LR.itemIcon(LR.RAID_ITEM[
 --- the game's tooltip for an item, with who reserved it underneath (and where it drops)
 function UI.itemTooltip(owner, s, id, raidKey)
   GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+  UI.ownTooltip = true                -- our own lines follow: the tooltip hook (UI/Highlight.lua) stays out
   GameTooltip:SetHyperlink("item:" .. id)
+  UI.ownTooltip = false
   if not s and raidKey then
     local from = LR.dropsFrom(raidKey, id)
     if #from > 0 then

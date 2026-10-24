@@ -51,6 +51,11 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add an item rule", click = function() UI.addRollRule() end } }, "left")
   end)
 
+  f:panel("Reserves where you see items", function(p)
+    toggle(p, "highlight", "Glow on my items in loot windows", "The game's loot window and need/greed windows glow on an item you reserved (or that's hard reserved for you).")
+    toggle(p, "tooltipInfo", "Reserves in item tooltips", "Every item tooltip says who reserved it and who it went to, while soft reserves are open.")
+  end)
+
   f:panel("Running loot", function(p)
     p:note("For the raid leader, an assistant or the master looter.")
     local chips = { { plain = true, label = "Seconds to roll:" } }

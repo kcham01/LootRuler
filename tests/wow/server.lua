@@ -239,7 +239,7 @@ function Server:install(p)
     return seenAs(q, p), srv.group.leader == q and 2 or (srv.group.assists[q] and 1 or 0), 1, 70, CLASS_NAME[q.class], q.class, "Karazhan", q.online, false, "NONE", false
   end
   G.GetFramerate = function() return 60 end
-  G.Enum = { LootMethod = { Freeforall = 0, Roundrobin = 1, Masterlooter = 2, Group = 3, Needbeforegreed = 4, Personal = 5 },
+  G.Enum = { TooltipDataType = { Item = 0 }, LootMethod = { Freeforall = 0, Roundrobin = 1, Masterlooter = 2, Group = 3, Needbeforegreed = 4, Personal = 5 },
     SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
     NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10 } }
   local function sendAddon(prefix, text, channel, target)
