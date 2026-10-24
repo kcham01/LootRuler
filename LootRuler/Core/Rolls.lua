@@ -9,6 +9,7 @@
 --                              m = mode, w = who may roll (names, or { name, reserves }), tie = kind of a tie roll }
 --   X  loot master -> group    a roll is over: { k, e = "closed" / "cancelled" / "awarded", p = winner, n, kd }
 --   N  raider -> loot master   "I pass" on roll k
+--   M  raider -> loot master   a max bid on auction k: { k, g } (kept by the loot master; nobody else sees it)
 -- An auction (GDKP, mode "BID") works the same way, with bids typed in raid chat instead of /rolls: R also
 -- carries mn (the lowest first bid), inc (the least raise) and tb (the highest bid so far: { p, n }).
 -- The leader of the soft reserves records who won what (so a reserve that has won its item is used up),
@@ -98,8 +99,10 @@ local function howTo(roll, link, secs)
   elseif roll.mode == "TIE" then
     return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), roll.tie == "OS" and "/roll 99" or "/roll", t)
   elseif roll.mode == "BID" then
-    return ("Auction: %s. Bids start at %s, each at least %s more than the last. Type your bid in raid chat (%s). %s."):format(
-      link, LR.Gdkp.gold(roll.min), LR.Gdkp.gold(roll.inc), roll.strict and ("\"bid " .. roll.min .. "\"") or "just the number", t)
+    local s = session()
+    local max = (s and LR.isLeader(s)) and (" To bid up to a max, whisper %s \"!lr max 800\"."):format(U.short(U.me())) or ""
+    return ("Auction: %s. Bids start at %s, each at least %s more than the last. Type your bid in raid chat (%s). %s.%s"):format(
+      link, LR.Gdkp.gold(roll.min), LR.Gdkp.gold(roll.inc), roll.strict and ("\"bid " .. roll.min .. "\"") or "just the number", t, max)
   elseif roll.mode == "PR" then
     return ("%s: %s share the top priority, so only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   end
@@ -598,6 +601,60 @@ function Rolls.onRoll(line)
   LR.changed("rolls")
 end
 
+---------------------------------------------------------------------- auctions: max bids
+--- the loot master's addon bids for players with a max, as little as it takes (R.resolve); the raid hears
+--- where it ended up, and everyone's windows get the highest bid
+local function autoBids(roll)
+  if not roll.maxes or not next(roll.maxes) then return end
+  local made = R.resolve(roll, roll.maxes)
+  if #made == 0 then return end
+  local t = now()
+  if roll.ends - t < SNIPE then roll.ends = t + SNIPE end
+  local top = roll.top
+  say(("Highest bid: %s, %s (bid for them by their max bid). Type a higher bid to beat it."):format(U.short(top.p), LR.Gdkp.gold(top.n)))
+  sendGroup(wire(roll))
+  Rolls.follow(wire(roll), U.me())
+  changed()
+end
+
+--- a player's max bid on the auction that's on (the loot master's addon); returns true, or false and why
+function Rolls.setMax(player, g)
+  local roll = Rolls.current
+  g = math.floor(tonumber(g) or 0)
+  if not (roll and roll.mode == "BID" and roll.state == "open") then return false, "Nothing is being auctioned right now." end
+  if g < R.nextBid(roll) then return false, ("A max bid has to be at least the lowest bid now, %s."):format(LR.Gdkp.gold(R.nextBid(roll))) end
+  if g > R.MAX_BID then return false, "That's more gold than there is." end
+  roll.maxes = roll.maxes or {}
+  local k = R.key(player)
+  if roll.maxes[k] and roll.maxes[k].g >= g then return false, ("Your max bid is %s already: it can only go up."):format(LR.Gdkp.gold(roll.maxes[k].g)) end
+  roll.maxes[k] = { p = U.full(player), g = g, at = (roll.maxes[k] and roll.maxes[k].at) or now() }
+  autoBids(roll)
+  return true
+end
+
+--- my max bid on an auction (my window, /lr max): to the loot master's addon, or my own
+function Rolls.myMax(copy, g)
+  g = math.floor(tonumber(g) or 0)
+  if not copy or copy.mode ~= "BID" or copy.state ~= "open" then return false, "Nothing is being auctioned right now." end
+  copy.myMax = g
+  if U.samePlayer(copy.by, U.me()) then
+    local ok, why = Rolls.setMax(U.me(), g)
+    if not ok then copy.myMax = nil end
+    return ok, why
+  end
+  Net.send({ t = "M", k = copy.k, g = g }, "WHISPER", copy.by)
+  LR.changed("rolls")
+  return true
+end
+
+--- the auction that's open (my copy), if any
+function Rolls.openAuction()
+  for i = #Rolls.order, 1, -1 do
+    local c = Rolls.seen[Rolls.order[i]]
+    if c and c.mode == "BID" and c.state == "open" then return c end
+  end
+end
+
 ---------------------------------------------------------------------- auctions: bids typed in raid chat
 --- a bid from a player (raid chat, or a whisper): counted in the loot master's auction and everyone's copies.
 --- Returns the loot master's entry (nil when there's no auction of ours).
@@ -615,6 +672,7 @@ function Rolls.onBid(sender, g)
           roll.warned = roll.secs < 10 or false
           sendGroup(wire(roll))
         end
+        autoBids(roll)                        -- anyone's max bid answers it
       elseif entry.why == "low" and not U.samePlayer(sender, U.me()) then
         LR.say(("%s The lowest bid now is %s."):format(LR.TAG, LR.Gdkp.gold(R.nextBid(roll))), "WHISPER", sender)
       end
@@ -707,6 +765,15 @@ Net.handlers.X = function(msg, channel, sender)
     local id = copy and copy.id or tonumber(msg.id)
     if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil, msg.de == true) end
   end
+end
+
+Net.handlers.M = function(msg, channel, sender)
+  local roll = Rolls.current
+  if channel ~= "WHISPER" or not roll or roll.k ~= msg.k or type(msg.g) ~= "number" then return end
+  if not (LR.inGroup(sender) or not IsInGroup()) then return end
+  local ok, why = Rolls.setMax(sender, msg.g)
+  -- (said by whisper, so it reaches them whatever version they have)
+  LR.say(LR.TAG .. " " .. (ok and ("Your max bid of %s on %s is in."):format(LR.Gdkp.gold(msg.g), U.plain(roll.link)) or why), "WHISPER", sender)
 end
 
 Net.handlers.N = function(msg, channel, sender)

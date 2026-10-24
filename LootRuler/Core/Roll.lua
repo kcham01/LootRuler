@@ -170,6 +170,44 @@ function R.bid(roll, player, g, late)
   return e
 end
 
+--- max bids ("bid for me up to 800g"), kept by the loot master's addon: maxes = { [key] = { p, g, at } }.
+--- Bids for them as little as it takes to keep them on top, up to their max; when two maxes meet, the higher
+--- one wins at the lower one's max (or just above the other's bid), and an equal one goes to whoever set it
+--- first. Returns the bids it made (entries).
+function R.resolve(roll, maxes)
+  local made = {}
+  if roll.mode ~= "BID" then return made end
+  for _ = 1, 40 do
+    local top = roll.top
+    local need = R.nextBid(roll)
+    local best
+    for k, m in pairs(maxes) do
+      if not (top and key(top.p) == k) and m.g >= need then
+        if not best or m.g > best.g or (m.g == best.g and m.at < best.at) then best = m end
+      end
+    end
+    if not best then break end
+    local mine = top and maxes[key(top.p)]
+    local topMax = mine and mine.g or (top and top.n) or 0
+    local e
+    if top and mine and (topMax > best.g or (topMax == best.g and mine.at <= best.at)) then
+      -- the leader's own max holds: they match the challenger's max, which then can't be beaten by enough
+      e = R.bid(roll, top.p, best.g)
+      if not e.kind then break end
+      e.auto = true
+      made[#made + 1] = e
+      -- (the challenger is out: their max is below the next bid now)
+    else
+      -- the challenger goes just above the leader's max (or their bid), up to their own max
+      e = R.bid(roll, best.p, math.min(best.g, math.max(need, topMax + (roll.inc or 1))))
+      if not e.kind then break end
+      e.auto = true
+      made[#made + 1] = e
+    end
+  end
+  return made
+end
+
 --- the gold in a chat line that's a bid: "150", "150g", "150 gold", "bid 150", "1.5k"; nil otherwise.
 --- strict: only "bid 150" (and "bid 150g"...) counts
 function R.parseBid(text, strict)

@@ -49,9 +49,10 @@ local function bidStatus(copy)
   end
   if copy.state == "closed" then return "Nobody bid." end
   if copy.state == "cancelled" then return "Called off." end
-  if top and U.samePlayer(top.p, me()) then return ("|cff1eff00You have the highest bid: %s.|r"):format(G.gold(top.n)) end
+  local max = copy.myMax and (" Your max: " .. G.gold(copy.myMax) .. ".") or ""
+  if top and U.samePlayer(top.p, me()) then return ("|cff1eff00You have the highest bid: %s.|r%s"):format(G.gold(top.n), max) end
   local how = copy.strict and "Type \"bid\" and an amount in raid chat, or click." or "Type a bid in raid chat, or click."
-  if top then return ("Highest bid: %s, %s. %s"):format(U.short(top.p), G.gold(top.n), how) end
+  if top then return ("Highest bid: %s, %s. %s%s"):format(U.short(top.p), G.gold(top.n), how, max) end
   return ("Bids start at %s. %s"):format(G.gold(copy.min or 0), how)
 end
 
@@ -235,6 +236,17 @@ local function makeFrame(i)
   for _, b in ipairs({ f.dice, f.coin, f.boost }) do
     b:SetScript("OnClick", function(self)
       if f.copy and self.kind == "BID" then
+        -- shift-click: a max bid instead (LootRuler bids for me, up to it)
+        if IsShiftKeyDown() then
+          local copy = f.copy
+          UI.show()
+          UI.goldSheet("Max bid for " .. U.plain(copy.link), "LootRuler bids for you, as little as it takes to keep you on top, up to this. Nobody else sees it.",
+            copy.myMax or self.amount, function(g)
+              local ok, why = LR.Rolls.myMax(copy, g)
+              if not ok then UI.toast(why) end
+            end)
+          return
+        end
         LR.Rolls.bid(f.copy, self.amount)
         return
       end
@@ -249,6 +261,7 @@ local function makeFrame(i)
       GameTooltip:SetText(self.tipTitle or "", 1, 1, 1)
       if self.tip then GameTooltip:AddLine(self.tip, 1, 0.82, 0, true) end
       if self ~= f.boost and self.kind ~= "BID" then GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true) end
+      if self.kind == "BID" then GameTooltip:AddLine("Shift-click: a max bid (LootRuler bids for you, up to it).", 0.5, 0.8, 1, true) end
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)

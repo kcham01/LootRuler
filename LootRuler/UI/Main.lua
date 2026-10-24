@@ -563,6 +563,11 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("reserves")
   elseif msg == "loot" or msg == "drops" then
     UI.show("loot")
+  elseif msg:match("^max") then
+    local g = LR.Roll.parseBid(msg:match("^max%s*(.*)$") or "")
+    if not g then LR.print("/lr max 800: bid for you, as little as it takes, up to 800g on the item being auctioned.") return end
+    local ok, why = LR.Rolls.myMax(LR.Rolls.openAuction(), g)
+    LR.print(ok and ("your max bid of %s is in."):format(LR.Gdkp.gold(g)) or why)
   elseif msg == "history" or msg == "past" then
     UI.show("loot")
     UI.historySheet()
