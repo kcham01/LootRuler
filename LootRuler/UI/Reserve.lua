@@ -29,8 +29,11 @@ end
 local function myReserves(f, s)
   local picks = LR.myPicks(s)
   f:panel("Your reserves", function(p)
-    local left = s.sr - #picks
-    local line = left > 0 and ("%s left of %d."):format(U.plural(left, "reserve"), s.sr) or ("All %d used."):format(s.sr)
+    local limit = S.limit(s, U.me())
+    local extra = S.extra(s, U.me())
+    local left = limit - #picks
+    local line = (left > 0 and ("%s left of %d."):format(U.plural(left, "reserve"), limit) or ("All %d used."):format(limit))
+      .. (extra > 0 and (" (" .. U.short(s.leader) .. " gave you " .. U.plural(extra, "extra reserve") .. ".)") or "")
     if s.dupes then line = line .. " You can put more than one on the same item." end
     p:text(line)
     if s.locked then p:note("|cffff5a4aReserves are locked.|r Ask " .. (LR.isLeader(s) and "yourself" or U.short(s.leader)) .. " if something needs changing.") end

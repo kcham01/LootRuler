@@ -37,10 +37,11 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 1. **Open reserves** on the Session tab: pick the raid, how many soft reserves each player gets, whether a player can put more than one on the same item (on by default), and whether to share the session with your guild so people can reserve before the group is even made.
 2. **Hard reserve** anything: say who it's for and add a note if you like. Anyone who had soft reserved it gets that reserve back.
-3. **Reserve yourself** on the Reserve tab, like everyone else.
-4. **Post in raid chat** tells everyone how to reserve, addon or not.
-5. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't.
-6. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
+3. **Extra reserves** for tanks, healers or anyone: on the Session tab (or a player's line on the Reserves tab), pick the players and how many more they get. `!lr` tells players without the addon how many they have.
+4. **Reserve yourself** on the Reserve tab, like everyone else.
+5. **Post in raid chat** tells everyone how to reserve, addon or not.
+6. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't.
+7. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
 
 Already used softres.it? **Import from softres.it** brings in its "Gargul Export".
 

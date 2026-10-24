@@ -128,6 +128,23 @@ check("it's a valid session", S.valid(bd))
 check("item ids from links, item strings and numbers", LR.idFrom("|cffa335ee|Hitem:28830::::|h[Dragonspine Trophy]|h|r") == 28830
   and LR.idFrom("item:123") == 123 and LR.idFrom(" 456 ") == 456 and LR.idFrom("[789]") == 789 and LR.idFrom("watch") == nil)
 
+print("== extra reserves")
+local xs = S.new("Lead-Dreamscythe", "Karazhan", 1, true, 600)
+check("one each", S.add(xs, A, "PRIEST", 28525, false, 601) and not S.add(xs, A, "PRIEST", 28530, false, 602) and S.limit(xs, A) == 1)
+check("the leader gives Ann two more", S.setExtra(xs, A, 2, 603) and S.limit(xs, A) == 3 and S.extra(xs, A) == 2 and S.limit(xs, B) == 1)
+check("so she can reserve three", S.add(xs, A, "PRIEST", 28530, false, 604) and S.add(xs, A, "PRIEST", 28528, false, 605)
+  and not S.add(xs, A, "PRIEST", 28529, false, 606))
+check("what she has left", S.players(xs)[1].left == 0)
+check("a sane number only", not S.setExtra(xs, A, 9, 607) and not S.setExtra(xs, A, 1.5, 607) and not S.setExtra(xs, A, 2, 607))
+local changed, lost = S.setExtra(xs, A, 1, 608)
+check("fewer extras: her last pick goes", changed and lost and #S.reservesOf(xs, A) == 2 and S.reservesOf(xs, A)[2] == 28530)
+check("it's a valid session", S.valid(xs))
+xs.xr[A] = "lots"
+check("but not with nonsense in it", not S.valid(xs))
+xs.xr[A] = 1
+S.configure(xs, 2, true, 609)
+check("changing everyone's count keeps the extra", S.limit(xs, A) == 3)
+
 print("== priority lists instead of reserves")
 local ps = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 400)
 check("reserves to start with", ps.prio == nil and S.add(ps, A, "PRIEST", 28525, false, 401))

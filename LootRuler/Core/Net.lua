@@ -303,6 +303,12 @@ end
 function LR.setDisenchanter(s, player) if S.setDisenchanter(s, player, U.now()) then leaderChanged(s) end end
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end
+function LR.setExtra(s, player, n)
+  if not LR.isLeader(s) then return false end
+  local ok, lost = S.setExtra(s, player, n, U.now())
+  if ok then leaderChanged(s) end
+  return ok, lost
+end
 function LR.setSessionPrio(s, mode) if S.setPrio(s, mode, U.now()) then leaderChanged(s) end end
 -- GDKP (Core/Gdkp.lua): only the leader's changes count
 local function gdkp(fn) return function(s, ...) if LR.isLeader(s) and fn(s, ...) then leaderChanged(s) return true end return false end end
@@ -372,7 +378,7 @@ function LR.changeMine(s, edit, id)
   -- no reserves in a GDKP raid, or one that goes by priority lists only (taking them back is fine)
   if #items > before and s.gdkp then return false, "GDKP" end
   if #items > before and s.prio == "only" then return false, "PRIO_ONLY" end
-  local ok, why = S.check(s, items, true)              -- which items are allowed is the leader's addon's call
+  local ok, why = S.check(s, items, true, me)          -- which items are allowed is the leader's addon's call
   if not ok then return false, why end
   db.mine[s.id] = { i = items, dirty = true }
   LR.sendPicks(s, true)
