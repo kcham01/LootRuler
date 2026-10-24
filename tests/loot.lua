@@ -407,6 +407,28 @@ check("it doesn't matter who opens the trade", #lead.tradeItems == 1 and lead.tr
 srv:completeTrade(lead)
 srv:tick(1)
 check("Bob has his", stateOf(SHOULDERS) == "given" and dropOf(SHOULDERS).h == full(bob))
+check("the raid is told what the loot master traded", chat("Traded |cffa335ee|Hitem:28647", "RAID") ~= nil and chat("to Bob-Faerlina.", "RAID") ~= nil)
+srv:lootTo(lead, 28670)
+srv:tick(1)
+srv:openTrade(lead, ann)
+srv:tick(0.5)
+lead.G.C_Container.UseContainerItem(0, (function() for slot, it in pairs(lead.bags) do if it.id == 28670 then return slot end end end)())
+srv:setTradeMoney(ann, 1505000)
+srv:tick(0.5)
+srv:completeTrade(lead)
+srv:tick(1)
+check("an item for gold: both sides are said", chat("to Ann for 150g 50s.", "RAID") ~= nil)
+lead.LR.db.settings.tradeAnnounce = false
+local lines = #srv.chat
+srv:openTrade(lead, ann)
+srv:setTradeMoney(ann, 10000)
+srv:tick(0.5)
+srv:completeTrade(lead)
+srv:tick(1)
+local fromLead = 0
+for i = lines + 1, #srv.chat do if srv.chat[i].from == full(lead) then fromLead = fromLead + 1 end end
+check("it can be turned off (Ann, an assistant, still says what she got)", fromLead == 0 and chat("Traded 1g to Lead.", "RAID") ~= nil)
+lead.LR.db.settings.tradeAnnounce = true
 check("nothing left to hand over", #lead.LR.Drops.toDeliver() == 0)
 
 section("group loot")

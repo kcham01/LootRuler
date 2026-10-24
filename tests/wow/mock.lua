@@ -931,6 +931,9 @@ function M.env(player)
   G.UnitGUID = function() return nil end
   G.UnitIsDead = function() return false end
   G.GetTradePlayerItemLink = function() return nil end
+  G.GetTradeTargetItemLink = function() return nil end
+  G.GetPlayerTradeMoney = function() return 0 end
+  G.GetTargetTradeMoney = function() return 0 end
   G.RandomRoll = function(lo, hi) M.rolled = M.rolled or {} table.insert(M.rolled, { tonumber(lo), tonumber(hi) }) end
   G.LootFrame = M.CreateFrame("Frame", "LootFrame", M.UIParent)
   G.LootFrame:SetSize(192, 300)
