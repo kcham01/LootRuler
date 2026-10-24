@@ -25,7 +25,10 @@ function Pot.line(s, player)
   if not row then return ("The pot is %s so far, split %d ways: %s each."):format(G.gold(split.pot), #split.players, G.gold(split.share)) end
   local parts = {}
   if row.spent > 0 then parts[#parts + 1] = "you bought " .. G.gold(row.spent) end
-  parts[#parts + 1] = row.out and "you're not in the split" or ("your share is " .. G.gold(row.gets) .. (row.bonus > 0 and (" (with a " .. G.gold(row.bonus) .. " bonus)") or ""))
+  local extras = {}
+  if row.roleCut > 0 then extras[#extras + 1] = "a " .. G.gold(row.roleCut) .. " " .. row.role .. " cut" end
+  if row.bonus > 0 then extras[#extras + 1] = "a " .. G.gold(row.bonus) .. " bonus" end
+  parts[#parts + 1] = row.out and "you're not in the split" or ("your share is " .. G.gold(row.gets) .. (#extras > 0 and (" (with " .. table.concat(extras, " and ") .. ")") or ""))
   if row.paid > 0 then parts[#parts + 1] = "you've paid " .. G.gold(row.paid) end
   if row.paid < 0 then parts[#parts + 1] = "you've had " .. G.gold(-row.paid) end
   local what
@@ -41,7 +44,8 @@ function Pot.summary(s)
   local split = G.split(s)
   local lines = { ("GDKP pot: %s from %d items. %s's cut: %s (%d%%)%s. Split %d ways: %s each."):format(
     G.gold(split.pot), #G.sales(s), U.short(s.leader), G.gold(split.cut), s.gk.cut,
-    split.bonuses > 0 and (", bonuses " .. G.gold(split.bonuses)) or "", #split.players, G.gold(split.share)) }
+    (split.bonuses > 0 and (", bonuses " .. G.gold(split.bonuses)) or "") .. (split.roles > 0 and (", tank and healer cuts " .. G.gold(split.roles)) or ""),
+    #split.players, G.gold(split.share)) }
   lines[#lines + 1] = ("Whisper %s \"!lr pot\" to see what you owe or are owed."):format(U.short(s.leader))
   return lines
 end
@@ -70,12 +74,13 @@ end
 
 --- a trade opened with someone: what they owe me, or I owe them
 function Pot.tradeNote(partner)
-  local s = Pot.mine()
+  local s = Pot.mine() or LR.History.owing(partner)
   if not s then return end
   local row = G.split(s).rows[U.full(partner)]
   if not row or math.abs(row.owed) < 0.01 then return end
-  if row.owed > 0 then LR.print(("GDKP: put %s in the trade for %s (their payout)."):format(G.gold(row.owed), U.short(partner)))
-  else LR.print(("GDKP: %s owes you %s."):format(U.short(partner), G.gold(-row.owed))) end
+  local from = s.archived and (" (from " .. LR.raidOf(s).name .. ", " .. date("%b %d", s.ended) .. ")") or ""
+  if row.owed > 0 then LR.print(("GDKP: put %s in the trade for %s (their payout%s)."):format(G.gold(row.owed), U.short(partner), from))
+  else LR.print(("GDKP: %s owes you %s%s."):format(U.short(partner), G.gold(-row.owed), from)) end
 end
 
 -- everyone who's in the group while the organiser is gets a share

@@ -10,6 +10,9 @@
 --   out      "Name-Realm" -> true: left out of the split by the leader
 --   paid     "Name-Realm" -> gold handed over in trades: what they gave the organiser, less what they got
 --   prices   item id -> its lowest first bid, when it isn't min
+--   rp       role -> the cut each player in it gets, as a percent of the pot ({ tank = 2, healer = 1 })
+--   role     "Name-Realm" -> "tank" / "healer": who's in which role (the leader picks)
+--   strict   bids must start with "bid" ("bid 150"), so someone saying "500" in raid chat doesn't bid
 -- Addons can't put gold in a trade, so LootRuler says who owes what and counts what changes hands.
 local _, LR = ...
 local U, S = LR.U, LR.Session
@@ -43,6 +46,42 @@ function G.option(s, key, value, now)
   value = num(value, limits[key][1], limits[key][2])
   if not value or s.gk[key] == value then return false end
   s.gk[key] = math.floor(value)
+  S.bump(s, now)
+  return true
+end
+
+G.ROLES = { { "tank", "Tanks", "tank" }, { "healer", "Healers", "healer" } }
+local ROLE = { tank = true, healer = true }
+G.MAX_ROLE_PCT = 10
+
+--- the cut every player in a role gets (a percent of the pot each; 0: none)
+function G.setRoleCut(s, role, pct, now)
+  pct = tonumber(pct)
+  if not s.gk or not ROLE[role] or not pct or pct < 0 or pct > G.MAX_ROLE_PCT then return false end
+  s.gk.rp = s.gk.rp or {}
+  if (s.gk.rp[role] or 0) == pct then return false end
+  s.gk.rp[role] = pct > 0 and pct or nil
+  S.bump(s, now)
+  return true
+end
+
+--- puts a player in a role (nil: none)
+function G.setRole(s, player, role, now)
+  if not s.gk or (role ~= nil and not ROLE[role]) then return false end
+  player = U.full(player)
+  s.gk.role = s.gk.role or {}
+  if s.gk.role[player] == role then return false end
+  s.gk.role[player] = role
+  S.bump(s, now)
+  return true
+end
+
+--- whether a bid has to start with "bid"
+function G.setStrict(s, on, now)
+  if not s.gk then return false end
+  on = on and true or nil
+  if s.gk.strict == on then return false end
+  s.gk.strict = on
   S.bump(s, now)
   return true
 end
@@ -136,7 +175,21 @@ function G.split(s)
   local bonuses = 0
   for name, b in pairs(gk.bonus or {}) do if not (gk.out and gk.out[name]) then bonuses = bonuses + b end end
   bonuses = math.min(bonuses, pot - cut)
-  local rest = pot - cut - bonuses
+  -- cuts by role: a percent of the pot for each player in the role (tanks, healers), out of what's left
+  local rolePay, roles = {}, 0
+  for name, role in pairs(gk.role or {}) do
+    local pct = gk.rp and gk.rp[role] or 0
+    if pct > 0 and not (gk.out and gk.out[name]) then
+      rolePay[name] = math.floor(pot * pct / 100)
+      roles = roles + rolePay[name]
+    end
+  end
+  if roles > pot - cut - bonuses then         -- (never more than there is: each is cut down to fit)
+    local scale = roles > 0 and (pot - cut - bonuses) / roles or 0
+    roles = 0
+    for name, g in pairs(rolePay) do rolePay[name] = math.floor(g * scale) roles = roles + rolePay[name] end
+  end
+  local rest = pot - cut - bonuses - roles
   local share = #players > 0 and math.floor(rest / #players) or 0
   local rows = {}
   local spent = {}
@@ -148,11 +201,24 @@ function G.split(s)
   for p in pairs(everyone) do
     local inSplit = not (gk.out and gk.out[p])
     local bonus = inSplit and (gk.bonus and gk.bonus[p]) or 0
-    local gets = inSplit and (share + bonus) or 0
+    local roleCut = inSplit and rolePay[p] or 0
+    local gets = inSplit and (share + bonus + roleCut) or 0
     local paid = gk.paid and gk.paid[p] or 0
-    rows[p] = { spent = spent[p] or 0, bonus = bonus, gets = gets, paid = paid, owed = gets - (spent[p] or 0) + paid, out = not inSplit }
+    rows[p] = { spent = spent[p] or 0, bonus = bonus, role = gk.role and gk.role[p], roleCut = roleCut, gets = gets, paid = paid,
+      owed = gets - (spent[p] or 0) + paid, out = not inSplit }
   end
-  return { pot = pot, cut = cut, bonuses = bonuses, share = share, players = players, rows = rows }
+  return { pot = pot, cut = cut, bonuses = bonuses, roles = roles, share = share, players = players, rows = rows }
+end
+
+--- who still owes the organiser or is owed by them: { { name, owed } }, biggest first (not the organiser)
+function G.unsettled(s)
+  local out = {}
+  if not s.gdkp or not s.gk then return out end
+  for name, row in pairs(G.split(s).rows) do
+    if math.abs(row.owed) >= 0.01 and not U.samePlayer(name, s.leader) then out[#out + 1] = { name, row.owed } end
+  end
+  table.sort(out, function(a, b) return math.abs(a[2]) > math.abs(b[2]) end)
+  return out
 end
 
 --- "1,250g" (whole gold; silver and copper as "12g 50s" when there are any)
@@ -171,6 +237,7 @@ function G.valid(gk)
   if gk == nil then return true end
   if type(gk) ~= "table" then return false end
   for _, k in ipairs({ "min", "inc", "cut" }) do if type(gk[k]) ~= "number" then return false end end
+  if gk.strict ~= nil and type(gk.strict) ~= "boolean" then return false end
   local function map(t, keyType, valType)
     if type(t) ~= "table" then return false end
     local n = 0
@@ -180,6 +247,8 @@ function G.valid(gk)
     end
     return true
   end
+  if gk.rp ~= nil and not map(gk.rp, "string", "number") then return false end
+  if gk.role ~= nil and not map(gk.role, "string", "string") then return false end
   return map(gk.bonus, "string", "number") and map(gk.seen, "string", "boolean") and map(gk.out, "string", "boolean")
     and map(gk.paid, "string", "number") and map(gk.prices, "number", "number")
 end

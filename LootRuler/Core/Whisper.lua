@@ -41,9 +41,12 @@ local function list(s, player)
 end
 
 local function status(s, player)
-  local left = s.sr - #S.reservesOf(s, player)
+  local limit = S.limit(s, player)
+  local left = limit - #S.reservesOf(s, player)
+  local extra = S.extra(s, player)
   local po = s.plusOne and (" You have %s."):format(S.plusOnes(s, player) == 1 and "a +1" or (S.plusOnes(s, player) .. " +1s")) or ""
-  return ("You have reserved %s (%d of %d used%s).%s"):format(list(s, player), s.sr - left, s.sr, s.locked and ", reserves are locked" or "", po)
+  return ("You have reserved %s (%d of %d used%s%s).%s"):format(list(s, player), limit - left, limit,
+    extra > 0 and (", with " .. U.plural(extra, "extra reserve")) or "", s.locked and ", reserves are locked" or "", po)
 end
 
 local function nameOf(s, id) return LR.itemLink(id) end
@@ -83,7 +86,13 @@ end
 
 function W.handle(text, sender)
   local s = W.session()
-  if not s then return end
+  if not s then
+    -- a GDKP that's over, with payouts still to do: "!lr pot" still answers
+    local lower = U.trim(text:sub(#COMMAND + 1)):lower()
+    local past = (lower == "pot" or lower == "gdkp") and LR.History.owing(sender)
+    if past then W.reply(U.full(sender), LR.Pot.line(past, U.full(sender))) end
+    return
+  end
   local player = U.full(sender)
   local class = LR.classOf(player)
   local args = U.trim(text:sub(#COMMAND + 1))
@@ -113,7 +122,19 @@ function W.handle(text, sender)
     if not g then W.reply(player, "A bid is an amount of gold: \"!lr bid 150\".") return end
     if not (roll and roll.mode == "BID" and roll.state == "open") then W.reply(player, "Nothing is being auctioned right now.") return end
     local e = LR.Rolls.onBid(player, g)
-    if e and e.kind then W.reply(player, ("Your bid of %s on %s is the highest."):format(LR.Gdkp.gold(g), roll.link)) end
+    if e and e.kind then
+      local top = roll.top
+      if top and U.samePlayer(top.p, player) then W.reply(player, ("Your bid of %s on %s is the highest."):format(LR.Gdkp.gold(g), roll.link))
+      elseif top then W.reply(player, ("Someone's max bid beat yours: the highest is %s."):format(LR.Gdkp.gold(top.n))) end
+    end
+    return
+  end
+  local maxArg = lower:match("^max%s+(.+)$")
+  if maxArg and s.gdkp then
+    local g = LR.Roll.parseBid(maxArg)
+    if not g then W.reply(player, "A max bid is an amount of gold: \"!lr max 800\".") return end
+    local ok, why = LR.Rolls.setMax(player, g)
+    W.reply(player, ok and ("Your max bid of %s is in: LootRuler bids for you, as little as it takes, up to that."):format(LR.Gdkp.gold(g)) or why)
     return
   end
   if (lower == "pot" or lower == "gdkp") and s.gdkp then

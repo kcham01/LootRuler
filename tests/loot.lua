@@ -551,6 +551,10 @@ section("ending the session")
 lead.LR.endSession(s)
 srv:tick(2)
 check("the loot list goes with it, everywhere", lead.LR.current() == nil and ann.LR.current() == nil and bob.LR.current() == nil)
+local kept = lead.LR.History.all()[1]
+check("but it's kept under past raids, for the leader and raiders", kept and kept.id == s.id and #kept.won == #s.won and #kept.won > 0
+  and ann.LR.History.all()[1] and ann.LR.History.all()[1].id == s.id)
+check("and still exports", lead.LR.Export.text(kept, "csv"):find("Signet of Unshakable Faith", 1, true) ~= nil)
 
 section("no errors")
 local longest = 0

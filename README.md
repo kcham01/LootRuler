@@ -37,10 +37,11 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 1. **Open reserves** on the Session tab: pick the raid, how many soft reserves each player gets, whether a player can put more than one on the same item (on by default), and whether to share the session with your guild so people can reserve before the group is even made.
 2. **Hard reserve** anything: say who it's for and add a note if you like. Anyone who had soft reserved it gets that reserve back.
-3. **Reserve yourself** on the Reserve tab, like everyone else.
-4. **Post in raid chat** tells everyone how to reserve, addon or not.
-5. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't.
-6. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
+3. **Extra reserves** for tanks, healers or anyone: on the Session tab (or a player's line on the Reserves tab), pick the players and how many more they get. `!lr` tells players without the addon how many they have.
+4. **Reserve yourself** on the Reserve tab, like everyone else.
+5. **Post in raid chat** tells everyone how to reserve, addon or not.
+6. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't.
+7. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
 
 Already used softres.it? **Import from softres.it** brings in its "Gargul Export".
 
@@ -95,6 +96,8 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 - **Trade announcements:** while you're running loot, a line in raid chat says what you traded and to whom ("Traded [item] to Ann for 150g."), so nobody wonders where an item went. You can turn it off.
 - **Export** who won what, to paste into a spreadsheet, thatsmybis or a DFT sheet, or **post it in raid chat** so everyone (addon or not) sees the list.
 
+**Past raids:** when a session ends, what it gave out is kept (the last 30 raids, on each character that was there), under **Past raids** on the Loot tab or `/lr history`: the loot list, the export, and a GDKP's payouts. In a GDKP, the loot panel says what an item sold for before.
+
 **Your reserves where you see items:** the game's own loot window and need/greed windows glow on items you reserved, and every item tooltip (bags, chat links, loot windows) says who reserved it and who it went to. Both can be turned off.
 
 **Auto-roll:** your own rules for roll windows (Settings tab). "Always pass on this item", "always roll main spec on that one", and "pass on anything my class can't use". Shift-click a roll window's dice, coin or x to make it a rule. LootRuler rolls or passes for you and says so.
@@ -108,10 +111,12 @@ Turn on **GDKP auctions** for a session (Session tab) and every item is auctione
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/34-payouts.png" alt="The payouts" width="40%">
 </p>
 
-- **Auctions:** the loot master clicks an item, or **Auction them all** to put every item up one after another. The raid is told where bids start and by how much each must go up. Players bid by **typing an amount in raid chat** ("150", "150g", "1.5k"), by whispering `!lr bid 150`, or by clicking one of the two bids in their auction window. A bid in the last few seconds gives everyone a few more. A bid that's too low doesn't count, and its bidder is told the lowest that would.
+- **Auctions:** the loot master clicks an item, or **Auction them all** to put every item up one after another. The raid is told where bids start and by how much each must go up. Players bid by **typing an amount in raid chat** ("150", "150g", "1.5k"), by whispering `!lr bid 150`, or by clicking one of the two bids in their auction window. A bid in the last few seconds gives everyone a few more. A bid that's too low doesn't count, and its bidder is told the lowest that would. If people chat numbers during auctions, switch on **Bids start with "bid"**: then only "bid 150" counts, not "150".
+- **Max bids:** "bid for me up to 800g". Shift-click a bid in the auction window, type `/lr max 800`, or (without the addon) whisper the leader `!lr max 800`. LootRuler bids for you as little as it takes to keep you on top, up to that, and nobody else sees your max. When two maxes meet, the higher one wins; equal ones go to whoever set theirs first.
 - **Sold:** the highest bid when time is up buys the item, which goes to them through master loot (or is marked for a trade). Nobody bids: it stays on the Loot tab to roll out or disenchant later, and the next item comes up. A hard reserve still comes first.
 - **Prices:** where bids start and the least raise, for the whole raid, and a different start for any item you like.
-- **The pot:** the organiser's cut (0 to 20%), bonuses for anyone you like (tanks, healers), and an even split between everyone who was in the group, plus anyone who bought something. Anyone can be left out of the split.
+- **The pot:** the organiser's cut (0 to 20%), a cut for each tank and each healer (a percent of the pot each; pick who on the GDKP panel's **Tanks and healers**), bonuses for anyone you like, and an even split between everyone who was in the group, plus anyone who bought something. Anyone can be left out of the split.
+- **Ending the raid:** while anyone still owes gold or is owed some, ending the session asks first. Either keep it open (it stays for a week), or end it: it's kept under **Past raids**, where the payouts can be finished, and trades with them still count for two weeks.
 - **Payouts:** addons can't put gold in a trade, so when the organiser opens a trade LootRuler says what to give or take, and counts the gold that changes hands. **Tell the raid** posts the pot in raid chat; **Whisper everyone** tells each player what they owe or are owed; `!lr pot` asks for it.
 
 ## For guilds
@@ -144,7 +149,7 @@ The loot master (or the raid leader, or an assistant) needs LootRuler; raiders d
 
 Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
 
-`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr guild` opens the Guild tab, `/lr settings` opens the Settings tab (every option, each saying what it does), `/lr help` lists the commands, `/lr minimap` hides or shows the minimap button.
+`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr history` past raids, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr guild` opens the Guild tab, `/lr settings` opens the Settings tab (every option, each saying what it does), `/lr help` lists the commands, `/lr minimap` hides or shows the minimap button.
 
 ## How it's checked
 
