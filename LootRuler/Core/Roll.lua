@@ -8,6 +8,9 @@
 --         won this item doesn't count again
 --   OPEN  nobody here reserved it: /roll (1-100) for main spec beats /roll 99 for off spec
 --   TIE   the highest rolls were equal: just those players roll again, the same way they rolled before
+--   PR    on the guild's priority list (the session uses them): the best priority here gets it; when several
+--         share it, just they roll (/roll, 1-100), and one alone gets it with no roll (who: names, n: the
+--         priority)
 -- Each player's first roll that counts is the one that counts.
 --
 -- The +1 rule (when the session has it on): every item won on a main spec roll is a +1, and among main spec
@@ -28,6 +31,7 @@ R.WHY = {
   range = "wrong roll",
   notReserved = "didn't reserve it",
   notTied = "wasn't in the tie",
+  notFirst = "isn't first on the priority list",
   hard = "it's hard reserved",
 }
 
@@ -89,6 +93,7 @@ function R.canRoll(roll, player)
   if roll.mode == "HR" then return false, "hard" end
   if roll.mode == "SR" and not inList(roll.who, player) then return false, "notReserved" end
   if roll.mode == "TIE" and not inList(roll.who, player) then return false, "notTied" end
+  if roll.mode == "PR" and not inList(roll.who, player) then return false, "notFirst" end
   return true
 end
 
@@ -98,6 +103,7 @@ function R.options(roll, player)
   if roll.mode == "OPEN" then return R.boostRange(roll, player) and { "MS", "BR", "OS" } or { "MS", "OS" } end
   if roll.mode == "SR" then return { "SR" } end
   if roll.mode == "TIE" then return { roll.tie } end
+  if roll.mode == "PR" then return { "MS" } end
   return {}
 end
 
@@ -166,7 +172,7 @@ end
 
 --- everyone who may roll and hasn't rolled or passed yet (only known for SR and TIE rolls)
 function R.waiting(roll)
-  if roll.mode ~= "SR" and roll.mode ~= "TIE" then return nil end
+  if roll.mode ~= "SR" and roll.mode ~= "TIE" and roll.mode ~= "PR" then return nil end
   local out = {}
   for _, w in ipairs(roll.who) do
     local name = type(w) == "table" and w[1] or w

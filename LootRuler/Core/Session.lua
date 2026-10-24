@@ -20,6 +20,8 @@
 --   de       the disenchanter ("Name-Realm"): items nobody wants go to them. Their awards are kind "OS" with
 --            de = true, so versions that don't know about disenchanting still read them.
 --   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
+--   prio     the guild's priority lists decide loot: "both" (priority lists first, then reserves) or "only"
+--            (no reserves); nil: reserves only
 --   boost    boosted rolls are on: guild members roll with their guild points added (Core/Book.lua)
 --   po       +1 changes the leader made by hand: "Name-Realm" -> number (added to the counted ones)
 --   drops    every item that dropped while the session was open, in order (Core/Drops.lua):
@@ -44,6 +46,7 @@ S.WHY = {
   DUPLICATE = "You can only reserve an item once in this raid.",
   NOT_RESERVED = "You haven't reserved that item.",
   BAD_COUNT = "That's not a number of reserves this addon allows.",
+  PRIO_ONLY = "This raid goes by the guild's priority lists, not reserves.",
 }
 
 --- a new session. raidKey: a built-in raid, or LR.CUSTOM with name (a raid that isn't in the lists).
@@ -87,6 +90,7 @@ end
 --- Returns true (changed or not), or false and the reason.
 function S.set(s, player, class, items, byLeader, now)
   if s.locked and not byLeader then return false, "LOCKED" end
+  if s.prio == "only" and #items > 0 and not byLeader then return false, "PRIO_ONLY" end
   local ok, why, id = S.check(s, items)
   if not ok then return false, why, id end
   local cur = s.res[player]
@@ -106,6 +110,7 @@ end
 function S.add(s, player, class, id, byLeader, now)
   local items = U.copy(S.reservesOf(s, player))
   if s.locked and not byLeader then return false, "LOCKED" end
+  if s.prio == "only" and not byLeader then return false, "PRIO_ONLY" end
   if not LR.allowedItem(s, id) then return false, "NOT_IN_RAID", id end
   if s.hr[id] then return false, "HARD_RESERVED", id end
   if #items >= s.sr then return false, "TOO_MANY", id end
@@ -278,6 +283,15 @@ function S.setPlusOne(s, on, now)
   return true
 end
 
+--- how loot is decided: nil (reserves), "both" (the guild's priority lists, then reserves) or "only"
+function S.setPrio(s, mode, now)
+  if mode ~= "both" and mode ~= "only" then mode = nil end
+  if s.prio == mode then return false end
+  s.prio = mode
+  bump(s, now)
+  return true
+end
+
 --- whether boosted rolls are on (players with guild points can roll 1+points to 100+points on main spec)
 function S.setBoost(s, on, now)
   on = on and true or false
@@ -403,6 +417,8 @@ function S.valid(t)
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
+  -- (a way of deciding loot this version doesn't know is kept, and treated as reserves)
+  if t.prio ~= nil and (type(t.prio) ~= "string" or #t.prio > 12) then return false end
   if t.po ~= nil then
     if type(t.po) ~= "table" then return false end
     for name, n in pairs(t.po) do if type(name) ~= "string" or type(n) ~= "number" then return false end end

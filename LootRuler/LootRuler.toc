@@ -21,6 +21,7 @@ Core\Util.lua
 Core\Loot.lua
 Core\Session.lua
 Core\Book.lua
+Core\Prio.lua
 Core\Roll.lua
 Core\Gargul.lua
 Core\Net.lua

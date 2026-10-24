@@ -77,9 +77,21 @@ end
 function Guild.setEditRank(rank)
   if not LR.isGuildMaster() then return false end
   local book = LR.book()
-  book.editRank, book.et = rank, U.now()
+  book.editRank, book.et = rank, B.stamp({ t = book.et }, U.now())
   Guild.share({ editRank = book.editRank, et = book.et })
   return true
+end
+
+---------------------------------------------------------------------- priority lists
+--- how an item is rolled for by the guild's priority lists: { mode = "PR", who = the best priority here
+--- (names), n = that priority }, or nil when nobody on its list is here
+function Guild.prioPlan(id)
+  local book = LR.book()
+  if not book then return nil end
+  local here = U.map(LR.roster(), function(m) return m.name end)
+  local first, n = B.first(book, id, here)
+  if #first == 0 then return nil end
+  return { mode = "PR", who = first, n = n, away = {} }
 end
 
 ---------------------------------------------------------------------- raid points

@@ -303,6 +303,7 @@ end
 function LR.setDisenchanter(s, player) if S.setDisenchanter(s, player, U.now()) then leaderChanged(s) end end
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end
+function LR.setSessionPrio(s, mode) if S.setPrio(s, mode, U.now()) then leaderChanged(s) end end
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGuild(s, guild)

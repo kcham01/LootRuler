@@ -216,6 +216,25 @@ function UI.reserveView(f, s)
     noSession(f)
     return browse(f)
   end
+  if s.prio == "only" then
+    f:panel("Priority lists", function(p)
+      p:text(LR.raidOf(s).name .. " goes by the guild's priority lists, not reserves: nobody reserves anything.")
+      local book = LR.book()
+      local mine = book and LR.Book.prioOf(book, U.me()) or {}
+      if #mine == 0 then p:note("You're not on any priority list. The Guild tab has them.")
+      else
+        for _, x in ipairs(mine) do
+          local b = K.get(p.owner, "item", p.parent)
+          K.setItem(b, p.width, LR.itemIcon(x[1]), LR.coloredName(x[1]), "You're " .. LR.Prio.place(x[2]) .. ": " .. UI.prioLine(LR.Book.prio(book, x[1]), 4))
+          b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, x[1]) end)
+          b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+          p:place(b, 36)
+          p:gap(2)
+        end
+      end
+    end)
+    return
+  end
   myReserves(f, s)
   f:chips({
     not LR.raidOf(s).custom and { label = "For my class", on = UI.usable, click = function() UI.usable = not UI.usable LR.db.ui.usable = UI.usable UI.render() end,

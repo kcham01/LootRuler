@@ -118,7 +118,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   counts if the game's guild list says its sender's rank may edit; only the guild master changes who may.
 - **Boosted rolls** are kind `BR` in a roll (a main spec roll moved up by the player's points, `roll.bp`), and an
   award of kind `MS` with `br = true` on the session, so older versions read it as main spec.
-- **Next:** priority lists (the book already has `prio`, `B.first`, `B.received`), then GDKP.
+- **Priority lists** are roll mode `PR` (`Guild.prioPlan`): the best place here gets the item with no roll (like
+  `HR`), or the players sharing it roll. Sessions choose with `s.prio` (nil, "both", "only"). Formats in and out
+  are in `Core/Prio.lua` (Gargul's CSV, DFT, thatsmybis).
+- **Next:** GDKP (auctions, the pot, payouts). Mind design rule 4: off until a leader turns it on.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
@@ -157,9 +160,9 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 
 **Guild features**
 - [x] Boosted rolls: attendance points that raise a roll's range (and the guild book they live in)
-- [ ] Priority lists managed in the game (like DFT): officers edit, kept between raids and shared with the
+- [x] Priority lists managed in the game (like DFT): officers edit, kept between raids and shared with the
       guild, update themselves when items are won, `!lr prio` for players without the addon, DFT/TMB import
-      and export, and loot rules chosen per session (reserves, priority, or both)
+      and export, and loot rules chosen per session (reserves, priority, or both; `Core/Prio.lua`)
 
 **GDKP**
 - [ ] Auctions (bid in the addon or by typing an amount in raid chat), prices, a queue, the pot with cuts and

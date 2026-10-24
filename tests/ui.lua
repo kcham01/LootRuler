@@ -638,6 +638,76 @@ run("the guild and boosted rolls", function()
   LR.UI.go("reserve")
 end)
 
+run("priority lists", function()
+  local function edits()
+    local boxes = {}
+    local function walkEdits(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() then boxes[#boxes + 1] = c end walkEdits(c) end end
+    walkEdits(LR.UI.topSheet())
+    return boxes
+  end
+  local function type(box, text) box:SetText(text) box._scripts.OnTextChanged(box, true) srv:tick(0.3) end
+  LR.UI.go("guild")
+  check("the Guild tab has priority lists", visible("Priority lists") and visible("Add an item") and visible("Bring in"))
+  clickText("Add an item")
+  type(edits()[1], "signet of unsh")
+  check("search any raid's loot for the item", visible("Signet of Unshakable Faith"))
+  M.click(rowFor("Signet of Unshakable Faith"))
+  srv:tick(0.3)
+  check("its list opens", visible("Priority list") and visible("Add a player"))
+  -- the boxes by their width: the name, the place, the note
+  local function box(w) for _, e in ipairs(edits()) do if math.abs(e:GetWidth() - w) < 1 then return e end end end
+  local wide = 0
+  for _, e in ipairs(edits()) do wide = math.max(wide, e:GetWidth()) end
+  type(box(150), "Ann")
+  type(box(50), "1")
+  type(box(wide), "tank set")
+  clickText("Add")
+  type(box(150), "Lead")
+  clickText("Add")
+  srv:tick(1)
+  local list = LR.Book.prio(LR.book(), 28525)
+  check("players go on the list, and it's shared", #list == 2 and list[1].p == "Ann-Dreamscythe" and list[1].note == "tank set" and list[2].n == 2
+    and #ann.LR.Book.prio(ann.LR.book(), 28525) == 2)
+  check("each with their place", visible("1st") and visible("2nd") and visible("tank set"))
+  shot("priority-list")
+  clickText("Done")
+  clickText("Bring in")
+  type(edits()[1], "28530,Ann|Lead,Bob\n28528,Lead")
+  check("it reads what's pasted, and says what it found", visible("Gargul's CSV: 2 items, 4 places on them."))
+  clickText("Bring them in")
+  srv:tick(1)
+  check("the lists are in", #LR.Book.prio(LR.book(), 28530) == 3 and #LR.Book.prio(LR.book(), 28528) == 1)
+  srv:tick(4)
+  check("the Guild tab lists them", visible("Brooch of Unquenchable Fury") and visible("1. Ann, Lead, 2. Bob"))
+  shot("guild-priority")
+  local s6 = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  LR.UI.go("session")
+  check("the Session tab asks what loot goes by", visible("Loot goes by:") and visible("Priority lists, then reserves"))
+  clickText("Priority lists, then reserves")
+  srv:tick(1)
+  check("priority lists, then reserves", s6.prio == "both" and ann.LR.current().prio == "both")
+  LR.Rolls.start(28530, {})
+  srv:tick(0.5)
+  local fr
+  for _, x in ipairs(ann.LR.UI.rollFrames()) do if x:IsShown() and x.copy and x.copy.id == 28530 then fr = x end end
+  check("Ann shares first place with Lead: her window lets her roll", fr and fr.dice:IsEnabled() and fr.status:GetText():find("You're 1st on the priority list", 1, true), fr and fr.status:GetText())
+  shot("priority-roll", ann, { fr:GetName() })
+  LR.Rolls.cancel()
+  srv:tick(1)
+  clickText("Priority lists only")
+  check("switching to priority lists only asks first when there are reserves", s6.prio == "only" or visible("Switch"))
+  if visible("Switch") then clickText("Switch") end
+  srv:tick(1)
+  ann.LR.UI.show("reserve")
+  srv:tick(0.3)
+  check("raiders see their places instead of reserves", visible("goes by the guild's priority lists, not reserves", ann) and visible("You're 1st", ann))
+  ann.LR.UI.win:Hide()
+  LR.endSession(s6)
+  srv:tick(1)
+  LR.UI.go("reserve")
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)

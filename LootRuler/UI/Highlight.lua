@@ -65,6 +65,10 @@ function UI.tooltipLines(s, id)
   for _, w in ipairs(S.winners(s, id)) do
     out[#out + 1] = { "LootRuler: given to " .. U.short(w[1]), 0.12, 1, 0 }
   end
+  -- the guild's priority list, when the session goes by them
+  local book = s.prio and LR.book and LR.book()
+  local list = book and LR.Book.prio(book, id)
+  if list and #list > 0 then out[#out + 1] = { "LootRuler: priority " .. UI.prioLine(list, 5), 0.12, 1, 0 } end
   return out
 end
 

@@ -93,6 +93,8 @@ local function howTo(roll, link, secs)
     return ("%s is soft reserved by %s: only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   elseif roll.mode == "TIE" then
     return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), roll.tie == "OS" and "/roll 99" or "/roll", t)
+  elseif roll.mode == "PR" then
+    return ("%s: %s share the top priority, so only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   end
   local away = #roll.away > 0 and (" (Reserved by %s, who isn't here.)"):format(R.names(roll.away, 3)) or ""
   local po = roll.po and next(roll.po) and " Main spec: anyone with a +1 rolls after those without." or ""
@@ -132,7 +134,7 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp }
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, pn = roll.mode == "PR" and roll.n or nil }
 end
 
 ---------------------------------------------------------------------- the loot master's roll
@@ -190,6 +192,13 @@ function Rolls.start(id, opts)
     if s then plan.away = R.plan(s, id, LR.roster()).away end
   else
     plan = R.plan(s, id, LR.roster())
+    -- the guild's priority lists, when the session goes by them: the best priority here gets it (a hard
+    -- reserve still comes first); with "only", reserves don't count
+    if s and s.prio and plan.mode ~= "HR" then
+      local pr = LR.Guild and LR.Guild.prioPlan(id)
+      if pr then pr.away = plan.away plan = pr
+      elseif s.prio == "only" then plan = R.plan(nil, id, LR.roster()) end
+    end
   end
   -- the +1 rule: everyone's +1s as the roll starts
   if s and s.plusOne then plan.po = S.plusOneTable(s, U.map(LR.roster(), function(m) return m.name end)) end
@@ -219,6 +228,14 @@ function Rolls.start(id, opts)
   if roll.mode == "HR" then
     roll.state = "closed"
     roll.ends = now()
+    changed()
+    return roll
+  end
+  -- first on the priority list, alone: no roll, it's theirs
+  if roll.mode == "PR" and #roll.who == 1 then
+    roll.state = "closed"
+    roll.ends = now()
+    say(("%s: %s is first on the priority list, so it goes to them."):format(roll.link, U.short(roll.who[1])), true)
     changed()
     return roll
   end
@@ -378,6 +395,16 @@ function Rolls.award(player, kind, n, de)
   local s = session()
   record(s, roll.id, player, kind, n, roll.drop, de)
   sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop, de = de or nil })
+  -- the guild's priority lists: whoever gets an item comes off its list (not the disenchanter)
+  local book = not de and s and s.prio and LR.book and LR.book()
+  if book and R.inList(U.map(LR.Book.prio(book, roll.id), function(x) return x.p end), player) then
+    if LR.canEditBook() then
+      LR.Guild.edit(function(b, t) return LR.Book.received(b, roll.id, player, t) end)
+      note = (note and (note .. " ") or "") .. ("%s comes off its priority list."):format(U.short(player))
+    else
+      note = (note and (note .. " ") or "") .. ("Ask an officer to take %s off its priority list: you can't change the lists."):format(U.short(player))
+    end
+  end
   -- won with a boosted roll: the points are spent (by whoever may change the guild book)
   if kind == "BR" then
     local spent = (roll.bp and roll.bp[R.key(player)]) or (roll.boosted and roll.boosted[R.key(player)]) or 0
@@ -411,13 +438,14 @@ end
 --- a roll from the loot master (or our own): start or update our copy and show its window
 function Rolls.follow(msg, sender)
   if type(msg.k) ~= "string" or type(msg.id) ~= "number" or type(msg.s) ~= "number" or type(msg.left) ~= "number" then return end
-  if msg.m ~= "OPEN" and msg.m ~= "SR" and msg.m ~= "TIE" then return end
+  if msg.m ~= "OPEN" and msg.m ~= "SR" and msg.m ~= "TIE" and msg.m ~= "PR" then return end
   local copy = Rolls.seen[msg.k]
   if not copy then
     local who = {}
     -- who may roll: names, or { name, reserves } on a reserved item
     if type(msg.w) == "table" then
-      for _, w in ipairs(msg.w) do
+      for i, w in ipairs(msg.w) do
+        if i > 40 then break end
         if type(w) == "string" then who[#who + 1] = w
         elseif type(w) == "table" and type(w[1]) == "string" then who[#who + 1] = { w[1], tonumber(w[2]) or 1 } end
       end
@@ -443,7 +471,8 @@ function Rolls.follow(msg, sender)
         if type(name) == "string" and type(c) == "number" and c > 0 and c <= LR.Book.MAX_POINTS then bp[name:lower()] = math.floor(c) end
       end
     end
-    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil) })
+    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil),
+      n = msg.m == "PR" and tonumber(msg.pn) or nil })
     copy.by = sender
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"

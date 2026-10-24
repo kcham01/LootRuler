@@ -148,6 +148,18 @@ local function manage(f, s)
     }, "left")
   end)
 
+  if s.prio or UI.prioAvailable() then
+    f:panel("Priority lists", function(p)
+      p:chips(UI.prioChips(s.prio, function(mode)
+        if mode == "only" and next(s.res) then
+          UI.confirm("Priority lists only", "Reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Switch", function() LR.setSessionPrio(s, mode) end)
+        else LR.setSessionPrio(s, mode) end
+      end), { gap = 4 })
+      for _, m in ipairs(UI.PRIO_MODES) do if m[1] == s.prio then p:note(m[3]) end end
+      if s.prio then p:note("The lists are the guild's (Guild tab). Whoever gets an item comes off its list. Raiders without the addon can whisper you \"!lr prio\".") end
+    end)
+  end
+
   if s.boost and UI.boostOn() then
     f:panel("Boosted rolls", function(p)
       local book = LR.book()
@@ -239,6 +251,9 @@ local function newSession(f)
       d.raid ~= LR.CUSTOM and { label = (d.any and "[x] " or "[  ] ") .. "Any item", on = d.any, click = function() d.any = not d.any UI.render() end,
         tip = "Lets people reserve any item, not just the raid's loot: for loot LootRuler's lists don't have yet." } or false,
     })
+    if UI.prioAvailable() then
+      p:chips(UI.prioChips(d.prio, function(mode) d.prio = mode UI.render() end), { gap = 4 })
+    end
     if IsInGroup() and not UnitIsGroupLeader("player") then
       p:note("You're not the group leader. That's fine if you're running loot, but make sure only one of you opens reserves.", K.GOLD)
     end
@@ -248,6 +263,7 @@ local function newSession(f)
       local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)
       if d.plusOne then LR.setPlusOne(s, true) end
       if d.boost and UI.boostOn() then LR.setSessionBoost(s, true) end
+      if d.prio and UI.prioAvailable() then LR.setSessionPrio(s, d.prio) end
       UI.toast(("%s reserves are open."):format(LR.raidOf(s).name))
       UI.render()
     end } })

@@ -9,7 +9,7 @@ end
 local LR = {}
 local env = setmetatable({ bit = require("bit"), GetRealmName = function() return "Dreamscythe" end,
   GetNormalizedRealmName = function() return "Dreamscythe" end, RAID_CLASS_COLORS = {} }, { __index = _G })
-for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua" }) do
+for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua", "Core/Prio.lua" }) do
   local chunk = assert(loadfile("LootRuler/" .. f))
   setfenv(chunk, env)
   chunk("LootRuler", LR)
@@ -230,6 +230,49 @@ check("nobody on the list here: a free roll", #B.first(book, WATCH, { CARA }) ==
 check("someone who gets the item comes off its list", B.received(book, WATCH, BOB, 71) and #B.prio(book, WATCH) == 2
   and B.received(book, WATCH, CARA, 72) == nil)
 check("everything a player has priority on", #B.prioOf(book, ANN) == 1 and B.prioOf(book, ANN)[1][1] == WATCH)
+
+print("== priority lists in and out")
+local P = LR.Prio
+local lists, kind = P.parse("28525,ann,bob|cara,dan\n28530,Bob-Faerlina[1],Ann[3]\n\nnot a line")
+check("Gargul's CSV, in order, with a shared place", kind == "Gargul's CSV" and #lists[28525] == 4 and lists[28525][1].p == "Ann" and lists[28525][1].n == 1
+  and lists[28525][2].n == 2 and lists[28525][3].p == "Cara" and lists[28525][3].n == 2 and lists[28525][4].n == 3)
+check("and numbered, with realms", lists[28530][1].p == "Bob-Faerlina" and lists[28530][2].n == 3)
+lists, kind = P.parse('"28525^Signet of Unshakable Faith\n1|cffc41e3aAnn|r: :1|\n2|cff3fc7ebBob|r: :2|;28530^Brooch\nFree Roll\n;32386^Head\n1|cffffffffDan|r: :1|"')
+check("DFT's export (Free Roll items left out)", kind == "DFT" and lists[28525] and lists[28525][1].p == "Ann" and lists[28525][2].n == 2 and not lists[28530]
+  and lists[32386][1].p == "Dan", kind)
+local tmbJSON = '{"wishlists":{"28525":["ann|1|1|0","bob|2|1|0","cara|1|2|0"],"28530":["dan|1|2|0"]}}'
+lists, kind = P.parse(tmbJSON)
+check("thatsmybis: its priorities, not its wishlists", kind == "thatsmybis" and #lists[28525] == 2 and lists[28525][2].p == "Bob" and not lists[28530])
+lists = P.parse('{"wishlists":{"28530":["dan|1|2|0"]}}')
+check("only wishlists: those", lists and lists[28530][1].p == "Dan")
+lists = P.parse(U.b64encode("packed:" .. tmbJSON), function(raw) return raw:match("^packed:(.*)$") end)
+check("thatsmybis compressed", lists and #lists[28525] == 2)
+local none, why = P.parse("hello there")
+check("anything else isn't a list", none == nil and why:find("isn't a priority list", 1, true) ~= nil)
+check("an empty paste", P.parse("  ") == nil and P.parse("28525,") == nil)
+check("names that can't be names are left out", (P.parse("28525,ann bob,|cff00ff00Cara|r,,x[y]") or {})[28525] and #P.parse("28525,ann bob,|cff00ff00Cara|r,,x[y]")[28525] == 1)
+local pbook = B.new("Night Watch")
+B.setPrio(pbook, 99999, { { p = ANN, n = 1 } }, 1)
+local change = P.apply(pbook, P.parse("28525,ann,bob|cara"), 5, true)
+check("bringing lists in replaces them, and clears others when asked", #B.prio(pbook, 28525) == 3 and #B.prio(pbook, 99999) == 0
+  and change.prio[99999] and change.prio[28525] and B.valid(change))
+check("names get this realm", B.prio(pbook, 28525)[1].p == ANN)
+local out = P.export(pbook, "gargul")
+check("out as Gargul's CSV", out == "28525,Ann[1],Bob[2],Cara[2]", out)
+check("which reads back the same", #P.parse(out)[28525] == 3 and P.parse(out)[28525][3].n == 2)
+out = P.export(pbook, "sheet", function() return "Signet, of Faith" end)
+check("out for a spreadsheet", out:find("^Item ID,Item,Player,Priority,Note\n28525,\"Signet, of Faith\",Ann,1,") ~= nil, out)
+check("places", P.place(1) == "1st" and P.place(2) == "2nd" and P.place(3) == "3rd" and P.place(4) == "4th" and P.place(11) == "11th" and P.place(22) == "22nd")
+
+print("== a priority roll")
+roll = R.new("k12", 28525, { mode = "PR", who = { BOB, DAN }, n = 2 })
+check("only the players who share the top place roll", table.concat(R.options(roll, BOB), ",") == "MS" and #R.options(roll, ANN) == 0
+  and select(2, R.canRoll(roll, ANN)) == "notFirst")
+R.add(roll, ANN, 99, 1, 100)
+R.add(roll, BOB, 40, 1, 100)
+good, bad = R.standings(roll)
+check("anyone else's roll doesn't count", #good == 1 and good[1].p == BOB and bad[1].why == "notFirst")
+check("who still has to roll", #R.waiting(roll) == 1 and R.waiting(roll)[1] == DAN)
 
 print("== boosted rolls")
 local plan = R.plan(nil, 28525, roster)

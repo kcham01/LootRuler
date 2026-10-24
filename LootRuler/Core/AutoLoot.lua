@@ -68,6 +68,8 @@ end
 local function spokenFor(s, id)
   if not s then return false end
   if s.hr[id] then return true end
+  -- someone here is on the guild's priority list for it (when the session goes by them)
+  if s.prio and LR.Guild and LR.Guild.prioPlan(id) then return true end
   for _, w in ipairs(S.byItem(s)[id] or {}) do if S.claims(s, w[1], id) > 0 then return true end end
   return false
 end
