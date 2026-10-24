@@ -144,6 +144,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Alts** (`book.alts`: alt -> { m = main or "", t }): `B.points`/`B.setPoints` go through `B.mainOf`, so an alt rolls
   with and spends its main's points; raid points go to each main once. Linking an alt takes its own alts along.
   Older versions don't know links (an alt shows its own points there). Gargul's "Name,Points,Alt,Alt" keeps them.
+- **softres.it imports** (`Gargul.importInto`): the session remembers what the last import brought (`s.sx`, `s.hx`),
+  so importing an updated sheet replaces those (swaps, removals) and leaves reserves made in LootRuler alone; an
+  item reserved in both places counts once. (Before this, re-importing skipped changed picks: the old ones stayed.)
 - **From Gargul:** +1s and boosted roll points as "Name,Number" lines (`Prio.parseCounts`, `Prio.countsText`), read
   straight from a loaded Gargul (`Gargul.counts`, its own export) or pasted. +1s set with `S.setPlusOnes`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has

@@ -53,7 +53,7 @@ local function importSheet(s)
   local text = ""
   UI.openSheet("Bring in reserves from softres.it", function(f, h)
     f:text("On softres.it, open the raid and click |cffffd100Gargul Export|r, copy what it shows, and paste it here (Ctrl+V).")
-    f:note("The reserves are added to this session; items that don't drop in " .. LR.raidOf(s).name .. " are skipped, and so are reserves past the limit.")
+    f:note("The sheet's reserves are added to this session's. Import again whenever the sheet changes: the reserves from the sheet are updated to match it, and reserves made in LootRuler stay. Items that don't drop in " .. LR.raidOf(s).name .. " are skipped, and so are reserves past the limit.")
     local e = K.get(f.owner, "edit", f.parent)
     f:place(e, 22, 6, f.width - 12)
     e:SetText(text)
@@ -63,8 +63,13 @@ local function importSheet(s)
       local sum, err = LR.Gargul.importInto(s, text)
       if not sum then UI.toast(err) return end
       h.close()
-      local msg = ("Added %s for %s"):format(U.plural(sum.items, "reserve"), U.plural(sum.players, "player"))
+      local msg = ("From softres.it: %s for %s"):format(U.plural(sum.items, "reserve"), U.plural(sum.players, "player"))
+      local changes = {}
+      if sum.added > 0 then changes[#changes + 1] = sum.added .. " new" end
+      if sum.removed > 0 then changes[#changes + 1] = sum.removed .. " taken off" end
+      if #changes > 0 then msg = msg .. " (" .. table.concat(changes, ", ") .. ")" elseif sum.items > 0 then msg = msg .. " (no changes)" end
       if sum.hard > 0 then msg = msg .. (", %d hard reserved"):format(sum.hard) end
+      if sum.hardRemoved > 0 then msg = msg .. (", %d hard reserves taken off"):format(sum.hardRemoved) end
       if sum.skipped + sum.over > 0 then msg = msg .. ("; %d skipped"):format(sum.skipped + sum.over) end
       UI.toast(msg .. ".")
       LR.print(msg .. ".")

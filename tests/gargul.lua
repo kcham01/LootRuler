@@ -79,6 +79,40 @@ check("a softres.it export comes into a session", sum and sum.players == 2 and s
 check("items from other raids are skipped", sum and sum.skipped == 1)
 check("with classes", s2.res["Zed-Dreamscythe"] and s2.res["Zed-Dreamscythe"].c == "ROGUE")
 check("and hard reserves", s2.hr[28770] and s2.hr[28770].f == "Lead")
+
+print("== importing the sheet again, after it changed")
+local function pack(t) return U.b64encode((LibDeflate:CompressZlib(U.toJSON(t)))) end
+local function list(s, name) local o = U.copy(S.reservesOf(s, name)) table.sort(o) return table.concat(o, ",") end
+local s3 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+S.set(s3, "Ann-Dreamscythe", "PRIEST", { 28529 }, false, 1760000000)       -- Ann reserved one in LootRuler
+local sheet = {
+  metadata = { id = "x1", instance = "karazhan" },
+  softreserves = {
+    { name = "Zed", class = "rogue", items = { { id = 28528 }, { id = 28525 } } },
+    { name = "Ann", class = "priest", items = { { id = 28762 } } },
+    { name = "Cara", class = "druid", items = { { id = 28530 } } },
+  },
+  hardreserves = { { id = 28770, ["for"] = "Lead", note = "" } },
+}
+local r1 = LR.Gargul.importInto(s3, pack(sheet))
+check("first import: the sheet's reserves join Ann's own", r1.added == 4 and list(s3, "Ann-Dreamscythe") == "28529,28762" and list(s3, "Zed-Dreamscythe") == "28525,28528")
+local r2 = LR.Gargul.importInto(s3, pack(sheet))
+check("importing the same sheet again changes nothing", r2.added == 0 and r2.removed == 0 and list(s3, "Zed-Dreamscythe") == "28525,28528"
+  and list(s3, "Ann-Dreamscythe") == "28529,28762")
+sheet.softreserves[1].items = { { id = 28528 }, { id = 28767 } }               -- Zed swaps one
+sheet.softreserves[2].items = { { id = 28529 } }                               -- Ann picks the one she reserved in LootRuler
+table.remove(sheet.softreserves, 3)                                             -- Cara's gone from the sheet
+sheet.hardreserves = {}                                                         -- and the hard reserve
+S.setHR(s3, 30480, "", "", 1760000001)                                         -- (one set in LootRuler)
+local r3 = LR.Gargul.importInto(s3, pack(sheet))
+check("an updated sheet: Zed's swap comes through", list(s3, "Zed-Dreamscythe") == "28528,28767")
+check("Ann's own reserve stays, and the same item on the sheet counts once", list(s3, "Ann-Dreamscythe") == "28529")
+check("whoever left the sheet loses what it gave them", list(s3, "Cara-Dreamscythe") == "")
+check("hard reserves the sheet dropped come off; ones set in LootRuler stay", s3.hr[28770] == nil and s3.hr[30480] ~= nil)
+check("and it says what changed", r3.added == 1 and r3.removed == 3 and r3.hardRemoved == 1, ("%d %d %d"):format(r3.added, r3.removed, r3.hardRemoved))
+check("it's still a valid session", S.valid(s3))
+s3.sx = { ["Zed-Dreamscythe"] = "lots" }
+check("but not with nonsense in it", not S.valid(s3))
 local bad, err = LR.Gargul.importInto(s2, "this isn't an export")
 check("rubbish is refused with a reason", bad == nil and type(err) == "string")
 
