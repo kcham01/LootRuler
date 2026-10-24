@@ -28,9 +28,11 @@ function Server:find(name)
   end
 end
 
+Server.GUILD_RANKS = { "Guild Master", "Officer", "Veteran", "Member", "Initiate" }
+
 --- a player without the addon (they can whisper and be grouped)
 function Server:player(o)
-  local p = { name = o.name, realm = o.realm or "Dreamscythe", class = o.class or "WARRIOR", guild = o.guild,
+  local p = { name = o.name, realm = o.realm or "Dreamscythe", class = o.class or "WARRIOR", guild = o.guild, rank = o.rank,
     faction = o.faction or "Alliance", online = true, inbox = {}, client = false, bags = {}, tradeItems = {} }
   table.insert(self.players, p)
   return p
@@ -232,6 +234,34 @@ function Server:install(p)
   G.IsInGroup = function() return srv:inGroup(p) and true or false end
   G.IsInRaid = function() return srv:inGroup(p) and srv.group.raid or false end
   G.IsInGuild = function() return p.guild ~= nil end
+  -- the guild: ranks are numbered from 0 (the guild master); o.rank when the player was made (default 3)
+  local function guildmates()
+    local list = {}
+    for _, q in ipairs(srv.players) do if p.guild and q.guild == p.guild then list[#list + 1] = q end end
+    return list
+  end
+  G.GetGuildInfo = function(unit)
+    local q = unit == "player" and p or unitPlayer(unit)
+    if not q or not q.guild then return nil end
+    return q.guild, Server.GUILD_RANKS[(q.rank or 3) + 1], q.rank or 3, nil
+  end
+  G.GetNumGuildMembers = function()
+    if not p.guild then return 0, 0 end
+    local list, on = guildmates(), 0
+    for _, q in ipairs(list) do if q.online then on = on + 1 end end
+    return #list, on, on
+  end
+  G.GetGuildRosterInfo = function(i)
+    local q = guildmates()[i]
+    if not q then return nil end
+    return q.name .. "-" .. q.realm, Server.GUILD_RANKS[(q.rank or 3) + 1], q.rank or 3, 70, CLASS_NAME[q.class], "Shattrath City", "", "", q.online, 0, q.class
+  end
+  G.C_GuildInfo = { GuildRoster = function()
+    if p.guild then srv:deliver(function() if p.client then p.M.fire("GUILD_ROSTER_UPDATE", false) end end) end
+  end }
+  G.IsGuildLeader = function() return p.guild ~= nil and (p.rank or 3) == 0 end
+  G.GuildControlGetNumRanks = function() return p.guild and #Server.GUILD_RANKS or 0 end
+  G.GuildControlGetRankName = function(i) return p.guild and Server.GUILD_RANKS[i] or nil end
   G.GetNumGroupMembers = function() return srv:inGroup(p) and #srv.group.members or 0 end
   G.GetRaidRosterInfo = function(i)
     local q = srv:inGroup(p) and srv.group.members[i]

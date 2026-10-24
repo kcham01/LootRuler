@@ -84,6 +84,11 @@ function LR.loadDB()
   for id, action in pairs(db.settings.autoRollRules) do
     if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
   end
+  -- guild books: checked like a message from another player
+  db.guilds = type(db.guilds) == "table" and db.guilds or {}
+  for g, book in pairs(db.guilds) do
+    if type(g) ~= "string" or not LR.Book.validBook(book) then db.guilds[g] = nil end
+  end
   -- forget sessions nobody has touched for a week
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do
@@ -297,6 +302,7 @@ function LR.setLocked(s, locked)
 end
 function LR.setDisenchanter(s, player) if S.setDisenchanter(s, player, U.now()) then leaderChanged(s) end end
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
+function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGuild(s, guild)

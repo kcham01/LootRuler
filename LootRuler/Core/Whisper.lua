@@ -96,6 +96,17 @@ function W.handle(text, sender)
     return
   end
 
+  -- boosted rolls: what their guild points are, and how to roll with them
+  if lower == "points" or lower == "boost" then
+    local book = LR.book and LR.book()
+    if not (s.boost and book and book.boost.on) then W.reply(player, "This raid doesn't use boosted rolls.") return end
+    local n = LR.Book.points(book, player)
+    if n == 0 then W.reply(player, ("You have no points for boosted rolls yet. Each raid with %s is worth %d."):format(book.guild, book.boost.perRaid)) return end
+    local lo, hi = LR.Book.boostRange(n)
+    W.reply(player, ("You have %d points. For a boosted main spec roll, type /roll %d %d. If you win with it, the points are spent."):format(n, lo, hi))
+    return
+  end
+
   if lower == "clear" or lower == "remove all" then
     local ok, why = S.set(s, player, class, {}, false, now)
     if ok then LR.leaderChanged(s) W.reply(player, "Your reserves are cleared.") else W.reply(player, S.WHY[why]) end

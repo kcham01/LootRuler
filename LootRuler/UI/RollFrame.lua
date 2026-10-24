@@ -3,6 +3,8 @@
 -- who reserved it, whether you may roll, the highest roll so far, and who it went to.
 --   dice  main spec: /roll (1-100), or your reserve on a reserved item
 --   coin  off spec: /roll 99
+--   green dice  a boosted roll: /roll 1+points to 100+points, spending your guild points if you win (boosted
+--         rolls on, and you have points)
 --   x     pass
 -- Only what you may roll with can be clicked; the buttons just /roll, so the loot master's addon (or anyone
 -- reading chat) counts them like any other roll.
@@ -74,6 +76,8 @@ function UI.rollStatus(copy)
   if highest then return highest .. "." end
   local it = LR.ITEMS[copy.id]
   if it and not LR.usableBy(copy.id, LR.myClass()) then return "|cff9d9d9dYour class can't use this.|r" end
+  local lo = R.boostRange(copy, me())
+  if lo and copy.mode == "OPEN" then return ("Dice: main spec. Green dice: boosted (%d points). Coin: off spec."):format(lo - 1) end
   return "Dice: main spec. Coin: off spec."
 end
 
@@ -85,8 +89,9 @@ local function buttonsFor(copy)
   local rolledAlready = copy.rolled[R.key(me())] ~= nil or copy.passedByMe or copy.state ~= "open"
   local dice = (can.SR and "SR") or (can.MS and "MS") or (copy.mode == "TIE" and copy.tie ~= "OS" and can[copy.tie] and copy.tie) or false
   local coin = can.OS and "OS" or false
-  if rolledAlready then dice, coin = false, false end
-  return dice, coin
+  local boost = can.BR and "BR" or false
+  if rolledAlready then dice, coin, boost = false, false, false end
+  return dice, coin, boost
 end
 
 ---------------------------------------------------------------------- the frame
@@ -98,17 +103,26 @@ end
 local function rollButton(f, kind)
   local b = CreateFrame("Button", nil, f)
   b:SetSize(32, 32)
-  local up = kind == "dice" and "Interface\\Buttons\\UI-GroupLoot-Dice-Up" or "Interface\\Buttons\\UI-GroupLoot-Coin-Up"
+  local dice = kind ~= "coin"
+  local up = dice and "Interface\\Buttons\\UI-GroupLoot-Dice-Up" or "Interface\\Buttons\\UI-GroupLoot-Coin-Up"
   b.tex = b:CreateTexture(nil, "ARTWORK")
   b.tex:SetTexture(up)
   b.tex:SetAllPoints()
-  b:SetHighlightTexture(kind == "dice" and "Interface\\Buttons\\UI-GroupLoot-Dice-Highlight" or "Interface\\Buttons\\UI-GroupLoot-Coin-Highlight", "ADD")
-  b:SetPushedTexture(kind == "dice" and "Interface\\Buttons\\UI-GroupLoot-Dice-Down" or "Interface\\Buttons\\UI-GroupLoot-Coin-Down")
+  b:SetHighlightTexture(dice and "Interface\\Buttons\\UI-GroupLoot-Dice-Highlight" or "Interface\\Buttons\\UI-GroupLoot-Coin-Highlight", "ADD")
+  b:SetPushedTexture(dice and "Interface\\Buttons\\UI-GroupLoot-Dice-Down" or "Interface\\Buttons\\UI-GroupLoot-Coin-Down")
   b:SetMotionScriptsWhileDisabled(true)
   b.label = K.fs(b, "GameFontNormalSmall")
   b.label:SetJustifyH("RIGHT")
   b.label:SetJustifyV("MIDDLE")
   b.label:SetPoint("RIGHT", b, "LEFT", -1, 0)
+  if kind == "boost" then
+    b.tex:SetVertexColor(0.45, 1, 0.45)
+    -- the points, on the dice (there's no room beside it)
+    b.label:SetFontObject("GameFontNormalSmall")
+    b.label:ClearAllPoints()
+    b.label:SetPoint("BOTTOM", b, "BOTTOM", 0, 1)
+    b.label:SetJustifyH("CENTER")
+  end
   return b
 end
 
@@ -189,10 +203,12 @@ local function makeFrame(i)
   f.dice:SetPoint("TOPRIGHT", -37, -14)
   f.coin = rollButton(f, "coin")
   f.coin:SetPoint("TOP", f.dice, "BOTTOM", -2, 2)
-  for _, b in ipairs({ f.dice, f.coin }) do
+  f.boost = rollButton(f, "boost")
+  f.boost:SetPoint("RIGHT", f.dice, "LEFT", -2, 0)
+  for _, b in ipairs({ f.dice, f.coin, f.boost }) do
     b:SetScript("OnClick", function(self)
       if f.copy and self.kind then
-        if IsShiftKeyDown() then UI.alwaysDo(f.copy, self.kind == "OS" and "OS" or "MS") end
+        if IsShiftKeyDown() and self ~= f.boost then UI.alwaysDo(f.copy, self.kind == "OS" and "OS" or "MS") end
         LR.Rolls.roll(f.copy, self.kind)
         UI.rollWindows()
       end
@@ -201,7 +217,7 @@ local function makeFrame(i)
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       GameTooltip:SetText(self.tipTitle or "", 1, 1, 1)
       if self.tip then GameTooltip:AddLine(self.tip, 1, 0.82, 0, true) end
-      GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true)
+      if self ~= f.boost then GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true) end
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -255,11 +271,22 @@ local function fill(f, copy)
   f.item.icon:SetTexture(LR.itemIcon(copy.id))
   f.name:SetText("|cff" .. hex .. name .. "|r")
 
-  local dice, coin = buttonsFor(copy)
+  local dice, coin, boost = buttonsFor(copy)
   local opts = R.options(copy, me())
-  f.dice.kind, f.coin.kind = dice or nil, coin or nil
+  f.dice.kind, f.coin.kind, f.boost.kind = dice or nil, coin or nil, boost or nil
   setButton(f.dice, dice ~= false)
   setButton(f.coin, coin ~= false)
+  setButton(f.boost, boost ~= false)
+  -- the green dice: only for someone who has points, while the roll is open to everyone
+  local lo, hi = R.boostRange(copy, me())
+  local boosted = copy.mode == "OPEN" and lo ~= nil
+  f.boost:SetShown(boosted)
+  f.name:SetWidth(boosted and 86 or 98)
+  if boosted then
+    f.boost.label:SetText("+" .. (lo - 1))
+    f.boost.tipTitle = "Boosted roll"
+    f.boost.tip = ("/roll %d %d: main spec, with your %d guild points added. If you win, the points are spent."):format(lo, hi, lo - 1)
+  end
   f.coin:SetShown(copy.mode == "OPEN" or (copy.mode == "TIE" and copy.tie == "OS"))
   if copy.mode == "TIE" and copy.tie == "OS" then
     f.dice:Hide()
@@ -271,7 +298,8 @@ local function fill(f, copy)
     f.coin:SetPoint("TOP", f.dice, "BOTTOM", -2, 2)
   end
   local srMine = copy.mode == "SR" and #opts > 0
-  f.dice.label:SetText(srMine and "SR" or copy.mode == "SR" and "" or copy.mode == "TIE" and R.LABEL[copy.tie] or "MS")
+  -- (beside a green dice there's no room for the label: the line underneath says which is which)
+  f.dice.label:SetText(boosted and "" or srMine and "SR" or copy.mode == "SR" and "" or copy.mode == "TIE" and R.LABEL[copy.tie] or "MS")
   f.coin.label:SetText("OS")
   f.dice.tipTitle = srMine and "Roll for your reserve" or "Main spec"
   f.coin.tipTitle = "Off spec"
@@ -285,7 +313,7 @@ local function fill(f, copy)
   else
     f.dice.tip = "/roll" .. (srMine and ": only players who reserved it roll." or " (1-100).")
   end
-  if copy.rolled[R.key(me())] then f.dice.tip = "You've rolled." f.coin.tip = "You've rolled." end
+  if copy.rolled[R.key(me())] then f.dice.tip = "You've rolled." f.coin.tip = "You've rolled." f.boost.tip = "You've rolled." end
   f.status:SetText(UI.rollStatus(copy))
 end
 

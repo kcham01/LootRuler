@@ -19,6 +19,7 @@ end
 local function who(name, s) return U.classText(U.short(name), LR.classOf(name) or (s.res[name] and s.res[name].c)) end
 local function how(w)
   if w.de then return "to disenchant" end
+  if w.br then return "boosted roll" .. (w.r and (" " .. w.r) or "") end
   return w.k == "HR" and "hard reserved" or ((R.LABEL[w.k] or tostring(w.k)) .. (w.r and (" " .. w.r) or ""))
 end
 

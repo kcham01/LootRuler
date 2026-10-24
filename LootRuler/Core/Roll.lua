@@ -18,8 +18,10 @@ local U, S = LR.U, LR.Session
 local R = {}
 LR.Roll = R
 
-R.KINDS = { SR = { 1, 100, 1 }, MS = { 1, 100, 2 }, OS = { 1, 99, 3 } }   -- range low, high, and rank (lower wins)
-R.LABEL = { SR = "SR", MS = "MS", OS = "OS", HR = "HR" }
+R.KINDS = { SR = { 1, 100, 1 }, MS = { 1, 100, 2 }, OS = { 1, 99, 3 }, BR = { 1, 100, 2 } }   -- range low, high, rank (lower wins)
+R.LABEL = { SR = "SR", MS = "MS", OS = "OS", HR = "HR", BR = "BR" }
+-- BR, a boosted roll (guild points, Core/Book.lua): a main spec roll moved up by the player's points, 1+p to
+-- 100+p (roll.bp: name, lower case -> points). It ranks with main spec rolls, so the higher number wins.
 R.WHY = {
   late = "after the roll closed",
   again = "rolled again",
@@ -62,7 +64,14 @@ end
 --- a new roll (the loot master's, or a raider's copy of it)
 function R.new(k, id, plan)
   return { k = k, id = id, mode = plan.mode, who = plan.who or {}, away = plan.away or {}, f = plan.f, n = plan.n,
-    tie = plan.tie, po = plan.po, entries = {}, rolled = {}, passed = {} }
+    tie = plan.tie, po = plan.po, bp = plan.bp, entries = {}, rolled = {}, passed = {} }
+end
+
+--- a player's boosted roll range in a roll, or nil when they have no points
+function R.boostRange(roll, player)
+  local p = roll.bp and roll.bp[key(player)]
+  if not p or p <= 0 then return nil end
+  return 1 + p, 100 + p
 end
 
 --- a player's +1s in a roll (0 when the +1 rule is off)
@@ -71,7 +80,7 @@ function R.plusOnes(roll, player) return roll.po and roll.po[key(player)] or 0 e
 --- what a roll counts as, for people: "MS", "MS +1", "SR 2"...
 function R.label(roll, e)
   local l = R.LABEL[e.kind] or tostring(e.kind)
-  local po = e.kind == "MS" and R.plusOnes(roll, e.p) or 0
+  local po = (e.kind == "MS" or e.kind == "BR") and R.plusOnes(roll, e.p) or 0
   return po > 0 and (l .. " +" .. po) or l
 end
 
@@ -86,7 +95,7 @@ end
 --- the ranges a player may roll with: { kind, ... } (most wanted first)
 function R.options(roll, player)
   if not R.canRoll(roll, player) then return {} end
-  if roll.mode == "OPEN" then return { "MS", "OS" } end
+  if roll.mode == "OPEN" then return R.boostRange(roll, player) and { "MS", "BR", "OS" } or { "MS", "OS" } end
   if roll.mode == "SR" then return { "SR" } end
   if roll.mode == "TIE" then return { roll.tie } end
   return {}
@@ -97,8 +106,9 @@ local function kindOf(roll, player, lo, hi)
   local ok, why = R.canRoll(roll, player)
   if not ok then return nil, why end
   for _, kind in ipairs(R.options(roll, player)) do
-    local r = R.KINDS[kind]
-    if lo == r[1] and hi == r[2] then return kind end
+    local a, b = R.KINDS[kind][1], R.KINDS[kind][2]
+    if kind == "BR" then a, b = R.boostRange(roll, player) end
+    if lo == a and hi == b then return kind end
   end
   return nil, "range"
 end
@@ -127,7 +137,7 @@ function R.standings(roll)
   table.sort(good, function(a, b)
     local ra, rb = R.KINDS[a.kind][3], R.KINDS[b.kind][3]
     if ra ~= rb then return ra < rb end
-    if a.kind == "MS" then
+    if ra == 2 then              -- main spec and boosted: fewer +1s first
       local pa, pb = R.plusOnes(roll, a.p), R.plusOnes(roll, b.p)
       if pa ~= pb then return pa < pb end
     end
@@ -146,7 +156,7 @@ function R.result(roll)
   local tied = { top.p }
   for i = 2, #good do
     local e = good[i]
-    if e.kind == top.kind and e.n == top.n and (e.kind ~= "MS" or R.plusOnes(roll, e.p) == R.plusOnes(roll, top.p)) then
+    if R.KINDS[e.kind][3] == R.KINDS[top.kind][3] and e.n == top.n and (R.KINDS[e.kind][3] ~= 2 or R.plusOnes(roll, e.p) == R.plusOnes(roll, top.p)) then
       tied[#tied + 1] = e.p
     else break end
   end

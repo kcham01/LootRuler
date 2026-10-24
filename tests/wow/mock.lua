@@ -977,6 +977,15 @@ function M.env(player)
   G.GetMasterLootCandidate = function() return nil end
   G.GiveMasterLoot = function() end
   G.C_PartyInfo = { GetLootMethod = function() return 3 end }
+  -- the guild (none, unless the test or the server says so)
+  G.IsInGuild = G.IsInGuild or function() return false end
+  G.GetGuildInfo = function() return nil end
+  G.GetNumGuildMembers = function() return 0, 0 end
+  G.GetGuildRosterInfo = function() return nil end
+  G.C_GuildInfo = { GuildRoster = function() end }
+  G.IsGuildLeader = function() return false end
+  G.GuildControlGetNumRanks = function() return 0 end
+  G.GuildControlGetRankName = function() return nil end
   G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, msg) table.insert(M.chat, msg) end }
   M.chat = {}
   -- print() goes to the chat frame in game: keep it for the test to read

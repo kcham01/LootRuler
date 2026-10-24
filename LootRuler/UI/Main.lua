@@ -13,7 +13,7 @@ local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
 local win, top, view, tabsBar, toastFrame
-local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "settings", "Settings" } }
+local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" } }
 
 ---------------------------------------------------------------------- the window
 local function build()
@@ -189,6 +189,19 @@ function UI.render()
   local keep = lastTab == UI.tab and lastId == (s and s.id)
   lastTab, lastId = UI.tab, s and s.id
   drawTop(s)
+  -- the Guild tab is only there for guild members
+  if UI.tab == "guild" and not IsInGuild() then UI.tab = "settings" end
+  local shown = {}
+  for _, b in ipairs(tabsBar.buttons) do
+    b:SetShown(b.id ~= "guild" or IsInGuild())
+    if b:IsShown() then shown[#shown + 1] = b end
+  end
+  local tw = (WIDTH - 24 - (#shown - 1) * 4) / #shown
+  for i, b in ipairs(shown) do
+    b:SetWidth(tw)
+    b:ClearAllPoints()
+    b:SetPoint("LEFT", (i - 1) * (tw + 4), 0)
+  end
   for _, b in ipairs(tabsBar.buttons) do
     local on = b.id == UI.tab
     b:SetBackdropColor(on and 0.35 or 0.1, on and 0.27 or 0.08, on and 0.07 or 0.06, 1)
@@ -197,7 +210,7 @@ function UI.render()
   end
   K.release("view")
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
-  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, settings = UI.settingsView }
+  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, guild = UI.guildView, settings = UI.settingsView }
   local ok, err = pcall(screens[UI.tab], flow, s)
   if not ok then
     flow:text("|cffff5a4aSomething went wrong drawing this screen:|r " .. tostring(err), { font = "GameFontHighlightSmall" })
@@ -220,7 +233,7 @@ LR.onChange(function(what)
     if UI.tab == "loot" and what ~= "roll" then UI.renderSoon() end
     return
   end
-  if what == "items" then UI.renderSoon() else UI.render() end
+  if what == "items" or what == "book" then UI.renderSoon() else UI.render() end
   if LR.minimapUpdate then LR.minimapUpdate() end
 end)
 
@@ -528,6 +541,8 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("reserves")
   elseif msg == "loot" or msg == "drops" then
     UI.show("loot")
+  elseif msg == "guild" or msg == "points" then
+    if IsInGuild() then UI.show("guild") else LR.print("you're not in a guild.") end
   elseif msg == "settings" or msg == "options" or msg == "config" then
     UI.show("settings")
   elseif msg == "help" or msg == "?" then

@@ -20,12 +20,14 @@ Data\Loot.lua
 Core\Util.lua
 Core\Loot.lua
 Core\Session.lua
+Core\Book.lua
 Core\Roll.lua
 Core\Gargul.lua
 Core\Net.lua
 Core\Whisper.lua
 Core\Rolls.lua
 Core\Drops.lua
+Core\Guild.lua
 Core\Export.lua
 Core\AutoLoot.lua
 Core\AutoRoll.lua
@@ -37,6 +39,7 @@ UI\Loot.lua
 UI\Setup.lua
 UI\RollFrame.lua
 UI\Master.lua
+UI\Guild.lua
 UI\Settings.lua
 UI\Highlight.lua
 UI\Shortcuts.lua

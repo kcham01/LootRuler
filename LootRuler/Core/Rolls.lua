@@ -96,6 +96,21 @@ local function howTo(roll, link, secs)
   end
   local away = #roll.away > 0 and (" (Reserved by %s, who isn't here.)"):format(R.names(roll.away, 3)) or ""
   local po = roll.po and next(roll.po) and " Main spec: anyone with a +1 rolls after those without." or ""
+  if roll.bp and next(roll.bp) then
+    local list = {}
+    for _, m in ipairs(LR.roster()) do
+      local n = roll.bp[R.key(m.name)]
+      if n then list[#list + 1] = { m.name, n } end
+    end
+    table.sort(list, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
+    local parts = {}
+    for i, x in ipairs(list) do
+      if i > 5 then parts[#parts + 1] = "and others with points" break end
+      local lo, hi = LR.Book.boostRange(x[2])
+      parts[#parts + 1] = ("%s /roll %d %d"):format(U.short(x[1]), lo, hi)
+    end
+    if #parts > 0 then po = po .. " Boosted rolls (your points are spent if you win): " .. table.concat(parts, ", ") .. "." end
+  end
   return ("Roll for %s: /roll for main spec, /roll 99 for off spec. %s.%s%s"):format(link, t, po, away)
 end
 
@@ -117,7 +132,7 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po }
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp }
 end
 
 ---------------------------------------------------------------------- the loot master's roll
@@ -169,6 +184,7 @@ function Rolls.start(id, opts)
   local plan
   if opts.tie then
     plan = { mode = "TIE", who = opts.tie.names, tie = opts.tie.kind }
+    plan.boosted = opts.tie.boosted
   elseif opts.mode == "OPEN" then
     plan = R.plan(nil, id, LR.roster())
     if s then plan.away = R.plan(s, id, LR.roster()).away end
@@ -177,8 +193,18 @@ function Rolls.start(id, opts)
   end
   -- the +1 rule: everyone's +1s as the roll starts
   if s and s.plusOne then plan.po = S.plusOneTable(s, U.map(LR.roster(), function(m) return m.name end)) end
+  -- boosted rolls: everyone's guild points (Core/Book.lua), when the session uses them
+  local book = LR.book and LR.book()
+  if s and s.boost and book and book.boost.on and plan.mode == "OPEN" then
+    plan.bp = {}
+    for _, m in ipairs(LR.roster()) do
+      local n = LR.Book.points(book, m.name)
+      if n > 0 then plan.bp[U.full(m.name):lower()] = n end
+    end
+  end
   seq = seq + 1
   local roll = R.new(U.me() .. ":" .. U.now() .. ":" .. seq, id, plan)
+  roll.boosted = plan.boosted            -- (a tie roll) who rolled boosted before: name -> points
   roll.by = U.me()
   roll.link = opts.link or LR.itemLink(id)
   roll.slot = opts.slot
@@ -273,7 +299,18 @@ function Rolls.again(mode)
   local opts = { link = roll.link, slot = roll.slot, secs = roll.secs, drop = roll.drop }
   if mode == "TIE" and roll.tied then
     -- they roll the way they rolled before (a tie between reservers is still for the reserve)
-    opts.tie = { kind = R.result(roll).kind, names = roll.tied }
+    local kind = R.result(roll).kind
+    -- a tie between boosted rolls (or a boosted and a main spec roll) is rolled again as plain main spec;
+    -- whoever had boosted still spends their points if they win
+    local boosted
+    if kind == "BR" or kind == "MS" then
+      for _, name in ipairs(roll.tied) do
+        local e = roll.rolled[R.key(name)]
+        if e and e.kind == "BR" then boosted = boosted or {} boosted[R.key(name)] = roll.bp and roll.bp[R.key(name)] or 0 end
+      end
+      kind = "MS"
+    end
+    opts.tie = { kind = kind, names = roll.tied, boosted = boosted }
   elseif mode == "OPEN" then
     opts.mode = "OPEN"
   end
@@ -309,7 +346,9 @@ end
 --- records that a player won an item (on the session, when I'm its leader)
 local function record(s, id, player, kind, n, drop, de)
   if not s or not LR.isLeader(s) then return end
-  if S.award(s, id, player, kind, n, U.now(), drop, de) then LR.leaderChanged(s) end
+  local boosted = kind == "BR"
+  if boosted then kind = "MS" end            -- a boosted roll is a main spec win (and a +1), marked as boosted
+  if S.award(s, id, player, kind, n, U.now(), drop, de, boosted) then LR.leaderChanged(s) end
 end
 
 --- gives the item to a player: straight from the loot window when it's still there (master loot), else it's
@@ -324,6 +363,8 @@ function Rolls.award(player, kind, n, de)
     local e = roll.rolled[R.key(player)]
     kind, n = e and e.kind or (roll.mode == "HR" and "HR" or "MS"), e and e.n
   end
+  -- won a tie roll after a boosted roll: still a boosted win
+  if kind == "MS" and roll.boosted and roll.boosted[R.key(player)] then kind = "BR" end
   local note
   local slot = lootSlot(roll)
   if slot then
@@ -337,6 +378,16 @@ function Rolls.award(player, kind, n, de)
   local s = session()
   record(s, roll.id, player, kind, n, roll.drop, de)
   sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop, de = de or nil })
+  -- won with a boosted roll: the points are spent (by whoever may change the guild book)
+  if kind == "BR" then
+    local spent = (roll.bp and roll.bp[R.key(player)]) or (roll.boosted and roll.boosted[R.key(player)]) or 0
+    if LR.canEditBook() then
+      LR.Guild.edit(function(book, now) return LR.Book.setPoints(book, player, 0, now) end)
+      note = (note and (note .. " ") or "") .. ("%s's %d points are spent."):format(U.short(player), spent)
+    else
+      note = (note and (note .. " ") or "") .. ("Ask an officer to take %s's %d points: you can't change points."):format(U.short(player), spent)
+    end
+  end
   -- it's in my bags (rolled out later): it goes over in a trade
   local held = not slot and s and roll.drop and S.drop(s, roll.drop)
   if not note and held and held.h and U.samePlayer(held.h, U.me()) and not U.samePlayer(player, U.me()) then
@@ -382,7 +433,17 @@ function Rolls.follow(msg, sender)
         if type(name) == "string" and type(c) == "number" and c > 0 and c < 100 then po[name:lower()] = math.floor(c) end
       end
     end
-    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil) })
+    local bp
+    if type(msg.bp) == "table" then
+      bp = {}
+      local n = 0
+      for name, c in pairs(msg.bp) do
+        n = n + 1
+        if n > 80 then break end
+        if type(name) == "string" and type(c) == "number" and c > 0 and c <= LR.Book.MAX_POINTS then bp[name:lower()] = math.floor(c) end
+      end
+    end
+    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp, tie = R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil) })
     copy.by = sender
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"
@@ -417,6 +478,13 @@ end
 function Rolls.roll(copy, kind)
   local r = R.KINDS[kind]
   if not r or copy.state ~= "open" then return false end
+  if kind == "BR" then
+    local lo, hi = R.boostRange(copy, U.me())
+    if not lo then return false end
+    RandomRoll(lo, hi)
+    copy.myRoll = kind
+    return true
+  end
   RandomRoll(r[1], r[2])
   copy.myRoll = kind
   return true
