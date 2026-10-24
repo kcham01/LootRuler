@@ -65,6 +65,7 @@ LR.DEFAULTS = {
   autoPassUnusable = false, -- pass on items my class can't use
   highlight = true,        -- the game's loot windows glow on items I reserved (UI/Highlight.lua)
   tooltipInfo = true,      -- item tooltips say who reserved the item
+  rollShortcut = "ctrlalt", -- clicking an item with these keys held rolls it out (UI/Shortcuts.lua)
 }
 function LR.loadDB()
   LootRulerDB = LootRulerDB or {}

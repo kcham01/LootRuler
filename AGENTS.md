@@ -112,7 +112,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Decided for the guild features:** officer ranks (picked by the guild master) edit priority lists; a
   player who gets an item they had priority on comes off that item's list; boosted roll points are earned
   per raid attended. Both live in a "guild book" shared over the guild channel.
-- **Next:** the rest of "less clicking", then the guild book, boosted rolls, priority lists, then GDKP.
+- **Next:** the guild book, boosted rolls, priority lists, then GDKP.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
@@ -147,7 +147,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 - [x] Auto-loot rules for the loot master (greens to the disenchanter, patterns to me; `Core/AutoLoot.lua`)
 - [x] Auto-roll rules for raiders (always pass on X; `Core/AutoRoll.lua`)
 - [x] Highlighting reserved items in the game's loot window, and reserves in item tooltips (`UI/Highlight.lua`)
-- [ ] Shortcut keys that don't clash with Gargul's
+- [x] Shortcut keys that don't clash with Gargul's (Ctrl+Alt+click rolls out; `UI/Shortcuts.lua`)
 
 **Guild features**
 - [ ] Boosted rolls: attendance points that raise a roll's range

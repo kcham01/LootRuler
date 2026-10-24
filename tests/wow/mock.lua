@@ -926,6 +926,7 @@ function M.env(player)
   G.GetSpellInfo = function(id) return "Spell " .. tostring(id), nil, 136243 end
   G.GetSpellTexture = function() return 136243 end
   G.ChatFrame_OpenChat = function() end
+  G.HandleModifiedItemClick = function(link) return false end
   -- rolling and master loot (tests/wow/server.lua makes these work between clients)
   G.RANDOM_ROLL_RESULT = "%s rolls %d (%d-%d)"
   G.LOOT_ITEM, G.LOOT_ITEM_SELF = "%s receives loot: %s.", "You receive loot: %s."
