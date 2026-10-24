@@ -318,8 +318,34 @@ check("the highest bid wins", top.p == ANN and top.n == 200 and R.topBid(roll).n
 check("a bid after it closed doesn't count", R.bid(roll, DAN, 500, true).why == "late" and R.topBid(roll).n == 200)
 check("what counts as a bid in chat", R.parseBid("150") == 150 and R.parseBid(" 150g ") == 150 and R.parseBid("150 gold") == 150
   and R.parseBid("bid 200") == 200 and R.parseBid("1.5k") == 1500 and R.parseBid("2k") == 2000 and R.parseBid("1,250") == 1250)
+check("with bids that must start with \"bid\", only those count", R.parseBid("bid 150", true) == 150 and R.parseBid("BID 2k", true) == 2000
+  and R.parseBid("150", true) == nil and R.parseBid("500 dps lol", true) == nil)
 check("and what doesn't", R.parseBid("gg") == nil and R.parseBid("150 for sure") == nil and R.parseBid("0") == nil
   and R.parseBid("lol 5") == nil and R.parseBid("99999999") == nil)
+
+print("== max bids (GDKP)")
+roll = R.new("k21", 28525, { mode = "BID", min = 100, inc = 25 })
+local maxes = { [ANN:lower()] = { p = ANN, g = 800, at = 1 } }
+local made = R.resolve(roll, maxes)
+check("a max bid opens at the lowest bid", #made == 1 and roll.top.p == ANN and roll.top.n == 100 and made[1].auto)
+R.bid(roll, BOB, 300)
+R.resolve(roll, maxes)
+check("someone bids: the max bids just above them", roll.top.p == ANN and roll.top.n == 325)
+maxes[DAN:lower()] = { p = DAN, g = 1000, at = 2 }
+R.resolve(roll, maxes)
+check("a higher max beats it, just above the other max", roll.top.p == DAN and roll.top.n == 825)
+R.bid(roll, BOB, 900)
+R.resolve(roll, maxes)
+check("a bid under the max: the max answers", roll.top.p == DAN and roll.top.n == 925)
+R.bid(roll, BOB, 1000)
+check("a bid over every max wins", #R.resolve(roll, maxes) == 0 and roll.top.p == BOB and roll.top.n == 1000)
+roll = R.new("k22", 28525, { mode = "BID", min = 100, inc = 25 })
+maxes = { [ANN:lower()] = { p = ANN, g = 500, at = 1 } }
+R.resolve(roll, maxes)
+maxes[DAN:lower()] = { p = DAN, g = 500, at = 2 }
+R.resolve(roll, maxes)
+check("equal maxes: whoever set theirs first wins, at that price", roll.top.p == ANN and roll.top.n == 500)
+check("nothing to do without maxes, or in a roll", #R.resolve(roll, {}) == 0 and #R.resolve(R.new("k23", 1, { mode = "OPEN" }), maxes) == 0)
 
 print("== the pot (GDKP)")
 local Gd = LR.Gdkp
@@ -349,6 +375,10 @@ Gd.paid(gs, DAN, -525, 517)
 sp = Gd.split(gs)
 check("gold handed over counts", sp.rows[ANN].owed == 0 and sp.rows[DAN].owed == 0 and sp.rows[BOB].owed == -175)
 check("it's all a valid session", S.valid(gs) and Gd.valid(gs.gk))
+local owing = Gd.unsettled(gs)
+check("who still owes or is owed, biggest first (not the organiser)", #owing == 2 and owing[1][1] == CARA and owing[1][2] == -400 and owing[2][1] == BOB)
+Gd.paid(gs, CARA, 400, 520) Gd.paid(gs, BOB, 175, 521)
+check("nobody, once it's all paid", #Gd.unsettled(gs) == 0)
 check("nonsense in it isn't", not Gd.valid({ min = 1, inc = 1, cut = 1, bonus = { [ANN] = "lots" }, seen = {}, out = {}, paid = {}, prices = {} })
   and not Gd.valid({ min = "x" }) and not Gd.valid(5))
 check("gold for people", Gd.gold(1250) == "1,250g" and Gd.gold(12.5) == "12g 50s" and Gd.gold(-40) == "-40g" and Gd.gold(0) == "0g" and Gd.gold(1234567) == "1,234,567g")

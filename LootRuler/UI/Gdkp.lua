@@ -112,7 +112,7 @@ end
 --- the GDKP panel on the Session tab
 function UI.gdkpPanel(f, s)
   local leader = LR.isLeader(s)
-  f:panel("GDKP", function(p)
+  f:panel("GDKP auctions", function(p)
     local gk = s.gk
     local split = G.split(s)
     if leader then
@@ -127,6 +127,8 @@ function UI.gdkpPanel(f, s)
       chips("Bids start at:", "min", { 50, 100, 250, 500, 1000 }, G.gold)
       chips("Raise by at least:", "inc", { 10, 25, 50, 100 }, G.gold)
       chips("Your cut:", "cut", { 0, 5, 10, 15, 20 }, function(v) return v .. "%" end)
+      p:chips({ { label = (gk.strict and "[x] " or "[  ] ") .. "Bids start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
+        tip = "Only \"bid 150\" counts, not just \"150\": someone saying \"500\" in raid chat doesn't bid by accident." } }, { gap = 2 })
       p:gap(4)
     end
     p:kv({
