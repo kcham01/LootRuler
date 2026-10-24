@@ -99,6 +99,21 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 
 **Auto-roll:** your own rules for roll windows (Settings tab). "Always pass on this item", "always roll main spec on that one", and "pass on anything my class can't use". Shift-click a roll window's dice, coin or x to make it a rule. LootRuler rolls or passes for you and says so.
 
+## GDKP
+
+Turn on **GDKP auctions** for a session (Session tab) and every item is auctioned for gold instead of reserved and rolled for. Nobody needs the addon to bid.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/32-auction-window.png" alt="An auction's roll window" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/34-payouts.png" alt="The payouts" width="40%">
+</p>
+
+- **Auctions:** the loot master clicks an item, or **Auction them all** to put every item up one after another. The raid is told where bids start and by how much each must go up. Players bid by **typing an amount in raid chat** ("150", "150g", "1.5k"), by whispering `!lr bid 150`, or by clicking one of the two bids in their auction window. A bid in the last few seconds gives everyone a few more. A bid that's too low doesn't count, and its bidder is told the lowest that would.
+- **Sold:** the highest bid when time is up buys the item, which goes to them through master loot (or is marked for a trade). Nobody bids: it stays on the Loot tab to roll out or disenchant later, and the next item comes up. A hard reserve still comes first.
+- **Prices:** where bids start and the least raise, for the whole raid, and a different start for any item you like.
+- **The pot:** the organiser's cut (0 to 20%), bonuses for anyone you like (tanks, healers), and an even split between everyone who was in the group, plus anyone who bought something. Anyone can be left out of the split.
+- **Payouts:** addons can't put gold in a trade, so when the organiser opens a trade LootRuler says what to give or take, and counts the gold that changes hands. **Tell the raid** posts the pot in raid chat; **Whisper everyone** tells each player what they owe or are owed; `!lr pot` asks for it.
+
 ## For guilds
 
 Guild members get a **Guild** tab: things that last between raids, kept by the officers and shared with everyone in the guild who has LootRuler. Nothing here shows up for pugs, and nothing is used until an officer turns it on.
@@ -138,6 +153,7 @@ Every build:
 - checks the session rules (limits, doubling up, hard reserves, locking, changing the rules part way);
 - runs a **whole raid of clients side by side** in a stand-in for the game: the leader, raiders on the same and other realms, a pug whispering, a guild member outside the group, the leader logging out and back in, people joining late, and messages from people who shouldn't be able to change things;
 - runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot; then the raid's loot list: what each corpse dropped, who has it, items kept to roll out later and handed over in trades, and group loot;
+- runs a **GDKP raid**: everything auctioned one after another, bids clicked, typed in raid chat and whispered, a bid that's too low, a bid at the last moment, an item nobody bids on, a hard reserved item, the cut and the split, gold changing hands in trades, and everyone told their payout;
 - runs a **guild raid**: the guild master, officers, members with and without the addon and someone logging in later; only the ranks the guild master picked can change points (even sending the change themselves doesn't work), raid points reach everyone in the guild, and boosted rolls, clicked and typed, win and spend their points, ties included; priority lists brought in, an item going straight to the first on its list, two who share a place rolling, winners coming off the lists everywhere, and a raid that goes by priority lists only;
 - loads **Gargul's own soft-reserve importer** and checks it reads LootRuler's reserves exactly (doubled reserves, classes, hard reserves, players from other realms);
 - checks the addon only uses what the TBC Anniversary client has, against Blizzard's own interface code;

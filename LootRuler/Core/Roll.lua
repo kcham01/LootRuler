@@ -8,6 +8,9 @@
 --         won this item doesn't count again
 --   OPEN  nobody here reserved it: /roll (1-100) for main spec beats /roll 99 for off spec
 --   TIE   the highest rolls were equal: just those players roll again, the same way they rolled before
+--   BID   a GDKP auction: everyone bids gold by typing an amount in raid chat; each bid must be at least
+--         roll.inc more than the highest (the first at least roll.min). The highest bid when time is up wins.
+--         Bids are entries of kind "BID" with n = the gold.
 --   PR    on the guild's priority list (the session uses them): the best priority here gets it; when several
 --         share it, just they roll (/roll, 1-100), and one alone gets it with no roll (who: names, n: the
 --         priority)
@@ -21,8 +24,10 @@ local U, S = LR.U, LR.Session
 local R = {}
 LR.Roll = R
 
-R.KINDS = { SR = { 1, 100, 1 }, MS = { 1, 100, 2 }, OS = { 1, 99, 3 }, BR = { 1, 100, 2 } }   -- range low, high, rank (lower wins)
-R.LABEL = { SR = "SR", MS = "MS", OS = "OS", HR = "HR", BR = "BR" }
+R.KINDS = { SR = { 1, 100, 1 }, MS = { 1, 100, 2 }, OS = { 1, 99, 3 }, BR = { 1, 100, 2 },
+  BID = { 0, 0, 4 } }   -- range low, high, rank (lower wins); BID: a bid in an auction (no roll)
+R.LABEL = { SR = "SR", MS = "MS", OS = "OS", HR = "HR", BR = "BR", BID = "bid" }
+R.MAX_BID = 1000000
 -- BR, a boosted roll (guild points, Core/Book.lua): a main spec roll moved up by the player's points, 1+p to
 -- 100+p (roll.bp: name, lower case -> points). It ranks with main spec rolls, so the higher number wins.
 R.WHY = {
@@ -32,6 +37,10 @@ R.WHY = {
   notReserved = "didn't reserve it",
   notTied = "wasn't in the tie",
   notFirst = "isn't first on the priority list",
+  auction = "a /roll in an auction",
+  low = "less than the lowest bid",
+  high = "more gold than there is",
+  raised = "bid again",
   hard = "it's hard reserved",
 }
 
@@ -68,7 +77,7 @@ end
 --- a new roll (the loot master's, or a raider's copy of it)
 function R.new(k, id, plan)
   return { k = k, id = id, mode = plan.mode, who = plan.who or {}, away = plan.away or {}, f = plan.f, n = plan.n,
-    tie = plan.tie, po = plan.po, bp = plan.bp, entries = {}, rolled = {}, passed = {} }
+    tie = plan.tie, po = plan.po, bp = plan.bp, min = plan.min, inc = plan.inc, entries = {}, rolled = {}, passed = {} }
 end
 
 --- a player's boosted roll range in a roll, or nil when they have no points
@@ -104,11 +113,13 @@ function R.options(roll, player)
   if roll.mode == "SR" then return { "SR" } end
   if roll.mode == "TIE" then return { roll.tie } end
   if roll.mode == "PR" then return { "MS" } end
+  if roll.mode == "BID" then return { "BID" } end         -- (a bid, typed: a /roll doesn't count)
   return {}
 end
 
 --- what a roll of lo-hi counts as for this player, or nil and why not
 local function kindOf(roll, player, lo, hi)
+  if roll.mode == "BID" then return nil, "auction" end
   local ok, why = R.canRoll(roll, player)
   if not ok then return nil, why end
   for _, kind in ipairs(R.options(roll, player)) do
@@ -133,6 +144,43 @@ function R.add(roll, player, n, lo, hi, late)
 end
 
 function R.pass(roll, player) roll.passed[key(player)] = U.full(player) end
+
+---------------------------------------------------------------------- auctions (GDKP)
+--- the lowest bid that counts now
+function R.nextBid(roll) return roll.top and (roll.top.n + (roll.inc or 1)) or (roll.min or 1) end
+--- the highest bid (an entry), or nil
+function R.topBid(roll) return roll.top end
+
+--- a bid of g gold from a player; late: after the auction closed. Returns the entry (kind "BID" when it counts)
+function R.bid(roll, player, g, late)
+  g = math.floor(tonumber(g) or 0)
+  local e = { p = U.full(player), n = g, seq = #roll.entries + 1 }
+  if roll.mode ~= "BID" then e.why = "notAuction"
+  elseif late then e.why = "late"
+  elseif g < R.nextBid(roll) then e.why = "low"
+  elseif g > R.MAX_BID then e.why = "high"
+  else
+    local old = roll.rolled[key(player)]
+    if old then old.kind, old.why = nil, "raised" end
+    e.kind = "BID"
+    roll.rolled[key(player)] = e
+    roll.top = e
+  end
+  table.insert(roll.entries, e)
+  return e
+end
+
+--- the gold in a chat line that's a bid: "150", "150g", "150 gold", "bid 150", "1.5k"; nil otherwise
+function R.parseBid(text)
+  local t = U.trim(tostring(text or "")):lower():gsub(",", "")
+  t = t:gsub("^bid%s*", ""):gsub("%s*gold$", ""):gsub("%s*g$", "")
+  local n, k = t:match("^(%d+%.?%d*)%s*(k?)$")
+  n = tonumber(n)
+  if not n then return nil end
+  if k == "k" then n = n * 1000 end
+  if n < 1 or n > R.MAX_BID then return nil end
+  return math.floor(n)
+end
 
 --- the rolls that count, best first; the ones that don't after them
 function R.standings(roll)

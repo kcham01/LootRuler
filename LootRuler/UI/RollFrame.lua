@@ -37,8 +37,26 @@ end
 ---------------------------------------------------------------------- what the window says
 local function me() return U.me() end
 
+--- the line under the timer for an auction
+local function bidStatus(copy)
+  local G = LR.Gdkp
+  local top = R.topBid(copy)
+  if copy.state == "awarded" or (copy.state == "closed" and copy.winner) then
+    local who, g = copy.winner or (top and top.p), copy.winN or (top and top.n)
+    if not who then return "Nobody bid." end
+    if U.samePlayer(who, me()) then return ("|cff1eff00It's yours, for %s!|r"):format(G.gold(g)) end
+    return ("Sold to %s for %s."):format(U.short(who), G.gold(g))
+  end
+  if copy.state == "closed" then return "Nobody bid." end
+  if copy.state == "cancelled" then return "Called off." end
+  if top and U.samePlayer(top.p, me()) then return ("|cff1eff00You have the highest bid: %s.|r"):format(G.gold(top.n)) end
+  if top then return ("Highest bid: %s, %s. Type a bid in raid chat, or click."):format(U.short(top.p), G.gold(top.n)) end
+  return ("Bids start at %s. Type an amount in raid chat, or click."):format(G.gold(copy.min or 0))
+end
+
 --- the line under the timer, for a raider's copy of a roll
 function UI.rollStatus(copy)
+  if copy.mode == "BID" then return bidStatus(copy) end
   local mine = copy.rolled[R.key(me())]
   local top, tied = R.result(copy)
   local function who(e) return U.samePlayer(e.p, me()) and "you" or U.short(e.p) end
@@ -215,6 +233,10 @@ local function makeFrame(i)
   f.boost:SetPoint("RIGHT", f.dice, "LEFT", -2, 0)
   for _, b in ipairs({ f.dice, f.coin, f.boost }) do
     b:SetScript("OnClick", function(self)
+      if f.copy and self.kind == "BID" then
+        LR.Rolls.bid(f.copy, self.amount)
+        return
+      end
       if f.copy and self.kind then
         if IsShiftKeyDown() and self ~= f.boost then UI.alwaysDo(f.copy, self.kind == "OS" and "OS" or "MS") end
         LR.Rolls.roll(f.copy, self.kind)
@@ -225,7 +247,7 @@ local function makeFrame(i)
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       GameTooltip:SetText(self.tipTitle or "", 1, 1, 1)
       if self.tip then GameTooltip:AddLine(self.tip, 1, 0.82, 0, true) end
-      if self ~= f.boost then GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true) end
+      if self ~= f.boost and self.kind ~= "BID" then GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true) end
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -279,6 +301,29 @@ local function fill(f, copy)
   f.item.icon:SetTexture(LR.itemIcon(copy.id))
   f.name:SetText("|cff" .. hex .. name .. "|r")
 
+  if copy.mode == "BID" then
+    -- an auction: the dice bids the least that counts, the coin a bigger jump; both just type it in raid chat
+    local top = R.topBid(copy)
+    local a1 = R.nextBid(copy)
+    local a2 = a1 + 4 * (copy.inc or 1)
+    local can = copy.state == "open" and not (top and U.samePlayer(top.p, me()))
+    f.dice.kind, f.coin.kind, f.boost.kind = can and "BID" or nil, can and "BID" or nil, nil
+    f.dice.amount, f.coin.amount = a1, a2
+    setButton(f.dice, can)
+    setButton(f.coin, can)
+    f.dice:Show() f.coin:Show() f.boost:Hide()
+    f.coin:ClearAllPoints()
+    f.coin:SetPoint("TOP", f.dice, "BOTTOM", -2, 2)
+    f.name:SetWidth(98)
+    f.dice.label:SetText(copy.state == "open" and LR.Gdkp.gold(a1) or "")
+    f.coin.label:SetText(copy.state == "open" and LR.Gdkp.gold(a2) or "")
+    f.dice.tipTitle, f.coin.tipTitle = "Bid " .. LR.Gdkp.gold(a1), "Bid " .. LR.Gdkp.gold(a2)
+    f.dice.tip = ("Types \"%d\" in raid chat: the least that beats the highest bid."):format(a1)
+    f.coin.tip = ("Types \"%d\" in raid chat. Any other amount: type it yourself."):format(a2)
+    f.status:SetText(UI.rollStatus(copy))
+    return
+  end
+  f.dice.amount, f.coin.amount = nil, nil
   local dice, coin, boost = buttonsFor(copy)
   local opts = R.options(copy, me())
   f.dice.kind, f.coin.kind, f.boost.kind = dice or nil, coin or nil, boost or nil

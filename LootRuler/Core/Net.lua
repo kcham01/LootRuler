@@ -304,6 +304,18 @@ function LR.setDisenchanter(s, player) if S.setDisenchanter(s, player, U.now()) 
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionPrio(s, mode) if S.setPrio(s, mode, U.now()) then leaderChanged(s) end end
+-- GDKP (Core/Gdkp.lua): only the leader's changes count
+local function gdkp(fn) return function(s, ...) if LR.isLeader(s) and fn(s, ...) then leaderChanged(s) return true end return false end end
+LR.setGdkp = gdkp(function(s, on, now)
+  local changed = LR.Gdkp.set(s, on, U.now())
+  if s.gdkp then LR.Gdkp.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) end
+  return changed
+end)
+LR.gdkpOption = gdkp(function(s, key, value) return LR.Gdkp.option(s, key, value, U.now()) end)
+LR.gdkpPrice = gdkp(function(s, id, gold) return LR.Gdkp.setPrice(s, id, gold, U.now()) end)
+LR.gdkpBonus = gdkp(function(s, player, gold) return LR.Gdkp.setBonus(s, player, gold, U.now()) end)
+LR.gdkpOut = gdkp(function(s, player, out) return LR.Gdkp.setOut(s, player, out, U.now()) end)
+LR.gdkpPaid = gdkp(function(s, player, gold) return LR.Gdkp.paid(s, player, gold, U.now()) end)
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGuild(s, guild)
@@ -354,7 +366,11 @@ function LR.changeMine(s, edit, id)
   end
   if s.locked then return false, "LOCKED" end
   local items = U.copy(LR.myPicks(s))
+  local before = #items
   edit(items)
+  -- no reserves in a GDKP raid, or one that goes by priority lists only (taking them back is fine)
+  if #items > before and s.gdkp then return false, "GDKP" end
+  if #items > before and s.prio == "only" then return false, "PRIO_ONLY" end
   local ok, why = S.check(s, items, true)              -- which items are allowed is the leader's addon's call
   if not ok then return false, why end
   db.mine[s.id] = { i = items, dirty = true }

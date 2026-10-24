@@ -161,6 +161,20 @@ local function drawTop(s)
   top.icon:SetTexture(LR.raidIcon(s.raid))
   top.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
   top.name:SetText(raid.name)
+  -- GDKP, or priority lists only: there are no reserves, so the box shows the pot (or nothing)
+  if s.gdkp and s.gk then
+    top.sub:SetText((LR.isLeader(s) and "Your GDKP" or ("GDKP by " .. U.short(s.leader))) .. " - bids from " .. LR.Gdkp.gold(s.gk.min))
+    top.count:Show()
+    top.count:SetBackdropColor(0.1, 0.08, 0.06, 0.9) top.count:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+    top.count.num:SetText(LR.Gdkp.gold(LR.Gdkp.pot(s)))
+    top.count.word:SetText("THE POT") top.count.word:SetTextColor(1, 0.82, 0)
+    return
+  end
+  if s.prio == "only" then
+    top.sub:SetText((LR.isLeader(s) and "Your session" or ("By " .. U.short(s.leader))) .. " - the guild's priority lists")
+    top.count:Hide()
+    return
+  end
   local bits = { (LR.isLeader(s) and "Your session" or ("By " .. U.short(s.leader))), U.plural(s.sr, "reserve") .. " each" }
   local hr = #U.keys(s.hr)
   if hr > 0 then bits[#bits + 1] = hr .. " hard reserved" end

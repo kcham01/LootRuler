@@ -216,6 +216,13 @@ function UI.reserveView(f, s)
     noSession(f)
     return browse(f)
   end
+  if s.gdkp then
+    f:panel("GDKP", function(p)
+      p:text(LR.raidOf(s).name .. " auctions its loot for gold: nobody reserves anything.")
+      p:note("When an item is up, a window pops up with bids to click, or type an amount in raid chat. The highest bid buys it. The Session tab shows the pot and your share.")
+    end)
+    return
+  end
   if s.prio == "only" then
     f:panel("Priority lists", function(p)
       p:text(LR.raidOf(s).name .. " goes by the guild's priority lists, not reserves: nobody reserves anything.")

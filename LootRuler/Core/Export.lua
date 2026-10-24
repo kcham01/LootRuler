@@ -23,6 +23,7 @@ local TMB_ID = { [18423] = 18422, [19003] = 19002, [32386] = 32385 }
 local function how(w)
   if w.de then return "disenchant" end
   if w.br then return "MS (boosted)" end
+  if w.k == "BID" then return "GDKP" end
   return LR.Roll.LABEL[w.k] or tostring(w.k)
 end
 
@@ -76,7 +77,7 @@ function E.chat(s)
   local parts = {}
   for _, e in ipairs(E.entries(s)) do
     local w = e.w
-    parts[#parts + 1] = ("%s %s%s"):format(LR.itemLink(w.i), U.short(w.p), w.de and " (disenchant)" or "")
+    parts[#parts + 1] = ("%s %s%s"):format(LR.itemLink(w.i), U.short(w.p), w.de and " (disenchant)" or (w.k == "BID" and LR.Gdkp) and (" (" .. LR.Gdkp.gold(w.r) .. ")") or "")
   end
   if #parts == 0 then return {} end
   return U.chatLines(LR.TAG .. " Loot given out: " .. table.concat(parts, ", "), 255)

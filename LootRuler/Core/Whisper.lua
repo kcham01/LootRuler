@@ -91,6 +91,10 @@ function W.handle(text, sender)
   local now = U.now()
 
   if lower == "" or lower == "list" or lower == "help" or lower == "?" then
+    if s.gdkp then
+      W.reply(player, ("%s auctions its loot for gold (GDKP). When an item is up, type your bid in raid chat (just the number), or whisper me \"!lr bid 150\". \"!lr pot\": what you owe or are owed."):format(LR.raidOf(s).name))
+      return
+    end
     local extra = (s.prio and " \"!lr prio\": your place on the guild's priority lists." or "") .. (s.boost and " \"!lr points\": your points for boosted rolls." or "")
     if s.prio == "only" then
       W.reply(player, ("%s goes by the guild's priority lists, not reserves.%s"):format(LR.raidOf(s).name, extra))
@@ -98,6 +102,22 @@ function W.handle(text, sender)
     end
     W.reply(player, ("Soft reserves for %s: %d each%s. %s Type \"!lr <item link>\" in raid chat or whisper me to reserve, \"!lr remove <item>\" to take one back.%s"):format(
       LR.raidOf(s).name, s.sr, s.dupes and "" or " (one per item)", status(s, player), extra))
+    return
+  end
+
+  -- GDKP: a bid by whisper, and what they owe or are owed
+  local bidArg = lower:match("^bid%s+(.+)$")
+  if bidArg and s.gdkp then
+    local g = LR.Roll.parseBid(bidArg)
+    local roll = LR.Rolls.current
+    if not g then W.reply(player, "A bid is an amount of gold: \"!lr bid 150\".") return end
+    if not (roll and roll.mode == "BID" and roll.state == "open") then W.reply(player, "Nothing is being auctioned right now.") return end
+    local e = LR.Rolls.onBid(player, g)
+    if e and e.kind then W.reply(player, ("Your bid of %s on %s is the highest."):format(LR.Gdkp.gold(g), roll.link)) end
+    return
+  end
+  if (lower == "pot" or lower == "gdkp") and s.gdkp then
+    W.reply(player, LR.Pot.line(s, player))
     return
   end
 

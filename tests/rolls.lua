@@ -9,7 +9,7 @@ end
 local LR = {}
 local env = setmetatable({ bit = require("bit"), GetRealmName = function() return "Dreamscythe" end,
   GetNormalizedRealmName = function() return "Dreamscythe" end, RAID_CLASS_COLORS = {} }, { __index = _G })
-for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua", "Core/Prio.lua" }) do
+for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua", "Core/Prio.lua", "Core/Gdkp.lua" }) do
   local chunk = assert(loadfile("LootRuler/" .. f))
   setfenv(chunk, env)
   chunk("LootRuler", LR)
@@ -303,6 +303,56 @@ good = R.standings(roll)
 check("with the +1 rule, a +1 still rolls after those without, boosted or not", good[1].p == BOB and good[2].p == ANN and R.label(roll, good[2]) == "BR +1")
 check("a boosted win is a main spec win (a +1), marked as boosted", S.award(s5, 28525, CARA, "MS", 110, 1760000300, nil, nil, true)
   and s5.won[#s5.won].br == true and S.valid(s5))
+
+print("== an auction (GDKP)")
+roll = R.new("k20", 28525, { mode = "BID", min = 100, inc = 10 })
+check("everyone may bid, nobody rolls", table.concat(R.options(roll, CARA), ",") == "BID" and R.add(roll, ANN, 50, 1, 100).kind == nil)
+check("the first bid is at least the start", R.nextBid(roll) == 100 and R.bid(roll, ANN, 90).why == "low" and R.bid(roll, ANN, 100).kind == "BID")
+check("each bid at least the raise more", R.nextBid(roll) == 110 and R.bid(roll, BOB, 105).why == "low" and R.bid(roll, BOB, 150).kind == "BID")
+local again = R.bid(roll, ANN, 200)
+good, bad = R.standings(roll)
+check("raising your own bid: the old one stops counting", again.kind == "BID" and #good == 2 and good[1].p == ANN and good[1].n == 200 and good[2].n == 150)
+check("the bids that didn't count are listed why", #bad == 4 and bad[1].why == "auction" and bad[2].why == "low" and bad[3].why == "raised" and bad[4].why == "low")
+top = R.result(roll)
+check("the highest bid wins", top.p == ANN and top.n == 200 and R.topBid(roll).n == 200 and R.label(roll, top) == "bid")
+check("a bid after it closed doesn't count", R.bid(roll, DAN, 500, true).why == "late" and R.topBid(roll).n == 200)
+check("what counts as a bid in chat", R.parseBid("150") == 150 and R.parseBid(" 150g ") == 150 and R.parseBid("150 gold") == 150
+  and R.parseBid("bid 200") == 200 and R.parseBid("1.5k") == 1500 and R.parseBid("2k") == 2000 and R.parseBid("1,250") == 1250)
+check("and what doesn't", R.parseBid("gg") == nil and R.parseBid("150 for sure") == nil and R.parseBid("0") == nil
+  and R.parseBid("lol 5") == nil and R.parseBid("99999999") == nil)
+
+print("== the pot (GDKP)")
+local Gd = LR.Gdkp
+local gs = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 500)
+S.add(gs, ANN, "PRIEST", 28525, false, 501)
+check("GDKP on: reserves stop counting, nobody can reserve", Gd.set(gs, true, 502) and gs.gdkp and not S.add(gs, BOB, "MAGE", 28530, false, 503)
+  and select(2, S.add(gs, BOB, "MAGE", 28530, false, 503)) == "GDKP" and gs.gk.min == 100 and S.valid(gs))
+check("its settings", Gd.option(gs, "cut", 20, 504) and Gd.option(gs, "cut", 10, 504) and Gd.option(gs, "inc", 25, 505) and gs.gk.inc == 25 and not Gd.option(gs, "cut", 150, 506)
+  and not Gd.option(gs, "nonsense", 5, 506))
+check("an item can start higher", Gd.setPrice(gs, 32386, 1000, 507) and Gd.minFor(gs, 32386) == 1000 and Gd.minFor(gs, 28525) == 100)
+check("everyone in the group gets a share", Gd.saw(gs, { "Lead-Dreamscythe", ANN, BOB, DAN }, 508) and not Gd.saw(gs, { ANN }, 509))
+S.award(gs, 28525, ANN, "BID", 1000, 510)
+S.award(gs, 28530, BOB, "BID", 600, 511)
+S.award(gs, 28528, CARA, "BID", 400, 512)        -- Cara bought something, then left
+S.award(gs, 28507, DAN, "OS", nil, 513, nil, true) -- disenchanted: not a sale
+local sp = Gd.split(gs)
+check("the pot is what was sold", Gd.pot(gs) == 2000 and #Gd.sales(gs) == 3 and sp.pot == 2000)
+check("the cut, then an even split between everyone (Cara bought, so she's in)", sp.cut == 200 and #sp.players == 5 and sp.share == 360)
+check("who owes and who's owed", sp.rows[ANN].owed == -640 and sp.rows[BOB].owed == -240 and sp.rows[DAN].owed == 360 and sp.rows[CARA].owed == -40)
+Gd.setBonus(gs, DAN, 100, 514)
+Gd.setOut(gs, CARA, true, 515)
+sp = Gd.split(gs)
+check("a bonus comes out of the pot first; someone left out gets no share", sp.bonuses == 100 and #sp.players == 4 and sp.share == 425
+  and sp.rows[DAN].gets == 525 and sp.rows[CARA].gets == 0 and sp.rows[CARA].owed == -400)
+Gd.paid(gs, ANN, 575, 516)
+Gd.paid(gs, DAN, -525, 517)
+sp = Gd.split(gs)
+check("gold handed over counts", sp.rows[ANN].owed == 0 and sp.rows[DAN].owed == 0 and sp.rows[BOB].owed == -175)
+check("it's all a valid session", S.valid(gs) and Gd.valid(gs.gk))
+check("nonsense in it isn't", not Gd.valid({ min = 1, inc = 1, cut = 1, bonus = { [ANN] = "lots" }, seen = {}, out = {}, paid = {}, prices = {} })
+  and not Gd.valid({ min = "x" }) and not Gd.valid(5))
+check("gold for people", Gd.gold(1250) == "1,250g" and Gd.gold(12.5) == "12g 50s" and Gd.gold(-40) == "-40g" and Gd.gold(0) == "0g" and Gd.gold(1234567) == "1,234,567g")
+check("GDKP off and on again keeps its settings", Gd.set(gs, false, 518) and not gs.gdkp and Gd.set(gs, true, 519) and gs.gk.inc == 25)
 
 print("== reading roll messages")
 local parse = R.parser("%s rolls %d (%d-%d)")

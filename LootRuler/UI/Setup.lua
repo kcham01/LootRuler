@@ -109,6 +109,11 @@ local function manage(f, s)
         tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
       { label = (s.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserves tab (by player)." },
+      { label = (s.gdkp and "[x] " or "[  ] ") .. "GDKP auctions", on = s.gdkp, click = function()
+        if not s.gdkp and next(s.res) then
+          UI.confirm("GDKP auctions", "Every item is auctioned for gold instead: reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Auction", function() LR.setGdkp(s, true) end)
+        else LR.setGdkp(s, not s.gdkp) end
+      end, tip = "Items are auctioned for gold: raiders bid by typing an amount in raid chat. The gold goes in a pot that's split between everyone at the end." },
       UI.boostOn() and { label = (s.boost and "[x] " or "[  ] ") .. "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
         tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
       { label = (s.locked and "[x] " or "[  ] ") .. "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
@@ -148,7 +153,9 @@ local function manage(f, s)
     }, "left")
   end)
 
-  if s.prio or UI.prioAvailable() then
+  if s.gdkp then UI.gdkpPanel(f, s) end
+
+  if not s.gdkp and (s.prio or UI.prioAvailable()) then
     f:panel("Priority lists", function(p)
       p:chips(UI.prioChips(s.prio, function(mode)
         if mode == "only" and next(s.res) then
@@ -244,6 +251,8 @@ local function newSession(f)
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         d.guild = not d.guild UI.render()
       end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
+      { label = (d.gdkp and "[x] " or "[  ] ") .. "GDKP auctions", on = d.gdkp, click = function() d.gdkp = not d.gdkp UI.render() end,
+        tip = "Items are auctioned for gold instead of reserved and rolled for. The gold goes in a pot that's split between everyone at the end." },
       { label = (d.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = d.plusOne, click = function() d.plusOne = not d.plusOne UI.render() end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more." },
       UI.boostOn() and { label = (d.boost and "[x] " or "[  ] ") .. "Boosted rolls", on = d.boost, click = function() d.boost = not d.boost UI.render() end,
@@ -262,6 +271,7 @@ local function newSession(f)
       if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
       local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)
       if d.plusOne then LR.setPlusOne(s, true) end
+      if d.gdkp then LR.setGdkp(s, true) end
       if d.boost and UI.boostOn() then LR.setSessionBoost(s, true) end
       if d.prio and UI.prioAvailable() then LR.setSessionPrio(s, d.prio) end
       UI.toast(("%s reserves are open."):format(LR.raidOf(s).name))
@@ -291,6 +301,7 @@ function UI.sessionView(f, s)
     manage(f, s)
   else
     if s then
+      if s.gdkp and s.gk then UI.gdkpPanel(f, s) end
       f:panel("Session by " .. U.short(s.leader), function(p)
         p:kv({
           { "Raid", LR.raidOf(s).name },
@@ -299,6 +310,7 @@ function UI.sessionView(f, s)
           { "Hard reserves", tostring(#U.keys(s.hr)) },
           { "Locked", s.locked and "yes" or "no" },
         })
+        if s.gdkp then p:note("Loot is auctioned for gold (GDKP): type your bid in raid chat when an item is up.", K.GOLD) end
         p:gap(4)
         p:buttons({ { label = "Forget it", click = function()
           UI.confirm("Forget the session", "It's only removed from your addon. If " .. U.short(s.leader) .. " sends it again, it comes back.", "Forget", function() LR.forget(s) end)

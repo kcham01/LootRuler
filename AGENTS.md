@@ -19,10 +19,10 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/LootRuler.toc` | Load order. Every new file goes here. |
 | `LootRuler/Init.lua` | The shared namespace `LR`, and a map of the files |
 | `LootRuler/Data/Loot.lua` | Generated loot lists (`tools/gen_loot.py`); never edit by hand |
-| `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. |
+| `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. `Gdkp.lua` is GDKP's money (no game calls), `Pot.lua` does it in the game. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `guild.lua` (whole raids), `gargul.lua`, `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `guild.lua`, `gdkp.lua` (whole raids), `gargul.lua`, `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
@@ -90,7 +90,7 @@ Players don't update their addons, so every version has to work with every other
 ## How to check your work
 
 ```sh
-lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/guild.lua
+lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
 GARGUL=<Gargul checkout> lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
@@ -121,7 +121,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Priority lists** are roll mode `PR` (`Guild.prioPlan`): the best place here gets the item with no roll (like
   `HR`), or the players sharing it roll. Sessions choose with `s.prio` (nil, "both", "only"). Formats in and out
   are in `Core/Prio.lua` (Gargul's CSV, DFT, thatsmybis).
-- **Next:** GDKP (auctions, the pot, payouts). Mind design rule 4: off until a leader turns it on.
+- **GDKP** is roll mode `BID` (`R.bid`, `R.parseBid`): bids are entries of kind `BID` with `n` = gold, typed in raid
+  chat (`Rolls.onChat`), whispered (`!lr bid`) or clicked (the window just types the amount). A sale is an award
+  of kind `BID` with `r` = the price. Session settings and who's in the pot are `s.gk` (`Core/Gdkp.lua`); trades
+  count the gold that changes hands (`Core/Drops.lua`). `Rolls.queue` puts items up one after another (any mode).
+- **Next:** the roadmap is done. Ideas from here: an in-game history of past raids, GDKP auction history and
+  average prices, Gargul's boosted-roll and +1 imports, and keeping an eye on WoW: Forever's new raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
@@ -165,5 +170,6 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
       and export, and loot rules chosen per session (reserves, priority, or both; `Core/Prio.lua`)
 
 **GDKP**
-- [ ] Auctions (bid in the addon or by typing an amount in raid chat), prices, a queue, the pot with cuts and
-      bonuses, payouts (addons can't put gold in a trade, so it tells each player what they're owed)
+- [x] Auctions (bid in the addon or by typing an amount in raid chat), prices, a queue, the pot with cuts and
+      bonuses, payouts (addons can't put gold in a trade, so it tells each player what they're owed;
+      `Core/Gdkp.lua`, `Core/Pot.lua`, `UI/Gdkp.lua`)

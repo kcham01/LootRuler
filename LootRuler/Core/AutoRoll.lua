@@ -33,6 +33,7 @@ function A.consider(copy)
   if copy.autoDone or copy.state ~= "open" or copy.test then return end
   local action, why = A.decide(copy)
   if not action then return end
+  if copy.mode == "BID" and action ~= "pass" then return end     -- an auction is bid in, never rolled
   copy.autoDone = true
   C_Timer.After(0.5, function()
     if copy.state ~= "open" or copy.rolled[R.key(U.me())] or copy.passedByMe then return end
