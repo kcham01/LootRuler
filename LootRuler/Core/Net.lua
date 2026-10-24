@@ -59,6 +59,8 @@ LR.DEFAULTS = {
   rollSeconds = 20,        -- how long everyone has to roll
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
+  autoLoot = false,        -- the master looter's loot rules hand out what they match (Core/AutoLoot.lua)
+  autoLootRules = {},      -- { { what, to } }, first match wins
 }
 function LR.loadDB()
   LootRulerDB = LootRulerDB or {}
@@ -68,8 +70,12 @@ function LR.loadDB()
   db.ui = db.ui or {}
   db.settings = db.settings or {}
   for k, v in pairs(LR.DEFAULTS) do
-    if db.settings[k] == nil or type(db.settings[k]) ~= type(v) then db.settings[k] = v end
+    if db.settings[k] == nil or type(db.settings[k]) ~= type(v) then db.settings[k] = type(v) == "table" and U.copy(v) or v end
   end
+  -- rules are checked like anything else saved: what doesn't make sense goes
+  db.settings.autoLootRules = U.filter(db.settings.autoLootRules, function(r)
+    return type(r) == "table" and type(r.what) == "string" and type(r.to) == "string"
+  end)
   -- forget sessions nobody has touched for a week
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do

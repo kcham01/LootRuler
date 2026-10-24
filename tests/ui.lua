@@ -427,6 +427,21 @@ run("settings", function()
   check("the minimap button can be hidden", not ann.G.LootRulerMinimapButton:IsShown() and ann.LR.db.ui.hideMinimap)
   clickText("Minimap button", nil, ann)
   check("and shown again", ann.G.LootRulerMinimapButton:IsShown())
+  clickText("Add a rule", nil, ann)
+  check("a loot rule: which items, then who gets them", visible("Which items?", ann) and visible("Who gets them?", ann))
+  clickText("Uncommon (green) items", nil, ann)
+  clickText("The disenchanter", nil, ann)
+  check("it says what the rule will do", visible("Uncommon (green) items will go to the disenchanter", ann))
+  clickText("Add the rule", nil, ann)
+  check("the rule is listed", #ann.LR.db.settings.autoLootRules == 1 and visible("Goes to the disenchanter", ann))
+  clickText("Hand out loot by my rules", nil, ann)
+  -- scroll down to the rules for the picture
+  local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+  local sf = scrollers(ann.G.LootRulerFrame, {})[1]
+  sf:SetVerticalScroll(sf:GetVerticalScrollRange())
+  shot("loot-rules", ann)
+  sf:SetVerticalScroll(0)
+  clickText("Hand out loot by my rules", nil, ann)
   clickText("Try the roll window", nil, ann)
   local shown = false
   for _, fr in ipairs(ann.LR.UI.rollFrames()) do if fr:IsShown() and fr.copy.test then shown = true end end

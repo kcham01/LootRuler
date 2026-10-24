@@ -499,6 +499,8 @@ events:SetScript("OnEvent", function(_, event, ...)
     Rolls.lootOpen = true
     local ok, err = pcall(LR.Drops.lootOpened)            -- the raid's loot list (Core/Drops.lua)
     if not ok then geterrorhandler()(err) end
+    ok, err = pcall(LR.AutoLoot.apply)                    -- the loot master's rules (Core/AutoLoot.lua)
+    if not ok then geterrorhandler()(err) end
     LR.changed("loot")
   elseif event == "LOOT_CLOSED" then
     Rolls.lootOpen = false

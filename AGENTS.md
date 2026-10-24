@@ -108,10 +108,11 @@ the mock (and to `tests/wow/server.lua` if it involves other players), never loo
 
 Start here in a new session; rewrite this section at the end of each piece of work.
 
-- **Open pull requests** are stacked, each built on the one before, so they merge in order: #1 (this file,
-  checks on PRs), #2 (any item, named raids), #3 (versions), #4 (Settings tab), then one per pug essential.
-- **Next:** "less clicking": auto-loot rules for the loot master, auto-roll rules for raiders, highlighting
-  reserved items in the game's loot window, shortcut keys that don't clash with Gargul's.
+- **Open pull requests** are stacked, each built on the one before, so they merge in order (one per feature).
+- **Decided for the guild features:** officer ranks (picked by the guild master) edit priority lists; a
+  player who gets an item they had priority on comes off that item's list; boosted roll points are earned
+  per raid attended. Both live in a "guild book" shared over the guild channel.
+- **Next:** the rest of "less clicking", then the guild book, boosted rolls, priority lists, then GDKP.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
@@ -143,7 +144,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 - [x] Trade announcements: a chat line when an item is traded over (both sides, items and gold)
 
 **Less clicking**
-- [ ] Auto-loot rules for the loot master (greens to the disenchanter, patterns to me)
+- [x] Auto-loot rules for the loot master (greens to the disenchanter, patterns to me; `Core/AutoLoot.lua`)
 - [ ] Auto-roll rules for raiders (always pass on X)
 - [ ] Highlighting reserved items in the game's loot window
 - [ ] Shortcut keys that don't clash with Gargul's

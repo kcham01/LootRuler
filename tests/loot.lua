@@ -441,6 +441,33 @@ srv:tick(1)
 check("an epic someone loots goes on the list", dropOf(DRAPE) and dropOf(DRAPE).h == full(bob) and stateOf(DRAPE) == "looted" and dropOf(DRAPE).b == "Shade of Aran")
 check("a grey doesn't", dropOf(22829) == nil)
 
+section("loot rules (master looter)")
+srv:setMasterLooter(lead)
+srv:tick(1)
+local set = lead.LR.db.settings
+lead.LR.AutoLoot.add("q2", "de")
+lead.LR.AutoLoot.add("recipe", "me")
+lead.LR.AutoLoot.add("item:28528", full(bob))          -- the watch: but Ann reserved it, so it's rolled for
+local given = #srv.given
+srv:openLoot(lead, { { 22545, 2 }, { 23809, 3 }, { WATCH, 4 }, { 28570, 4 } })
+srv:tick(2)
+check("rules do nothing until they're switched on", #srv.given == given)
+srv:closeLoot(lead)
+set.autoLoot = true
+srv:openLoot(lead, { { 22545, 2 }, { 23809, 3 }, { WATCH, 4 }, { 28570, 4 } })
+srv:tick(2)
+local function gotItem(id) for i = given + 1, #srv.given do if srv.given[i].id == id then return srv.given[i].to end end end
+check("the green goes to the disenchanter (the first rule that matches decides)", gotItem(22545) == dan)
+check("the pattern goes to the loot master", gotItem(23809) == lead)
+check("a reserved item is never handed out by a rule", gotItem(WATCH) == nil)
+check("nor anything no rule matches", gotItem(28570) == nil)
+check("the raid is told", chat("Handed out by the loot rules:") ~= nil)
+check("the disenchanted green is on the list of loot given out", (function()
+  for _, w in ipairs(s.won) do if w.i == 22545 and w.de and w.p == full(dan) then return true end end end)())
+srv:closeLoot(lead)
+set.autoLoot = false
+set.autoLootRules = {}
+
 section("ending the session")
 lead.LR.endSession(s)
 srv:tick(2)
