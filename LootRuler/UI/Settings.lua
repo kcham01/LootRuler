@@ -182,6 +182,7 @@ UI.COMMANDS = {
   { "/lr reserves", "everyone's reserves" },
   { "/lr loot", "the raid's loot" },
   { "/lr history", "past raids: what each gave out" },
+  { "/lr max 800", "GDKP: bid for me up to 800g on the item being auctioned" },
   { "/lr guild", "the Guild tab (boosted roll points)" },
   { "/lr settings", "the Settings tab" },
   { "/lr roll [item]", "roll an item out" },

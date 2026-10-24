@@ -815,6 +815,36 @@ run("past raids", function()
   LR.UI.go("reserve")
 end)
 
+run("max bids", function()
+  local s9 = LR.startSession("Karazhan", 2, true, false)
+  LR.setGdkp(s9, true)
+  srv:tick(1)
+  LR.Rolls.start(28525, {})
+  srv:tick(0.5)
+  local fr
+  for _, f in ipairs(bob.LR.UI.rollFrames()) do if f:IsShown() and f.copy and f.copy.id == 28525 then fr = f end end
+  bob.G.IsShiftKeyDown = function() return true end
+  bob.M.click(fr.dice)
+  bob.G.IsShiftKeyDown = function() return false end
+  srv:tick(0.3)
+  check("shift-click a bid: a max bid", visible("Max bid for", bob) and visible("Nobody else sees it.", bob))
+  fr:Hide() shot("max-bid", bob) fr:Show()        -- (the roll window sits over the sheet in the picture)
+  local box
+  local function walkEdits(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() then box = c end walkEdits(c) end end
+  walkEdits(bob.LR.UI.topSheet())
+  box:SetText("900") box._scripts.OnTextChanged(box, true)
+  clickText("Save", nil, bob)
+  srv:tick(1)
+  check("it goes to the loot master's addon, and bids for Bob", LR.Rolls.current.top and LR.Rolls.current.top.p == "Bob-Faerlina" and fr.copy.myMax == 900)
+  check("Bob's window says his max", fr.status:GetText():find("Your max: 900g", 1, true))
+  bob.LR.UI.win:Hide()
+  LR.Rolls.cancel()
+  srv:tick(1)
+  LR.setGdkp(s9, false)
+  LR.endSession(s9)
+  srv:tick(1)
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)

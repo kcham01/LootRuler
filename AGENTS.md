@@ -132,7 +132,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Past raids** (`Core/History.lua`): a session that ends (or is closed by its leader, or forgotten after a week) is
   kept as a frozen copy (`archived = true`), so exports, the GDKP split and the payouts sheet read it like a
   session. Trades and `!lr pot` find a past GDKP still owing (`History.owing`). Kept per character, 30 at most.
-- **Next:** the roadmap is done. Ideas from here: max bids, GDKP cuts by role, Gargul's boosted-roll and +1 imports,
+- **Max bids** (`R.resolve`): kept only by the loot master's addon (`roll.maxes`, sent as `M` or whispered `!lr max`);
+  it bids for them as little as it takes, says where the bidding ended up, and resends `R` so windows update.
+- **Next:** the roadmap is done. Ideas from here: GDKP cuts by role, Gargul's boosted-roll and +1 imports,
   and keeping an eye on WoW: Forever's new raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;

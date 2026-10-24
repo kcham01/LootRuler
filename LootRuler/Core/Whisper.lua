@@ -122,7 +122,19 @@ function W.handle(text, sender)
     if not g then W.reply(player, "A bid is an amount of gold: \"!lr bid 150\".") return end
     if not (roll and roll.mode == "BID" and roll.state == "open") then W.reply(player, "Nothing is being auctioned right now.") return end
     local e = LR.Rolls.onBid(player, g)
-    if e and e.kind then W.reply(player, ("Your bid of %s on %s is the highest."):format(LR.Gdkp.gold(g), roll.link)) end
+    if e and e.kind then
+      local top = roll.top
+      if top and U.samePlayer(top.p, player) then W.reply(player, ("Your bid of %s on %s is the highest."):format(LR.Gdkp.gold(g), roll.link))
+      elseif top then W.reply(player, ("Someone's max bid beat yours: the highest is %s."):format(LR.Gdkp.gold(top.n))) end
+    end
+    return
+  end
+  local maxArg = lower:match("^max%s+(.+)$")
+  if maxArg and s.gdkp then
+    local g = LR.Roll.parseBid(maxArg)
+    if not g then W.reply(player, "A max bid is an amount of gold: \"!lr max 800\".") return end
+    local ok, why = LR.Rolls.setMax(player, g)
+    W.reply(player, ok and ("Your max bid of %s is in: LootRuler bids for you, as little as it takes, up to that."):format(LR.Gdkp.gold(g)) or why)
     return
   end
   if (lower == "pot" or lower == "gdkp") and s.gdkp then
