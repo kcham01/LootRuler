@@ -104,6 +104,24 @@ The mock is strict on purpose: a method the client doesn't have is an error, and
 mock and the addon against Blizzard's own interface code. When the addon needs a new game function, add it to
 the mock (and to `tests/wow/server.lua` if it involves other players), never loosen the checks.
 
+## Next up (hand-off note)
+
+Start here in a new session; rewrite this section at the end of each piece of work.
+
+- **Open pull requests:** #1 (this file, checks on PRs), #2 (any item, named raids), #3 (versions), #4 (Settings
+  tab). They're stacked: each is built on the one before, so they merge in order.
+- **Next:** `!lr` in raid chat. A pug can reserve by typing `!lr [item]` in raid chat, not just by whisper, and
+  the leader's addon answers by whisper. It's the quickest way to get a whole pug's reserves in. After that
+  come the pug essentials below.
+- **Feedback this plan follows** (an experienced player and engineer):
+  - only the loot runner should need the addon;
+  - onboarding a pug must be quick;
+  - loot for new raids (Forever) isn't known in advance;
+  - players don't update addons;
+  - pull requests, not pushes to `main`;
+  - write down security and speed rules;
+  - keep a hand-off note like this one so each session starts fresh and cheap.
+
 ## Roadmap
 
 One pull request per feature, in this order. Mark items done here as they merge.
@@ -119,6 +137,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
       their on/off switch there
 
 **Pug essentials**
+- [ ] `!lr` in raid chat as well as by whisper (quick onboarding for a whole pug)
 - [ ] Plus ones: +1 for each win; players with fewer roll first
 - [ ] Disenchanter: a "Disenchant" choice when nobody wants an item
 - [ ] Export: who won what, to copy out
