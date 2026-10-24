@@ -39,3 +39,4 @@ UI\RollFrame.lua
 UI\Master.lua
 UI\Settings.lua
 UI\Highlight.lua
+UI\Shortcuts.lua

@@ -519,6 +519,34 @@ dan.LR.db.settings.tooltipInfo = false
 check("which can be turned off", not tooltipHas(dan, "LootRuler:"))
 dan.LR.db.settings.tooltipInfo = true
 
+section("shortcut keys")
+local function holding(p, ctrl, alt, shift)
+  p.G.IsControlKeyDown = function() return ctrl end
+  p.G.IsAltKeyDown = function() return alt end
+  p.G.IsShiftKeyDown = function() return shift end
+end
+holding(lead, true, true, false)
+lead.G.HandleModifiedItemClick(srv:link(28570))
+srv:tick(0.5)
+check("Ctrl+Alt+click on an item rolls it out", Rolls.mine() and Rolls.mine().id == 28570 and Rolls.mine().state == "open")
+Rolls.cancel()
+holding(lead, false, true, false)
+lead.G.HandleModifiedItemClick(srv:link(28570))
+srv:tick(0.5)
+check("Alt alone doesn't (that's Gargul's)", Rolls.mine() == nil)
+lead.LR.db.settings.rollShortcut = "alt"
+lead.G.HandleModifiedItemClick(srv:link(28570))
+srv:tick(0.5)
+check("unless it's picked in Settings", Rolls.mine() and Rolls.mine().id == 28570)
+Rolls.cancel()
+lead.LR.db.settings.rollShortcut = "ctrlalt"
+holding(lead, false, false, false)
+holding(dan, true, true, false)
+dan.G.HandleModifiedItemClick(srv:link(28570))
+srv:tick(0.5)
+check("a raider's shortcut does nothing", dan.LR.Rolls.mine() == nil)
+holding(dan, false, false, false)
+
 section("ending the session")
 lead.LR.endSession(s)
 srv:tick(2)

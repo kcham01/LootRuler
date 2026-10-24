@@ -64,6 +64,12 @@ function UI.settingsView(f)
     end
     p:chips(chips, { gap = 2 })
     p:note("How long everyone has to roll on an item (you can add time during a roll).")
+    local keys = { { plain = true, label = "Roll out with:" } }
+    for _, x in ipairs(UI.SHORTCUTS) do
+      keys[#keys + 1] = { label = x[2], on = set.rollShortcut == x[1], click = function() set.rollShortcut = x[1] UI.render() end }
+    end
+    p:chips(keys, { gap = 2 })
+    p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
     toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
     toggle(p, "tradeHelp", "Put won items in trades for me", "When someone who won an item you're holding opens a trade with you, LootRuler puts it in.")
     toggle(p, "tradeAnnounce", "Tell the raid what I trade", "While you're running loot, a line in raid chat says what you traded and to whom (\"Traded [item] to Ann.\"), so nobody wonders where an item went.")
