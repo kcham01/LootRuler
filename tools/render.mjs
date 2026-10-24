@@ -79,7 +79,7 @@ function opHtml(op) {
     return `<div style="${base}"><div style="position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c2321e,#5e0a03);border:1px solid #b5893a;color:#ffd9b0;font:bold 12px Arial;text-align:center;line-height:20px">x</div></div>`;
   }
   if (op.kind === 'edit') {
-    return `<div style="${base}box-sizing:border-box;border:1px solid #6b5530;background:#050403;border-radius:3px;color:#fff;font:12px 'Friz Quadrata','Segoe UI',Arial;line-height:${b.h}px;padding-left:6px;overflow:hidden;white-space:nowrap">${esc(op.text || '')}</div>`;
+    return `<div style="${base}box-sizing:border-box;border:1px solid #6b5530;background:#050403;border-radius:3px;color:#fff;font:12px 'Friz Quadrata','Segoe UI',Arial;line-height:${b.h}px;padding-left:6px;overflow:hidden;white-space:nowrap">${richText((op.text || '').replace(/\|H.-\|h(.-)\|h/g, '$1').replace(/\|H[^|]*\|h(.*?)\|h/g, '$1'), [1, 1, 1])}</div>`;
   }
   if (op.kind === 'texture') {
     const tint = op.vertex || [1, 1, 1, 1];

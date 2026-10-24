@@ -36,7 +36,8 @@ local function leaderTools(f, s)
   end)
 end
 
---- picks an item from the session's raid for something (a sheet), then calls done(id)
+--- picks an item for something (a sheet), then calls done(id): from the session's raid, the items it knows
+--- of, or any item shift-clicked into the box (when the session allows it)
 function UI.pickItem(s, title, done, filter)
   local q = ""
   UI.openSheet(title, function(f, h)
@@ -49,31 +50,50 @@ function UI.pickItem(s, title, done, filter)
       h.redraw(true)
       K.refocus(K.lastEdit)
     end)
+    K.takeLinks(e)
     K.lastEdit = e
     f:gap(6)
+    local function row(id)
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), s.hr[id] and "|cffff5a4aHR|r" or "")
+      b:SetScript("OnClick", function() h.close() done(id) end)
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      f:place(b, 36)
+      f:gap(2)
+    end
+    local function head(text)
+      local hd = K.get(f.owner, "head", f.parent)
+      hd.text:SetText(text)
+      hd:SetWidth(f.width)
+      f:place(hd, 22)
+      f:gap(3)
+    end
+    local raid = LR.raidOf(s)
+    local linked = LR.idFrom(q)
+    if linked then
+      if LR.allowedItem(s, linked) and (not filter or filter(linked)) then head("Linked item") row(linked)
+      else f:note(("That item doesn't drop in %s. Allow any item (Session tab) to use it."):format(raid.name), K.GOLD) end
+      return
+    end
+    f:note(s.any and "Pick one, or shift-click any item into the box." or "Pick one, or search by name.")
     local want = U.lower(q)
     local faction = UnitFactionGroup("player")
-    for _, boss in ipairs(LR.raid(s.raid).bosses) do
+    for _, boss in ipairs(raid.bosses) do
       local first = true
       for _, id in ipairs(boss.items) do
         local name = LR.itemName(id):lower()
         if LR.forFaction(id, faction) and (not filter or filter(id)) and (want == "" or name:find(want, 1, true) or boss.name:lower():find(want, 1, true)) then
-          if first then
-            local hd = K.get(f.owner, "head", f.parent)
-            hd.text:SetText(boss.name)
-            hd:SetWidth(f.width)
-            f:place(hd, 22)
-            f:gap(3)
-            first = false
-          end
-          local b = K.get(f.owner, "item", f.parent)
-          K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), s.hr[id] and "|cffff5a4aHR|r" or "")
-          b:SetScript("OnClick", function() h.close() done(id) end)
-          b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
-          b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-          f:place(b, 36)
-          f:gap(2)
+          if first then head(boss.name) first = false end
+          row(id)
         end
+      end
+    end
+    local first = true
+    for _, id in ipairs(LR.sessionItems(s)) do
+      if not raid.has[id] and (not filter or filter(id)) and (want == "" or LR.itemName(id):lower():find(want, 1, true)) then
+        if first then head(raid.custom and "Reserved and dropped" or "Other items") first = false end
+        row(id)
       end
     end
   end, { full = true })
@@ -100,7 +120,7 @@ local function byItem(f, s, leader)
   for _ in pairs(list) do total = total + 1 end
   f:panel("Soft reserves", function(p)
     if total == 0 then p:note("Nobody has reserved anything yet.") return end
-    for _, boss in ipairs(LR.raid(s.raid).bosses) do
+    for _, boss in ipairs(LR.raidOf(s).bosses) do
       local ids = U.filter(boss.items, function(id) return list[id] ~= nil end)
       if #ids > 0 then
         local hd = K.get(p.owner, "head", p.parent)
@@ -120,6 +140,27 @@ local function byItem(f, s, leader)
           p:gap(3)
         end
         for _, id in ipairs(ids) do list[id] = nil end    -- an item two bosses drop is shown under the first
+      end
+    end
+    -- reserves on items that aren't the raid's own loot (any item allowed, or a raid not in the lists)
+    local rest = {}
+    for id in pairs(list) do rest[#rest + 1] = id end
+    table.sort(rest)
+    if #rest > 0 then
+      local hd = K.get(p.owner, "head", p.parent)
+      hd.text:SetText(LR.raidOf(s).custom and "Reserved items" or "Other items")
+      hd:SetWidth(p.width)
+      p:place(hd, 22)
+      p:gap(3)
+      for _, id in ipairs(rest) do
+        local n = 0
+        for _, w in ipairs(list[id]) do n = n + w[2] end
+        local b = K.get(p.owner, "item", p.parent)
+        K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), UI.whoLine(s, id), n > 1 and (n .. " SR") or "1 SR")
+        b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        p:place(b, 36)
+        p:gap(3)
       end
     end
   end)

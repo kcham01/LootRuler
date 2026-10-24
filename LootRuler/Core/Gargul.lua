@@ -45,7 +45,7 @@ function G.data(s, plusOnesOf)
       hidden = false,
       discordUrl = "",
       url = "https://github.com/kcham01/LootRuler",
-      instance = LR.raid(s.raid).name,
+      instance = LR.raidOf(s).name,
     },
   }
 end
@@ -101,7 +101,7 @@ end
 
 ---------------------------------------------------------------------- softres.it into a session
 --- adds the reserves (and hard reserves) from a softres.it / Gargul export to a session the leader holds.
---- Items that don't drop in the session's raid are skipped. Returns a summary.
+--- Items the session doesn't allow (not its raid's loot, unless any item is allowed) are skipped. Returns a summary.
 function G.importInto(s, text)
   local data, err = G.decode(text)
   if not data then return nil, err end
@@ -110,7 +110,7 @@ function G.importInto(s, text)
   for token, name in pairs(CLASS_NAME) do classes[name] = token end
   for _, h in ipairs(data.hardreserves or {}) do
     local id = tonumber(h.id)
-    if id and LR.raidHas(s.raid, id) then
+    if id and LR.allowedItem(s, id) then
       S.setHR(s, id, h["for"] or "", h.note or "", U.now())
       sum.hard = sum.hard + 1
     elseif id then sum.skipped = sum.skipped + 1 end
@@ -124,7 +124,7 @@ function G.importInto(s, text)
       local added = false
       for _, it in ipairs(type(e.items) == "table" and e.items or {}) do
         local id = tonumber(type(it) == "table" and it.id or it)
-        if id and LR.raidHas(s.raid, id) then
+        if id and LR.allowedItem(s, id) then
           local ok, why = S.add(s, player, class, id, true, U.now())
           if ok then sum.items = sum.items + 1 added = true
           elseif why == "TOO_MANY" or why == "DUPLICATE" then sum.over = sum.over + 1

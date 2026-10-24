@@ -5,7 +5,9 @@
 --   id       unique: "<leader>:<time>"
 --   rev      goes up by one with every change, so copies can tell which is newer
 --   leader   "Name-Realm" of the raid leader who opened it
---   raid     raid key (LR.RAIDS)
+--   raid     raid key (LR.RAIDS), or LR.CUSTOM for a raid that isn't in the built-in lists
+--   raidName the raid's name (so a version that doesn't know the raid can still show it)
+--   any      any item may be reserved, not just the raid's own loot (always, for a raid not in the lists)
 --   sr       soft reserves each player gets
 --   dupes    whether a player may put more than one of their reserves on the same item
 --   locked   reserves can't be changed any more (the leader still can)
@@ -31,7 +33,7 @@ S.MIN_SR, S.MAX_SR = 1, 10
 S.WHY = {
   LOCKED = "Reserves are locked.",
   NO_SESSION = "There are no soft reserves open.",
-  NOT_IN_RAID = "That item doesn't drop in this raid.",
+  NOT_IN_RAID = "That item doesn't drop in this raid (the leader can allow any item).",
   HARD_RESERVED = "That item is hard reserved.",
   TOO_MANY = "You have no reserves left.",
   DUPLICATE = "You can only reserve an item once in this raid.",
@@ -39,10 +41,14 @@ S.WHY = {
   BAD_COUNT = "That's not a number of reserves this addon allows.",
 }
 
-function S.new(leader, raidKey, sr, dupes, now)
-  assert(LR.raid(raidKey), "unknown raid " .. tostring(raidKey))
+--- a new session. raidKey: a built-in raid, or LR.CUSTOM with name (a raid that isn't in the lists).
+function S.new(leader, raidKey, sr, dupes, now, name, any)
+  local known = LR.raid(raidKey)
+  assert(known or raidKey == LR.CUSTOM, "unknown raid " .. tostring(raidKey))
+  name = known and known.name or U.trim(name or ""):sub(1, 40)
   return {
-    id = leader .. ":" .. now, rev = 1, leader = leader, raid = raidKey,
+    id = leader .. ":" .. now, rev = 1, leader = leader, raid = raidKey, raidName = name ~= "" and name or "Raid",
+    any = (any or not known) and true or false,
     sr = sr, dupes = dupes and true or false, locked = false,
     hr = {}, res = {}, created = now, updated = now,
   }
@@ -53,12 +59,13 @@ local function bump(s, now)
   s.updated = now or s.updated
 end
 
---- whether a list of item ids is allowed for one player; false, reason, item id when not
-function S.check(s, items)
+--- whether a list of item ids is allowed for one player; false, reason, item id when not. lenient: leave
+--- which items are allowed to the leader's addon (a raider's addon checking before it asks)
+function S.check(s, items, lenient)
   if #items > s.sr then return false, "TOO_MANY" end
   local seen = {}
   for _, id in ipairs(items) do
-    if not LR.raidHas(s.raid, id) then return false, "NOT_IN_RAID", id end
+    if not LR.allowedItem(s, id, lenient) then return false, "NOT_IN_RAID", id end
     if s.hr[id] then return false, "HARD_RESERVED", id end
     if seen[id] and not s.dupes then return false, "DUPLICATE", id end
     seen[id] = true
@@ -94,7 +101,7 @@ end
 function S.add(s, player, class, id, byLeader, now)
   local items = U.copy(S.reservesOf(s, player))
   if s.locked and not byLeader then return false, "LOCKED" end
-  if not LR.raidHas(s.raid, id) then return false, "NOT_IN_RAID", id end
+  if not LR.allowedItem(s, id) then return false, "NOT_IN_RAID", id end
   if s.hr[id] then return false, "HARD_RESERVED", id end
   if #items >= s.sr then return false, "TOO_MANY", id end
   if not s.dupes and U.indexOf(items, id) then return false, "DUPLICATE", id end
@@ -118,7 +125,7 @@ end
 --- hard reserves an item (for someone, with a note: both optional). Soft reserves on it are taken away;
 --- returns the players who lost one.
 function S.setHR(s, id, forWho, note, now)
-  if not LR.raidHas(s.raid, id) then return false, "NOT_IN_RAID", id end
+  if not LR.allowedItem(s, id) then return false, "NOT_IN_RAID", id end
   s.hr[id] = { f = U.trim(forWho or ""), n = U.trim(note or "") }
   local lost = {}
   for player, r in pairs(s.res) do
@@ -158,6 +165,15 @@ function S.configure(s, sr, dupes, now)
   table.sort(touched)
   bump(s, now)
   return true, touched
+end
+
+--- whether any item may be reserved (a raid that isn't in the lists always allows any)
+function S.setAny(s, any, now)
+  any = (any or not LR.raid(s.raid)) and true or false
+  if s.any == any then return false end
+  s.any = any
+  bump(s, now)
+  return true
 end
 
 function S.setLocked(s, locked, now)
@@ -308,7 +324,9 @@ end
 --- a session from another player, checked before it's trusted: right shape, known raid, sane numbers
 function S.valid(t)
   if type(t) ~= "table" or type(t.id) ~= "string" or type(t.leader) ~= "string" or type(t.rev) ~= "number" then return false end
-  if not LR.raid(t.raid) or type(t.sr) ~= "number" or t.sr < S.MIN_SR or t.sr > S.MAX_SR then return false end
+  -- a raid this version doesn't know (a newer version's, or one the leader named) is fine: it's shown by name
+  if type(t.raid) ~= "string" or (t.raidName ~= nil and type(t.raidName) ~= "string") then return false end
+  if type(t.sr) ~= "number" or t.sr < S.MIN_SR or t.sr > S.MAX_SR then return false end
   if type(t.hr) ~= "table" or type(t.res) ~= "table" then return false end
   if t.won ~= nil then
     if type(t.won) ~= "table" then return false end

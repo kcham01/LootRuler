@@ -53,7 +53,7 @@ local function importSheet(s)
   local text = ""
   UI.openSheet("Bring in reserves from softres.it", function(f, h)
     f:text("On softres.it, open the raid and click |cffffd100Gargul Export|r, copy what it shows, and paste it here (Ctrl+V).")
-    f:note("The reserves are added to this session; items that don't drop in " .. LR.raid(s.raid).name .. " are skipped, and so are reserves past the limit.")
+    f:note("The reserves are added to this session; items that don't drop in " .. LR.raidOf(s).name .. " are skipped, and so are reserves past the limit.")
     local e = K.get(f.owner, "edit", f.parent)
     f:place(e, 22, 6, f.width - 12)
     e:SetText(text)
@@ -73,7 +73,7 @@ local function importSheet(s)
 end
 
 local function manage(f, s)
-  local raid = LR.raid(s.raid)
+  local raid = LR.raidOf(s)
   f:panel("Your session", function(p)
     p:kv({
       { "Raid", raid.name },
@@ -105,6 +105,8 @@ local function manage(f, s)
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         LR.setGuild(s, not s.guild)
       end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
+      not LR.raidOf(s).custom and { label = (s.any and "[x] " or "[  ] ") .. "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
+        tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
       { label = (s.locked and "[x] " or "[  ] ") .. "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
         tip = "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
     })
@@ -167,6 +169,17 @@ local function newSession(f)
       end
       p:chips(chips)
     end
+    p:chips({ { label = "Another raid", on = d.raid == LR.CUSTOM, click = function() d.raid = LR.CUSTOM UI.render() end,
+      tip = "A raid that isn't in LootRuler's lists (a new one, or World of Warcraft: Forever's): name it, and any item can be reserved." } })
+    if d.raid == LR.CUSTOM then
+      p:text("Raid name", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      local e = K.get(p.owner, "edit", p.parent)
+      p:place(e, 22, 6, p.width - 12)
+      e:SetMaxLetters(40)
+      e:SetText(d.name or "")
+      e:SetScript("OnTextChanged", function(self) d.name = self:GetText() end)
+      p:gap(6)
+    end
     stepper(p, "Reserves each", d.sr, S.MIN_SR, S.MAX_SR, function(v) d.sr = v UI.render() end)
     p:chips({
       { label = (d.dupes and "[x] " or "[  ] ") .. "Same item more than once", on = d.dupes, click = function() d.dupes = not d.dupes UI.render() end,
@@ -175,14 +188,17 @@ local function newSession(f)
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         d.guild = not d.guild UI.render()
       end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
+      d.raid ~= LR.CUSTOM and { label = (d.any and "[x] " or "[  ] ") .. "Any item", on = d.any, click = function() d.any = not d.any UI.render() end,
+        tip = "Lets people reserve any item, not just the raid's loot: for loot LootRuler's lists don't have yet." } or false,
     })
     if IsInGroup() and not UnitIsGroupLeader("player") then
       p:note("You're not the group leader. That's fine if you're running loot, but make sure only one of you opens reserves.", K.GOLD)
     end
     p:note("Raiders reserve in LootRuler, or whisper you \"!lr <item link>\" if they don't have it. You reserve on the Reserve tab like everyone else; hard reserves come next.")
     p:buttons({ { label = "Open reserves", click = function()
-      local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild)
-      UI.toast(("%s reserves are open."):format(LR.raid(s.raid).name))
+      if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
+      local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)
+      UI.toast(("%s reserves are open."):format(LR.raidOf(s).name))
       UI.render()
     end } })
   end)
@@ -194,7 +210,7 @@ local function others(f, current)
   f:panel("Other open sessions", function(p)
     for _, x in ipairs(list) do
       local b = K.get(p.owner, "item", p.parent)
-      K.setItem(b, p.width, LR.raidIcon(x.raid), LR.raid(x.raid).name,
+      K.setItem(b, p.width, LR.raidIcon(x.raid), LR.raidOf(x).name,
         (LR.isLeader(x) and "Yours" or ("By " .. U.short(x.leader))) .. " - " .. U.plural(x.sr, "reserve") .. " each", "",
         not LR.isLeader(x) and { text = "x", tip = "Forget this session", click = function() LR.forget(x) end } or nil)
       b:SetScript("OnClick", function() LR.select(x.id) UI.go("reserve") end)
@@ -211,7 +227,7 @@ function UI.sessionView(f, s)
     if s then
       f:panel("Session by " .. U.short(s.leader), function(p)
         p:kv({
-          { "Raid", LR.raid(s.raid).name },
+          { "Raid", LR.raidOf(s).name },
           { "Reserves each", tostring(s.sr) },
           { "Same item more than once", s.dupes and "yes" or "no" },
           { "Hard reserves", tostring(#U.keys(s.hr)) },

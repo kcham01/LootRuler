@@ -208,9 +208,9 @@ function LR.sendPicks(s, force)
 end
 
 ---------------------------------------------------------------------- what the leader does
-function LR.startSession(raidKey, sr, dupes, guild)
+function LR.startSession(raidKey, sr, dupes, guild, name, any)
   local now = U.now()
-  local s = S.new(U.me(), raidKey, sr, dupes, now)
+  local s = S.new(U.me(), raidKey, sr, dupes, now, name, any)
   s.guild = guild and true or false
   db.sessions[s.id] = s
   db.current = s.id
@@ -250,6 +250,7 @@ function LR.setLocked(s, locked)
     if locked and LR.Gargul.available() then LR.Gargul.send(s, true) end
   end
 end
+function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGuild(s, guild)
   s.guild = guild and true or false
   leaderChanged(s)
@@ -299,7 +300,7 @@ function LR.changeMine(s, edit, id)
   if s.locked then return false, "LOCKED" end
   local items = U.copy(LR.myPicks(s))
   edit(items)
-  local ok, why = S.check(s, items)
+  local ok, why = S.check(s, items, true)              -- which items are allowed is the leader's addon's call
   if not ok then return false, why end
   db.mine[s.id] = { i = items, dirty = true }
   LR.sendPicks(s, true)
@@ -341,7 +342,7 @@ function handlers.T(msg, channel, sender)
     if LR.inGroup(t.leader) then db.current = t.id end
     if not t.ended then
       LR.print(("%s opened soft reserves for %s: %s each%s. Type |cffffd100/lr|r to reserve."):format(
-        U.short(t.leader), LR.raid(t.raid).name, U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))
+        U.short(t.leader), LR.raidOf(t).name, U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))
     end
   end
   LR.changed("session")
@@ -354,7 +355,7 @@ function handlers.E(msg, channel, sender)
   db.sessions[msg.id] = nil
   db.mine[msg.id] = nil
   if db.current == msg.id then db.current = nil end
-  LR.print(("%s closed the soft reserves for %s."):format(U.short(s.leader), LR.raid(s.raid).name))
+  LR.print(("%s closed the soft reserves for %s."):format(U.short(s.leader), LR.raidOf(s).name))
   LR.changed("session")
 end
 

@@ -38,6 +38,7 @@ local function chatHas(p, text)
   return false
 end
 local function same(a, b) return table.concat(a, ",") == table.concat(b, ",") end
+local U = lead.LR.U
 
 -- Karazhan items used below
 local WATCH, BROOCH, TRINKET_DRAGONSPINE, HANDWRAPS, SIGNET, ROYAL = 28528, 28530, 28830, 28507, 28525, 28529
@@ -67,8 +68,11 @@ local why
 ok, why = ann.LR.reserve(cur(ann), BROOCH)
 check("a third reserve is refused before it's sent", not ok and why == "TOO_MANY")
 check("Bob sees Ann's reserves", same(bob.LR.Session.reservesOf(cur(bob), full(ann)), { WATCH, WATCH }))
-ok, why = bob.LR.reserve(cur(bob), TRINKET_DRAGONSPINE)
-check("items from another raid are refused", not ok and why == "NOT_IN_RAID")
+bob.LR.reserve(cur(bob), TRINKET_DRAGONSPINE)
+srv:tick(2)
+check("items from another raid are refused by the leader's addon (it decides, not the raider's)",
+  #lead.LR.Session.reservesOf(s, "Bob-Faerlina") == 0 and #picks(bob) == 0 and not bob.LR.pending(cur(bob)))
+check("and Bob is told why", chatHas(bob, "turned down your reserves") and chatHas(bob, "the leader can allow any item"))
 bob.LR.reserve(cur(bob), HANDWRAPS)
 srv:tick(2)
 check("Bob, from another realm, reserves", same(lead.LR.Session.reservesOf(s, "Bob-Faerlina"), { HANDWRAPS }))
@@ -195,6 +199,27 @@ srv:rosterChanged()
 srv:tick(4)
 check("joining the group brings the session", cur(dan) and cur(dan).id == s.id and cur(dan).rev == s.rev)
 
+section("the leader's addon decides what can be reserved")
+r = ask("!lr |cffa335ee|Hitem:28830::::::::70:::::|h[Dragonspine Trophy]|h|r")
+check("a link to another raid's item is refused by whisper, saying why", r:find("only its loot can be reserved", 1, true) ~= nil, r)
+lead.LR.setAny(s, true)
+srv:tick(2)
+check("the leader allows any item; raiders see it", cur(ann).any == true)
+r = ask("!lr |cffa335ee|Hitem:28830::::::::70:::::|h[Dragonspine Trophy]|h|r")
+check("then a linked item from anywhere is reserved", U.indexOf(lead.LR.Session.reservesOf(s, full(pug)), TRINKET_DRAGONSPINE) ~= nil, r)
+lead.LR.leaderRemove(s, full(pug), TRINKET_DRAGONSPINE)
+lead.LR.setAny(s, false)
+srv:tick(2)
+-- Bob's addon is an old version whose Karazhan list doesn't have the signet
+local had = bob.LR.RAID_BY_KEY.Karazhan.has[SIGNET]
+bob.LR.RAID_BY_KEY.Karazhan.has[SIGNET] = nil
+lead.LR.leaderRemove(s, full(ann), SIGNET)
+srv:tick(2)
+ok = bob.LR.reserve(cur(bob), SIGNET)
+srv:tick(2)
+check("a raider whose loot list is out of date can still reserve what the leader's allows", ok and U.indexOf(lead.LR.Session.reservesOf(s, "Bob-Faerlina"), SIGNET) ~= nil)
+bob.LR.RAID_BY_KEY.Karazhan.has[SIGNET] = had
+
 section("ending")
 lead.LR.endSession(s)
 srv:tick(2)
@@ -210,6 +235,21 @@ section("no errors")
 for _, p in ipairs({ lead, ann, bob, cara, dan }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
+
+section("a raid that isn't in the lists")
+local bd = lead.LR.startSession(lead.LR.CUSTOM, 2, false, false, "Barrow Deeps")
+srv:tick(2)
+check("raiders get it, by name", cur(ann) and cur(ann).id == bd.id and chatHas(ann, "opened soft reserves for Barrow Deeps"))
+local FOREVER_ITEM = 45001                       -- an item no loot list has
+ok = ann.LR.reserve(cur(ann), FOREVER_ITEM)
+srv:tick(2)
+check("any item can be reserved", ok and lead.LR.Session.reservesOf(bd, full(ann))[1] == FOREVER_ITEM)
+r = ask("!lr |cffa335ee|Hitem:28830::::::::70:::::|h[Dragonspine Trophy]|h|r")
+check("by whisper too", lead.LR.Session.reservesOf(bd, full(pug))[1] == TRINKET_DRAGONSPINE, r)
+r = ask("!lr dragonspine")
+check("by name, once someone has linked it (found, then refused: one per item)", r:find("Dragonspine Trophy", 1, true) ~= nil and r:find("only reserve an item once", 1, true) ~= nil, r)
+lead.LR.endSession(bd)
+srv:tick(2)
 
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))

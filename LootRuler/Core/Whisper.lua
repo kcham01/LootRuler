@@ -52,16 +52,16 @@ local function nameOf(s, id) return LR.itemLink(id) end
 --- one item from what was typed; replies with what went wrong when it can't tell
 local function pick(s, player, text)
   local faction = UnitFactionGroup("player")
-  local id, close, linked = LR.findItem(s.raid, text, faction)
+  local id, close, linked = LR.findInSession(s, text, faction)
   if id then return id end
   if linked then
-    W.reply(player, ("%s doesn't drop in %s."):format(LR.itemLink(linked), LR.raid(s.raid).name))
+    W.reply(player, ("%s doesn't drop in %s, and only its loot can be reserved."):format(LR.itemLink(linked), LR.raidOf(s).name))
   elseif #close > 1 then
     local some = {}
     for i = 1, math.min(4, #close) do some[i] = LR.itemLink(close[i]) end
     W.reply(player, ("Which one? %s%s - whisper the item link to be sure."):format(table.concat(some, " "), #close > 4 and " ..." or ""))
   else
-    W.reply(player, ("I couldn't find \"%s\" in %s. Shift-click the item to whisper its link."):format(U.plain(text), LR.raid(s.raid).name))
+    W.reply(player, ("I couldn't find \"%s\" in %s. Shift-click the item to whisper its link."):format(U.plain(text), LR.raidOf(s).name))
   end
 end
 
@@ -93,7 +93,7 @@ function W.handle(text, sender)
 
   if lower == "" or lower == "list" or lower == "help" or lower == "?" then
     W.reply(player, ("Soft reserves for %s: %d each%s. %s Whisper \"!lr <item link>\" to reserve, \"!lr remove <item>\" to take one back."):format(
-      LR.raid(s.raid).name, s.sr, s.dupes and "" or " (one per item)", status(s, player)))
+      LR.raidOf(s).name, s.sr, s.dupes and "" or " (one per item)", status(s, player)))
     return
   end
 
@@ -170,7 +170,7 @@ end
 --- the line the leader posts to the raid
 function W.announce(s)
   local text = ("%s Soft reserves are open for %s: %s each%s. Reserve in the LootRuler addon, or whisper me \"!lr <item link>\"."):format(
-    LR.TAG, LR.raid(s.raid).name, U.plural(s.sr, "reserve"), s.dupes and "" or ", one per item")
+    LR.TAG, LR.raidOf(s).name, U.plural(s.sr, "reserve"), s.dupes and "" or ", one per item")
   local hr = U.keys(s.hr)
   if #hr > 0 then
     local links = U.map(hr, function(id) return LR.itemLink(id) end)

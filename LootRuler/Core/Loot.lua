@@ -18,6 +18,38 @@ end
 function LR.raid(key) return key and LR.RAID_BY_KEY[key] end
 function LR.raidHas(key, id) local r = LR.RAID_BY_KEY[key] return r and r.has[id] or false end
 
+LR.CUSTOM = "custom"         -- a session's raid key for a raid that isn't in the built-in lists
+
+--- a session's raid: the built-in one, or (for a raid that isn't in this version's lists: one the leader
+--- named, or one a newer version knows) a stand-in with its name and no bosses
+local stubs = setmetatable({}, { __mode = "k" })
+function LR.raidOf(s)
+  local r = s and LR.RAID_BY_KEY[s.raid]
+  if r then return r end
+  local stub = s and stubs[s]
+  local name = s and type(s.raidName) == "string" and s.raidName ~= "" and s.raidName or "the raid"
+  if not stub or stub.name ~= name then
+    stub = { key = s and s.raid or LR.CUSTOM, name = name, short = name, bosses = {}, order = {}, has = {}, custom = true }
+    if s then stubs[s] = stub end
+  end
+  return stub
+end
+
+--- whether a session lets an item be reserved: any item for a raid that isn't in the lists, or when the
+--- leader allows any item; else the raid's own loot. lenient: don't judge by the built-in lists at all (a
+--- raider's addon, before asking the leader's, which decides)
+function LR.allowedItem(s, id, lenient)
+  if type(id) ~= "number" or id <= 0 or id % 1 ~= 0 then return false end
+  if lenient or s.any or not LR.RAID_BY_KEY[s.raid] then return true end
+  return LR.RAID_BY_KEY[s.raid].has[id] == true
+end
+
+--- an item id from what someone typed or linked: an item link, "item:123" or just a number
+function LR.idFrom(text)
+  text = tostring(text or "")
+  return tonumber(text:match("|Hitem:(%d+)")) or tonumber(text:match("^%s*item:(%d+)")) or tonumber(text:match("^%s*%[?(%d+)%]?%s*$"))
+end
+
 --- which bosses in a raid drop an item (names)
 function LR.dropsFrom(key, id)
   local out = {}
@@ -110,7 +142,12 @@ function LR.itemName(id)
   local it = LR.ITEMS[id]
   return it and it[1] or ("item " .. tostring(id))
 end
-function LR.quality(id) local it = LR.ITEMS[id] return it and it[2] or 4 end
+function LR.quality(id)
+  local it = LR.ITEMS[id]
+  if it then return it[2] end
+  local _, _, q = info(id)
+  return q or 4
+end
 function LR.qualityHex(id) return QUALITY[LR.quality(id)] or "ffffff" end
 function LR.coloredName(id) return "|cff" .. LR.qualityHex(id) .. LR.itemName(id) .. "|r" end
 --- the game's link for chat ([Item] in its quality colour)
@@ -156,28 +193,49 @@ function LR.preload(key)
 end
 
 --- finds a raid item from what someone typed: an item link, an item id, or (part of) its name. Returns the
---- id, or nil and a list of close matches. Items for the other faction are skipped.
-function LR.findItem(key, text, faction)
+--- id, or nil and a list of close matches; and the id that was linked, if one was. Names are searched in the
+--- raid's loot and in `extra` (more item ids). Items for the other faction are skipped.
+function LR.findItem(key, text, faction, extra)
   local r = LR.RAID_BY_KEY[key]
-  if not r then return nil, {} end
   text = U.trim(text)
-  local linked = tonumber(text:match("|Hitem:(%d+)")) or tonumber(text:match("^%[?(%d+)%]?$"))
-  if linked then return r.has[linked] and linked or nil, {}, linked end
+  local linked = LR.idFrom(text)
+  if linked then return (r and r.has[linked]) and linked or nil, {}, linked end
   local want = U.plain(text):gsub("^%[", ""):gsub("%]$", ""):lower()
   if want == "" then return nil, {} end
-  local exact, partial = {}, {}
-  for _, id in ipairs(r.order) do
-    if LR.forFaction(id, faction) then
-      local here, english = LR.itemName(id):lower(), (LR.ITEMS[id] and LR.ITEMS[id][1] or ""):lower()
-      if here == want or english == want then
-        exact[#exact + 1] = id
-      elseif here:find(want, 1, true) or english:find(want, 1, true) then
-        partial[#partial + 1] = id
-      end
+  local exact, partial, seen = {}, {}, {}
+  local function consider(id)
+    if seen[id] or not LR.forFaction(id, faction) then return end
+    seen[id] = true
+    local here, english = LR.itemName(id):lower(), (LR.ITEMS[id] and LR.ITEMS[id][1] or ""):lower()
+    if here == want or english == want then
+      exact[#exact + 1] = id
+    elseif here:find(want, 1, true) or (english ~= "" and english:find(want, 1, true)) then
+      partial[#partial + 1] = id
     end
   end
+  for _, id in ipairs(r and r.order or {}) do consider(id) end
+  for _, id in ipairs(extra or {}) do consider(id) end
   if #exact == 1 then return exact[1], {} end
   if #exact > 1 then return nil, exact end
   if #partial == 1 then return partial[1], {} end
   return nil, partial
+end
+
+--- items a session knows of besides its raid's loot: reserved, hard reserved, or seen dropping
+function LR.sessionItems(s)
+  local out, seen = {}, {}
+  local function add(id) if type(id) == "number" and not seen[id] then seen[id] = true out[#out + 1] = id end end
+  for _, r in pairs(s.res or {}) do for _, id in ipairs(r.i or {}) do add(id) end end
+  for id in pairs(s.hr or {}) do add(id) end
+  for _, d in ipairs(s.drops or {}) do add(d.i) end
+  table.sort(out)
+  return out
+end
+
+--- finds an item for a session: a link to anything the session allows, or a name from its raid's loot and
+--- the items it knows of. Returns as LR.findItem.
+function LR.findInSession(s, text, faction)
+  local id, close, linked = LR.findItem(s.raid, text, faction, LR.sessionItems(s))
+  if linked and LR.allowedItem(s, linked) then return linked, {} end
+  return id, close, linked
 end
