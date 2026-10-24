@@ -82,6 +82,11 @@ lead.LR.setHR(s, HANDWRAPS, "Ann", "healer")
 srv:tick(3)
 check("the reserves are in", lead.LR.Session.claims(s, full(ann), WATCH) == 2 and lead.LR.Session.claims(s, full(bob), WATCH) == 1)
 local Rolls = lead.LR.Rolls
+local function dropOf(id, n)
+  local seen = 0
+  for _, d in ipairs(s.drops or {}) do if d.i == id then seen = seen + 1 if seen == (n or 1) then return d end end end
+end
+local function stateOf(id, n) return lead.LR.Session.dropState(s, dropOf(id, n)) end
 
 section("the loot window")
 srv:openLoot(lead, { { WATCH, 4 }, { SIGNET, 4 }, { HANDWRAPS, 4 }, { 22829, 0 }, { BROOCH, 4 } })
@@ -246,6 +251,26 @@ lead.LR.adjustPlusOne(s, full(ann), -1)
 lead.LR.setPlusOne(s, false)
 srv:tick(2)
 
+section("the disenchanter")
+lead.LR.setDisenchanter(s, full(dan))
+srv:tick(2)
+check("raiders know who disenchants", ann.LR.current().de == full(dan))
+srv:openLoot(lead, { { 28570, 4 } })
+srv:tick(0.5)
+roll = Rolls.start(28570, { slot = 1, secs = 5 })
+srv:tick(8)
+check("nobody rolled", roll.state == "closed" and lead.LR.Roll.result(roll) == nil)
+check("the loot master's window offers it to the disenchanter", found(lead, "Disenchant (Dan)", lead.G.LootRulerMasterFrame))
+clickText(lead, "Disenchant (Dan)", lead.G.LootRulerMasterFrame)
+srv:tick(1)
+check("it goes to Dan through master loot", srv.given[#srv.given].id == 28570 and srv.given[#srv.given].to == dan)
+check("the raid is told", chat("to be disenchanted") ~= nil)
+check("the list says disenchanted", s.won[#s.won].de == true and ann.LR.U.plain(ann.LR.UI.dropLine(ann.LR.current(), dropOf(28570))):find("Disenchanted by Dan", 1, true) ~= nil)
+check("no +1 for it", lead.LR.Session.plusOnes(s, full(dan)) == 0)
+Rolls.dismiss()
+srv:closeLoot(lead)
+srv:tick(0.5)
+
 section("raid warnings or plain raid chat")
 lead.LR.db.settings.raidWarning = false
 roll = Rolls.start(SIGNET, { secs = 10 })
@@ -287,7 +312,7 @@ dan.M.click(frameFor(dan, ROYAL).dice)
 srv:tick(8)
 ann.LR.Rolls.award(full(dan))
 srv:tick(2)
-check("the item goes to Dan", srv.given[4] and srv.given[4].id == ROYAL and srv.given[4].to == dan)
+check("the item goes to Dan", srv.given[#srv.given].id == ROYAL and srv.given[#srv.given].to == dan)
 check("and the soft reserves' leader records it", wonBy(s, ROYAL) == full(dan) .. ":MS")
 
 section("settings")
@@ -309,11 +334,6 @@ Rolls.cancel()
 srv:tick(1)
 
 section("the raid's loot list")
-local function dropOf(id, n)
-  local seen = 0
-  for _, d in ipairs(s.drops or {}) do if d.i == id then seen = seen + 1 if seen == (n or 1) then return d end end end
-end
-local function stateOf(id, n) return lead.LR.Session.dropState(s, dropOf(id, n)) end
 check("everything from the first corpse is on it, in order", s.drops and s.drops[1].i == WATCH and s.drops[2].i == SIGNET and s.drops[3].i == HANDWRAPS and s.drops[4].i == BROOCH)
 check("not the grey", dropOf(22829) == nil)
 check("with the boss it dropped from", dropOf(WATCH).b == "Moroes")

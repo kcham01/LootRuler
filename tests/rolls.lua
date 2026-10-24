@@ -154,6 +154,17 @@ check("never below none", S.adjustPlusOne(s3, ANN, -1, 406) and not S.adjustPlus
 check("the table for a roll", next(S.plusOneTable(s3, { ANN, DAN })) == nil and S.adjustPlusOne(s3, DAN, 1, 408) and S.plusOneTable(s3, { ANN, DAN })[DAN:lower()] == 1)
 check("a session with +1s is valid", S.setPlusOne(s3, true, 409) and S.valid(s3))
 
+print("== the disenchanter")
+local s4 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 500)
+check("the leader picks a disenchanter", S.setDisenchanter(s4, "Dan", 501) and s4.de == DAN)
+S.award(s4, 28525, DAN, "OS", nil, 502, nil, true)
+check("a disenchanted item is an off spec award marked to disenchant (older versions read it as off spec)", s4.won[1].k == "OS" and s4.won[1].de == true)
+check("it isn't a +1", S.plusOnes(s4, DAN) == 0)
+check("and shows as disenchanted", S.winners(s4, 28525)[1][2] == "DE")
+check("nobody", S.setDisenchanter(s4, nil, 503) and s4.de == nil)
+local bad3 = U.copy(s4) bad3.de = 5
+check("a broken disenchanter isn't trusted", not S.valid(bad3))
+
 print("== reading roll messages")
 local parse = R.parser("%s rolls %d (%d-%d)")
 local name, n, lo, hi = parse("Bob-Faerlina rolls 57 (1-100)")

@@ -17,6 +17,8 @@
 --            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time,
 --              d = the drop it was (its key, when known) }
 --            A reserve that has won its item is used up: it doesn't count when another copy drops.
+--   de       the disenchanter ("Name-Realm"): items nobody wants go to them. Their awards are kind "OS" with
+--            de = true, so versions that don't know about disenchanting still read them.
 --   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
 --   po       +1 changes the leader made by hand: "Name-Realm" -> number (added to the counted ones)
 --   drops    every item that dropped while the session was open, in order (Core/Drops.lua):
@@ -214,12 +216,12 @@ S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true }
 
 --- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
 --- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
-function S.award(s, id, player, kind, roll, now, dropKey)
+function S.award(s, id, player, kind, roll, now, dropKey, de)
   if type(id) ~= "number" or type(player) ~= "string" or not S.WON_KINDS[kind] then return false end
   local d = dropKey and S.drop(s, dropKey) or S.openDrops(s, id)[1]
   if d and d.i ~= id then d = nil end
   s.won = s.won or {}
-  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now, d = d and d.k or nil }
+  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now, d = d and d.k or nil, de = de and true or nil }
   bump(s, now)
   return true
 end
@@ -251,8 +253,17 @@ end
 --- who has been given an item: { { name, kind }, ... } in the order it was given
 function S.winners(s, id)
   local out = {}
-  for _, w in ipairs(s.won or {}) do if w.i == id then out[#out + 1] = { w.p, w.k } end end
+  for _, w in ipairs(s.won or {}) do if w.i == id then out[#out + 1] = { w.p, w.de and "DE" or w.k } end end
   return out
+end
+
+--- who disenchants (nil: nobody)
+function S.setDisenchanter(s, player, now)
+  player = type(player) == "string" and player ~= "" and U.full(player) or nil
+  if s.de == player then return false end
+  s.de = player
+  bump(s, now)
+  return true
 end
 
 ---------------------------------------------------------------------- +1s
@@ -379,6 +390,7 @@ function S.valid(t)
       if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or type(w.k) ~= "string" or #w.k > 12 then return false end
     end
   end
+  if t.de ~= nil and type(t.de) ~= "string" then return false end
   if t.po ~= nil then
     if type(t.po) ~= "table" then return false end
     for name, n in pairs(t.po) do if type(name) ~= "string" or type(n) ~= "number" then return false end end
