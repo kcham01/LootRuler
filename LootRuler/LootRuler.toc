@@ -31,6 +31,7 @@ Core\Rolls.lua
 Core\Drops.lua
 Core\Guild.lua
 Core\Pot.lua
+Core\History.lua
 Core\Export.lua
 Core\AutoLoot.lua
 Core\AutoRoll.lua

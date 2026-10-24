@@ -209,18 +209,18 @@ local function manage(f, s)
         local owing = LR.Gdkp.unsettled(s)
         if #owing > 0 then
           UI.openSheet("Gold is still owed", function(sf, h)
-            sf:text(("Ending the session loses the list of who owes what, and %s aren't settled yet:"):format(U.plural(#owing, "player")))
+            sf:text(("%s aren't settled yet:"):format(U.plural(#owing, "player")))
             for i, x in ipairs(owing) do
               if i > 8 then sf:note(("...and %d more."):format(#owing - 8)) break end
               sf:note(x[2] > 0 and ("%s: you give them %s"):format(U.short(x[1]), LR.Gdkp.gold(x[2]))
                 or ("%s: they give you %s"):format(U.short(x[1]), LR.Gdkp.gold(-x[2])), x[2] > 0 and K.GOLD or { 1, 0.35, 0.29 })
             end
-            sf:note("Keep it open until everyone is paid: it stays for a week, even after you log out. The Payouts sheet can mark gold sent by mail as settled.")
+            sf:note("You can end it anyway: it's kept under Past raids (Loot tab), where you can finish the payouts, and trades with them still count for two weeks. Or keep it open: it stays for a week, even after you log out.")
             sf:gap(6)
             sf:buttons({
               { label = "Keep it open", click = function() h.close() end },
               { label = "Payouts", click = function() h.close() UI.payoutSheet(s) end },
-              { label = "End anyway", click = function() h.close() LR.endSession(s) end },
+              { label = "End it", click = function() h.close() LR.endSession(s) end },
             })
           end)
           return

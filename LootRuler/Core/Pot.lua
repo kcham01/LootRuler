@@ -70,12 +70,13 @@ end
 
 --- a trade opened with someone: what they owe me, or I owe them
 function Pot.tradeNote(partner)
-  local s = Pot.mine()
+  local s = Pot.mine() or LR.History.owing(partner)
   if not s then return end
   local row = G.split(s).rows[U.full(partner)]
   if not row or math.abs(row.owed) < 0.01 then return end
-  if row.owed > 0 then LR.print(("GDKP: put %s in the trade for %s (their payout)."):format(G.gold(row.owed), U.short(partner)))
-  else LR.print(("GDKP: %s owes you %s."):format(U.short(partner), G.gold(-row.owed))) end
+  local from = s.archived and (" (from " .. LR.raidOf(s).name .. ", " .. date("%b %d", s.ended) .. ")") or ""
+  if row.owed > 0 then LR.print(("GDKP: put %s in the trade for %s (their payout%s)."):format(G.gold(row.owed), U.short(partner), from))
+  else LR.print(("GDKP: %s owes you %s%s."):format(U.short(partner), G.gold(-row.owed), from)) end
 end
 
 -- everyone who's in the group while the organiser is gets a share
