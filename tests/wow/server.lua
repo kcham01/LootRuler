@@ -222,6 +222,9 @@ function Server:install(p)
     end,
   }
   G.GetTradePlayerItemLink = function(i) local it = p.tradeItems and p.tradeItems[i] return it and it.link end
+  G.GetTradeTargetItemLink = function(i) local q = p.trading local it = q and q.tradeItems and q.tradeItems[i] return it and it.link end
+  G.GetPlayerTradeMoney = function() return p.trading and p.tradeMoney or 0 end
+  G.GetTargetTradeMoney = function() return p.trading and p.trading.tradeMoney or 0 end
   G.UnitIsConnected = function(unit) local q = unitPlayer(unit) return q and q.online or false end
   G.UnitIsGroupLeader = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and srv.group.leader == q or false end
   G.UnitIsGroupAssistant = function(unit) local q = unitPlayer(unit) return srv:inGroup(p) and q and srv.group.assists[q] or false end
@@ -382,8 +385,17 @@ function Server:target(p, name, guid) p.target = name and { name = name, guid = 
 function Server:openTrade(a, b)
   a.trading, b.trading = b, a
   a.tradeItems, b.tradeItems = {}, {}
+  a.tradeMoney, b.tradeMoney = 0, 0
   for _, p in ipairs({ a, b }) do if p.client then p.G.TradeFrame:Show() p.M.fire("TRADE_SHOW") end end
 end
+--- p puts gold in the trade (copper)
+function Server:setTradeMoney(p, copper)
+  p.tradeMoney = copper
+  for _, q in ipairs({ p, p.trading }) do
+    if q and q.client then local who = q self:deliver(function() who.M.fire("TRADE_MONEY_CHANGED") end) end
+  end
+end
+
 --- both accept: a's items go to b
 function Server:completeTrade(a)
   local b = a.trading
@@ -401,7 +413,7 @@ function Server:completeTrade(a)
       p.M.fire("UI_INFO_MESSAGE", 0, "Trade complete.")
       p.G.TradeFrame:Hide()
     end
-    p.trading, p.tradeItems = nil, {}
+    p.trading, p.tradeItems, p.tradeMoney = nil, {}, 0
   end
 end
 

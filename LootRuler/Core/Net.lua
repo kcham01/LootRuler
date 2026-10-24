@@ -55,6 +55,7 @@ LR.DEFAULTS = {
   rollWindow = true,       -- roll windows pop up
   rollOnlyMine = false,    -- ...only for items I may roll on
   tradeHelp = true,        -- won items go into trades with their winners
+  tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom
   rollSeconds = 20,        -- how long everyone has to roll
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat

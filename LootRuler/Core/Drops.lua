@@ -233,19 +233,58 @@ function Drops.tradeShow()
   if #trade.queue > 0 then C_Timer.After(0.3, offerNext) end
 end
 
---- what we're giving in the trade, kept up to date until it goes through
+--- what's in the trade on both sides, kept up to date until it goes through
 function Drops.tradeItems()
-  trade.items = {}
+  trade.items, trade.gave, trade.got = {}, {}, {}
   for i = 1, 6 do
-    local id = idOf(GetTradePlayerItemLink(i))
-    if id then trade.items[#trade.items + 1] = id end
+    local mine, theirs = GetTradePlayerItemLink(i), GetTradeTargetItemLink(i)
+    local id = idOf(mine)
+    if id then trade.items[#trade.items + 1] = id trade.gave[#trade.gave + 1] = mine end
+    if theirs then trade.got[#trade.got + 1] = theirs end
   end
+  trade.gaveMoney = GetPlayerTradeMoney and GetPlayerTradeMoney() or 0
+  trade.gotMoney = GetTargetTradeMoney and GetTargetTradeMoney() or 0
 end
 
---- the trade went through: every raid drop we gave now belongs to the partner
+--- "12g 50s" (copper in, the game's own coin names aren't needed in chat)
+function Drops.money(copper)
+  copper = math.floor(tonumber(copper) or 0)
+  local g, s, c = math.floor(copper / 10000), math.floor(copper % 10000 / 100), copper % 100
+  local parts = {}
+  if g > 0 then parts[#parts + 1] = g .. "g" end
+  if s > 0 then parts[#parts + 1] = s .. "s" end
+  if c > 0 or #parts == 0 then parts[#parts + 1] = c .. "c" end
+  return table.concat(parts, " ")
+end
+
+--- the line telling the raid what a trade was, or nil when nothing changed hands
+function Drops.tradeLine(partner, gave, gaveMoney, got, gotMoney)
+  local function side(links, money)
+    local list = {}
+    for _, l in ipairs(links or {}) do list[#list + 1] = l end
+    if (money or 0) > 0 then list[#list + 1] = Drops.money(money) end
+    return #list > 0 and table.concat(list, " ") or nil
+  end
+  local g, r = side(gave, gaveMoney), side(got, gotMoney)
+  if not g and not r then return nil end
+  local who = U.short(partner)
+  if g and r then return ("Traded %s to %s for %s."):format(g, who, r) end
+  if g then return ("Traded %s to %s."):format(g, who) end
+  return ("%s traded me %s."):format(who, r)
+end
+
+--- the trade went through: the raid hears what changed hands (the person running loot, when that's on), and
+--- every raid drop we gave now belongs to the partner
 function Drops.tradeDone()
-  local s = Rolls.session()
   local partner = trade.partner
+  if partner and LR.db.settings.tradeAnnounce and IsInGroup() and LR.canRunLoot() then
+    local line = Drops.tradeLine(partner, trade.gave, trade.gaveMoney, trade.got, trade.gotMoney)
+    if line then
+      for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, LR.groupChannel()) end
+    end
+  end
+  trade.gave, trade.got, trade.gaveMoney, trade.gotMoney = {}, {}, 0, 0
+  local s = Rolls.session()
   if not s or not partner then return end
   local list, used = {}, {}
   for _, id in ipairs(trade.items or {}) do
@@ -268,7 +307,8 @@ end
 
 ---------------------------------------------------------------------- events
 local events = CreateFrame("Frame")
-for _, e in ipairs({ "CHAT_MSG_LOOT", "TRADE_SHOW", "TRADE_PLAYER_ITEM_CHANGED", "TRADE_ACCEPT_UPDATE", "UI_INFO_MESSAGE", "TRADE_CLOSED" }) do
+for _, e in ipairs({ "CHAT_MSG_LOOT", "TRADE_SHOW", "TRADE_PLAYER_ITEM_CHANGED", "TRADE_TARGET_ITEM_CHANGED", "TRADE_MONEY_CHANGED",
+  "TRADE_ACCEPT_UPDATE", "UI_INFO_MESSAGE", "TRADE_CLOSED" }) do
   events:RegisterEvent(e)
 end
 events:SetScript("OnEvent", function(_, event, a1, a2)
@@ -276,7 +316,8 @@ events:SetScript("OnEvent", function(_, event, a1, a2)
   local ok, err = pcall(function()
     if event == "CHAT_MSG_LOOT" then Drops.lootMessage(a1)
     elseif event == "TRADE_SHOW" then Drops.tradeShow()
-    elseif event == "TRADE_PLAYER_ITEM_CHANGED" or event == "TRADE_ACCEPT_UPDATE" then Drops.tradeItems()
+    elseif event == "TRADE_PLAYER_ITEM_CHANGED" or event == "TRADE_TARGET_ITEM_CHANGED" or event == "TRADE_MONEY_CHANGED"
+      or event == "TRADE_ACCEPT_UPDATE" then Drops.tradeItems()
     elseif event == "UI_INFO_MESSAGE" then
       if a2 == ERR_TRADE_COMPLETE or a1 == ERR_TRADE_COMPLETE then Drops.tradeDone() end
     elseif event == "TRADE_CLOSED" then trade.queue = {}

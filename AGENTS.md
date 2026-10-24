@@ -110,8 +110,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 
 - **Open pull requests** are stacked, each built on the one before, so they merge in order: #1 (this file,
   checks on PRs), #2 (any item, named raids), #3 (versions), #4 (Settings tab), then one per pug essential.
-- **Next:** the rest of the pug essentials (plus ones, disenchanter, export, trade announcements), then "less
-  clicking".
+- **Next:** "less clicking": auto-loot rules for the loot master, auto-roll rules for raiders, highlighting
+  reserved items in the game's loot window, shortcut keys that don't clash with Gargul's.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
@@ -140,7 +140,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 - [x] Plus ones: +1 for each win; players with fewer roll first (a session option; counted from the awards)
 - [x] Disenchanter: a "Disenchant" choice when nobody wants an item (awards are kind "OS" with `de = true`)
 - [x] Export: who won what, to copy out (CSV, thatsmybis, DFT; `Core/Export.lua`), and posted in raid chat
-- [ ] Trade announcements: a chat line when an item is traded over
+- [x] Trade announcements: a chat line when an item is traded over (both sides, items and gold)
 
 **Less clicking**
 - [ ] Auto-loot rules for the loot master (greens to the disenchanter, patterns to me)
