@@ -101,7 +101,7 @@ The loot master (or the raid leader, or an assistant) needs LootRuler; raiders d
 
 Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
 
-`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr minimap` hides or shows the minimap button.
+`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr settings` opens the Settings tab (every option, each saying what it does), `/lr help` lists the commands, `/lr minimap` hides or shows the minimap button.
 
 ## How it's checked
 

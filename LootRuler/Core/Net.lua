@@ -49,6 +49,15 @@ function LR.onChange(fn) listeners[#listeners + 1] = fn end
 function LR.print(msg) print("|cffffd100LootRuler|r: " .. msg) end
 
 ---------------------------------------------------------------------- saved state
+-- every option, and what it is until changed (the Settings tab, UI/Settings.lua)
+LR.DEFAULTS = {
+  hideWhispers = true,     -- "!lr" whispers and the answers don't show in the leader's chat
+  rollWindow = true,       -- roll windows pop up
+  rollOnlyMine = false,    -- ...only for items I may roll on
+  tradeHelp = true,        -- won items go into trades with their winners
+  rollSeconds = 20,        -- how long everyone has to roll
+  raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
+}
 function LR.loadDB()
   LootRulerDB = LootRulerDB or {}
   db = LootRulerDB
@@ -56,10 +65,9 @@ function LR.loadDB()
   db.mine = db.mine or {}             -- id -> { i = my picks, dirty = not yet confirmed by the leader }
   db.ui = db.ui or {}
   db.settings = db.settings or {}
-  if db.settings.hideWhispers == nil then db.settings.hideWhispers = true end
-  if db.settings.rollWindow == nil then db.settings.rollWindow = true end        -- show roll windows
-  if db.settings.rollOnlyMine == nil then db.settings.rollOnlyMine = false end   -- only for items I may roll on
-  if db.settings.tradeHelp == nil then db.settings.tradeHelp = true end         -- put won loot in trades
+  for k, v in pairs(LR.DEFAULTS) do
+    if db.settings[k] == nil or type(db.settings[k]) ~= type(v) then db.settings[k] = v end
+  end
   -- forget sessions nobody has touched for a week
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do

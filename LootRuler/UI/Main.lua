@@ -13,7 +13,7 @@ local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
 local win, top, view, tabsBar, toastFrame
-local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" } }
+local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "settings", "Settings" } }
 
 ---------------------------------------------------------------------- the window
 local function build()
@@ -197,7 +197,7 @@ function UI.render()
   end
   K.release("view")
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
-  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView }
+  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, settings = UI.settingsView }
   local ok, err = pcall(screens[UI.tab], flow, s)
   if not ok then
     flow:text("|cffff5a4aSomething went wrong drawing this screen:|r " .. tostring(err), { font = "GameFontHighlightSmall" })
@@ -526,6 +526,10 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("reserves")
   elseif msg == "loot" or msg == "drops" then
     UI.show("loot")
+  elseif msg == "settings" or msg == "options" or msg == "config" then
+    UI.show("settings")
+  elseif msg == "help" or msg == "?" then
+    UI.help()
   elseif msg == "master" then
     UI.showMaster()
   elseif msg == "test" then

@@ -115,7 +115,8 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 - [x] This file, and pull-request checks in CI
 - [x] Reserve or roll out any item by link; raids that aren't in the built-in lists (Forever)
 - [x] Older and newer versions working together
-- [ ] A Settings tab: one home for options, advanced features off until turned on
+- [x] A Settings tab: one home for options (`LR.DEFAULTS` in `Core/Net.lua`, `UI/Settings.lua`); new features get
+      their on/off switch there
 
 **Pug essentials**
 - [ ] Plus ones: +1 for each win; players with fewer roll first

@@ -147,11 +147,6 @@ local function manage(f, s)
         end)
       end },
     }, "left")
-    p:chips({
-      { label = (LR.db.settings.hideWhispers and "[x] " or "[  ] ") .. "Hide !lr whispers in my chat", on = LR.db.settings.hideWhispers, click = function()
-        LR.db.settings.hideWhispers = not LR.db.settings.hideWhispers UI.render()
-      end, tip = "Raiders' \"!lr\" whispers and the addon's answers don't show in your chat while you have a session open." },
-    })
   end)
 end
 
@@ -241,6 +236,5 @@ function UI.sessionView(f, s)
     end
     newSession(f)
   end
-  UI.rollingPanel(f)
   others(f, s)
 end
