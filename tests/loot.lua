@@ -222,6 +222,15 @@ check("and still recorded", wonBy(s, BROOCH) == "Bob-Faerlina:MS")
 srv.farAway = nil
 Rolls.dismiss()
 
+section("raid warnings or plain raid chat")
+lead.LR.db.settings.raidWarning = false
+roll = Rolls.start(SIGNET, { secs = 10 })
+srv:tick(0.5)
+check("with raid warnings off, a roll is announced in plain raid chat", chat("Roll for", "RAID") ~= nil and srv.chat[#srv.chat].channel == "RAID")
+Rolls.cancel()
+srv:tick(0.5)
+lead.LR.db.settings.raidWarning = true
+
 section("calling it off")
 roll = Rolls.start(ROYAL, { secs = 15 })
 srv:tick(0.5)

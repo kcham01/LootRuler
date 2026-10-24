@@ -343,6 +343,15 @@ function UI.rollWindows()
   end
 end
 
+--- roll windows (and the loot master window) back where they start
+function UI.resetPositions()
+  if anchor then
+    anchor:ClearAllPoints()
+    anchor:SetPoint("TOP", UIParent, "CENTER", 0, -120)
+  end
+  if UI.masterDraw then UI.masterDraw() end
+end
+
 --- a roll started or changed (Core/Rolls.lua)
 function UI.rollWindow(copy)
   local fresh = not copy.shownOnce

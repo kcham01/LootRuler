@@ -368,31 +368,6 @@ LR.onChange(function(what)
   elseif what == "loot" or what == "session" or what == "roster" then UI.lootPanel() if what == "loot" and master and master:IsShown() then UI.masterDraw() end end
 end)
 
----------------------------------------------------------------------- the Session tab's settings
-function UI.rollingPanel(f)
-  local set = LR.db.settings
-  f:panel("Rolling out loot", function(p)
-    p:note("When the loot master rolls an item out with LootRuler, a roll window pops up: dice for main spec, coin for off spec, x to pass. On a reserved item only the players who reserved it can roll.")
-    p:chips({
-      { label = (set.rollWindow and "[x] " or "[  ] ") .. "Show roll windows", on = set.rollWindow, click = function() set.rollWindow = not set.rollWindow UI.render() UI.rollWindows() end },
-      { label = (set.rollOnlyMine and "[x] " or "[  ] ") .. "Only for items I can roll on", on = set.rollOnlyMine, click = function() set.rollOnlyMine = not set.rollOnlyMine UI.render() UI.rollWindows() end,
-        tip = "Leaves out items other players reserved, and ties you're not in." },
-    })
-    p:buttons({ { label = "Try the roll window", click = function() UI.testRoll() end } }, "left")
-    if LR.canRunLoot() then
-      p:gap(2)
-      p:note("Running loot: with master loot on, open a corpse and LootRuler lists what's in it beside the loot window; click an item to roll it out. Or type /lr roll and an item link. You (or the leader) need LootRuler; raiders don't, chat tells them what to roll.")
-      local chips = { { plain = true, label = "Seconds to roll:" } }
-      local cur = set.rollSeconds or Rolls.DEFAULT_SECONDS
-      for _, n in ipairs(Rolls.SECONDS) do
-        chips[#chips + 1] = { label = tostring(n), on = n == cur, click = function() set.rollSeconds = n UI.render() end }
-      end
-      p:chips(chips)
-      if Rolls.mine() then p:buttons({ { label = "Loot master window", click = function() UI.showMaster() end } }, "left") end
-    end
-  end)
-end
-
 --- /lr roll <item link, id or name>
 function UI.rollCommand(text)
   text = U.trim(text or "")
