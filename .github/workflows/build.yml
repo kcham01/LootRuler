@@ -1,17 +1,19 @@
 name: Build and test LootRuler
 # Tests the session rules, a whole raid of clients side by side, Gargul's importer reading the export and
-# the window; checks the addon only uses what the TBC Anniversary client has; draws every screen; and puts
-# the zip, pictures and logs on the "results" branch.
+# the window; checks the addon only uses what the TBC Anniversary client has; draws every screen. On main the
+# zip, pictures and logs go on the "results" branch; on a pull request they're a download on the run.
 on:
   push:
     branches: [main]
-    paths-ignore: ['README.md', 'LICENSE', 'docs/**']
+    paths-ignore: ['README.md', 'LICENSE', 'docs/**', 'AGENTS.md', 'CLAUDE.md']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: build
-  cancel-in-progress: false
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   addon:
     runs-on: ubuntu-latest
@@ -36,7 +38,18 @@ jobs:
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium
       - run: bash ci/build.sh
-      - if: always()
+      # main: the zip, pictures and logs go on the "results" branch (the README's download link)
+      - if: always() && github.event_name != 'pull_request'
         run: bash ci/publish.sh
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # a pull request: the same, as a download on the run, to look at before merging
+      - if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LootRuler-pr${{ github.event.number }}
+          path: |
+            out/LootRuler.zip
+            build/shots/*.png
+            build/*.log
+          if-no-files-found: warn
