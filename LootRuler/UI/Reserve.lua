@@ -217,7 +217,7 @@ function UI.reserveView(f, s)
     return browse(f)
   end
   if s.gdkp then
-    f:panel("GDKP", function(p)
+    f:panel("GDKP auctions", function(p)
       p:text(LR.raidOf(s).name .. " auctions its loot for gold: nobody reserves anything.")
       p:note("When an item is up, a window pops up with bids to click, or type an amount in raid chat. The highest bid buys it. The Session tab shows the pot and your share.")
     end)

@@ -77,7 +77,7 @@ end
 --- a new roll (the loot master's, or a raider's copy of it)
 function R.new(k, id, plan)
   return { k = k, id = id, mode = plan.mode, who = plan.who or {}, away = plan.away or {}, f = plan.f, n = plan.n,
-    tie = plan.tie, po = plan.po, bp = plan.bp, min = plan.min, inc = plan.inc, entries = {}, rolled = {}, passed = {} }
+    tie = plan.tie, po = plan.po, bp = plan.bp, min = plan.min, inc = plan.inc, strict = plan.strict, entries = {}, rolled = {}, passed = {} }
 end
 
 --- a player's boosted roll range in a roll, or nil when they have no points
@@ -170,9 +170,11 @@ function R.bid(roll, player, g, late)
   return e
 end
 
---- the gold in a chat line that's a bid: "150", "150g", "150 gold", "bid 150", "1.5k"; nil otherwise
-function R.parseBid(text)
+--- the gold in a chat line that's a bid: "150", "150g", "150 gold", "bid 150", "1.5k"; nil otherwise.
+--- strict: only "bid 150" (and "bid 150g"...) counts
+function R.parseBid(text, strict)
   local t = U.trim(tostring(text or "")):lower():gsub(",", "")
+  if strict and not t:find("^bid") then return nil end
   t = t:gsub("^bid%s*", ""):gsub("%s*gold$", ""):gsub("%s*g$", "")
   local n, k = t:match("^(%d+%.?%d*)%s*(k?)$")
   n = tonumber(n)

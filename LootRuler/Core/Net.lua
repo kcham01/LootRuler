@@ -312,6 +312,7 @@ LR.setGdkp = gdkp(function(s, on, now)
   return changed
 end)
 LR.gdkpOption = gdkp(function(s, key, value) return LR.Gdkp.option(s, key, value, U.now()) end)
+LR.gdkpStrict = gdkp(function(s, on) return LR.Gdkp.setStrict(s, on, U.now()) end)
 LR.gdkpPrice = gdkp(function(s, id, gold) return LR.Gdkp.setPrice(s, id, gold, U.now()) end)
 LR.gdkpBonus = gdkp(function(s, player, gold) return LR.Gdkp.setBonus(s, player, gold, U.now()) end)
 LR.gdkpOut = gdkp(function(s, player, out) return LR.Gdkp.setOut(s, player, out, U.now()) end)
