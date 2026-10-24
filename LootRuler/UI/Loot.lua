@@ -128,11 +128,74 @@ function UI.exportSheet(s)
   end)
 end
 
+---------------------------------------------------------------------- past raids (Core/History.lua)
+--- one past raid: what it gave out, the export, and (a GDKP of mine) the payouts
+function UI.pastRaidSheet(e)
+  UI.openSheet(LR.raidOf(e).name .. ", " .. date("%b %d", e.ended), function(f, h)
+    f:note(("Led by %s. Ended %s."):format(U.short(e.leader), date("%b %d, %H:%M", e.ended)))
+    if e.gdkp and e.gk then
+      local split = LR.Gdkp.split(e)
+      f:kv({ { "Pot", LR.Gdkp.gold(split.pot) }, { "Split " .. #split.players .. " ways", LR.Gdkp.gold(split.share) .. " each" } })
+      local owing = LR.Gdkp.unsettled(e)
+      if LR.isLeader(e) and #owing > 0 then f:note(("%s still to settle: trades with them count, as during the raid."):format(U.plural(#owing, "player")), K.GOLD) end
+    end
+    f:gap(4)
+    local list = {}
+    if #(e.won or {}) > 0 then list[#list + 1] = { label = "Export", click = function() UI.exportSheet(e) end } end
+    if e.gdkp and e.gk and LR.isLeader(e) then list[#list + 1] = { label = "Payouts", click = function() UI.payoutSheet(e) end } end
+    list[#list + 1] = { label = "Forget it", click = function()
+      UI.confirm("Forget this raid", "It's only removed from your own list of past raids.", "Forget", function() h.close() LR.History.remove(e.id) end)
+    end }
+    f:buttons(list, "left")
+    f:gap(4)
+    if #(e.won or {}) == 0 then f:note("Nothing was given out.") end
+    for _, w in ipairs(e.won or {}) do
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(w.i), LR.coloredName(w.i), who(w.p, e) .. "  -  " .. how(w), "")
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, nil, w.i) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      f:place(b, 36)
+      f:gap(2)
+    end
+  end, { full = true })
+end
+
+--- every past raid, newest first
+function UI.historySheet()
+  UI.openSheet("Past raids", function(f, h)
+    local all = LR.History.all()
+    if #all == 0 then f:note("None yet. When a raid's soft reserves end, what it gave out is kept here.") return end
+    f:note(("Raids you were in that gave loot out (up to the last %d), kept on this character. Click one for its loot."):format(LR.History.MAX))
+    for _, e in ipairs(all) do
+      local b = K.get(f.owner, "item", f.parent)
+      local badge = ""
+      if e.gdkp and e.gk then
+        badge = "|cffffd100" .. LR.Gdkp.gold(LR.Gdkp.pot(e)) .. "|r"
+        if LR.isLeader(e) and #LR.Gdkp.unsettled(e) > 0 then badge = badge .. " |cffff5a4aunpaid|r" end
+      end
+      K.setItem(b, f.width, LR.raidIcon(e.raid), LR.raidOf(e).name, ("%s - by %s - %s given out"):format(date("%b %d", e.ended), U.short(e.leader),
+        U.plural(#(e.won or {}), "item")), badge)
+      b:SetScript("OnClick", function() UI.pastRaidSheet(e) end)
+      f:place(b, 36)
+      f:gap(2)
+    end
+  end, { full = true })
+end
+
+local function pastRaids(f)
+  local n = #LR.History.all()
+  if n > 0 then
+    f:gap(4)
+    f:buttons({ { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end } }, "left")
+  end
+end
+
 function UI.lootView(f, s)
   if not s then
     f:panel("The raid's loot", function(p)
       p:text("Everything that drops is listed here once soft reserves are open: who reserved it, who won it and who has it. The raid leader opens reserves on the Session tab.")
     end)
+    pastRaids(f)
     return
   end
   local drops = s.drops or {}
@@ -224,4 +287,5 @@ function UI.lootView(f, s)
       f:gap(2)
     end
   end
+  pastRaids(f)
 end

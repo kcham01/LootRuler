@@ -74,6 +74,7 @@ end
 
 local function manage(f, s)
   local raid = LR.raidOf(s)
+  if s.gdkp then UI.gdkpPanel(f, s) end          -- GDKP first: in a GDKP raid it's what matters
   f:panel("Your session", function(p)
     p:kv({
       { "Raid", raid.name },
@@ -141,6 +142,20 @@ local function manage(f, s)
     end } }, "left")
   end)
 
+  if not s.gdkp and s.prio ~= "only" then
+    f:panel("Extra reserves", function(p)
+      local list = {}
+      for name, n in pairs(s.xr or {}) do list[#list + 1] = { name, n } end
+      table.sort(list, function(a, b) return a[1] < b[1] end)
+      if #list == 0 then
+        p:note("Everyone gets the same. Give tanks and healers (or anyone) extra reserves here.")
+      else
+        p:text(table.concat(U.map(list, function(x) return U.classText(U.short(x[1]), LR.classOf(x[1])) .. " +" .. x[2] end), ", "))
+      end
+      p:buttons({ { label = "Give extra reserves", click = function() UI.extraSheet(s) end } }, "left")
+    end)
+  end
+
   f:panel("Disenchanter", function(p)
     if s.de then
       p:text(U.classText(U.short(s.de), LR.classOf(s.de)) .. " disenchants what nobody wants: the loot master's window has a Disenchant button.")
@@ -152,8 +167,6 @@ local function manage(f, s)
       s.de and { label = "Nobody", click = function() LR.setDisenchanter(s, nil) end } or nil,
     }, "left")
   end)
-
-  if s.gdkp then UI.gdkpPanel(f, s) end
 
   if not s.gdkp and (s.prio or UI.prioAvailable()) then
     f:panel("Priority lists", function(p)
@@ -192,6 +205,26 @@ local function manage(f, s)
       { label = "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()
         local text = "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)"
+        -- GDKP: ending it loses who owes what, so not while gold is still owed (unless they mean it)
+        local owing = LR.Gdkp.unsettled(s)
+        if #owing > 0 then
+          UI.openSheet("Gold is still owed", function(sf, h)
+            sf:text(("%s aren't settled yet:"):format(U.plural(#owing, "player")))
+            for i, x in ipairs(owing) do
+              if i > 8 then sf:note(("...and %d more."):format(#owing - 8)) break end
+              sf:note(x[2] > 0 and ("%s: you give them %s"):format(U.short(x[1]), LR.Gdkp.gold(x[2]))
+                or ("%s: they give you %s"):format(U.short(x[1]), LR.Gdkp.gold(-x[2])), x[2] > 0 and K.GOLD or { 1, 0.35, 0.29 })
+            end
+            sf:note("You can end it anyway: it's kept under Past raids (Loot tab), where you can finish the payouts, and trades with them still count for two weeks. Or keep it open: it stays for a week, even after you log out.")
+            sf:gap(6)
+            sf:buttons({
+              { label = "Keep it open", click = function() h.close() end },
+              { label = "Payouts", click = function() h.close() UI.payoutSheet(s) end },
+              { label = "End it", click = function() h.close() LR.endSession(s) end },
+            })
+          end)
+          return
+        end
         if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers() > 0 then
           -- the end of a raid is when its points are usually given
           UI.openSheet("End the session", function(sf, h)

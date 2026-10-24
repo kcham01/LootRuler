@@ -41,9 +41,12 @@ local function list(s, player)
 end
 
 local function status(s, player)
-  local left = s.sr - #S.reservesOf(s, player)
+  local limit = S.limit(s, player)
+  local left = limit - #S.reservesOf(s, player)
+  local extra = S.extra(s, player)
   local po = s.plusOne and (" You have %s."):format(S.plusOnes(s, player) == 1 and "a +1" or (S.plusOnes(s, player) .. " +1s")) or ""
-  return ("You have reserved %s (%d of %d used%s).%s"):format(list(s, player), s.sr - left, s.sr, s.locked and ", reserves are locked" or "", po)
+  return ("You have reserved %s (%d of %d used%s%s).%s"):format(list(s, player), limit - left, limit,
+    extra > 0 and (", with " .. U.plural(extra, "extra reserve")) or "", s.locked and ", reserves are locked" or "", po)
 end
 
 local function nameOf(s, id) return LR.itemLink(id) end
@@ -83,7 +86,13 @@ end
 
 function W.handle(text, sender)
   local s = W.session()
-  if not s then return end
+  if not s then
+    -- a GDKP that's over, with payouts still to do: "!lr pot" still answers
+    local lower = U.trim(text:sub(#COMMAND + 1)):lower()
+    local past = (lower == "pot" or lower == "gdkp") and LR.History.owing(sender)
+    if past then W.reply(U.full(sender), LR.Pot.line(past, U.full(sender))) end
+    return
+  end
   local player = U.full(sender)
   local class = LR.classOf(player)
   local args = U.trim(text:sub(#COMMAND + 1))

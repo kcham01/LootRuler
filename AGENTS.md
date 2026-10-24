@@ -125,8 +125,15 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   chat (`Rolls.onChat`), whispered (`!lr bid`) or clicked (the window just types the amount). A sale is an award
   of kind `BID` with `r` = the price. Session settings and who's in the pot are `s.gk` (`Core/Gdkp.lua`); trades
   count the gold that changes hands (`Core/Drops.lua`). `Rolls.queue` puts items up one after another (any mode).
-- **Next:** the roadmap is done. Ideas from here: an in-game history of past raids, GDKP auction history and
-  average prices, Gargul's boosted-roll and +1 imports, and keeping an eye on WoW: Forever's new raids.
+- **Ending a GDKP session** with gold still owed (`Gdkp.unsettled`) asks first: ending it loses the list.
+- **Bids that must start with "bid"** (`s.gk.strict`, sent as `sb`): `R.parseBid(text, strict)`.
+- **Extra reserves** (`s.xr`, `S.limit`, `S.setExtra`): a player's limit is `s.sr` plus their extra. Older raiders'
+  addons check against `s.sr` only, so they can't use an extra from the addon, but can by whisper.
+- **Past raids** (`Core/History.lua`): a session that ends (or is closed by its leader, or forgotten after a week) is
+  kept as a frozen copy (`archived = true`), so exports, the GDKP split and the payouts sheet read it like a
+  session. Trades and `!lr pot` find a past GDKP still owing (`History.owing`). Kept per character, 30 at most.
+- **Next:** the roadmap is done. Ideas from here: max bids, GDKP cuts by role, Gargul's boosted-roll and +1 imports,
+  and keeping an eye on WoW: Forever's new raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;

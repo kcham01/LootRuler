@@ -89,10 +89,17 @@ function LR.loadDB()
   for g, book in pairs(db.guilds) do
     if type(g) ~= "string" or not LR.Book.validBook(book) then db.guilds[g] = nil end
   end
-  -- forget sessions nobody has touched for a week
+  -- past raids: checked like a session from someone else
+  db.history = type(db.history) == "table" and U.filter(db.history, function(e) return LR.History.valid(e) end) or {}
+  LR.db = db
+  -- forget sessions nobody has touched for a week (what they gave out goes to past raids)
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do
-    if not S.valid(s) or (s.updated or 0) < cutoff then db.sessions[id] = nil db.mine[id] = nil end
+    if not S.valid(s) then db.sessions[id] = nil db.mine[id] = nil
+    elseif (s.updated or 0) < cutoff then
+      LR.History.archive(s, s.updated or U.now())
+      db.sessions[id] = nil db.mine[id] = nil
+    end
   end
   for id in pairs(db.mine) do if not db.sessions[id] then db.mine[id] = nil end end
   if db.current and not db.sessions[db.current] then db.current = nil end
@@ -303,15 +310,29 @@ end
 function LR.setDisenchanter(s, player) if S.setDisenchanter(s, player, U.now()) then leaderChanged(s) end end
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end
+function LR.setExtra(s, player, n)
+  if not LR.isLeader(s) then return false end
+  local ok, lost = S.setExtra(s, player, n, U.now())
+  if ok then leaderChanged(s) end
+  return ok, lost
+end
 function LR.setSessionPrio(s, mode) if S.setPrio(s, mode, U.now()) then leaderChanged(s) end end
 -- GDKP (Core/Gdkp.lua): only the leader's changes count
-local function gdkp(fn) return function(s, ...) if LR.isLeader(s) and fn(s, ...) then leaderChanged(s) return true end return false end end
+local function gdkp(fn)
+  return function(s, ...)
+    if not (LR.isLeader(s) and fn(s, ...)) then return false end
+    -- a past raid (finishing its payouts): kept, not sent to anyone
+    if s.archived then s.updated = U.now() LR.changed("history") else leaderChanged(s) end
+    return true
+  end
+end
 LR.setGdkp = gdkp(function(s, on, now)
   local changed = LR.Gdkp.set(s, on, U.now())
   if s.gdkp then LR.Gdkp.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) end
   return changed
 end)
 LR.gdkpOption = gdkp(function(s, key, value) return LR.Gdkp.option(s, key, value, U.now()) end)
+LR.gdkpStrict = gdkp(function(s, on) return LR.Gdkp.setStrict(s, on, U.now()) end)
 LR.gdkpPrice = gdkp(function(s, id, gold) return LR.Gdkp.setPrice(s, id, gold, U.now()) end)
 LR.gdkpBonus = gdkp(function(s, player, gold) return LR.Gdkp.setBonus(s, player, gold, U.now()) end)
 LR.gdkpOut = gdkp(function(s, player, out) return LR.Gdkp.setOut(s, player, out, U.now()) end)
@@ -329,6 +350,7 @@ function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, 
 
 function LR.endSession(s)
   if not LR.isLeader(s) then return end
+  LR.History.archive(s, U.now())                -- what it gave out is kept under Past raids (Core/History.lua)
   for _, ch in ipairs(publishTo(s)) do send({ t = "E", id = s.id }, ch) end
   db.sessions[s.id] = nil
   db.mine[s.id] = nil
@@ -371,7 +393,7 @@ function LR.changeMine(s, edit, id)
   -- no reserves in a GDKP raid, or one that goes by priority lists only (taking them back is fine)
   if #items > before and s.gdkp then return false, "GDKP" end
   if #items > before and s.prio == "only" then return false, "PRIO_ONLY" end
-  local ok, why = S.check(s, items, true)              -- which items are allowed is the leader's addon's call
+  local ok, why = S.check(s, items, true, me)          -- which items are allowed is the leader's addon's call
   if not ok then return false, why end
   db.mine[s.id] = { i = items, dirty = true }
   LR.sendPicks(s, true)
@@ -423,6 +445,7 @@ end
 function handlers.E(msg, channel, sender)
   local s = db.sessions[msg.id]
   if not s or not U.samePlayer(s.leader, sender) or LR.isLeader(s) then return end
+  LR.History.archive(s, U.now())
   db.sessions[msg.id] = nil
   db.mine[msg.id] = nil
   if db.current == msg.id then db.current = nil end

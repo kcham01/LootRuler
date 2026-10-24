@@ -181,6 +181,7 @@ UI.COMMANDS = {
   { "/lr session", "the Session tab (open reserves)" },
   { "/lr reserves", "everyone's reserves" },
   { "/lr loot", "the raid's loot" },
+  { "/lr history", "past raids: what each gave out" },
   { "/lr guild", "the Guild tab (boosted roll points)" },
   { "/lr settings", "the Settings tab" },
   { "/lr roll [item]", "roll an item out" },
