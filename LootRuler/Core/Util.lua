@@ -65,6 +65,24 @@ function U.pattern(format)
   p = p:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
   return "^" .. p:gsub("\1", "(.+)"):gsub("\2", "(%%d+)") .. "$"
 end
+--- compares "1.2.0-beta" style versions: -1, 0, 1 (a beta comes before the release of the same number)
+function U.compareVersions(a, b)
+  local function parts(v)
+    v = tostring(v or "")
+    local nums = {}
+    for n in v:gmatch("(%d+)") do nums[#nums + 1] = tonumber(n) if #nums == 3 then break end end
+    return nums, v:find("%-") ~= nil
+  end
+  local pa, ba = parts(a)
+  local pb, bb = parts(b)
+  for i = 1, 3 do
+    local x, y = pa[i] or 0, pb[i] or 0
+    if x ~= y then return x < y and -1 or 1 end
+  end
+  if ba ~= bb then return ba and -1 or 1 end
+  return 0
+end
+
 function U.plural(n, one, many) return n .. " " .. (n == 1 and one or (many or one .. "s")) end
 function U.hex(r, g, b) return ("%02x%02x%02x"):format(floor(r * 255 + 0.5), floor(g * 255 + 0.5), floor(b * 255 + 0.5)) end
 function U.color(text, r, g, b) return "|cff" .. U.hex(r, g, b) .. text .. "|r" end

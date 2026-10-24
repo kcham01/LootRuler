@@ -220,6 +220,39 @@ srv:tick(2)
 check("a raider whose loot list is out of date can still reserve what the leader's allows", ok and U.indexOf(lead.LR.Session.reservesOf(s, "Bob-Faerlina"), SIGNET) ~= nil)
 bob.LR.RAID_BY_KEY.Karazhan.has[SIGNET] = had
 
+section("older and newer versions")
+check("everyone's addon says which version it is", lead.LR.versionOf(full(ann)) == lead.LR.VERSION and lead.LR.versionOf("Bob-Faerlina") == lead.LR.VERSION)
+check("a player without the addon has none", lead.LR.versionOf(full(pug)) == nil)
+-- the leader's addon is a newer version that adds things this one doesn't know
+local realVersion = lead.LR.VERSION
+lead.LR.VERSION = "9.9.9"
+s.somethingNew = { "a", "b" }
+s.won = { { i = WATCH, p = full(ann), k = "DE", at = 1 } }
+s.rev = s.rev + 1
+lead.LR.leaderChanged(s)
+srv:tick(2)
+check("a newer version's session is still taken", cur(ann).rev == s.rev and cur(ann).won[1].k == "DE")
+check("and the player is told, once, that there's a newer LootRuler", chatHas(ann, "has a newer LootRuler (9.9.9"))
+local told = 0
+for _, line in ipairs(ann.M.chat) do if line:find("newer LootRuler", 1, true) then told = told + 1 end end
+check("only once", told == 1, told)
+ann.LR.UI.show("loot")
+ann.LR.UI.show("reserves")
+srv:tick(0.5)
+check("screens show what they don't know without breaking", #ann.M.errors == 0, table.concat(ann.M.errors, " | "))
+ann.LR.UI.win:Hide()
+local rev = cur(ann).rev
+srv:addonMessage(lead, "LootRuler", lead.LR.Net.encode({ t = "T", s = { id = s.id, rev = 999, leader = full(lead), raid = "Karazhan", sr = 2, hr = {}, res = {} }, mv = 99 }), "RAID")
+srv:addonMessage(lead, "LootRuler", lead.LR.Net.encode({ t = "Z", stuff = { 1, 2, 3 } }), "RAID")
+srv:tick(1)
+check("a message only newer versions can handle is left alone", cur(ann).rev == rev)
+check("and a kind of message this version doesn't know is ignored", #ann.M.errors == 0)
+lead.LR.VERSION = realVersion
+s.somethingNew, s.won = nil, nil
+s.rev = s.rev + 1
+lead.LR.leaderChanged(s)
+srv:tick(2)
+
 section("ending")
 lead.LR.endSession(s)
 srv:tick(2)
