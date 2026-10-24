@@ -99,6 +99,19 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 
 **Auto-roll:** your own rules for roll windows (Settings tab). "Always pass on this item", "always roll main spec on that one", and "pass on anything my class can't use". Shift-click a roll window's dice, coin or x to make it a rule. LootRuler rolls or passes for you and says so.
 
+## For guilds
+
+Guild members get a **Guild** tab: things that last between raids, kept by the officers and shared with everyone in the guild who has LootRuler. Nothing here shows up for pugs, and nothing is used until an officer turns it on.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/27-guild.png" alt="The Guild tab" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/28-boosted-roll.png" alt="A roll window with a boosted roll" width="40%">
+</p>
+
+- **Who can change it:** the guild master picks the lowest rank that can (officers to start with). Everyone else can see it.
+- **Boosted rolls:** guild members get points for each raid they come to (5 to 25 a raid, the officers choose). With boosted rolls on for a session, a player with 30 points can roll 31 to 130 on main spec instead of 1 to 100. If they win with it, their points are spent. Roll windows get a green dice for it; players without the addon are told what to type in raid chat (`/roll 31 130`) and can whisper `!lr points` to ask what they have.
+- **Raid points:** an officer gives them from the Session tab, or when ending the session. Everyone from the guild in the group gets them, and the raid is told.
+
 The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Session tab can turn roll windows off, or show them only for items you can roll on.
 
 ## Install
@@ -110,7 +123,7 @@ The loot master (or the raid leader, or an assistant) needs LootRuler; raiders d
 
 Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
 
-`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr settings` opens the Settings tab (every option, each saying what it does), `/lr help` lists the commands, `/lr minimap` hides or shows the minimap button.
+`/lr session` opens the Session tab, `/lr reserves` the list of everyone's reserves, `/lr roll <item>` rolls an item out, `/lr loot` the raid's loot, `/lr master` brings back the loot master's window, `/lr test` shows a pretend roll window, `/lr guild` opens the Guild tab, `/lr settings` opens the Settings tab (every option, each saying what it does), `/lr help` lists the commands, `/lr minimap` hides or shows the minimap button.
 
 ## How it's checked
 
@@ -119,6 +132,7 @@ Every build:
 - checks the session rules (limits, doubling up, hard reserves, locking, changing the rules part way);
 - runs a **whole raid of clients side by side** in a stand-in for the game: the leader, raiders on the same and other realms, a pug whispering, a guild member outside the group, the leader logging out and back in, people joining late, and messages from people who shouldn't be able to change things;
 - runs the same raid **rolling out loot**: the loot master opens a corpse, raiders roll from their roll windows and a pug types `/roll`, reserved items are only rolled for by their reservers, ties are rolled again, hard reserved items are given straight out, someone is out of range, an assistant runs the loot, and every item goes to the right player through master loot; then the raid's loot list: what each corpse dropped, who has it, items kept to roll out later and handed over in trades, and group loot;
+- runs a **guild raid**: the guild master, officers, members with and without the addon and someone logging in later; only the ranks the guild master picked can change points (even sending the change themselves doesn't work), raid points reach everyone in the guild, and boosted rolls, clicked and typed, win and spend their points, ties included;
 - loads **Gargul's own soft-reserve importer** and checks it reads LootRuler's reserves exactly (doubled reserves, classes, hard reserves, players from other realms);
 - checks the addon only uses what the TBC Anniversary client has, against Blizzard's own interface code;
 - clicks through every screen, checks nothing errors or leaks frames, and draws every screen.

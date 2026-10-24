@@ -15,11 +15,12 @@
 --   res      soft reserves: "Name-Realm" -> { c = class token ("PALADIN", may be nil), i = { item ids } }
 --   won      loot given out while the session was open (Core/Rolls.lua), oldest first:
 --            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time,
---              d = the drop it was (its key, when known) }
+--              d = the drop it was (its key, when known), de = to disenchant, br = won with a boosted roll (k "MS") }
 --            A reserve that has won its item is used up: it doesn't count when another copy drops.
 --   de       the disenchanter ("Name-Realm"): items nobody wants go to them. Their awards are kind "OS" with
 --            de = true, so versions that don't know about disenchanting still read them.
 --   plusOne  the +1 rule is on: items won on main spec rolls count against the winner in later rolls
+--   boost    boosted rolls are on: guild members roll with their guild points added (Core/Book.lua)
 --   po       +1 changes the leader made by hand: "Name-Realm" -> number (added to the counted ones)
 --   drops    every item that dropped while the session was open, in order (Core/Drops.lua):
 --            { k = key, i = item id, b = boss ("" when not known), at = when it dropped, by = who recorded it (the
@@ -216,12 +217,13 @@ S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true }
 
 --- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
 --- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
-function S.award(s, id, player, kind, roll, now, dropKey, de)
+function S.award(s, id, player, kind, roll, now, dropKey, de, boosted)
   if type(id) ~= "number" or type(player) ~= "string" or not S.WON_KINDS[kind] then return false end
   local d = dropKey and S.drop(s, dropKey) or S.openDrops(s, id)[1]
   if d and d.i ~= id then d = nil end
   s.won = s.won or {}
-  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now, d = d and d.k or nil, de = de and true or nil }
+  s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now, d = d and d.k or nil, de = de and true or nil,
+    br = boosted and true or nil }
   bump(s, now)
   return true
 end
@@ -272,6 +274,15 @@ function S.setPlusOne(s, on, now)
   on = on and true or false
   if (s.plusOne or false) == on then return false end
   s.plusOne = on
+  bump(s, now)
+  return true
+end
+
+--- whether boosted rolls are on (players with guild points can roll 1+points to 100+points on main spec)
+function S.setBoost(s, on, now)
+  on = on and true or false
+  if (s.boost or false) == on then return false end
+  s.boost = on
   bump(s, now)
   return true
 end
@@ -391,6 +402,7 @@ function S.valid(t)
     end
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
+  if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
   if t.po ~= nil then
     if type(t.po) ~= "table" then return false end
     for name, n in pairs(t.po) do if type(name) ~= "string" or type(n) ~= "number" then return false end end

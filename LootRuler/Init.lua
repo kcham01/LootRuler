@@ -9,6 +9,8 @@
 --   Core/Gargul.lua   the reserves as a Gargul import, and handing them to Gargul
 --   Core/Roll.lua     the rules of rolling for an item (no game calls: tested on their own)
 --   Core/Rolls.lua    rolling loot out: the loot master's roll, raiders following it, master loot
+--   Core/Book.lua     the guild book: boosted roll points and priority lists (no game calls)
+--   Core/Guild.lua    sharing the guild book with the guild; who may change it
 --   UI/*              the window; UI/RollFrame.lua the roll windows, UI/Master.lua the loot master's
 local ADDON, LR = ...
 LR.NAME = ADDON

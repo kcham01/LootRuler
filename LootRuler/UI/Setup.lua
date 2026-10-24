@@ -109,6 +109,8 @@ local function manage(f, s)
         tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
       { label = (s.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserves tab (by player)." },
+      UI.boostOn() and { label = (s.boost and "[x] " or "[  ] ") .. "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
+        tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
       { label = (s.locked and "[x] " or "[  ] ") .. "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
         tip = "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
     })
@@ -146,6 +148,20 @@ local function manage(f, s)
     }, "left")
   end)
 
+  if s.boost and UI.boostOn() then
+    f:panel("Boosted rolls", function(p)
+      local book = LR.book()
+      p:note(("Guild members with points can roll 1 to 100 plus their points on main spec. Each raid is worth %d points."):format(book.boost.perRaid))
+      if LR.canEditBook() then
+        local given = LR.Guild.pointsGiven(s)
+        p:buttons({ { label = given and "Give raid points again" or "Give raid points", click = function() UI.giveRaidPoints(s) end } }, "left")
+        p:note(given and "You've given this raid its points." or "Everyone from the guild in the group gets them. You can also give them when you end the session.")
+      else
+        p:note("An officer gives the raid its points (Guild tab).")
+      end
+    end)
+  end
+
   f:panel("More", function(p)
     p:buttons({
       { label = "Tell the raid how to SR without the addon", disabled = LR.groupChannel() == nil, click = function()
@@ -156,9 +172,28 @@ local function manage(f, s)
     p:buttons({
       { label = "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()
-        UI.confirm("End the session", "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)", "End it", function()
-          LR.endSession(s)
-        end)
+        local text = "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)"
+        if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers() > 0 then
+          -- the end of a raid is when its points are usually given
+          UI.openSheet("End the session", function(sf, h)
+            sf:text(text)
+            sf:note(("This raid's points haven't been given yet (%d each for %s from the guild)."):format(LR.book().boost.perRaid,
+              U.plural(#LR.Guild.raidMembers(), "player")), K.GOLD)
+            sf:gap(6)
+            sf:buttons({
+              { label = "Cancel", click = function() h.close() end },
+              { label = "End it", click = function() h.close() LR.endSession(s) end },
+              { label = "Give points and end", click = function()
+                h.close()
+                local ok, why = LR.Guild.raidPoints(s)
+                if not ok then UI.refused(why) end
+                LR.endSession(s)
+              end },
+            })
+          end)
+          return
+        end
+        UI.confirm("End the session", text, "End it", function() LR.endSession(s) end)
       end },
     }, "left")
   end)
@@ -199,6 +234,8 @@ local function newSession(f)
       end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
       { label = (d.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = d.plusOne, click = function() d.plusOne = not d.plusOne UI.render() end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more." },
+      UI.boostOn() and { label = (d.boost and "[x] " or "[  ] ") .. "Boosted rolls", on = d.boost, click = function() d.boost = not d.boost UI.render() end,
+        tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
       d.raid ~= LR.CUSTOM and { label = (d.any and "[x] " or "[  ] ") .. "Any item", on = d.any, click = function() d.any = not d.any UI.render() end,
         tip = "Lets people reserve any item, not just the raid's loot: for loot LootRuler's lists don't have yet." } or false,
     })
@@ -210,6 +247,7 @@ local function newSession(f)
       if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
       local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)
       if d.plusOne then LR.setPlusOne(s, true) end
+      if d.boost and UI.boostOn() then LR.setSessionBoost(s, true) end
       UI.toast(("%s reserves are open."):format(LR.raidOf(s).name))
       UI.render()
     end } })

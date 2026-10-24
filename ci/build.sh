@@ -20,6 +20,9 @@ lua5.1 tests/raid.lua | tee build/raid.log
 echo "== a whole raid rolling out loot: roll windows, reserved items, ties, hard reserves, master loot"
 lua5.1 tests/loot.lua | tee build/loot.log
 
+echo "== a guild raid: the guild book, raid points and boosted rolls"
+lua5.1 tests/guild.lua | tee build/guild.log
+
 echo "== Gargul reading LootRuler's reserves"
 GARGUL=gargul lua5.1 tests/gargul.lua | tee build/gargul.log
 

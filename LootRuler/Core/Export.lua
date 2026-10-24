@@ -22,6 +22,7 @@ local TMB_ID = { [18423] = 18422, [19003] = 19002, [32386] = 32385 }
 
 local function how(w)
   if w.de then return "disenchant" end
+  if w.br then return "MS (boosted)" end
   return LR.Roll.LABEL[w.k] or tostring(w.k)
 end
 

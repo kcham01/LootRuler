@@ -19,10 +19,10 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/LootRuler.toc` | Load order. Every new file goes here. |
 | `LootRuler/Init.lua` | The shared namespace `LR`, and a map of the files |
 | `LootRuler/Data/Loot.lua` | Generated loot lists (`tools/gen_loot.py`); never edit by hand |
-| `LootRuler/Core/*.lua` | Rules and networking. `Session.lua` and `Roll.lua` make no game calls (tested on their own). |
+| `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua` (whole raids), `gargul.lua`, `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `guild.lua` (whole raids), `gargul.lua`, `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
@@ -90,7 +90,7 @@ Players don't update their addons, so every version has to work with every other
 ## How to check your work
 
 ```sh
-lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua
+lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/guild.lua
 GARGUL=<Gargul checkout> lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
@@ -112,7 +112,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Decided for the guild features:** officer ranks (picked by the guild master) edit priority lists; a
   player who gets an item they had priority on comes off that item's list; boosted roll points are earned
   per raid attended. Both live in a "guild book" shared over the guild channel.
-- **Next:** the guild book, boosted rolls, priority lists, then GDKP.
+- **The guild book** (`Core/Book.lua`, `Core/Guild.lua`, `UI/Guild.lua`): every entry carries the time it changed
+  and copies merge entry by entry, newest first, so officers' copies agree without one overwriting another. Changes
+  go over the guild channel (`GB`); someone logging in asks (`GQ`) and editors answer by whisper. A change only
+  counts if the game's guild list says its sender's rank may edit; only the guild master changes who may.
+- **Boosted rolls** are kind `BR` in a roll (a main spec roll moved up by the player's points, `roll.bp`), and an
+  award of kind `MS` with `br = true` on the session, so older versions read it as main spec.
+- **Next:** priority lists (the book already has `prio`, `B.first`, `B.received`), then GDKP.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;
@@ -150,7 +156,7 @@ up to Zul'Aman, roll windows and the loot master window, the raid's loot list wi
 - [x] Shortcut keys that don't clash with Gargul's (Ctrl+Alt+click rolls out; `UI/Shortcuts.lua`)
 
 **Guild features**
-- [ ] Boosted rolls: attendance points that raise a roll's range
+- [x] Boosted rolls: attendance points that raise a roll's range (and the guild book they live in)
 - [ ] Priority lists managed in the game (like DFT): officers edit, kept between raids and shared with the
       guild, update themselves when items are won, `!lr prio` for players without the addon, DFT/TMB import
       and export, and loot rules chosen per session (reserves, priority, or both)

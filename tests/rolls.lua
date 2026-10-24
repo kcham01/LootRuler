@@ -9,7 +9,7 @@ end
 local LR = {}
 local env = setmetatable({ bit = require("bit"), GetRealmName = function() return "Dreamscythe" end,
   GetNormalizedRealmName = function() return "Dreamscythe" end, RAID_CLASS_COLORS = {} }, { __index = _G })
-for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua" }) do
+for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua" }) do
   local chunk = assert(loadfile("LootRuler/" .. f))
   setfenv(chunk, env)
   chunk("LootRuler", LR)
@@ -183,6 +183,83 @@ check("thatsmybis: its columns, the name without the realm, and Magtheridon's he
   tmb:find("^dateTime,character,itemID,offspec,id\n") and tmb:find("\n%d+%-%d+%-%d+,Bob,32385,0,") and tmb:find(",Dan,28530,1,"), tmb)
 local dft = LR.Export.text(s5, "dfteu")
 check("DFT: date;[item];player, without disenchanted items", select(2, dft:gsub("\n", "\n")) == 1 and dft:find(";%[28525%];Ann%-Dreamscythe") ~= nil, dft)
+
+print("== the guild book")
+local B = LR.Book
+local book = B.new("Night Watch")
+check("a new book: nobody has points, officers edit, boosted rolls off", B.points(book, ANN) == 0 and book.editRank == 1 and not book.boost.on)
+local c = B.setPoints(book, "Ann", 30, 10)
+check("setting points gives the change to send", B.points(book, ANN) == 30 and c.points[ANN].n == 30 and c.points[ANN].t == 10)
+check("setting the same points again sends nothing", B.setPoints(book, ANN, 30, 11) == nil)
+check("points stay between 0 and the most", B.setPoints(book, DAN, 5000, 12) and B.points(book, DAN) == B.MAX_POINTS
+  and B.setPoints(book, DAN, -4, 13) and B.points(book, DAN) == 0)
+B.setBoost(book, true, 15, 14)
+c = B.raidAttended(book, { ANN, "Bob-Faerlina" }, 20)
+check("a raid gives everyone in it the points for a raid", B.points(book, ANN) == 45 and B.points(book, BOB) == 15 and c.points[BOB].n == 15)
+check("a boosted roll's range", select(1, B.boostRange(45)) == 46 and select(2, B.boostRange(45)) == 145)
+check("points for each raid are kept sane", B.setBoost(book, true, 999, 21).boost.perRaid == 100 and B.setBoost(book, true, 15, 22).boost.perRaid == 15)
+
+-- another officer's copy: merging goes entry by entry, newest first
+local other = B.new("Night Watch")
+B.setPoints(other, ANN, 5, 30)       -- newer than ours (spent on a win)
+B.setPoints(other, BOB, 90, 1)       -- older than ours
+check("a change has the right shape", B.valid(c) and B.valid(other))
+check("merging takes what's newer", B.merge(book, other) and B.points(book, ANN) == 5 and B.points(book, BOB) == 15)
+check("merging the same again changes nothing", not B.merge(book, other))
+B.setPoints(other, ANN, 0, 40)
+check("points taken away spread too", B.merge(book, { points = { [ANN] = other.points[ANN] } }) and B.points(book, ANN) == 0)
+check("only the guild master changes who may edit", not B.merge(book, { editRank = 4, et = 50 }) and book.editRank == 1
+  and B.merge(book, { editRank = 2, et = 50 }, true) and book.editRank == 2)
+check("an older change of who may edit doesn't count", not B.merge(book, { editRank = 0, et = 49 }, true) and book.editRank == 2)
+check("boosted rolls switched off spreads", B.merge(book, { boost = { on = false, perRaid = 10, t = 60 } }) and not book.boost.on)
+check("nonsense isn't a change", not B.valid("x") and not B.valid({ points = { [ANN] = { n = "many", t = 1 } } })
+  and not B.valid({ prio = { ["x"] = { list = {}, t = 1 } } }) and not B.valid({ boost = { on = true } })
+  and not B.valid({ editRank = 1 }))
+local huge = { points = {} }
+for i = 1, 2001 do huge.points["P" .. i] = { n = 1, t = 1 } end
+check("a change can't be endless", not B.valid(huge))
+check("a whole saved book is checked", B.validBook(book) and not B.validBook({ guild = "x" }) and not B.validBook(nil))
+
+print("== priority lists (in the guild book)")
+c = B.setPrio(book, WATCH, { { p = "Bob-Faerlina", n = 2 }, { p = ANN, n = 1, note = "tank set" }, { p = "Dan", n = 2 }, { p = ANN, n = 3 } }, 70)
+local list = B.prio(book, WATCH)
+check("a list, best first, each player once", #list == 3 and list[1].p == ANN and list[1].note == "tank set" and list[2].p == BOB and list[3].p == DAN)
+local first, n1 = B.first(book, WATCH, { BOB, DAN })
+check("whose turn: the best who are here (ties together)", #first == 2 and first[1] == BOB and first[2] == DAN and n1 == 2)
+check("nobody on the list here: a free roll", #B.first(book, WATCH, { CARA }) == 0)
+check("someone who gets the item comes off its list", B.received(book, WATCH, BOB, 71) and #B.prio(book, WATCH) == 2
+  and B.received(book, WATCH, CARA, 72) == nil)
+check("everything a player has priority on", #B.prioOf(book, ANN) == 1 and B.prioOf(book, ANN)[1][1] == WATCH)
+
+print("== boosted rolls")
+local plan = R.plan(nil, 28525, roster)
+plan.bp = { [ANN:lower()] = 30, ["dan-dreamscythe"] = 5 }
+roll = R.new("k9", 28525, plan)
+check("someone with points may roll boosted", table.concat(R.options(roll, ANN), ",") == "MS,BR,OS")
+check("someone without points can't", table.concat(R.options(roll, BOB), ",") == "MS,OS" and R.boostRange(roll, BOB) == nil)
+R.add(roll, ANN, 120, 31, 130)
+R.add(roll, BOB, 99, 1, 100)
+R.add(roll, DAN, 12, 6, 105)
+R.add(roll, CARA, 140, 31, 130)
+good, bad = R.standings(roll)
+check("a boosted roll counts as boosted, ranked with main spec by its number", good[1].p == ANN and good[1].kind == "BR" and good[2].p == BOB and good[3].kind == "BR")
+check("someone else's range doesn't count", bad[1].p == CARA and bad[1].why == "range")
+check("a boosted roll's label", R.label(roll, good[1]) == "BR")
+top, tied = R.result(roll)
+check("the highest number wins", top.p == ANN and not tied)
+roll = R.new("k10", 28525, plan)
+R.add(roll, ANN, 100, 31, 130)
+R.add(roll, BOB, 100, 1, 100)
+top, tied = R.result(roll)
+check("a boosted and a main spec roll can tie", tied and #tied == 2)
+plan.po = { [ANN:lower()] = 1 }
+roll = R.new("k11", 28525, plan)
+R.add(roll, ANN, 125, 31, 130)
+R.add(roll, BOB, 20, 1, 100)
+good = R.standings(roll)
+check("with the +1 rule, a +1 still rolls after those without, boosted or not", good[1].p == BOB and good[2].p == ANN and R.label(roll, good[2]) == "BR +1")
+check("a boosted win is a main spec win (a +1), marked as boosted", S.award(s5, 28525, CARA, "MS", 110, 1760000300, nil, nil, true)
+  and s5.won[#s5.won].br == true and S.valid(s5))
 
 print("== reading roll messages")
 local parse = R.parser("%s rolls %d (%d-%d)")
