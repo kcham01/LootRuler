@@ -468,6 +468,34 @@ srv:closeLoot(lead)
 set.autoLoot = false
 set.autoLootRules = {}
 
+section("auto-roll (each raider's own rules)")
+dan.LR.db.settings.autoPassUnusable = true
+roll = Rolls.start(28503, { secs = 10 })                -- Whirlwind Bracers: plate, a rogue can't wear it
+srv:tick(1.5)
+check("Dan passes on plate he can't use, on his own", roll.passed["dan-dreamscythe"] ~= nil and frameFor(dan, 28503) == nil)
+check("and is told", (function() for _, l in ipairs(dan.M.chat) do if l:find("passed on", 1, true) and l:find("can't use it", 1, true) then return true end end end)())
+Rolls.cancel()
+srv:tick(0.5)
+ann.LR.AutoRoll.set(SIGNET, "pass")
+bob.LR.AutoRoll.set(SIGNET, "OS")
+roll = Rolls.start(SIGNET, { secs = 10 })
+srv:tick(1.5)
+check("Ann's rule passes for her", roll.passed["ann-dreamscythe"] ~= nil)
+check("Bob's rolls off spec for him (even with his roll windows off)", roll.rolled["bob-faerlina"] ~= nil and roll.rolled["bob-faerlina"].kind == "OS")
+Rolls.cancel()
+srv:tick(0.5)
+ann.LR.AutoRoll.set(SIGNET, nil)
+-- shift-clicking a roll window's button keeps it as a rule
+roll = Rolls.start(28570, { secs = 10 })
+srv:tick(0.5)
+ann.G.IsShiftKeyDown = function() return true end
+ann.M.click(frameFor(ann, 28570).dice)
+ann.G.IsShiftKeyDown = function() return false end
+srv:tick(0.5)
+check("shift-clicking the dice rolls and remembers it", roll.rolled["ann-dreamscythe"] ~= nil and ann.LR.db.settings.autoRollRules[28570] == "MS")
+Rolls.cancel()
+srv:tick(0.5)
+
 section("ending the session")
 lead.LR.endSession(s)
 srv:tick(2)

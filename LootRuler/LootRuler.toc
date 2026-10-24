@@ -28,6 +28,7 @@ Core\Rolls.lua
 Core\Drops.lua
 Core\Export.lua
 Core\AutoLoot.lua
+Core\AutoRoll.lua
 UI\Kit.lua
 UI\Main.lua
 UI\Reserve.lua

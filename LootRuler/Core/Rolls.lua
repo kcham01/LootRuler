@@ -396,6 +396,7 @@ function Rolls.follow(msg, sender)
   copy.state = "open"
   copy.seenAt = now()
   if not copy.hidden and LR.UI and LR.UI.rollWindow then LR.UI.rollWindow(copy) end
+  if not copy.hidden and LR.AutoRoll then LR.AutoRoll.consider(copy) end      -- my own rules (Core/AutoRoll.lua)
   LR.changed("rolls")
 end
 
