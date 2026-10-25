@@ -111,7 +111,9 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 
 **Past raids:** when a session ends, what it gave out is kept (the last 30 raids, on each character that was there), under **Past raids** on the Loot tab or `/lr history`: the loot list, the export, and a GDKP's payouts. In a GDKP, the loot panel says what an item sold for before.
 
-**Your reserves where you see items:** the game's own loot window and need/greed windows glow on items you reserved, and every item tooltip (bags, chat links, loot windows) says who reserved it and who it went to. Both can be turned off.
+**Your reserves where you see items:** the game's own loot window and need/greed windows glow on items you reserved, and every item tooltip (bags, chat links, loot windows) says who reserved it and who it went to. The loot window also marks every reserved item (SR, or HR) with who reserved it, for everyone.
+
+**Who reserved it, while it's rolled for:** a small strip above the roll window lists everyone who reserved the item, every name in full and in class colours, and goes when the roll ends. It works for Gargul's rolls too: LootRuler reads Gargul's line in raid chat ("You have 20 seconds to roll on ..."), so raiders with LootRuler see the reserves whoever runs the roll. Each of these can be turned off (Settings tab).
 
 **Auto-roll:** your own rules for roll windows (Settings tab). "Always pass on this item", "always roll main spec on that one", and "pass on anything my class can't use". Shift-click a roll window's dice, coin or x to make it a rule. LootRuler rolls or passes for you and says so.
 

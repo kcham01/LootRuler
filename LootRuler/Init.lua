@@ -14,7 +14,8 @@
 --   Core/Prio.lua     priority lists in and out (Gargul's CSV, DFT, thatsmybis)
 --   Core/Gdkp.lua     GDKP: auctions' pot, cuts and payouts (no game calls); Core/Pot.lua does it in the game
 --   Core/History.lua  past raids: what each gave out, kept after it ends (and a GDKP's payouts)
---   UI/*              the window; UI/RollFrame.lua the roll windows, UI/Master.lua the loot master's
+--   UI/*              the window; UI/RollFrame.lua the roll windows, UI/Master.lua the loot master's,
+--                     UI/ReserveStrip.lua who reserved the item being rolled for (LootRuler's rolls and Gargul's)
 local ADDON, LR = ...
 LR.NAME = ADDON
 LR.PREFIX = "LootRuler"          -- addon message prefix (16 characters at most)

@@ -457,6 +457,48 @@ run("rolling out loot", function()
   LR.UI.win:Hide()
 end)
 
+run("who reserved it, while it's rolled for", function()
+  -- seven players without the addon join, and all reserve the brooch: more than the roll window has room for
+  local extra = {}
+  for _, x in ipairs({ { "Rhonin", "MAGE" }, { "Valeera", "ROGUE" }, { "Øyvind", "WARRIOR" }, { "Tyrande", "PRIEST" },
+    { "Turalyon", "PALADIN" }, { "Alleria", "HUNTER" }, { "Muradin", "WARRIOR" } }) do
+    local p = srv:player({ name = x[1], class = x[2] })
+    table.insert(srv.group.members, p) p.inGroup = true
+    extra[#extra + 1] = p
+  end
+  srv:rosterChanged()
+  srv:tick(1)
+  for _, p in ipairs(extra) do LR.leaderAdd(s, p.name .. "-Dreamscythe", p.class, 28530) end
+  srv:tick(2)
+  -- the game's loot window on Ann's screen: every reserved item says who
+  local back = ann.G.CreateFrame("Frame", "AnnLootBack", ann.G.UIParent, "BackdropTemplate")
+  back:SetPoint("TOPLEFT", ann.G.LootButton1, "TOPLEFT", -14, 14)
+  back:SetSize(200, 150)
+  back:SetFrameStrata("LOW")
+  back:SetBackdrop(LR.K.ROCK)
+  srv:openLoot(ann, { { 28530, 4 }, { 28528, 4 }, { 28766, 4 } })
+  for i = 1, 3 do ann.G.LootFrame_UpdateButton(i) end
+  local b1, b2 = ann.G.LootButton1, ann.G.LootButton2
+  check("the loot window marks reserved items, with who", b1.lrTag and b1.lrTag:IsShown() and ann.M.plain(b1.lrWho:GetText()):find("+", 1, true) ~= nil
+    and ann.M.plain(b2.lrTag:GetText()) == "HR")
+  shot("loot-window-reserves", ann, { "AnnLootBack" })
+  srv:closeLoot(ann)
+  back:Hide()
+  -- rolling it out: the strip over the roll window has every name
+  LR.Rolls.start(28530, { link = srv.itemInfo(28530).link })
+  srv:tick(1)
+  local strip = ann.G.LootRulerReserveStrip
+  local names = strip and ann.M.plain(strip.names:GetText()) or ""
+  check("a strip over the roll window lists everyone who reserved it", strip and strip:IsShown()
+    and names:find("Muradin", 1, true) and names:find("Øyvind", 1, true) and names:find("Valeera", 1, true) and not names:find("+", 1, true), names)
+  shot("reserve-strip", ann, { "LootRulerReserveStrip", "LootRulerRollFrame1" })
+  LR.Rolls.cancel()
+  srv:tick(1)
+  check("and goes when the roll ends", not strip:IsShown())
+  for _, p in ipairs(extra) do LR.leaderRemove(s, p.name .. "-Dreamscythe", 28530) srv:leaveGroup(p) end
+  srv:tick(10)
+end)
+
 run("settings", function()
   ann.LR.UI.show("settings")
   srv:tick(0.3)

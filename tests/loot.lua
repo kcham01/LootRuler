@@ -592,6 +592,69 @@ srv:rosterChanged()
 srv:tick(3)
 check("someone joining gets the reserves the sheet spelled without the accent", S.reservesOf(sn, "Kåre-Dreamscythe")[1] == BROOCH and #S.reservesOf(sn, "Kare-Dreamscythe") == 0)
 check("raiders' addons hear about it", S.reservesOf(ann.LR.current(), "Kåre-Dreamscythe")[1] == BROOCH)
+
+section("who reserved it, for everyone")
+-- seven players reserved the signet: six here, one not
+for _, x in ipairs({ { "Lead-Dreamscythe", "PALADIN" }, { "Ann-Dreamscythe", "PRIEST" }, { "Bob-Faerlina", "MAGE" }, { "Pug-Dreamscythe", "WARRIOR" },
+  { "Ghøst-Dreamscythe", "MAGE" }, { "Kåre-Dreamscythe", "HUNTER" }, { "Cara-Dreamscythe", "DRUID" } }) do
+  lead.LR.leaderAdd(sn, x[1], x[2], SIGNET)
+end
+srv:tick(2)
+-- the game's loot window, on Dan's screen (he reserved nothing)
+srv:openLoot(dan, { { SIGNET, 4 }, { BROOCH, 4 }, { HANDWRAPS, 4 } })
+lead.LR.setHR(sn, HANDWRAPS, "Ann", "")
+srv:tick(2)
+for i = 1, 3 do dan.G.LootFrame_UpdateButton(i) end
+local b1, b2, b3 = dan.G.LootButton1, dan.G.LootButton2, dan.G.LootButton3
+check("the loot window marks a reserved item for everyone", b1.lrTag and b1.lrTag:IsShown() and dan.M.plain(b1.lrTag:GetText()) == "SR"
+  and not (b1.lrGlow and b1.lrGlow:IsShown()))
+check("with who reserved it, as many as fit", dan.M.plain(b1.lrWho:GetText()):find("^Ann") ~= nil and dan.M.plain(b1.lrWho:GetText()):find("+%d$") ~= nil,
+  dan.M.plain(b1.lrWho:GetText()))
+check("one reserver: their name", dan.M.plain(b2.lrWho:GetText()) == "Kåre", dan.M.plain(b2.lrWho:GetText()))
+check("a hard reserve says who for", dan.M.plain(b3.lrTag:GetText()) == "HR" and dan.M.plain(b3.lrWho:GetText()) == "For Ann")
+check("the item's name moves up to make room", dan.G.LootButton1Text:GetHeight() == 25)
+dan.LR.db.settings.lootTags = false
+dan.G.LootFrame_UpdateButton(1)
+check("which can be turned off, and the name goes back", not b1.lrTag:IsShown() and dan.G.LootButton1Text:GetHeight() == 38)
+dan.LR.db.settings.lootTags = true
+srv:closeLoot(dan)
+lead.LR.clearHR(sn, HANDWRAPS)
+-- the strip, while it's rolled for: everyone, in full (the loot window only has room for a name or two)
+local strip = function(p) return p.G.LootRulerReserveStrip end
+check("no strip before a roll", not (strip(dan) and strip(dan):IsShown()))
+Rolls.start(SIGNET, { link = srv:link(SIGNET) })
+srv:tick(1)
+local names = strip(dan) and dan.M.plain(strip(dan).names:GetText()) or ""
+check("a roll starts: the strip lists everyone who reserved it", strip(dan) and strip(dan):IsShown()
+  and names:find("Ann, Bob-Faerlina, Ghøst, Kåre, Lead, Pug", 1, true) ~= nil and not names:find("+", 1, true), names)
+check("and who isn't here", names:find("Not here: Cara", 1, true) ~= nil)
+check("the loot master sees it too", strip(lead) and strip(lead):IsShown())
+Rolls.cancel()
+srv:tick(1)
+check("the roll ends: the strip goes", not strip(dan):IsShown() and not strip(lead):IsShown())
+-- a roll Gargul runs: read from its line in raid chat
+local gargulSays = function(text) dan.M.fire("CHAT_MSG_RAID_WARNING", text, "Lead-Dreamscythe") end
+gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+check("a Gargul roll shows the strip too", strip(dan):IsShown() and dan.M.plain(strip(dan).names:GetText()):find("Kåre", 1, true) ~= nil)
+gargulSays("10 seconds to roll")
+check("its countdown leaves it up", strip(dan):IsShown())
+gargulSays("Stop your rolls!")
+check("\"Stop your rolls!\" takes it down", not strip(dan):IsShown())
+gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+gargulSays(srv:link(SIGNET) .. " was awarded to Ann. Congrats!")
+check("so does the item being given out", not strip(dan):IsShown())
+gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+dan.M.fire("CHAT_MSG_LOOT", "Ann receives loot: " .. srv:link(SIGNET) .. ".")
+check("and it goes when someone loots the item", not strip(dan):IsShown())
+gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+srv:tick(25)
+check("or when its time is up", not strip(dan):IsShown() and dan.LR.Gargul.roll == nil)
+dan.LR.db.settings.reserveStrip = false
+gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+check("the strip can be turned off", not strip(dan):IsShown())
+dan.LR.db.settings.reserveStrip = true
+dan.LR.Gargul.endRoll()
+
 lead.LR.endSession(sn)
 srv:tick(2)
 

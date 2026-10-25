@@ -54,6 +54,8 @@ function UI.settingsView(f)
   f:panel("Reserves where you see items", function(p)
     toggle(p, "highlight", "Glow on my items in loot windows", "The game's loot window and need/greed windows glow on an item you reserved (or that's hard reserved for you).")
     toggle(p, "tooltipInfo", "Reserves in item tooltips", "Every item tooltip says who reserved it and who it went to, while soft reserves are open.")
+    toggle(p, "lootTags", "Who reserved it, in the loot window", "The game's loot window marks every reserved item (SR, or HR when it's hard reserved) and says who reserved it, whoever you are.")
+    toggle(p, "reserveStrip", "Who reserved it, while it's rolled for", "When an item is rolled for, with LootRuler or Gargul, a small strip above the roll window lists everyone who reserved it. It goes when the roll ends.")
   end)
 
   f:panel("Running loot", function(p)
