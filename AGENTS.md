@@ -176,6 +176,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Reminders** (`Whisper.notReserved`, `Whisper.remind`): one raid line naming who in the group hasn't reserved, with
   how to. `remindOnJoin` (off to start with): people who join while reserves are open, batched for `Whisper.JOIN_WAIT`
   seconds, hear it if they still haven't reserved.
+- **Trades** (`Drops.tradeItems`, `Drops.tradeLine`): items are `{ link, how many }` (a stack says "x3"); an enchant cast on the
+  item in the trade's "will not be traded" slot (`TRADE_ENCHANT_SLOT`) is `trade.enchant` and gets its own line, also as
+  a note to an enchanter who isn't running loot. Gold in an enchant trade isn't a GDKP payment. The test server can
+  put stacks (`giveItem`) and enchant in trades (`tradeToEnchant`, `enchantInTrade`).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

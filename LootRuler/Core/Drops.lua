@@ -224,7 +224,7 @@ end
 function Drops.tradeShow()
   local name, realm = UnitName("NPC")
   trade.partner = name and (realm and realm ~= "" and (name .. "-" .. realm) or U.full(name)) or nil
-  trade.queue, trade.offered, trade.items = {}, {}, {}
+  trade.queue, trade.offered, trade.items, trade.enchant = {}, {}, {}, nil
   if trade.partner and LR.Pot then LR.Pot.tradeNote(trade.partner) end      -- GDKP: who owes whom
   if not trade.partner or not LR.db.settings.tradeHelp then return end
   for i, x in ipairs(Drops.toDeliver(trade.partner)) do
@@ -234,17 +234,32 @@ function Drops.tradeShow()
   if #trade.queue > 0 then C_Timer.After(0.3, offerNext) end
 end
 
---- what's in the trade on both sides, kept up to date until it goes through
+local ENCHANT_SLOT = TRADE_ENCHANT_SLOT or 7     -- the trade's "will not be traded" slot: an item to be enchanted
+
+--- what's in the trade on both sides, kept up to date until it goes through: the items ({ link, how many }),
+--- the gold, and an enchant (the game says which, once it's cast on the item in the "will not be traded" slot)
 function Drops.tradeItems()
   trade.items, trade.gave, trade.got = {}, {}, {}
   for i = 1, 6 do
     local mine, theirs = GetTradePlayerItemLink(i), GetTradeTargetItemLink(i)
     local id = idOf(mine)
-    if id then trade.items[#trade.items + 1] = id trade.gave[#trade.gave + 1] = mine end
-    if theirs then trade.got[#trade.got + 1] = theirs end
+    if id then
+      trade.items[#trade.items + 1] = id
+      trade.gave[#trade.gave + 1] = { mine, select(3, GetTradePlayerItemInfo(i)) or 1 }
+    end
+    if theirs then trade.got[#trade.got + 1] = { theirs, select(3, GetTradeTargetItemInfo(i)) or 1 } end
   end
   trade.gaveMoney = GetPlayerTradeMoney and GetPlayerTradeMoney() or 0
   trade.gotMoney = GetTargetTradeMoney and GetTargetTradeMoney() or 0
+  -- I enchant their item, or they enchant mine
+  local theirs, mine = select(6, GetTradeTargetItemInfo(ENCHANT_SLOT)), select(5, GetTradePlayerItemInfo(ENCHANT_SLOT))
+  if theirs and GetTradeTargetItemLink(ENCHANT_SLOT) then
+    trade.enchant = { byMe = true, item = GetTradeTargetItemLink(ENCHANT_SLOT), what = theirs }
+  elseif mine and GetTradePlayerItemLink(ENCHANT_SLOT) then
+    trade.enchant = { byMe = false, item = GetTradePlayerItemLink(ENCHANT_SLOT), what = mine }
+  else
+    trade.enchant = nil
+  end
 end
 
 --- "12g 50s" (copper in, the game's own coin names aren't needed in chat)
@@ -258,17 +273,29 @@ function Drops.money(copper)
   return table.concat(parts, " ")
 end
 
---- the line telling the raid what a trade was, or nil when nothing changed hands
-function Drops.tradeLine(partner, gave, gaveMoney, got, gotMoney)
-  local function side(links, money)
+--- the line telling the raid what a trade was, or nil when nothing changed hands. gave, got: items (links, or
+--- { link, how many }: a stack says "x3"); enchant: { byMe, item (link), what (the enchant's name) }, when an item
+--- was enchanted in the trade
+function Drops.tradeLine(partner, gave, gaveMoney, got, gotMoney, enchant)
+  local function side(items, money)
     local list = {}
-    for _, l in ipairs(links or {}) do list[#list + 1] = l end
+    for _, x in ipairs(items or {}) do
+      local link, n = type(x) == "table" and x[1] or x, type(x) == "table" and x[2] or 1
+      list[#list + 1] = (n or 1) > 1 and (link .. " x" .. n) or link
+    end
     if (money or 0) > 0 then list[#list + 1] = Drops.money(money) end
     return #list > 0 and table.concat(list, " ") or nil
   end
   local g, r = side(gave, gaveMoney), side(got, gotMoney)
-  if not g and not r then return nil end
   local who = U.short(partner)
+  if enchant then
+    -- what was paid for it, and anything else that changed hands
+    if enchant.byMe then
+      return ("Enchanted %s's %s (%s)%s%s."):format(who, enchant.item, enchant.what, r and (" for " .. r) or "", g and ("; gave " .. g) or "")
+    end
+    return ("%s enchanted my %s (%s)%s%s."):format(who, enchant.item, enchant.what, g and (" for " .. g) or "", r and ("; got " .. r) or "")
+  end
+  if not g and not r then return nil end
   if g and r then return ("Traded %s to %s for %s."):format(g, who, r) end
   if g then return ("Traded %s to %s."):format(g, who) end
   return ("%s traded me %s."):format(who, r)
@@ -278,18 +305,19 @@ end
 --- every raid drop we gave now belongs to the partner
 function Drops.tradeDone()
   local partner = trade.partner
-  if partner and LR.db.settings.tradeAnnounce and IsInGroup() and LR.canRunLoot() then
-    local line = Drops.tradeLine(partner, trade.gave, trade.gaveMoney, trade.got, trade.gotMoney)
-    if line then
-      for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, LR.groupChannel()) end
-    end
+  local enchant = trade.enchant
+  local line = partner and Drops.tradeLine(partner, trade.gave, trade.gaveMoney, trade.got, trade.gotMoney, enchant)
+  if line and LR.db.settings.tradeAnnounce and IsInGroup() and LR.canRunLoot() then
+    for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, LR.groupChannel()) end
+  elseif line and enchant then
+    LR.print(line)                     -- (an enchant is worth a note to me, whoever runs loot)
   end
   local gaveMoney, gotMoney = trade.gaveMoney or 0, trade.gotMoney or 0
-  trade.gave, trade.got, trade.gaveMoney, trade.gotMoney = {}, {}, 0, 0
+  trade.gave, trade.got, trade.gaveMoney, trade.gotMoney, trade.enchant = {}, {}, 0, 0, nil
   local s = Rolls.session()
   -- GDKP: gold that changed hands counts towards what they owe, or what they're owed (Core/Gdkp.lua), in the
-  -- raid going on, or one that ended with payouts left to do (Core/History.lua)
-  if partner and gotMoney ~= gaveMoney then
+  -- raid going on, or one that ended with payouts left to do (Core/History.lua). Gold for an enchant doesn't.
+  if partner and gotMoney ~= gaveMoney and not enchant then
     local pot = (s and s.gdkp and LR.isLeader(s)) and s or LR.History.owing(partner)
     if pot and LR.Gdkp.paid(pot, partner, (gotMoney - gaveMoney) / 10000, U.now()) then
       if pot.archived then LR.changed("history") else LR.leaderChanged(pot) end
@@ -318,7 +346,7 @@ end
 ---------------------------------------------------------------------- events
 local events = CreateFrame("Frame")
 for _, e in ipairs({ "CHAT_MSG_LOOT", "TRADE_SHOW", "TRADE_PLAYER_ITEM_CHANGED", "TRADE_TARGET_ITEM_CHANGED", "TRADE_MONEY_CHANGED",
-  "TRADE_ACCEPT_UPDATE", "UI_INFO_MESSAGE", "TRADE_CLOSED" }) do
+  "TRADE_ACCEPT_UPDATE", "TRADE_UPDATE", "UI_INFO_MESSAGE", "TRADE_CLOSED" }) do
   events:RegisterEvent(e)
 end
 events:SetScript("OnEvent", function(_, event, a1, a2)
@@ -327,7 +355,7 @@ events:SetScript("OnEvent", function(_, event, a1, a2)
     if event == "CHAT_MSG_LOOT" then Drops.lootMessage(a1)
     elseif event == "TRADE_SHOW" then Drops.tradeShow()
     elseif event == "TRADE_PLAYER_ITEM_CHANGED" or event == "TRADE_TARGET_ITEM_CHANGED" or event == "TRADE_MONEY_CHANGED"
-      or event == "TRADE_ACCEPT_UPDATE" then Drops.tradeItems()
+      or event == "TRADE_ACCEPT_UPDATE" or event == "TRADE_UPDATE" then Drops.tradeItems()
     elseif event == "UI_INFO_MESSAGE" then
       if a2 == ERR_TRADE_COMPLETE or a1 == ERR_TRADE_COMPLETE then Drops.tradeDone() end
     elseif event == "TRADE_CLOSED" then trade.queue = {}

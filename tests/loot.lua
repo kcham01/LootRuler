@@ -429,6 +429,45 @@ local fromLead = 0
 for i = lines + 1, #srv.chat do if srv.chat[i].from == full(lead) then fromLead = fromLead + 1 end end
 check("it can be turned off (Ann, an assistant, still says what she got)", fromLead == 0 and chat("Traded 1g to Lead.", "RAID") ~= nil)
 lead.LR.db.settings.tradeAnnounce = true
+-- a stack: how many
+local DUST = 22445                          -- (a stack of something, not raid loot)
+local _, dustSlot = srv:giveItem(lead, DUST, 3)
+srv:openTrade(lead, ann)
+srv:tick(0.5)
+lead.G.C_Container.UseContainerItem(0, dustSlot)
+srv:tick(0.5)
+srv:completeTrade(lead)
+srv:tick(1)
+check("a stack says how many", chat("Traded " .. srv:link(DUST) .. " x3 to Ann.", "RAID") ~= nil)
+-- an enchant: the loot master enchants Ann's item in the "will not be traded" slot, and she pays 5g
+local bracers = srv:giveItem(ann, 28477, 1)
+srv:openTrade(lead, ann)
+srv:tick(0.5)
+srv:tradeToEnchant(ann, bracers)
+srv:setTradeMoney(ann, 50000)
+srv:enchantInTrade(lead, "Enchant Bracer - Superior Healing")
+srv:tick(0.5)
+srv:completeTrade(lead)
+srv:tick(1)
+check("an enchant for a player: what, on which item, and what they paid",
+  chat("Enchanted Ann's " .. srv:link(28477) .. " (Enchant Bracer - Superior Healing) for 5g.", "RAID") ~= nil)
+check("the enchanted item stays theirs", (function() for _, it in pairs(ann.bags) do if it == bracers then return true end end end)())
+check("Ann's side says it the other way round", chat("Lead enchanted my " .. srv:link(28477) .. " (Enchant Bracer - Superior Healing) for 5g.", "RAID") ~= nil)
+-- someone not running loot enchants: not in raid chat, but a note in their own chat
+local dagger = srv:giveItem(bob, 28524, 1)
+local before = #srv.chat
+srv:openTrade(dan, bob)
+srv:tick(0.5)
+srv:tradeToEnchant(bob, dagger)
+srv:setTradeMoney(bob, 20000)
+srv:enchantInTrade(dan, "Enchant Weapon - Major Spellpower")
+srv:tick(0.5)
+srv:completeTrade(dan)
+srv:tick(1)
+local danSaid = false
+for _, l in ipairs(dan.M.chat) do if l:find("Enchanted Bob-Faerlina's", 1, true) and l:find("for 2g", 1, true) then danSaid = true end end
+check("an enchanter who isn't running loot gets a note of it", danSaid)
+check("and the raid isn't told", #srv.chat == before)
 check("nothing left to hand over", #lead.LR.Drops.toDeliver() == 0)
 
 section("group loot")
