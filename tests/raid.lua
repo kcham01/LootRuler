@@ -366,6 +366,74 @@ check("by name, once someone has linked it (found, then refused: one per item)",
 lead.LR.endSession(bd)
 srv:tick(2)
 
+section("a new leader for the reserves")
+local hs = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+ann.LR.reserve(cur(ann), WATCH)
+srv:tick(2)
+local function leaderOf(p) local c = p.LR.session(hs.id) return c and c.leader end
+-- what the raid heard (raid chat, everyone's screen)
+local function lines(text) local n = 0 for _, m in ipairs(srv.chat) do if m.channel == "RAID" and m.text:find(text, 1, true) then n = n + 1 end end return n end
+-- the leader hands them to Bob
+check("only players whose LootRuler can take them are offered", lead.LR.canLead(full(bob)) and lead.LR.canLead(full(dan)) and not lead.LR.canLead(full(pug)))
+local ok, why = lead.LR.handOver(hs, full(pug))
+check("a player without LootRuler can't be handed them", not ok and why:find("can't take the reserves over", 1, true))
+lead.LR.handOver(hs, full(bob))
+srv:tick(3)
+check("Bob's addon takes them on", bob.LR.isLeader(bob.LR.session(hs.id)))
+check("everyone follows Bob, the old leader too", leaderOf(lead) == full(bob) and leaderOf(ann) == full(bob) and leaderOf(dan) == full(bob)
+  and not lead.LR.isLeader(lead.LR.session(hs.id)))
+check("the same session, with everything in it", lead.LR.Session.reservesOf(bob.LR.session(hs.id), full(ann))[1] == WATCH
+  and bob.LR.session(hs.id).was[1] == full(lead))
+check("the raid is told who to whisper", lines("Bob runs the soft reserves now (taking over from Lead-Dreamscythe). Whisper Bob \"!lr [item]\"") == 1)
+local n0 = #pug.inbox
+srv:whisper(pug, bob, "!lr brooch")
+srv:tick(2)
+check("a pug whispers the new leader", lead.LR.Session.reservesOf(bob.LR.session(hs.id), full(pug))[1] == BROOCH and #pug.inbox > n0)
+-- someone who isn't handed them, nor leads or assists the group, claims them: ignored
+local fake = dan.LR.U.copy(dan.LR.session(hs.id))
+fake.leader, fake.rev = full(dan), fake.rev + 50
+dan.LR.Net.send({ t = "T", s = fake }, "RAID")
+srv:tick(2)
+check("a forged copy naming someone else the leader is ignored", leaderOf(ann) == full(bob) and leaderOf(lead) == full(bob) and leaderOf(bob) == full(bob))
+-- Bob leaves: the raid leader is told, and takes over (a raider can't)
+srv:leaveGroup(bob)
+srv:tick(2)
+check("the raid leader is told the reserves' leader left", chatHas(lead, "who runs the soft reserves, has left the group"))
+check("a raider isn't offered it", not ann.LR.mayTakeOver(ann.LR.session(hs.id)) and not ann.LR.takeOver(ann.LR.session(hs.id)))
+check("the raid leader takes over", lead.LR.takeOver(lead.LR.session(hs.id)))
+srv:tick(3)
+check("everyone in the group follows", leaderOf(ann) == full(lead) and leaderOf(dan) == full(lead) and lead.LR.isLeader(lead.LR.session(hs.id)))
+check("the raid hears it", lines("Lead runs the soft reserves now (taking over from Bob-Faerlina)") == 1)
+check("nothing is lost", lead.LR.Session.reservesOf(lead.LR.session(hs.id), full(pug))[1] == BROOCH)
+-- Bob comes back: his addon follows the raid leader instead of fighting over it
+table.insert(srv.group.members, bob) bob.inGroup = true
+srv:rosterChanged()
+srv:tick(5)
+check("the old leader, back, follows the new one", leaderOf(bob) == full(lead) and not bob.LR.isLeader(bob.LR.session(hs.id))
+  and leaderOf(ann) == full(lead) and chatHas(bob, "were taken over while you were away"))
+check("and the raid leader keeps them (Bob's old copy doesn't win them back)", lead.LR.isLeader(lead.LR.session(hs.id)) and leaderOf(dan) == full(lead))
+-- the raid leader goes offline; an assistant hands the reserves straight to Dan
+srv:setAssist(ann, true)
+local leadDB2 = srv:logout(lead)
+srv:tick(2)
+local annCopy = ann.LR.session(hs.id)
+check("an assistant can take over while the leader is offline", ann.LR.mayTakeOver(annCopy))
+check("or hand them to someone else", ann.LR.passOn(annCopy, full(dan)))
+srv:tick(4)
+check("Dan runs them, and everyone follows", dan.LR.isLeader(dan.LR.session(hs.id)) and leaderOf(ann) == full(dan) and leaderOf(bob) == full(dan))
+check("one line in raid chat, from Dan", lines("Dan runs the soft reserves now") == 1 and lines("Ann runs the soft reserves now") == 0)
+srv:login(lead, leadDB2)
+srv:tick(9)
+check("the leader logs back in and follows Dan (his old copy doesn't win it back)", leaderOf(lead) == full(dan) and not lead.LR.isLeader(lead.LR.session(hs.id)) and dan.LR.isLeader(dan.LR.session(hs.id)))
+check("it's still one session, with who led it", #dan.LR.session(hs.id).was == 4 and lead.LR.Session.reservesOf(dan.LR.session(hs.id), full(ann))[1] == WATCH)
+dan.LR.endSession(dan.LR.session(hs.id))
+srv:tick(2)
+check("the new leader ends it, for everyone", lead.LR.session(hs.id) == nil and ann.LR.session(hs.id) == nil and bob.LR.session(hs.id) == nil)
+for _, p in ipairs({ lead, ann, bob, dan }) do
+  check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

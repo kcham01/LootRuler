@@ -15,6 +15,7 @@
 --   R, X, N                       rolling out loot (Core/Rolls.lua)
 --   D                             the raid's drops (Core/Drops.lua)
 --   V  anyone -> group            "I have LootRuler, this version" (on joining a group, and when asked)
+-- Every message also says what the sender's addon can do (fl): 1 = it can take over a session (a new leader).
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
 --
@@ -28,6 +29,7 @@ local _, LR = ...
 local U, S = LR.U, LR.Session
 
 local PROTOCOL = 1
+local FEATURES = 1          -- what this version can do, sent as fl (see the top)
 local KEEP_DAYS = 7
 
 local Net = {}
@@ -184,6 +186,7 @@ end
 local function encode(msg)
   msg.v = 1                                         -- see the top: never raised
   msg.av = LR.VERSION
+  msg.fl = FEATURES
   return LibDeflate:EncodeForWoWAddonChannel(LibDeflate:CompressDeflate(LibSerialize:Serialize(msg)))
 end
 local function decode(text)
@@ -361,6 +364,79 @@ function LR.removeDrop(s, k) if LR.isLeader(s) and S.removeDrop(s, k, U.now()) t
 function LR.unaward(s, index) if LR.isLeader(s) and S.unaward(s, index, U.now()) then leaderChanged(s) return true end return false end
 function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
 
+---------------------------------------------------------------------- a new leader for a session
+--- the session's leader is away: we're in a group, and they're not in it or are offline
+function LR.leaderGone(s)
+  if not s or not IsInGroup() then return false end
+  local m = LR.inGroup(s.leader)
+  return not m or not m.online
+end
+--- someone leads or assists the group (the game says so)
+function LR.groupBoss(name)
+  local m = LR.inGroup(name)
+  return m and (m.leader or m.assist) and true or false
+end
+--- whether I may take over a session: its leader is away, and I lead or assist the group
+function LR.mayTakeOver(s) return s ~= nil and not LR.isLeader(s) and not s.archived and LR.leaderGone(s) and LR.groupBoss(U.me()) end
+
+local function tellGroup(text)
+  local ch = LR.groupChannel()
+  if ch then for _, line in ipairs(U.chatLines(LR.TAG .. " " .. text)) do LR.say(line, ch) end end
+end
+--- I run the reserves from now on: the raid hears who to whisper
+local function nowMine(s, from, quiet)
+  S.newLeader(s, U.me(), U.now())
+  -- my own picks the old leader hadn't confirmed yet go in now (as the leader's do)
+  local mine = db.mine[s.id]
+  if mine and mine.dirty then S.set(s, U.me(), LR.myClass(), mine.i, true, U.now()) end
+  db.mine[s.id] = nil
+  db.current = s.id
+  leaderChanged(s)
+  if quiet then return end
+  tellGroup(("%s runs the soft reserves now (taking over from %s). Whisper %s \"!lr [item]\" to reserve or check yours."):format(
+    U.short(U.me()), U.short(from), U.short(U.me())))
+end
+--- takes over a session whose leader is gone (I lead or assist the group). Returns true, or false and why not.
+function LR.takeOver(s)
+  if not LR.mayTakeOver(s) then return false, "Only the raid leader or an assistant can take over, while the reserves' leader is away." end
+  nowMine(s, s.leader)
+  return true
+end
+--- takes over a session whose leader is gone, to hand it straight to someone else (the raid hears from them)
+function LR.passOn(s, player)
+  if not LR.canLead(player) then return false, ("%s's LootRuler can't take the reserves over (it's too old, or not there)."):format(U.short(player)) end
+  if U.samePlayer(player, U.me()) then return LR.takeOver(s) end
+  if not LR.mayTakeOver(s) then return false, "Only the raid leader or an assistant can take over, while the reserves' leader is away." end
+  nowMine(s, s.leader, true)
+  return LR.handOver(s, player)
+end
+--- the leader hands the session to someone in the group with LootRuler (their addon takes it on); nil takes it back
+function LR.handOver(s, player)
+  if not LR.isLeader(s) then return false, "Only the reserves' leader can hand them over." end
+  if player and not LR.canLead(player) then return false, ("%s's LootRuler can't take the reserves over (it's too old, or not there)."):format(U.short(player)) end
+  if not S.handTo(s, player, U.now()) then return false end
+  leaderChanged(s)
+  return true
+end
+--- the session was handed to me: it's mine now
+function LR.adopt(s)
+  if not s.next or not U.samePlayer(s.next, U.me()) or LR.isLeader(s) then return end
+  LR.print(("%s handed you the soft reserves: you run them now."):format(U.short(s.leader)))
+  nowMine(s, s.leader)
+end
+
+-- the reserves' leader left (or went offline): tell the raid leader and assistants, once per session
+local toldGone = {}
+LR.onChange(function(what)
+  if what ~= "roster" or not db then return end
+  for id, s in pairs(db.sessions) do
+    if LR.mayTakeOver(s) and not toldGone[id] and LR.inGroup(s.leader) == false then
+      toldGone[id] = true
+      LR.print(("%s, who runs the soft reserves, has left the group. Take them over on the Session tab (/lr)."):format(U.short(s.leader)))
+    elseif not LR.leaderGone(s) then toldGone[id] = nil end
+  end
+end)
+
 -- names from softres.it: someone joining (or reserving) may be who a name on the sheet really is (Core/Gargul.lua)
 local recheckSoon = false
 LR.onChange(function(what)
@@ -447,8 +523,15 @@ function handlers.T(msg, channel, sender)
   local t = msg.s
   if not S.valid(t) or not U.samePlayer(t.leader, sender) then return end
   local known = db.sessions[t.id]
-  if LR.isLeader(known) then return end                     -- ours: we're the one that knows best
-  if known and known.rev >= t.rev then
+  local tookOurs = false
+  if known and not U.samePlayer(known.leader, t.leader) then
+    -- a new leader: only if it was handed to them, or they lead or assist the group and took it over while its
+    -- leader was gone (or it was ours, and we were away). Anyone else claiming it is ignored.
+    if not S.newLeaderOk(known, t.leader, LR.leaderGone(known), LR.groupBoss(sender), LR.isLeader(known), S.ledBy(t, U.me()), t.rev > known.rev) then return end
+    tookOurs = LR.isLeader(known)
+    if tookOurs then LR.print(("%s runs the soft reserves now: they were taken over while you were away."):format(U.short(sender))) end
+  elseif LR.isLeader(known) then return                     -- ours: we're the one that knows best
+  elseif known and known.rev >= t.rev then
     LR.sendPicks(known, true)                               -- the leader is there: anything still waiting goes now
     return
   end
@@ -464,6 +547,8 @@ function handlers.T(msg, channel, sender)
   else
     db.mine[t.id] = { i = U.copy(theirs), dirty = false }
   end
+  -- handed to me: my addon takes it on
+  if t.next and U.samePlayer(t.next, U.me()) then LR.adopt(t) end
   if first then
     LR.preload(t.raid)
     -- a new session from someone in our group is the one to show (last week's can go to the back)
@@ -545,7 +630,7 @@ function Net:OnComm(prefix, text, channel, sender)
   if U.samePlayer(sender, U.me()) then return end
   local msg = decode(text)
   if not msg or (msg.mv and (tonumber(msg.mv) or 0) > PROTOCOL) then return end
-  LR.heardFrom(sender, msg.av)
+  LR.heardFrom(sender, msg.av, msg.fl)
   local fn = handlers[msg.t]
   if fn then
     local ok, err = pcall(fn, msg, channel, sender)
@@ -558,15 +643,23 @@ local versions = {}            -- "name-realm" (lower case) -> version string
 local toldNewer = false
 
 --- something came from a player's addon: remember its version; say once when there's a newer one
-function LR.heardFrom(sender, version)
+local features = {}          -- "name-realm" -> what their addon can do (fl)
+function LR.heardFrom(sender, version, fl)
   if not sender then return end
   version = type(version) == "string" and version:sub(1, 20) or "1.0.0-beta"
   versions[U.full(sender):lower()] = version
+  features[U.full(sender):lower()] = type(fl) == "number" and fl or 0
   if not toldNewer and U.compareVersions(LR.VERSION, version) < 0 then
     toldNewer = true
     LR.print(("%s has a newer LootRuler (%s; you have %s). It works with yours, but update when you can."):format(U.short(sender), version, LR.VERSION))
   end
   LR.changed("versions")
+end
+
+--- whether a player's LootRuler can take over a session (we've heard from it, and it's new enough)
+function LR.canLead(name)
+  if U.samePlayer(name, U.me()) then return true end
+  return (name and features[U.full(name):lower()] or 0) >= 1
 end
 
 --- the version of LootRuler a player has, if we've heard from them (and nil if not)

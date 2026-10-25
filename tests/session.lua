@@ -180,6 +180,31 @@ check("matched names must be names", not S.valid(ns))
 ns.nm = "Ghost"
 check("and a list of them", not S.valid(ns))
 
+-- a new leader for a session
+local hs = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 600)
+S.set(hs, "Ann-Dreamscythe", "PRIEST", { 28528 }, false, 601)
+local rev = hs.rev
+check("the leader hands it to someone", S.handTo(hs, "Ann", 602) and hs.next == "Ann-Dreamscythe" and hs.rev == rev + 1)
+check("not to themselves", not S.handTo(hs, "Lead-Dreamscythe", 603))
+check("and can take the offer back", S.handTo(hs, nil, 604) and hs.next == nil and not S.handTo(hs, nil, 605))
+S.handTo(hs, "Ann", 606)
+check("the new leader takes it on: the old one is remembered", S.newLeader(hs, "Ann", 607) and hs.leader == "Ann-Dreamscythe"
+  and hs.was[1] == "Lead-Dreamscythe" and hs.next == nil)
+check("everything in it stays", S.reservesOf(hs, "Ann-Dreamscythe")[1] == 28528 and hs.id == "Lead-Dreamscythe:600")
+check("it's still a valid session", S.valid(hs))
+check("a copy naming a new leader counts when it was handed to them", S.newLeaderOk({ next = "Bob-Faerlina" }, "Bob-Faerlina", false, false, false))
+check("or they lead or assist the group, and its leader is away", S.newLeaderOk({}, "Bob-Faerlina", true, true, false))
+check("or it was ours and they lead or assist, with a newer copy", S.newLeaderOk({}, "Bob-Faerlina", false, true, true, false, true))
+check("or it was ours, and their newer copy carried on from us", S.newLeaderOk({}, "Bob-Faerlina", false, false, true, true, true))
+check("an old copy never takes ours back, whoever sends it", not S.newLeaderOk({}, "Bob-Faerlina", false, true, true, true, false))
+check("not when its leader is here", not S.newLeaderOk({}, "Bob-Faerlina", false, true, false))
+check("who led it before", S.ledBy(hs, "Lead-Dreamscythe") and not S.ledBy(hs, "Bob-Faerlina"))
+check("not from just anyone", not S.newLeaderOk({}, "Bob-Faerlina", true, false, false) and not S.newLeaderOk({ next = "Ann-Dreamscythe" }, "Bob-Faerlina", true, false, false))
+hs.was = { 5 }
+check("who led it must be names", not S.valid(hs))
+hs.was, hs.next = nil, 7
+check("and who it's handed to", not S.valid(hs))
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

@@ -166,6 +166,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   for Gargul's English lines (`Gargul.ROLL_LINES`, `Gargul.END_LINES`); they also end when the item is looted or time
   runs out. Other languages aren't read yet. The game's loot window gets "SR"/"HR" on the icon and the names under
   the item's name (as many as fit). Switches: `reserveStrip`, `lootTags`. The test server now has the game's class colours.
+- **A new leader for a session** (`S.handTo`, `S.newLeader`, `S.newLeaderOk`; `LR.handOver`, `LR.takeOver`, `LR.passOn`, `LR.adopt`):
+  the leader hands it on (`s.next`; that player's addon takes it), or the raid leader / an assistant takes it over
+  while its leader is out of the group or offline. Same id, so everything stays; `s.was` lists who led it. A raider's
+  addon now only accepts a copy naming a different leader by those rules (before, any sender could claim a session
+  with a higher rev), and a session's own leader yields only to a newer copy. Messages carry `fl` (what the
+  sender's addon can do; 1 = can take a session) so only able players are offered (`LR.canLead`). Older versions
+  still follow whoever sends the newest copy.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
