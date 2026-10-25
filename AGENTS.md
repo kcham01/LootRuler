@@ -149,6 +149,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   item reserved in both places counts once. (Before this, re-importing skipped changed picks: the old ones stayed.)
 - **From Gargul:** +1s and boosted roll points as "Name,Number" lines (`Prio.parseCounts`, `Prio.countsText`), read
   straight from a loaded Gargul (`Gargul.counts`, its own export) or pasted. +1s set with `S.setPlusOnes`.
+- **Reserving for someone** (Reserves > By player > "Add a reserve for ..."): `UI.pickItem(s, title, nil, filter, many)`
+  with `many = { player, class }` stays open, counts what's left in its title, and a second click on an item added
+  there takes it off. Every other picker (hard reserves) still closes on the first click.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

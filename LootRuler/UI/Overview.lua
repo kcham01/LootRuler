@@ -37,10 +37,46 @@ local function leaderTools(f, s)
 end
 
 --- picks an item for something (a sheet), then calls done(id): from the session's raid, the items it knows
---- of, or any item shift-clicked into the box (when the session allows it)
-function UI.pickItem(s, title, done, filter)
+--- of, or any item shift-clicked into the box (when the session allows it).
+--- many: pick several, for one player, without the sheet closing (it closes with Done, its X or Escape):
+---   { player, class } - each click reserves the item for them; clicking an item added here again takes it off
+function UI.pickItem(s, title, done, filter, many)
   local q = ""
+  local added, said = {}, nil         -- (many) items added in this sheet, in order; what the last click did
+  local who = many and U.short(many.player)
+  local function addedAt(id) for i = #added, 1, -1 do if added[i] == id then return i end end end
+  local function click(id, h)
+    if not many then h.close() done(id) return end
+    local i = addedAt(id)
+    if i then
+      local ok, why = LR.leaderRemove(s, many.player, id)
+      if ok or why == "NOT_RESERVED" then table.remove(added, i) end     -- (or it went some other way meanwhile)
+      if ok then said = { "Took " .. LR.coloredName(id) .. " off." }
+      elseif why == "NOT_RESERVED" then said = { ("%s doesn't have %s reserved any more."):format(who, LR.coloredName(id)), true }
+      else said = { S.WHY[why] or tostring(why), true } end
+    else
+      local ok, why = LR.leaderAdd(s, many.player, many.class, id)
+      if ok then added[#added + 1] = id said = { "Added " .. LR.coloredName(id) .. "." }
+      elseif why == "TOO_MANY" then said = { ("%s has no reserves left. Click an item added here to take it off."):format(who), true }
+      elseif why == "DUPLICATE" then said = { ("%s already reserved %s, and this raid allows one each per item."):format(who, LR.coloredName(id)), true }
+      else said = { S.WHY[why] or tostring(why), true } end
+    end
+    h.redraw(true)
+  end
   UI.openSheet(title, function(f, h)
+    local used, limit, full
+    if many then
+      used, limit = #S.reservesOf(s, many.player), S.limit(s, many.player)
+      full = used >= limit
+      -- the count stays in sight in the title, however far down the list is scrolled
+      h.frame.title:SetText(("%s  |cffffd100(%d of %d left)|r"):format(title, math.max(0, limit - used), limit))
+      local list = U.map(added, LR.coloredName)
+      f:note(#added > 0 and ("Added for %s: %s. Click one again to take it off."):format(who, table.concat(list, ", "))
+        or ("Click items to reserve them for %s. This stays open until you're done."):format(who))
+      if said then f:note(said[1], said[2] and { 1, 0.35, 0.29 } or K.GREEN) end
+      f:buttons({ { label = "Done", click = function() h.close() end } }, "left")
+      f:gap(2)
+    end
     local e = K.get(f.owner, "edit", f.parent)
     f:place(e, 22, 6, f.width - 12)
     e:SetText(q)
@@ -55,8 +91,12 @@ function UI.pickItem(s, title, done, filter)
     f:gap(6)
     local function row(id)
       local b = K.get(f.owner, "item", f.parent)
-      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), s.hr[id] and "|cffff5a4aHR|r" or "")
-      b:SetScript("OnClick", function() h.close() done(id) end)
+      local badge = s.hr[id] and "|cffff5a4aHR|r" or ""
+      if many and addedAt(id) then badge = "|cff1eff00Added|r"
+      elseif many and U.indexOf(S.reservesOf(s, many.player), id) then badge = "|cffffd100Reserved|r" end
+      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), badge)
+      if many and full and not addedAt(id) then b:SetAlpha(0.5) end
+      b:SetScript("OnClick", function() click(id, h) end)
       b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
       b:SetScript("OnLeave", function() GameTooltip:Hide() end)
       f:place(b, 36)
@@ -76,7 +116,8 @@ function UI.pickItem(s, title, done, filter)
       else f:note(("That item doesn't drop in %s. Allow any item (Session tab) to use it."):format(raid.name), K.GOLD) end
       return
     end
-    f:note(s.any and "Pick one, or shift-click any item into the box." or "Pick one, or search by name.")
+    if many then f:note(s.any and "Search by name, or shift-click any item into the box." or "Search by name.")
+    else f:note(s.any and "Pick one, or shift-click any item into the box." or "Pick one, or search by name.") end
     local want = U.lower(q)
     local faction = UnitFactionGroup("player")
     for _, boss in ipairs(raid.bosses) do
@@ -320,10 +361,8 @@ local function byPlayer(f, s, leader)
       local list = {}
       if #items < limit then
         list[#list + 1] = { label = "Add a reserve for " .. U.short(person.name), click = function()
-          UI.pickItem(s, "Reserve for " .. U.short(person.name), function(id)
-            local ok, why = LR.leaderAdd(s, person.name, class, id)
-            if not ok then UI.refused(why) end
-          end, function(id) return not s.hr[id] end)
+          UI.pickItem(s, "Reserve for " .. U.short(person.name), nil, function(id) return not s.hr[id] end,
+            { player = person.name, class = class })
         end }
       end
       local extra = S.extra(s, person.name)
