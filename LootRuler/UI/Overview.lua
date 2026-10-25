@@ -140,6 +140,52 @@ function UI.pickItem(s, title, done, filter, many)
   end, { full = true })
 end
 
+--- a name from softres.it that isn't anyone in the group (LR.Gargul.unmatched): who it could be, a click each
+function UI.nameFix(f, s, x, after)
+  local from = U.short(x.from)
+  local list = x.options or x.near or {}
+  if #list == 0 then return end
+  if x.options then
+    f:note(("%s (from softres.it) could be %s. Which is it?"):format(from, table.concat(U.map(list, U.short), " or ")), K.GOLD)
+  else
+    f:note(("Nobody in the group is called %s (from softres.it). Did the sheet mean %s?"):format(from, table.concat(U.map(list, U.short), " or ")), K.GOLD)
+  end
+  local buttons = {}
+  for _, to in ipairs(list) do
+    buttons[#buttons + 1] = { label = from .. " -> " .. U.short(to), click = function()
+      local ok, why = LR.matchName(s, x.from, to)
+      if ok then UI.toast(("%s's reserves from softres.it are %s's now."):format(from, U.short(to))) elseif why then UI.toast(why) end
+      if after then after() end
+    end }
+  end
+  f:buttons(buttons, "left")
+end
+
+--- what a softres.it import did (Session tab): the counts, names matched to the group's spelling, and names to check
+function UI.importSummary(s, sum, line)
+  UI.openSheet("From softres.it", function(f, h)
+    f:text(line)
+    if #sum.matched > 0 then
+      f:gap(4)
+      f:note("Spelled differently on the sheet, so matched to who's in the group: "
+        .. table.concat(U.map(sum.matched, function(m) return U.short(m[1]) .. " is " .. U.short(m[2]) end), ", ") .. ".", K.GREEN)
+    end
+    -- (worked out again on every redraw: a name sorted out here, or by someone joining, drops off the list)
+    local left = LR.Gargul.unmatched(s, LR.roster(), true)
+    local waiting = {}
+    for _, x in ipairs(left) do
+      if (x.options and #x.options > 0) or (x.near and #x.near > 0) then f:gap(4) UI.nameFix(f, s, x, function() h.redraw(true) end)
+      else waiting[#waiting + 1] = U.short(x.from) end
+    end
+    if #waiting > 0 then
+      f:gap(4)
+      f:note(("Not in the group yet: %s. When they join, their reserves count for them, even if the sheet left out an accent."):format(table.concat(waiting, ", ")))
+    end
+    f:gap(6)
+    f:buttons({ { label = "Close", click = function() h.close() end } })
+  end)
+end
+
 --- extra reserves (tanks, healers, whoever the leader likes): pick players, then how many extra each
 function UI.extraSheet(s, preset)
   local picked, n = {}, 1
@@ -311,12 +357,12 @@ end
 local function byPlayer(f, s, leader)
   -- everyone in the group, and everyone who reserved
   local people, seen = {}, {}
-  for _, p in ipairs(S.players(s)) do people[#people + 1] = { name = p.name, class = p.class } seen[p.name:lower()] = true end
+  for _, p in ipairs(S.players(s)) do people[#people + 1] = { name = p.name, class = p.class } seen[U.foldCase(p.name)] = true end
   local missing = 0
   for _, m in ipairs(LR.roster()) do
-    if not seen[m.name:lower()] then
+    if not seen[U.foldCase(m.name)] then
       people[#people + 1] = { name = m.name, class = m.class, none = true }
-      seen[m.name:lower()] = true
+      seen[U.foldCase(m.name)] = true
       missing = missing + 1
     end
   end
@@ -332,6 +378,9 @@ local function byPlayer(f, s, leader)
     f:note(("%s in the group %s LootRuler, as far as your addon can tell: they can whisper %s \"!lr [item]\"."):format(
       U.plural(without, "player"), without == 1 and "doesn't have" or "don't have", leader and "you" or U.short(s.leader)))
   end
+  -- names from softres.it that aren't anyone in the group, but could be (the leader picks)
+  local fixes = {}
+  if leader then for _, x in ipairs(LR.Gargul.unmatched(s, LR.roster())) do fixes[x.from] = x end end
   for _, person in ipairs(people) do
     local items = S.reservesOf(s, person.name)
     local class = person.class or LR.classOf(person.name)
@@ -345,6 +394,7 @@ local function byPlayer(f, s, leader)
     hd:SetWidth(f.width)
     f:place(hd, 22)
     f:gap(3)
+    if fixes[person.name] then UI.nameFix(f, s, fixes[person.name]) end
     for _, id in ipairs(items) do
       local b = K.get(f.owner, "item", f.parent)
       K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), "",

@@ -158,6 +158,28 @@ check("a way this version doesn't know is kept", S.valid(ps))
 ps.prio = 5
 check("but not nonsense", not S.valid(ps))
 
+-- names with letters beyond A-Z: the game's lower() only changes A-Z
+check("small letters, accented ones too", U.foldCase("ØYVIND-Dreamscythe") == "øyvind-dreamscythe" and U.foldCase("Ghost") == "ghost")
+check("Russian names too", U.foldCase("ЁЛКА") == "ёлка")
+check("the same character, whatever the capitals", U.samePlayer("ghØst", "Ghøst-Dreamscythe") and U.samePlayer("ÆSIR", "Æsir"))
+check("an accent makes a different character", not U.samePlayer("Ghost", "Ghøst"))
+check("a name the way the game writes it", U.capitalize("ghØst") == "Ghøst" and U.capitalize("øyvind") == "Øyvind" and U.capitalize("élise") == "Élise",
+  U.capitalize("ghØst") .. " " .. U.capitalize("øyvind"))
+check("the realm is left as it is", U.capitalize("ølaf-Area52") == "Ølaf-Area52" and U.capitalize("ann-Faerlina") == "Ann-Faerlina")
+check("a letter with no capital stays", U.capitalize("ßam") == "ßam" and U.capitalize("") == "")
+check("names matched with accents put aside", U.nameKey("Ghøst") == "ghost" and U.nameKey("GHÖST") == "ghost" and U.nameKey("Æsir") == "aesir"
+  and U.nameKey("Strauß") == "strauss")
+check("how far apart two spellings are", U.distance("ghost", "ghots") == 2 and U.distance("ghøst", "ghost") == 1 and U.distance("ann", "ann") == 0
+  and U.distance("", "ann") == 3)
+-- what a softres.it import matched (Core/Gargul.lua): checked like everything else in a session
+local ns = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 500)
+ns.nm = { ["Ghost-Dreamscythe"] = "Ghøst-Dreamscythe" }
+check("matched names are fine", S.valid(ns))
+ns.nm = { ["Ghost-Dreamscythe"] = 5 }
+check("matched names must be names", not S.valid(ns))
+ns.nm = "Ghost"
+check("and a list of them", not S.valid(ns))
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

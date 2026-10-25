@@ -154,7 +154,86 @@ function U.short(full)
 end
 --- the name only, for comparisons with names typed by people
 function U.bare(full) return (tostring(full or ""):match("^([^%-]+)")) or "" end
-function U.samePlayer(a, b) return a and b and U.full(a):lower() == U.full(b):lower() end
+
+-- Letters beyond plain English in character names. The game's lower() and upper() only change A-Z, so
+-- "Øyvind" and "øyvind" look different to them. Each row: capital, small, the plain letters it's matched
+-- as (so a name typed "Ghost" can be found as the character "Ghøst"). Russian letters have no plain row.
+local LETTERS = {
+  { "À", "à", "a" }, { "Á", "á", "a" }, { "Â", "â", "a" }, { "Ã", "ã", "a" }, { "Ä", "ä", "a" }, { "Å", "å", "a" },
+  { "Æ", "æ", "ae" }, { "Ç", "ç", "c" }, { "È", "è", "e" }, { "É", "é", "e" }, { "Ê", "ê", "e" }, { "Ë", "ë", "e" },
+  { "Ì", "ì", "i" }, { "Í", "í", "i" }, { "Î", "î", "i" }, { "Ï", "ï", "i" }, { "Ð", "ð", "d" }, { "Ñ", "ñ", "n" },
+  { "Ò", "ò", "o" }, { "Ó", "ó", "o" }, { "Ô", "ô", "o" }, { "Õ", "õ", "o" }, { "Ö", "ö", "o" }, { "Ø", "ø", "o" },
+  { "Ù", "ù", "u" }, { "Ú", "ú", "u" }, { "Û", "û", "u" }, { "Ü", "ü", "u" }, { "Ý", "ý", "y" }, { "Þ", "þ", "th" },
+  { "Ÿ", "ÿ", "y" }, { nil, "ß", "ss" },
+  { "Ā", "ā", "a" }, { "Ă", "ă", "a" }, { "Ą", "ą", "a" }, { "Ć", "ć", "c" }, { "Ĉ", "ĉ", "c" }, { "Ċ", "ċ", "c" },
+  { "Č", "č", "c" }, { "Ď", "ď", "d" }, { "Đ", "đ", "d" }, { "Ē", "ē", "e" }, { "Ĕ", "ĕ", "e" }, { "Ė", "ė", "e" },
+  { "Ę", "ę", "e" }, { "Ě", "ě", "e" }, { "Ĝ", "ĝ", "g" }, { "Ğ", "ğ", "g" }, { "Ġ", "ġ", "g" }, { "Ģ", "ģ", "g" },
+  { "Ĥ", "ĥ", "h" }, { "Ħ", "ħ", "h" }, { "Ĩ", "ĩ", "i" }, { "Ī", "ī", "i" }, { "Ĭ", "ĭ", "i" }, { "Į", "į", "i" },
+  { "İ", "i", "i" }, { nil, "ı", "i" }, { "Ĳ", "ĳ", "ij" }, { "Ĵ", "ĵ", "j" }, { "Ķ", "ķ", "k" }, { "Ĺ", "ĺ", "l" },
+  { "Ļ", "ļ", "l" }, { "Ľ", "ľ", "l" }, { "Ŀ", "ŀ", "l" }, { "Ł", "ł", "l" }, { "Ń", "ń", "n" }, { "Ņ", "ņ", "n" },
+  { "Ň", "ň", "n" }, { "Ō", "ō", "o" }, { "Ŏ", "ŏ", "o" }, { "Ő", "ő", "o" }, { "Œ", "œ", "oe" }, { "Ŕ", "ŕ", "r" },
+  { "Ŗ", "ŗ", "r" }, { "Ř", "ř", "r" }, { "Ś", "ś", "s" }, { "Ŝ", "ŝ", "s" }, { "Ş", "ş", "s" }, { "Š", "š", "s" },
+  { "Ţ", "ţ", "t" }, { "Ť", "ť", "t" }, { "Ŧ", "ŧ", "t" }, { "Ũ", "ũ", "u" }, { "Ū", "ū", "u" }, { "Ŭ", "ŭ", "u" },
+  { "Ů", "ů", "u" }, { "Ű", "ű", "u" }, { "Ų", "ų", "u" }, { "Ŵ", "ŵ", "w" }, { "Ŷ", "ŷ", "y" }, { "Ź", "ź", "z" },
+  { "Ż", "ż", "z" }, { "Ž", "ž", "z" },
+}
+local RUSSIAN = { "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ", "абвгдеёжзийклмнопрстуфхцчшщъыьэюя" }
+local CHAR = "[%z\1-\127\194-\244][\128-\191]*"     -- one letter, however many bytes it takes
+local toLower, toUpper, toPlain = {}, {}, {}
+for _, l in ipairs(LETTERS) do
+  if l[1] then toLower[l[1]] = l[2] end
+  if l[1] and l[2] ~= "i" then toUpper[l[2]] = l[1] end
+  toPlain[l[2]] = l[3]
+end
+do
+  local small = {}
+  for c in RUSSIAN[2]:gmatch(CHAR) do small[#small + 1] = c end
+  local i = 0
+  for c in RUSSIAN[1]:gmatch(CHAR) do i = i + 1 toLower[c] = small[i] toUpper[small[i]] = c end
+end
+
+--- a name (or any text) in small letters, the accented ones too
+function U.foldCase(text)
+  text = tostring(text or "")
+  if not text:find("[\128-\255]") then return text:lower() end      -- (plain letters: the quick way)
+  return (text:gsub(CHAR, function(c) return #c == 1 and c:lower() or toLower[c] or c end))
+end
+--- a name the way the game writes it: a capital, then small letters ("ghØst" -> "Ghøst"); a realm stays as it is
+function U.capitalize(name)
+  name = tostring(name or "")
+  local bare, realm = name:match("^([^%-]*)(.*)$")
+  local first, rest = bare:match("^(" .. CHAR .. ")(.*)$")
+  if not first then return name end
+  return (#first == 1 and first:upper() or toUpper[first] or first) .. U.foldCase(rest) .. realm
+end
+--- what a name is matched by when people may have typed it differently: small letters, accents dropped
+--- ("Ghøst-Faerlina" -> "ghost-faerlina"). Only for finding a character; two names with the same key can
+--- still be two different characters.
+function U.nameKey(name)
+  return (U.foldCase(name):gsub(CHAR, function(c) return toPlain[c] or c end))
+end
+--- the letters of a text, one per entry
+function U.letters(text)
+  local out = {}
+  for c in tostring(text or ""):gmatch(CHAR) do out[#out + 1] = c end
+  return out
+end
+--- how many letters must change (added, taken away or swapped) to turn one text into another
+function U.distance(a, b)
+  a, b = U.letters(a), U.letters(b)
+  if #a == 0 or #b == 0 then return math.max(#a, #b) end
+  local prev = {}
+  for j = 0, #b do prev[j] = j end
+  for i = 1, #a do
+    local cur = { [0] = i }
+    for j = 1, #b do cur[j] = math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i] == b[j] and 0 or 1)) end
+    prev = cur
+  end
+  return prev[#b]
+end
+
+--- the same character: the game's names differ only in capitals (any letters, not just A-Z)
+function U.samePlayer(a, b) return a and b and U.foldCase(U.full(a)) == U.foldCase(U.full(b)) end
 
 --- a class token ("PALADIN") coloured
 function U.classColor(token)

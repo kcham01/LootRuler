@@ -54,7 +54,7 @@ local function selectedPlayer(roll)
   if roll.mode == "HR" then
     local f = roll.f or ""
     for _, m in ipairs(LR.roster()) do
-      if f ~= "" and (U.samePlayer(m.name, f) or U.bare(m.name):lower() == U.bare(f):lower()) then return m.name end
+      if f ~= "" and (U.samePlayer(m.name, f) or U.foldCase(U.bare(m.name)) == U.foldCase(U.bare(f))) then return m.name end
     end
     return nil
   end

@@ -288,7 +288,11 @@ run("Gargul", function()
 end)
 
 run("softres.it import", function()
-  local site = LR.Gargul.encode({ metadata = { id = "x1" }, softreserves = { { name = "Zed", class = "rogue", items = { { id = 28524 } } } }, hardreserves = {} })
+  -- Zed isn't in the group yet; "Pùg" is Pug with an accent; "Bobb" is a typo for Bob (from another realm)
+  local site = LR.Gargul.encode({ metadata = { id = "x1" }, hardreserves = {}, softreserves = {
+    { name = "Zed", class = "rogue", items = { { id = 28524 } } },
+    { name = "Pùg", class = "warrior", items = { { id = 28477 } } },
+    { name = "Bobb", class = "mage", items = { { id = 28766 } } } } })
   clickText("Session")
   clickText("Import from softres.it")
   local box
@@ -300,6 +304,28 @@ run("softres.it import", function()
   clickText("Import")
   srv:tick(2)
   check("reserves from softres.it are added", LR.Session.reservesOf(s, "Zed-Dreamscythe")[1] == 28524)
+  check("a name spelled with an accent goes to the player in the group", LR.U.indexOf(LR.Session.reservesOf(s, "Pug-Dreamscythe"), 28477)
+    and #LR.Session.reservesOf(s, "Pùg-Dreamscythe") == 0)
+  check("the summary says so", visible("From softres.it") and visible("Pùg is Pug"))
+  check("and asks about a name nobody has, with a click to fix it", visible("Nobody in the group is called Bobb") and visible("Bobb -> Bob-Faerlina"))
+  check("and lists who isn't here yet", visible("Not in the group yet: Zed"))
+  shot("import-names")
+  LR.UI.closeAll()
+  -- the Reserves tab asks too, under the name
+  clickText("Reserves")
+  clickText("By player")
+  check("the Reserves tab offers the same fix", visible("Bobb -> Bob-Faerlina"))
+  shot("import-names-by-player")
+  clickText("Bobb -> Bob-Faerlina")
+  srv:tick(2)
+  check("one click moves the reserve to Bob", LR.Session.reservesOf(s, "Bob-Faerlina")[2] == 28766 and #LR.Session.reservesOf(s, "Bobb-Dreamscythe") == 0
+    and LR.Session.reservesOf(bob.LR.current(), "Bob-Faerlina")[2] == 28766)
+  check("and the question goes away", not visible("Bobb -> Bob-Faerlina"))
+  LR.leaderRemove(s, "Bob-Faerlina", 28766)
+  LR.leaderRemove(s, "Pug-Dreamscythe", 28477)
+  srv:tick(2)
+  clickText("By item")
+  clickText("Session")
 end)
 
 run("a raider's window", function()

@@ -556,6 +556,45 @@ check("but it's kept under past raids, for the leader and raiders", kept and kep
   and ann.LR.History.all()[1] and ann.LR.History.all()[1].id == s.id)
 check("and still exports", lead.LR.Export.text(kept, "csv"):find("Signet of Unshakable Faith", 1, true) ~= nil)
 
+section("softres.it names spelled differently from the characters")
+-- Ghøst (no addon) is in the raid; the sheet says "Ghost". Kåre isn't here yet; the sheet says "Kare".
+local ghost = srv:player({ name = "Ghøst", class = "MAGE" })
+local kare = srv:player({ name = "Kåre", class = "HUNTER" })
+table.insert(srv.group.members, ghost) ghost.inGroup = true
+srv:rosterChanged()
+local sn = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+local sum = lead.LR.Gargul.importInto(sn, lead.LR.Gargul.encode({ metadata = { id = "n1" }, hardreserves = {}, softreserves = {
+  { name = "Ghost", class = "mage", items = { { id = ROYAL } } },
+  { name = "kare", class = "hunter", items = { { id = BROOCH } } } } }))
+srv:tick(2)
+local S = lead.LR.Session
+check("the reserve goes under the character's own spelling", S.reservesOf(sn, "Ghøst-Dreamscythe")[1] == ROYAL and #S.reservesOf(sn, "Ghost-Dreamscythe") == 0
+  and #sum.matched == 1)
+check("raiders' addons have it that way too", S.reservesOf(ann.LR.current(), "Ghøst-Dreamscythe")[1] == ROYAL)
+check("Kare isn't here yet: kept as the sheet has it", S.reservesOf(sn, "Kare-Dreamscythe")[1] == BROOCH and #sum.missing == 1)
+local roll = Rolls.start(ROYAL, { link = srv:link(ROYAL) })
+srv:tick(1)
+check("the item is rolled for by the reserve, not opened to everyone", roll and roll.mode == "SR" and #roll.who == 1 and roll.who[1][1] == "Ghøst-Dreamscythe"
+  and #roll.away == 0)
+check("raiders' windows say it's reserved", copyOf(ann, ROYAL) and copyOf(ann, ROYAL).mode == "SR")
+srv:roll(ghost, 1, 100, 64)
+srv:roll(dan, 1, 100, 99)
+srv:tick(1)
+Rolls.stop()
+srv:tick(1)
+local top = lead.LR.Roll.result(Rolls.mine())
+check("Ghøst's roll counts, and someone who didn't reserve it doesn't", top and top.p == "Ghøst-Dreamscythe" and top.n == 64)
+Rolls.dismiss()
+-- Kåre joins: the sheet's "Kare" is him
+table.insert(srv.group.members, kare) kare.inGroup = true
+srv:rosterChanged()
+srv:tick(3)
+check("someone joining gets the reserves the sheet spelled without the accent", S.reservesOf(sn, "Kåre-Dreamscythe")[1] == BROOCH and #S.reservesOf(sn, "Kare-Dreamscythe") == 0)
+check("raiders' addons hear about it", S.reservesOf(ann.LR.current(), "Kåre-Dreamscythe")[1] == BROOCH)
+lead.LR.endSession(sn)
+srv:tick(2)
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
