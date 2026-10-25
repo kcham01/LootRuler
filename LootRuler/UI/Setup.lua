@@ -70,7 +70,9 @@ local function importSheet(s)
       if #changes > 0 then msg = msg .. " (" .. table.concat(changes, ", ") .. ")" elseif sum.items > 0 then msg = msg .. " (no changes)" end
       if sum.hard > 0 then msg = msg .. (", %d hard reserved"):format(sum.hard) end
       if sum.hardRemoved > 0 then msg = msg .. (", %d hard reserves taken off"):format(sum.hardRemoved) end
-      if sum.skipped + sum.over > 0 then msg = msg .. ("; %d skipped"):format(sum.skipped + sum.over) end
+      if sum.used > 0 then msg = msg .. ("; %d kept (they already won with it)"):format(sum.used) end
+      if sum.over > 0 then msg = msg .. ("; %d past someone's limit, skipped"):format(sum.over) end
+      if sum.skipped > 0 then msg = msg .. ("; %d not from this raid, skipped"):format(sum.skipped) end
       LR.print(msg .. ".")
       UI.importSummary(s, sum, msg .. ".")
     end } })
