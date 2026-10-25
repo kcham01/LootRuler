@@ -10,7 +10,7 @@ function LR.isMine(s, id)
   if not s or not id then return false end
   if S.claims(s, U.me(), id) > 0 then return true end
   local hr = s.hr[id]
-  return hr ~= nil and hr.f ~= "" and (U.samePlayer(hr.f, U.me()) or U.bare(hr.f):lower() == U.bare(U.me()):lower())
+  return hr ~= nil and hr.f ~= "" and (U.samePlayer(hr.f, U.me()) or U.foldCase(U.bare(hr.f)) == U.foldCase(U.bare(U.me())))
 end
 
 local function idOf(link) return link and tonumber(tostring(link):match("item:(%d+)")) end

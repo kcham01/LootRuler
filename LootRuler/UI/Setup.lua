@@ -71,8 +71,8 @@ local function importSheet(s)
       if sum.hard > 0 then msg = msg .. (", %d hard reserved"):format(sum.hard) end
       if sum.hardRemoved > 0 then msg = msg .. (", %d hard reserves taken off"):format(sum.hardRemoved) end
       if sum.skipped + sum.over > 0 then msg = msg .. ("; %d skipped"):format(sum.skipped + sum.over) end
-      UI.toast(msg .. ".")
       LR.print(msg .. ".")
+      UI.importSummary(s, sum, msg .. ".")
     end } })
   end)
 end

@@ -116,6 +116,88 @@ check("but not with nonsense in it", not S.valid(s3))
 local bad, err = LR.Gargul.importInto(s2, "this isn't an export")
 check("rubbish is refused with a reason", bad == nil and type(err) == "string")
 
+print("== names on the sheet spelled differently from the characters")
+local G = LR.Gargul
+local function group(...) local o = {} for _, n in ipairs({ ... }) do o[#o + 1] = { name = n } end return o end
+local function names(sum, field) local o = {} for _, x in ipairs(sum[field]) do o[#o + 1] = U.short(x[1]) end table.sort(o) return table.concat(o, ",") end
+do
+  local sn = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  local roster = group("Lead-Dreamscythe", "Ghøst-Dreamscythe", "Øyvind-Dreamscythe", "Bob-Faerlina")
+  local page = { metadata = { id = "n1" }, hardreserves = {}, softreserves = {
+    { name = "ghost", class = "mage", items = { { id = 28528 } } },             -- no accent, no capital
+    { name = "øYVIND", class = "warrior", items = { { id = 28525 } } },         -- capitals all over
+    { name = "Bob", class = "mage", items = { { id = 28529 } } },               -- another realm, typed without it
+    { name = "Zed", class = "rogue", items = { { id = 28762 } } },              -- not in the group yet
+    { name = "Ghots", class = "rogue", items = { { id = 28530 } } },            -- a typo: close to Ghøst
+  } }
+  local sum = G.importInto(sn, pack(page), roster)
+  check("a name without its accent goes to the character", list(sn, "Ghøst-Dreamscythe") == "28528" and list(sn, "Ghost-Dreamscythe") == "")
+  check("capitals don't matter, accented ones either", list(sn, "Øyvind-Dreamscythe") == "28525" and sn.res["Øyvind-Dreamscythe"].c == "WARRIOR")
+  check("a name typed without its realm finds the player from another realm", list(sn, "Bob-Faerlina") == "28529" and list(sn, "Bob-Dreamscythe") == "")
+  check("the summary says which names were matched", names(sum, "matched") == "Bob,Ghost", names(sum, "matched"))
+  check("names nobody in the group has are kept as they are", list(sn, "Zed-Dreamscythe") == "28762" and list(sn, "Ghots-Dreamscythe") == "28530")
+  local miss = {}
+  for _, x in ipairs(sum.missing) do miss[x[1]] = x[2] end
+  check("and listed, with close spellings", names(sum, "missing") == "Ghots,Zed" and miss["Ghots-Dreamscythe"][1] == "Ghøst-Dreamscythe"
+    and #miss["Zed-Dreamscythe"] == 0)
+  -- what goes to Gargul (and to older versions of LootRuler) is the game's spelling, so exact matching works there
+  local out = G.decode(G.export(sn))
+  local sent = {}
+  for _, r in ipairs(out.softreserves) do sent[r.name] = true end
+  check("Gargul gets the game's spelling", sent["Ghøst"] and sent["Øyvind"] and sent["Bob-Faerlina"] and not sent["Ghost"])
+  -- the same sheet again: no new phantom players, nothing changes
+  local again = G.importInto(sn, pack(page), roster)
+  check("importing again goes to the same characters", again.added == 0 and again.removed == 0 and list(sn, "Ghøst-Dreamscythe") == "28528"
+    and list(sn, "Ghost-Dreamscythe") == "")
+  -- the typo, sorted out by the leader: a click moves it, and later imports remember
+  local left = G.unmatched(sn, roster)
+  check("the typo is listed for the leader, Zed (no close spelling) isn't", #left == 1 and left[1].from == "Ghots-Dreamscythe" and left[1].near[1] == "Ghøst-Dreamscythe")
+  check("one character can't take a second name's picks while it has the first's", not G.rename(sn, "Ghots-Dreamscythe", "Ghøst-Dreamscythe"))
+  check("but someone without any can", G.rename(sn, "Ghots-Dreamscythe", "Lead-Dreamscythe", "PALADIN") and list(sn, "Lead-Dreamscythe") == "28530"
+    and list(sn, "Ghots-Dreamscythe") == "" and sn.res["Lead-Dreamscythe"].c == "PALADIN")
+  local third = G.importInto(sn, pack(page), roster)
+  check("and the next import remembers it", third.added == 0 and third.removed == 0 and list(sn, "Lead-Dreamscythe") == "28530" and list(sn, "Ghots-Dreamscythe") == "")
+  check("the session with its matches is valid", S.valid(sn) and sn.nm["Ghost-Dreamscythe"] == "Ghøst-Dreamscythe")
+  -- Zed joins as Zéd: his reserves follow him
+  roster[#roster + 1] = { name = "Zéd-Dreamscythe" }
+  local moved = G.recheck(sn, roster)
+  check("someone joining with the accent gets the sheet's reserves", #moved == 1 and moved[1][2] == "Zéd-Dreamscythe" and list(sn, "Zéd-Dreamscythe") == "28762"
+    and list(sn, "Zed-Dreamscythe") == "")
+  check("once is enough", #G.recheck(sn, roster) == 0)
+end
+
+do
+  -- two characters in the group whose names only differ by an accent: never a guess
+  local sa = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  local roster = group("Ghøst-Dreamscythe", "Ghöst-Dreamscythe")
+  local sum = G.importInto(sa, pack({ softreserves = { { name = "Ghost", items = { { id = 28528 } } } } }), roster)
+  check("a name that could be two characters stays as it is", list(sa, "Ghost-Dreamscythe") == "28528" and list(sa, "Ghøst-Dreamscythe") == "" and list(sa, "Ghöst-Dreamscythe") == "")
+  check("and the leader is asked which", #sum.unsure == 1 and #sum.unsure[1][2] == 2)
+  local left = G.unmatched(sa, roster)
+  check("it stays on the list until the leader picks", #left == 1 and #left[1].options == 2)
+  check("a later join doesn't guess either", #G.recheck(sa, roster) == 0)
+  check("the leader's pick", G.rename(sa, "Ghost-Dreamscythe", "Ghöst-Dreamscythe") and list(sa, "Ghöst-Dreamscythe") == "28528" and #G.unmatched(sa, roster) == 0)
+end
+
+do
+  -- the sheet has the name without its accent, and the player reserved in LootRuler too (a whisper, before joining)
+  local sw = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  S.add(sw, "Ghøst-Dreamscythe", "MAGE", 28528, false, 1760000000)
+  local sum = G.importInto(sw, pack({ softreserves = { { name = "Ghost", items = { { id = 28528 }, { id = 28525 } } } } }), {})
+  check("no double entry: the sheet's picks join the player's own", list(sw, "Ghøst-Dreamscythe") == "28525,28528" and list(sw, "Ghost-Dreamscythe") == ""
+    and #sum.matched == 1)
+  -- both spellings on one sheet: the exact one is theirs, the other is left for the leader
+  local sb = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  local both = G.importInto(sb, pack({ softreserves = { { name = "Ghost", items = { { id = 28528 } } }, { name = "Ghøst", items = { { id = 28525 } } } } }),
+    group("Ghøst-Dreamscythe"))
+  check("both spellings on a sheet: the exact one wins, the other isn't lost", list(sb, "Ghøst-Dreamscythe") == "28525" and list(sb, "Ghost-Dreamscythe") == "28528"
+    and #both.unsure == 1)
+  -- someone who was in the group as the sheet spells them keeps their reserves, whoever joins later
+  local sk = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  G.importInto(sk, pack({ softreserves = { { name = "Ann", items = { { id = 28528 } } } } }), group("Ann-Dreamscythe"))
+  check("a name that was in the group isn't moved to a lookalike", #G.recheck(sk, group("Ånn-Dreamscythe")) == 0 and list(sk, "Ann-Dreamscythe") == "28528")
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

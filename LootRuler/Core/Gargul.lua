@@ -114,6 +114,148 @@ function G.send(s, show)
 end
 
 ---------------------------------------------------------------------- softres.it into a session
+local wasHere = {}           -- names seen in the group as they are: a later join never moves their reserves
+
+-- a multiset difference: how many of a's ids aren't matched in b
+local function missing(a, b)
+  local left = {}
+  for _, id in ipairs(b) do left[id] = (left[id] or 0) + 1 end
+  local n = 0
+  for _, id in ipairs(a) do if (left[id] or 0) > 0 then left[id] = left[id] - 1 else n = n + 1 end end
+  return n
+end
+-- takes one of each of ids off a list
+local function takeOff(list, ids)
+  for _, id in ipairs(ids) do
+    for k = #list, 1, -1 do if list[k] == id then table.remove(list, k) break end end
+  end
+end
+
+--- the characters a name on the sheet could be: everyone in the group, and players who reserved in LootRuler
+--- themselves (the game named them, so they're real). A name only the sheet brought could be the typo itself.
+function G.people(s, roster)
+  local out, seen = {}, {}
+  local function add(name)
+    name = U.full(name)
+    if name and not seen[U.foldCase(name)] then seen[U.foldCase(name)] = true out[#out + 1] = name end
+  end
+  for _, m in ipairs(roster or {}) do add(m.name) end
+  for name, r in pairs(s.res) do
+    if #r.i > #(s.sx and s.sx[name] or {}) then add(name) end
+  end
+  table.sort(out)
+  return out
+end
+
+--- which character a name typed on softres.it is, among people (G.people):
+---   { to = name }      the same name (capitals aside), or the only one it can be once accents are put aside
+---                      (and the realm, for a name typed without one)
+---   { options = names } several could be: the leader picks, nothing is guessed
+---   { near = names }    none: the closest spellings, if any are close
+function G.findPlayer(typed, people)
+  local full = U.full(typed)
+  for _, p in ipairs(people) do if U.samePlayer(p, full) then return { to = p } end end
+  -- typed without a realm (it reads as this realm's): characters from other realms with that name count too
+  local realmless = U.short(full) == U.bare(full)
+  local function key(name) return U.nameKey(realmless and U.bare(name) or name) end
+  local want = key(full)
+  local same, near = {}, {}
+  local most = #U.letters(want) >= 5 and 2 or 1
+  for _, p in ipairs(people) do
+    local k = key(p)
+    if k == want then same[#same + 1] = p
+    else
+      local d = U.distance(k, want)
+      if d <= most then near[#near + 1] = { p, d } end
+    end
+  end
+  if #same == 1 then return { to = same[1] } end
+  if #same > 1 then return { options = same } end
+  table.sort(near, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
+  local out = {}
+  for i = 1, math.min(3, #near) do out[i] = near[i][1] end
+  return { near = out }
+end
+
+--- moves what the sheet gave a name over to the character it really is (the leader's pick, or the only one it
+--- can be), so the reserves count for them. What they reserved in LootRuler stays, and an item reserved in both
+--- places counts once. Later imports bring that name's picks to them too (s.nm). Returns true, or false and why not.
+function G.rename(s, from, to, class, now)
+  from, to = U.full(from), U.full(to)
+  if not from or not to or U.samePlayer(from, to) then return false, "That's the same name." end
+  if s.sx and s.sx[to] then return false, ("%s already has reserves from the sheet."):format(U.short(to)) end
+  now = now or U.now()
+  local sheet = s.sx and s.sx[from] or {}
+  local own = U.copy(S.reservesOf(s, from))
+  takeOff(own, sheet)                            -- (anything the leader added for the name by hand)
+  local mine = U.copy(S.reservesOf(s, to))
+  local limit = S.limit(s, to)
+  local function fits(id) return #mine < limit and (s.dupes or not U.indexOf(mine, id)) end
+  for _, id in ipairs(own) do if fits(id) then mine[#mine + 1] = id end end
+  local have, count, moved = {}, {}, {}
+  for _, id in ipairs(mine) do have[id] = (have[id] or 0) + 1 end
+  for _, id in ipairs(sheet) do
+    count[id] = (count[id] or 0) + 1
+    if count[id] > (have[id] or 0) and fits(id) then mine[#mine + 1] = id moved[#moved + 1] = id end
+  end
+  local oldClass = s.res[from] and s.res[from].c
+  S.set(s, from, nil, {}, true, now)
+  S.set(s, to, (s.res[to] and s.res[to].c) or class or oldClass, mine, true, now)
+  if s.sx then
+    s.sx[from] = nil
+    s.sx[to] = #moved > 0 and moved or nil
+    if not next(s.sx) then s.sx = nil end
+  end
+  s.nm = type(s.nm) == "table" and s.nm or {}
+  for k, v in pairs(s.nm) do if v == from then s.nm[k] = to end end
+  s.nm[from] = to
+  if s.xr and s.xr[from] then
+    s.xr[to] = s.xr[to] or s.xr[from]
+    s.xr[from] = nil
+  end
+  S.bump(s, now)
+  LR.leaderChanged(s)
+  return true
+end
+
+--- names from the sheet that aren't anyone in the group, each with who it could be (G.findPlayer): for the
+--- leader to sort out. Names nobody is close to are left out (they may not have joined yet) unless all.
+function G.unmatched(s, roster, all)
+  local out = {}
+  if not s.sx then return out end
+  local here, people = {}, G.people(s, roster)
+  for _, m in ipairs(roster or {}) do here[U.foldCase(U.full(m.name))] = true end
+  for name in pairs(s.sx) do
+    if not here[U.foldCase(name)] then
+      local m = G.findPlayer(name, U.filter(people, function(p) return not U.samePlayer(p, name) end))
+      if m.options or (m.near and (#m.near > 0 or all)) then out[#out + 1] = { from = name, options = m.options, near = m.near } end
+    end
+  end
+  table.sort(out, function(a, b) return a.from < b.from end)
+  return out
+end
+
+--- someone joined (or reserved): a name from the sheet that is now clearly one of them moves to them. Names
+--- seen in the group as they are stay put. Returns the moves: { { from, to } }
+function G.recheck(s, roster)
+  local moved = {}
+  if not s.sx then return moved end
+  for _, m in ipairs(roster or {}) do wasHere[U.foldCase(U.full(m.name))] = true end
+  local people = G.people(s, roster)
+  local names = U.keys(s.sx)
+  for _, name in ipairs(names) do
+    if not wasHere[U.foldCase(name)] then
+      local m = G.findPlayer(name, U.filter(people, function(p) return not U.samePlayer(p, name) end))
+      if m.to and not (s.sx and s.sx[m.to]) then
+        local class
+        for _, r in ipairs(roster or {}) do if U.samePlayer(r.name, m.to) then class = r.class end end
+        if G.rename(s, name, m.to, class) then moved[#moved + 1] = { name, m.to } end
+      end
+    end
+  end
+  return moved
+end
+
 --- adds the reserves (and hard reserves) from a softres.it / Gargul export to a session the leader holds.
 --- Items the session doesn't allow (not its raid's loot, unless any item is allowed) are skipped. Returns a summary.
 --- brings a softres.it export into a session. Importing again (the sheet changed) updates the session: the
@@ -121,13 +263,23 @@ end
 --- comes off. Reserves made in LootRuler (the addon, or !lr) are never touched, and an item a player reserved
 --- in both places counts once (twice only if the sheet itself has it twice). Hard reserves from the sheet
 --- work the same way. s.sx: "Name-Realm" -> the items the sheet gave them; s.hx: the sheet's hard reserves.
---- Returns a summary { players, items (from the sheet now), added, removed, hard, hardRemoved, skipped, over },
---- or nil and what's wrong.
-function G.importInto(s, text)
+--- Names on the sheet are matched to the characters in the group (roster: LR.roster()) and to players who
+--- reserved in LootRuler, and the reserves go under the game's spelling of the name, so nothing else has to
+--- match loosely (older versions included). A name that clearly is one character (capitals and accents aside,
+--- "Ghost" for "Ghøst") goes to them; one that could be several is left for the leader to pick (never a guess);
+--- one that's nobody's is kept as it is, with the closest spellings. s.nm remembers each match for next time.
+--- Returns a summary { players, items (from the sheet now), added, removed, hard, hardRemoved, skipped, over,
+--- matched = { { from, to } }, unsure = { { from, options } }, missing = { { from, near } } }, or nil and what's wrong.
+function G.importInto(s, text, roster)
   local data, err = G.decode(text)
   if not data then return nil, err end
   local now = U.now()
-  local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0 }
+  local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0,
+    matched = {}, unsure = {}, missing = {} }
+  roster = roster or (LR.roster and LR.roster()) or {}
+  for _, m in ipairs(roster) do wasHere[U.foldCase(U.full(m.name))] = true end
+  local people = G.people(s, roster)
+  s.nm = type(s.nm) == "table" and s.nm or {}
   local classes = {}
   for token, name in pairs(CLASS_NAME) do classes[name] = token end
   s.sx = type(s.sx) == "table" and s.sx or {}
@@ -152,58 +304,71 @@ function G.importInto(s, text)
   end
   s.hx = #order > 0 and order or nil
 
-  -- a multiset difference: how many of a's ids aren't matched in b
-  local function missing(a, b)
-    local left = {}
-    for _, id in ipairs(b) do left[id] = (left[id] or 0) + 1 end
-    local n = 0
-    for _, id in ipairs(a) do if (left[id] or 0) > 0 then left[id] = left[id] - 1 else n = n + 1 end end
-    return n
+  -- who each name on the sheet is. A name that is someone exactly comes first, then matches made before (an
+  -- earlier import, or the leader's pick), then names that can only be one character; one character never
+  -- takes two names' picks (the second is left for the leader to sort out).
+  local list, claimed = {}, {}
+  for _, e in ipairs(data.softreserves) do
+    local name = type(e.name) == "string" and U.trim(e.name) or ""
+    if name ~= "" then
+      local typed = U.full(U.capitalize(name))
+      list[#list + 1] = { e = e, typed = typed, m = G.findPlayer(typed, people) }
+    end
   end
-  -- takes one of each of ids off a list
-  local function takeOff(list, ids)
-    for _, id in ipairs(ids) do
-      for k = #list, 1, -1 do if list[k] == id then table.remove(list, k) break end end
+  local function claim(x, to)
+    if claimed[U.foldCase(to)] then return false end
+    claimed[U.foldCase(to)] = true
+    x.player = to
+    return true
+  end
+  for _, x in ipairs(list) do if x.m.to and U.samePlayer(x.typed, x.m.to) then claim(x, x.m.to) end end
+  for _, x in ipairs(list) do if not x.player and s.nm[x.typed] then claim(x, s.nm[x.typed]) end end
+  for _, x in ipairs(list) do
+    local m = x.m
+    if not x.player then
+      if m.to and claim(x, m.to) then
+        s.nm[x.typed] = m.to
+        sum.matched[#sum.matched + 1] = { x.typed, m.to }
+      elseif m.to and not U.samePlayer(x.typed, m.to) then sum.unsure[#sum.unsure + 1] = { x.typed, { m.to } }
+      elseif m.options then sum.unsure[#sum.unsure + 1] = { x.typed, m.options }
+      elseif not m.to then sum.missing[#sum.missing + 1] = { x.typed, m.near } end
+      x.player = x.player or x.typed
     end
   end
 
   local seen = {}
-  for _, e in ipairs(data.softreserves) do
-    local name = type(e.name) == "string" and U.trim(e.name) or ""
-    if name ~= "" then
-      name = name:sub(1, 1):upper() .. name:sub(2)
-      local player = U.full(name)
-      seen[player] = true
-      local class = classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
-      local before = s.sx[player] or {}
-      local mine = U.copy(S.reservesOf(s, player))
-      takeOff(mine, before)                          -- what the last import brought
-      local own = {}                                 -- what they reserved in LootRuler
-      for _, id in ipairs(mine) do own[id] = (own[id] or 0) + 1 end
-      local fromSheet, count = {}, {}
-      for _, it in ipairs(type(e.items) == "table" and e.items or {}) do
-        local id = tonumber(type(it) == "table" and it.id or it)
-        if not id or not LR.allowedItem(s, id) or s.hr[id] then
-          if id then sum.skipped = sum.skipped + 1 end
+  for _, x in ipairs(list) do
+    local e, player = x.e, x.player
+    seen[player] = true
+    local class = classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
+    local before = s.sx[player] or {}
+    local mine = U.copy(S.reservesOf(s, player))
+    takeOff(mine, before)                          -- what the last import brought
+    local own = {}                                 -- what they reserved in LootRuler
+    for _, id in ipairs(mine) do own[id] = (own[id] or 0) + 1 end
+    local fromSheet, count = {}, {}
+    for _, it in ipairs(type(e.items) == "table" and e.items or {}) do
+      local id = tonumber(type(it) == "table" and it.id or it)
+      if not id or not LR.allowedItem(s, id) or s.hr[id] then
+        if id then sum.skipped = sum.skipped + 1 end
+      else
+        count[id] = (count[id] or 0) + 1
+        if count[id] <= (own[id] or 0) then
+          -- (reserved in LootRuler too: it counts once)
+        elseif #mine >= S.limit(s, player) or (not s.dupes and U.indexOf(mine, id)) then
+          sum.over = sum.over + 1
         else
-          count[id] = (count[id] or 0) + 1
-          if count[id] <= (own[id] or 0) then
-            -- (reserved in LootRuler too: it counts once)
-          elseif #mine >= S.limit(s, player) or (not s.dupes and U.indexOf(mine, id)) then
-            sum.over = sum.over + 1
-          else
-            mine[#mine + 1] = id
-            fromSheet[#fromSheet + 1] = id
-          end
+          mine[#mine + 1] = id
+          fromSheet[#fromSheet + 1] = id
         end
       end
-      if S.set(s, player, class, mine, true, now) then
-        sum.added = sum.added + missing(fromSheet, before)
-        sum.removed = sum.removed + missing(before, fromSheet)
-        s.sx[player] = #fromSheet > 0 and fromSheet or nil
-        sum.items = sum.items + #fromSheet
-        if #fromSheet > 0 then sum.players = sum.players + 1 end
-      end
+    end
+    if S.set(s, player, class, mine, true, now) then
+      sum.added = sum.added + missing(fromSheet, before)
+      sum.removed = sum.removed + missing(before, fromSheet)
+      s.sx[player] = #fromSheet > 0 and fromSheet or nil
+      sum.items = sum.items + #fromSheet
+      if #fromSheet > 0 then sum.players = sum.players + 1 end
     end
   end
   -- players who aren't on the sheet any more: what it gave them comes off
@@ -216,6 +381,7 @@ function G.importInto(s, text)
     end
   end
   if not next(s.sx) then s.sx = nil end
+  if not next(s.nm) then s.nm = nil end
   LR.leaderChanged(s)
   return sum
 end

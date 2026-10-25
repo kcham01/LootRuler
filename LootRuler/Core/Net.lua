@@ -359,6 +359,28 @@ function LR.removeDrop(s, k) if LR.isLeader(s) and S.removeDrop(s, k, U.now()) t
 function LR.unaward(s, index) if LR.isLeader(s) and S.unaward(s, index, U.now()) then leaderChanged(s) return true end return false end
 function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
 
+-- names from softres.it: someone joining (or reserving) may be who a name on the sheet really is (Core/Gargul.lua)
+local recheckSoon = false
+LR.onChange(function(what)
+  if (what ~= "roster" and what ~= "session") or recheckSoon or not db then return end
+  recheckSoon = true
+  C_Timer.After(1, function()
+    recheckSoon = false
+    for _, s in pairs(db.sessions) do
+      if s.sx and not s.archived and LR.isLeader(s) then
+        for _, m in ipairs(LR.Gargul.recheck(s, LR.roster())) do
+          LR.print(("%s on the softres.it sheet is %s: their reserves from the sheet count for them now."):format(U.short(m[1]), U.short(m[2])))
+        end
+      end
+    end
+  end)
+end)
+--- the leader puts a name from the sheet under the character it really is (Reserves tab, or after an import)
+function LR.matchName(s, from, to)
+  if not LR.isLeader(s) then return false end
+  return LR.Gargul.rename(s, from, to, LR.classOf(to))
+end
+
 function LR.endSession(s)
   if not LR.isLeader(s) then return end
   LR.History.archive(s, U.now())                -- what it gave out is kept under Past raids (Core/History.lua)

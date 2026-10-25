@@ -152,6 +152,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Reserving for someone** (Reserves > By player > "Add a reserve for ..."): `UI.pickItem(s, title, nil, filter, many)`
   with `many = { player, class }` stays open, counts what's left in its title, and a second click on an item added
   there takes it off. Every other picker (hard reserves) still closes on the first click.
+- **Names from softres.it** (`Gargul.importInto`, `Gargul.findPlayer`): each name on the sheet is matched to a character
+  in the group (or one who reserved in LootRuler) with `U.nameKey` (capitals and accents put aside; the letters are a
+  table in `Core/Util.lua`), and the reserve is stored under the game's spelling. Everything else, older versions and
+  Gargul included, then compares names exactly. A name that could be two characters is never guessed: the leader
+  picks (`Gargul.unmatched`, `LR.matchName`, the import summary and the Reserves tab). `s.nm` remembers matches for
+  re-imports; `Gargul.recheck` runs when someone joins. `U.samePlayer` ignores capitals in any letters (`U.foldCase`),
+  not accents: Ghost and Ghøst are two characters. `R.key` is unchanged (its keys go over the network).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
@@ -159,6 +166,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   - Not yet tried in the real game: everything is tested in the stand-in only. Keep the version at 1.0.0-beta
     until the owner's in-game test passes, then bump `LR.VERSION` and the TOC to 1.0.0.
   - softres.it names must match characters exactly (other realms need "-Realm"); a typo becomes a phantom player.
+    (Mostly fixed: capitals, accents and a missing realm are matched; a typo is listed with a one-click fix.)
   - Party (5-man) master loot is coded and unit-tested but has had less whole-group testing than raids.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;

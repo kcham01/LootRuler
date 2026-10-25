@@ -443,6 +443,22 @@ name, n, lo, hi = de("Bob würfelt. Ergebnis: 3 (1-99)")
 check("a translation with numbered places", name == "Bob" and n == 3 and hi == 99)
 check("names for chat", R.names({ { ANN, 2 }, { BOB, 1 }, { DAN, 1 } }, 2) == "Ann x2, Bob-Faerlina, +1")
 
+print("== names with letters beyond A-Z")
+do
+  local ns = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 100)
+  S.set(ns, "ØYVIND-Dreamscythe", "WARRIOR", { WATCH }, false, 101)      -- (typed in capitals somewhere)
+  S.set(ns, "Ghost-Dreamscythe", "MAGE", { BROOCH }, false, 102)
+  local here = { { name = "Øyvind-Dreamscythe" }, { name = "Ghøst-Dreamscythe" } }
+  local pl = R.plan(ns, WATCH, here)
+  check("a reserve counts for the character, whatever the capitals", pl.mode == "SR" and #pl.who == 1 and #pl.away == 0)
+  local roll = R.new("k", WATCH, pl)
+  check("and they may roll", R.canRoll(roll, "Øyvind-Dreamscythe"))
+  -- Ghost and Ghøst are two characters: rolling never guesses (an import puts the reserve under the right name)
+  local gp = R.plan(ns, BROOCH, here)
+  check("an accent apart is someone else: they're away, everyone rolls", gp.mode == "OPEN" and gp.away[1] == "Ghost-Dreamscythe")
+  check("so Ghøst can't roll on Ghost's reserve", not R.canRoll(R.new("k2", BROOCH, { mode = "SR", who = { { "Ghost-Dreamscythe", 1 } } }), "Ghøst-Dreamscythe"))
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

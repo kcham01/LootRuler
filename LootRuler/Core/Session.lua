@@ -24,6 +24,8 @@
 --            (no reserves); nil: reserves only
 --   sx, hx   what the last import from softres.it brought: "Name-Realm" -> items, and hard reserved items
 --            (so importing an updated sheet replaces them; Core/Gargul.lua)
+--   nm       names on the softres.it sheet that are a character spelled differently: sheet "Name-Realm" -> the
+--            character's "Name-Realm" (so later imports go to them too)
 --   xr       "Name-Realm" -> extra reserves the leader gave that player (tanks, healers...), on top of sr
 --   gdkp     items are auctioned for gold (Core/Gdkp.lua); gk: its settings, who's in the pot, what's been paid
 --   boost    boosted rolls are on: guild members roll with their guild points added (Core/Book.lua)
@@ -483,6 +485,14 @@ function S.valid(t)
       n = n + 1
       if n > 200 or type(name) ~= "string" or type(ids) ~= "table" or #ids > 50 then return false end
       for _, id in ipairs(ids) do if type(id) ~= "number" then return false end end
+    end
+  end
+  if t.nm ~= nil then
+    if type(t.nm) ~= "table" then return false end
+    local n = 0
+    for from, to in pairs(t.nm) do
+      n = n + 1
+      if n > 200 or type(from) ~= "string" or type(to) ~= "string" then return false end
     end
   end
   if t.hx ~= nil then
