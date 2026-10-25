@@ -15,9 +15,9 @@
 # LootRuler
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/04-reserve.png" alt="Reserving" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/09-reserves.png" alt="Everyone's reserves" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/08-session.png" alt="Running the session" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve.png" alt="Reserving" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserves.png" alt="Everyone's reserves" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/session.png" alt="Running the session" width="32%">
 </p>
 
 **Raid loot, run inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord. Only the person running loot needs the addon: everyone else can type in raid chat, whisper, or `/roll`.
@@ -53,6 +53,11 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 Already used softres.it, or some of the raid did? **Import from softres.it** brings in its "Gargul Export", on top of the reserves made in LootRuler. Import it again whenever the sheet changes: the reserves from the sheet are updated to match it (swaps, removals, hard reserves), and reserves made in LootRuler stay. An item someone reserved in both places counts once. Names on the sheet are matched to the characters in the group: capitals and accents don't matter ("Ghost" on the sheet is your "Ghøst"), and a name typed without its realm finds a player from another realm. A name that could be two players, or a typo nobody in the group has, is listed with a one-click fix ("Bobb -> Bob-Faerlina"). Someone who joins later gets their reserves as soon as they're in.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/import-names.png" alt="After a softres.it import: names matched, and one to check" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve-for-player.png" alt="Picking several reserves for a player" width="49%">
+</p>
+
 **A raid LootRuler doesn't know yet** (a brand new one, or *World of Warcraft: Forever*'s): pick **Another raid** and name it. Any item can be reserved for it: shift-click the item into the search box, or whisper its link. For a raid it does know, **Any item** lets people reserve loot its lists don't have yet. Either way, it's the leader's addon that decides what can be reserved, so raiders with an older version of LootRuler can still reserve everything.
 
 ## For raiders
@@ -79,8 +84,8 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
 When it's time to hand out loot, LootRuler pops up a roll window for everyone, like the game's own Need/Greed window, and it knows who reserved what.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/18-loot-master.png" alt="The loot master's panel and window" width="70%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/19-roll-windows.png" alt="Roll windows" width="28%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-master.png" alt="The loot master's panel and window" width="70%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/roll-windows.png" alt="Roll windows" width="28%">
 </p>
 
 - **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. Click one to roll it out, or **Roll them all out** to put every item up one after another. **Ctrl+Alt+click** any item (in your bags, the loot window or a chat link), or type `/lr roll` and an item link. (The shortcut can be changed to Alt+click, Gargul's, on the Settings tab.)
@@ -98,7 +103,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 The **Loot** tab lists everything that has dropped this raid, boss by boss, for the whole raid to see, with the game's icons, tooltips and quality colours: who reserved it, whether it's still on the corpse or being rolled for, who won it and how, and who has it now. Your own wins and reserves stand out. When the session ends it moves to **Past raids** (below).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/20-loot-tab.png" alt="The Loot tab" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-tab.png" alt="The Loot tab" width="40%">
 </p>
 
 - **Roll now or at the end.** The loot master can roll an item out as soon as it drops, or give it to themselves, keep going, and roll it out from the Loot tab later. The game lets you trade raid loot for 2 hours after you loot it, so the list shows how long is left.
@@ -115,6 +120,11 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 
 **Who reserved it, while it's rolled for:** a small strip above the roll window lists everyone who reserved the item, every name in full and in class colours, and goes when the roll ends. It works for Gargul's rolls too: LootRuler reads Gargul's line in raid chat ("You have 20 seconds to roll on ..."), so raiders with LootRuler see the reserves whoever runs the roll. Each of these can be turned off (Settings tab).
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve-strip.png" alt="Everyone who reserved the item, above the roll window" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-window-reserves.png" alt="Reserved items marked in the game's loot window" width="40%">
+</p>
+
 **Auto-roll:** your own rules for roll windows (Settings tab). "Always pass on this item", "always roll main spec on that one", and "pass on anything my class can't use". Shift-click a roll window's dice, coin or x to make it a rule. LootRuler rolls or passes for you and says so.
 
 ## GDKP
@@ -122,8 +132,8 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 Turn on **GDKP auctions** for a session (Session tab) and every item is auctioned for gold instead of reserved and rolled for. Nobody needs the addon to bid.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/32-auction-window.png" alt="An auction's roll window" width="40%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/34-payouts.png" alt="The payouts" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/auction-window.png" alt="An auction's roll window" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/payouts.png" alt="The payouts" width="40%">
 </p>
 
 - **Auctions:** the loot master clicks an item, or **Auction them all** to put every item up one after another. The raid is told where bids start and by how much each must go up. Players bid by **typing an amount in raid chat** ("150", "150g", "1.5k"), by whispering `!lr bid 150`, or by clicking one of the two bids in their auction window. A bid in the last few seconds gives everyone a few more. A bid that's too low doesn't count, and its bidder is told the lowest that would. If people chat numbers during auctions, switch on **Bids start with "bid"**: then only "bid 150" counts, not "150".
@@ -139,8 +149,8 @@ Turn on **GDKP auctions** for a session (Session tab) and every item is auctione
 Guild members get a **Guild** tab: things that last between raids, kept by the officers and shared with everyone in the guild who has LootRuler. Nothing here shows up for pugs, and nothing is used until an officer turns it on.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/27-guild.png" alt="The Guild tab" width="40%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/28-boosted-roll.png" alt="A roll window with a boosted roll" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/guild.png" alt="The Guild tab" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/boosted-roll.png" alt="A roll window with a boosted roll" width="40%">
 </p>
 
 - **Who can change it:** the guild master picks the lowest rank that can (officers to start with). Everyone else can see it. Two officers changing it at once don't undo each other's changes.
@@ -151,8 +161,8 @@ Guild members get a **Guild** tab: things that last between raids, kept by the o
 - **Priority lists** (like a DFT sheet, kept in the game): officers put players on an item's list in order (players can share a place), or bring the lists in from the DFT sheet, thatsmybis or Gargul's CSV, and copy them back out. On the Session tab, loot goes by **reserves**, **priority lists, then reserves**, or **priority lists only**. The best place in the raid gets the item with no roll; players who share it roll for it, and their roll windows say so. Whoever gets it comes off the list, for the whole guild. Item tooltips show the list, and players without the addon whisper `!lr prio` (their places) or `!lr prio [item]` (an item's list).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/30-guild-priority.png" alt="Priority lists on the Guild tab" width="40%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/29-priority-list.png" alt="Changing a priority list" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/guild-priority.png" alt="Priority lists on the Guild tab" width="40%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/priority-list.png" alt="Changing a priority list" width="40%">
 </p>
 
 The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Settings tab can turn roll windows off, or show them only for items you can roll on.
