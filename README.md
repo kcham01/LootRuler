@@ -47,7 +47,7 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 2. **Hard reserve** anything: say who it's for and add a note if you like. Anyone who had soft reserved it gets that reserve back.
 3. **Extra reserves** for tanks, healers or anyone: on the Session tab (or a player's line on the Reserves tab), pick the players and how many more they get. `!lr` tells players without the addon how many they have.
 4. **Reserve yourself** on the Reserve tab, like everyone else.
-5. **Post in raid chat** tells everyone how to reserve, addon or not.
+5. **Post in raid chat** tells everyone how to reserve, addon or not. **Remind who hasn't reserved** names them in raid chat with how to. Switch on "Tell people who join how to reserve" (Settings) and anyone joining later hears it too.
 6. **Watch it fill up** on the Reserves tab, by item or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't (pick all of someone's items in one go).
 7. **Lock** when you're ready, and the reserves go into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
 8. **Leaving, or the leader dropped?** Hand the reserves to someone else on the Session tab. If the leader leaves or goes offline, the raid leader or an assistant can take them over (or pick who does). Everything reserved and given out stays, and the raid is told who to whisper now.
