@@ -249,12 +249,22 @@ function UI.masterDraw()
       .. (roll.de and ", to disenchant." or sold and (" for " .. LR.Gdkp.gold(sold.n) .. ".") or "."), { font = "GameFontNormal" })
     if roll.note then f:note(roll.note, K.GOLD) end
     if Rolls.session() then f:note(LR.isLeader(Rolls.session()) and "It's on the soft reserves' list of loot given out." or "The soft reserves' leader keeps a list of loot given out.") end
-    f:buttons({ { label = "Close", click = function() Rolls.dismiss() end } }, "left")
+    f:buttons({
+      { label = "Close", click = function() Rolls.dismiss() end },
+      { label = "Undo", click = function()
+        local ok, note = Rolls.undo()
+        if ok then roll.undoNote = note end
+        if not ok then UI.masterNote(note) end
+        UI.masterDraw()
+      end },
+    }, "left")
+    f:note("Wrong player? Undo, then give it to someone else or roll it again.")
   else
     local _, tied = R.result(roll)
     if roll.mode == "HR" and not pick then
       f:note("Hard reserved" .. ((roll.f or "") ~= "" and (" for " .. roll.f .. ", who isn't in the group") or "") .. ": give it out yourself, or roll it out anyway.", K.GOLD)
     end
+    if roll.undoNote then f:note(roll.undoNote, K.GOLD) end
     if tied and not roll.pick then f:note("A tie: roll it again between them, or click a name to pick.", K.GOLD) end
     local list = {}
     if pick then

@@ -408,6 +408,8 @@ run("rolling out loot", function()
   M.click(M.findText("Give to Ann", true, G.LootRulerMasterFrame)[1].clickable)
   srv:tick(1)
   check("given to Ann", srv.given and srv.given[1].id == 28529 and s.won and s.won[1].p == "Ann-Dreamscythe" and s.won[1].k == "SR")
+  check("with an Undo, for a mistake", #M.findText("Undo", true, G.LootRulerMasterFrame) > 0)
+  shot("given", lead, { "LootStandIn", "LootRulerLootPanel", "LootRulerMasterFrame" })
   -- the next item: nobody reserved it, so everyone rolls; Bob sees both windows
   M.click(M.findText("Close", true, G.LootRulerMasterFrame)[1].clickable)
   for _, x in ipairs(M.findText("Signet of Unshakable Faith", true, panel)) do if x.clickable then hit = x.clickable end end

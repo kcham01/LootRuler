@@ -323,6 +323,14 @@ function S.unaward(s, index, now)
   return true
 end
 
+--- the place in the list of loot given out of a player's latest award of an item (from a drop, when known), or nil
+function S.findAward(s, id, player, dropKey)
+  for i = #(s.won or {}), 1, -1 do
+    local w = s.won[i]
+    if w.i == id and U.samePlayer(w.p, player) and (not dropKey or not w.d or w.d == dropKey) then return i end
+  end
+end
+
 --- how many times a player has won an item on a soft reserve
 function S.srWins(s, player, id)
   local n = 0

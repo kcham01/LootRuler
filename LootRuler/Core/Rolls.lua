@@ -428,6 +428,8 @@ function Rolls.award(player, kind, n, de)
   end
   roll.state = "awarded"
   roll.winner = player
+  roll.winKind = kind
+  roll.undoNote = nil
   roll.de = de
   local s = session()
   record(s, roll.id, player, kind, n, roll.drop, de)
@@ -461,12 +463,58 @@ function Rolls.award(player, kind, n, de)
   if kind == "BID" then say(("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n)))
   elseif de then say(("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player)))
   else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
-  -- the next item in the queue, a moment later (the loot master's window shows this one until then)
+  -- the next item in the queue, a moment later (the loot master's window shows this one until then; not if the
+  -- award is undone meanwhile)
   if #Rolls.queue > 0 then
-    C_Timer.After(NEXT, function() if Rolls.current == roll then Rolls.current = nil Rolls.queueNext() end end)
+    C_Timer.After(NEXT, function() if Rolls.current == roll and roll.state == "awarded" then Rolls.current = nil Rolls.queueNext() end end)
   end
   changed()
   return true, note
+end
+
+--- takes an award back from the list of loot given out (the leader's addon)
+local function unrecord(s, id, player, drop)
+  if not s or not LR.isLeader(s) then return end
+  local i = S.findAward(s, id, player, drop)
+  if i then LR.unaward(s, i) end
+end
+
+--- the item went to the wrong player: the award is undone, and the roll is back as it was when it closed, to give it
+--- to someone else or roll it again. Returns true and a note for the loot master, or false and why not.
+function Rolls.undo()
+  local roll = Rolls.current
+  if not roll or roll.state ~= "awarded" or not roll.winner then return false, "There's nothing given out to undo." end
+  local player, kind = roll.winner, roll.winKind
+  local s = session()
+  unrecord(s, roll.id, player, roll.drop)
+  local notes = {}
+  -- a boosted win spent their points: they get them back
+  if kind == "BR" then
+    local spent = (roll.bp and roll.bp[R.key(player)]) or (roll.boosted and roll.boosted[R.key(player)]) or 0
+    if LR.canEditBook() then
+      LR.Guild.edit(function(book, now) return LR.Book.setPoints(book, player, spent, now) end)
+      notes[#notes + 1] = ("%s gets their %d points back."):format(U.short(player), spent)
+    else
+      notes[#notes + 1] = ("Ask an officer to give %s their %d points back."):format(U.short(player), spent)
+    end
+  end
+  local book = s and s.prio and LR.book and LR.book()
+  if book and not roll.de and LR.Book.prio(book, roll.id) then
+    notes[#notes + 1] = ("If %s came off its priority list, put them back on the Guild tab."):format(U.short(player))
+  end
+  -- did the item reach them already (master loot)? then they have it to trade on
+  local d = s and roll.drop and S.drop(s, roll.drop)
+  local theyHaveIt = d and d.h and U.samePlayer(d.h, player) and not U.samePlayer(player, U.me())
+  if theyHaveIt then table.insert(notes, 1, ("%s has it already: they trade it to whoever gets it."):format(U.short(player))) end
+  roll.state, roll.winner, roll.pick, roll.de, roll.winKind, roll.note = "closed", nil, nil, nil, nil, nil
+  -- raiders' windows: "closed" again (older versions understand that); the leader takes the award off the list
+  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "closed" })
+  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "undone", p = player, sid = s and s.id, d = roll.drop })
+  Rolls.ended(roll.k, "closed")
+  say(("Undone: %s isn't %s's after all.%s"):format(roll.link, U.short(player),
+    theyHaveIt and (" %s, please trade it to whoever gets it."):format(U.short(player)) or ""))
+  changed()
+  return true, #notes > 0 and table.concat(notes, " ") or nil
 end
 
 --- gives the item to the session's disenchanter
@@ -759,11 +807,15 @@ Net.handlers.X = function(msg, channel, sender)
   if copy and U.samePlayer(copy.by, sender) and (msg.e == "closed" or msg.e == "cancelled" or msg.e == "awarded") then
     Rolls.ended(msg.k, msg.e, winner, tonumber(msg.n), kind)
   end
-  -- the leader of the soft reserves records loot given out by the loot master
+  -- the leader of the soft reserves records loot given out by the loot master (and takes back one that's undone)
   if msg.e == "awarded" and winner and kind and fromLooter(sender) then
     local s = msg.sid and LR.session(msg.sid) or session()
     local id = copy and copy.id or tonumber(msg.id)
     if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil, msg.de == true) end
+  elseif msg.e == "undone" and winner and fromLooter(sender) and not U.samePlayer(sender, U.me()) then
+    local s = msg.sid and LR.session(msg.sid) or session()
+    local id = copy and copy.id or tonumber(msg.id)
+    if id then unrecord(s, id, winner, type(msg.d) == "string" and msg.d or nil) end
   end
 end
 
