@@ -107,6 +107,10 @@ function UI.settingsView(f)
     p:note("Without it, /lr opens LootRuler.")
   end)
 
+  f:panel("Testing", function(p)
+    toggle(p, "testTab", "Show the Test tab", "A tab of pretend rolls and messages, to see how LootRuler looks before a raid. Everything on it happens only on your screen: nothing is said in chat or sent to anyone.")
+  end)
+
   f:panel("About", function(p)
     p:kv({ { "Version", LR.VERSION } })
     p:gap(4)

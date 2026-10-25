@@ -484,24 +484,62 @@ LR.onChange(function(what)
   if what == "rolls" and LR.db then UI.rollWindows() end
 end)
 
---- a pretend roll, only on this screen, to see the window (and move it): /lr test
-function UI.testRoll()
-  local id = 28830                              -- Dragonspine Trophy
-  local s = LR.current()
-  if s then
-    local raid = LR.raidOf(s)
-    id = raid and raid.order[1] or id
+-- made-up players for pretend rolls (the Test tab), with their classes
+UI.PRETEND = { { "Arthas", "PALADIN" }, { "Jaina", "MAGE" }, { "Thrall", "SHAMAN" }, { "Sylvanas", "HUNTER" }, { "Øyvind", "WARRIOR" },
+  { "Valeera", "ROGUE" }, { "Malfurion", "DRUID" }, { "Anduin", "PRIEST" }, { "Kael", "WARLOCK" }, { "Tyrande", "PRIEST" },
+  { "Muradin", "WARRIOR" }, { "Alleria", "HUNTER" } }
+--- the first n made-up players: who (names, with reserves), and their classes
+function UI.pretendPlayers(n)
+  local who, classes = {}, {}
+  for i = 1, math.min(n or 0, #UI.PRETEND) do
+    local name = UI.PRETEND[i][1] .. "-" .. U.realm()
+    who[#who + 1] = { name, 1 }
+    classes[name] = UI.PRETEND[i][2]
   end
+  return who, classes
+end
+--- the item pretend rolls are for: the first of the session's raid, else Dragonspine Trophy
+function UI.pretendItem()
+  local s = LR.current()
+  local raid = s and LR.raidOf(s)
+  return raid and raid.order and raid.order[1] or 28830
+end
+
+--- a pretend roll, only on this screen, to see the window (and move it): /lr test, and the Test tab.
+--- opts: { mode = "OPEN" / "SR", reservers = how many made-up players reserved it, mine = I reserved it too, secs }
+function UI.testRoll(opts)
+  opts = opts or {}
+  local id = UI.pretendItem()
   local k = "test:" .. GetTime()
-  local copy = R.new(k, id, { mode = "OPEN" })
+  local who, classes = {}, nil
+  if opts.mode == "SR" then
+    who, classes = UI.pretendPlayers(opts.reservers or 3)
+    if opts.mine then table.insert(who, 1, { U.me(), 1 }) end
+  end
+  local copy = R.new(k, id, { mode = opts.mode or "OPEN", who = who })
   copy.by = U.me()
   copy.link = LR.itemLink(id)
-  copy.secs, copy.ends, copy.state, copy.test = 20, GetTime() + 20, "open", true
+  copy.classes = classes
+  local secs = opts.secs or 20
+  copy.secs, copy.ends, copy.state, copy.test = secs, GetTime() + secs, "open", true
   LR.Rolls.seen[k] = copy
   table.insert(LR.Rolls.order, k)
-  LR.print("a pretend roll window, only on your screen. Drag it to where you'd like roll windows to be.")
+  if not opts.quiet then LR.print("a pretend roll window, only on your screen. Drag it to where you'd like roll windows to be.") end
   UI.rollWindow(copy)
-  C_Timer.After(20, function()
-    if copy.state == "open" then copy.state = "closed" copy.endedAt = GetTime() UI.rollWindows() end
+  LR.changed("rolls")
+  C_Timer.After(secs, function()
+    if copy.state == "open" then copy.state = "closed" copy.endedAt = GetTime() UI.rollWindows() LR.changed("rolls") end
   end)
+  return copy
+end
+
+--- a pretend Gargul roll: the strip shows, as it would for Gargul's line in raid chat (nothing is said in chat)
+function UI.testGargul(reservers, secs)
+  local id = UI.pretendItem()
+  local roll = LR.Gargul.startRoll(id, LR.itemLink(id), secs or 20, GetTime())
+  roll.who, roll.classes, roll.test = UI.pretendPlayers(reservers or 3)
+  roll.test = true
+  LR.changed("gargul")
+  C_Timer.After(secs or 20, function() if LR.Gargul.roll == roll then LR.Gargul.endRoll() end end)
+  return roll
 end

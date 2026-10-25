@@ -122,6 +122,8 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 
 **Your reserves where you see items:** the game's own loot window and need/greed windows glow on items you reserved, and every item tooltip (bags, chat links, loot windows) says who reserved it and who it went to. The loot window also marks every reserved item (SR, or HR) with who reserved it, for everyone.
 
+**The Test tab** (switch it on in Settings): pretend LootRuler and Gargul rolls with as many made-up reservers as you like, the trade warning and the reminder, and a box to try a softres.it name against your group. Everything on it happens only on your screen.
+
 **Who reserved it, while it's rolled for:** a small strip above the roll window lists everyone who reserved the item, every name in full and in class colours, and goes when the roll ends. It works for Gargul's rolls too: LootRuler reads Gargul's line in raid chat ("You have 20 seconds to roll on ..."), so raiders with LootRuler see the reserves whoever runs the roll. Each of these can be turned off (Settings tab).
 
 <p align="center">

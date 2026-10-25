@@ -47,5 +47,6 @@ UI\ReserveStrip.lua
 UI\Guild.lua
 UI\Gdkp.lua
 UI\Settings.lua
+UI\Test.lua
 UI\Highlight.lua
 UI\Shortcuts.lua

@@ -606,6 +606,16 @@ end
 function Rolls.roll(copy, kind)
   local r = R.KINDS[kind]
   if not r or kind == "BID" or copy.state ~= "open" then return false end
+  -- a pretend roll (the Test tab): rolled here, nobody else sees it
+  if copy.test then
+    local lo, hi = r[1], r[2]
+    if kind == "BR" then lo, hi = R.boostRange(copy, U.me()) end
+    if not lo then return false end
+    R.add(copy, U.me(), math.random(lo, hi), lo, hi)
+    copy.myRoll = kind
+    LR.changed("rolls")
+    return true
+  end
   if kind == "BR" then
     local lo, hi = R.boostRange(copy, U.me())
     if not lo then return false end

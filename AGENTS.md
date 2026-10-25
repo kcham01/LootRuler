@@ -189,6 +189,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Only the group can reserve** (`s.go`, `S.groupOk`, `S.setGroupOnly`, `LR.setGroupOnly`): on for new sessions; the
   leader's addon refuses new reserves from outside the group (picks `P`, whispers) with `GROUP_ONLY`, while taking
   reserves back, the leader's own adds and imports still work. Switch it off for guild members to reserve pre-raid.
+- **The Test tab** (`UI/Test.lua`, setting `testTab`, off to start with): pretend rolls (`UI.testRoll(opts)`, `UI.testGargul`,
+  made-up players in `UI.PRETEND`), the trade warning, the reminder line and a softres.it name check, all only on this
+  screen. A pretend roll (`copy.test`) rolls locally in `Rolls.roll`, never with the game's /roll.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

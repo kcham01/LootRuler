@@ -13,7 +13,7 @@ local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
 local win, top, view, tabsBar, toastFrame
-local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" } }
+local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
 
 ---------------------------------------------------------------------- the window
 local function build()
@@ -206,9 +206,10 @@ function UI.render()
   drawTop(s)
   -- the Guild tab is only there for guild members
   if UI.tab == "guild" and not IsInGuild() then UI.tab = "settings" end
+  if UI.tab == "test" and not LR.db.settings.testTab then UI.tab = "settings" end      -- (the Test tab: only when switched on)
   local shown = {}
   for _, b in ipairs(tabsBar.buttons) do
-    b:SetShown(b.id ~= "guild" or IsInGuild())
+    b:SetShown((b.id ~= "guild" or IsInGuild()) and (b.id ~= "test" or LR.db.settings.testTab))
     if b:IsShown() then shown[#shown + 1] = b end
   end
   local tw = (WIDTH - 24 - (#shown - 1) * 4) / #shown
@@ -225,7 +226,7 @@ function UI.render()
   end
   K.release("view")
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
-  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, guild = UI.guildView, settings = UI.settingsView }
+  local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, guild = UI.guildView, settings = UI.settingsView, test = UI.testView }
   local ok, err = pcall(screens[UI.tab], flow, s)
   if not ok then
     flow:text("|cffff5a4aSomething went wrong drawing this screen:|r " .. tostring(err), { font = "GameFontHighlightSmall" })
