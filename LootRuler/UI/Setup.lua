@@ -107,10 +107,12 @@ local function manage(f, s)
           UI.confirm("One per item", ("%s put more than one reserve on the same item: the extra ones go."):format(U.plural(doubled, "player")), "Switch it off", go)
         else go() end
       end, tip = "Lets a player put more than one of their reserves on the same item (softres.it's \"x2\")." },
+      { label = (s.go and "[x] " or "[  ] ") .. "Only the group can reserve", on = s.go, click = function() LR.setGroupOnly(s, not s.go) end,
+        tip = "Players outside the group can't reserve for themselves (they're told to ask for an invite). You can still add reserves for anyone, and imports still come in. Switch it off to let guild members reserve before the raid forms." },
       { label = (s.guild and "[x] " or "[  ] ") .. "Share with my guild", on = s.guild, click = function()
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         LR.setGuild(s, not s.guild)
-      end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
+      end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group can reserve\"." },
       not LR.raidOf(s).custom and { label = (s.any and "[x] " or "[  ] ") .. "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
         tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
       { label = (s.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
@@ -326,7 +328,7 @@ local function newSession(f)
       { label = (d.guild and "[x] " or "[  ] ") .. "Share with my guild", on = d.guild, click = function()
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         d.guild = not d.guild UI.render()
-      end, tip = "Guild members with LootRuler can see the session and reserve before the group is made." },
+      end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group can reserve\" on the Session tab once it's open." },
       { label = (d.gdkp and "[x] " or "[  ] ") .. "GDKP auctions", on = d.gdkp, click = function() d.gdkp = not d.gdkp UI.render() end,
         tip = "Items are auctioned for gold instead of reserved and rolled for. The gold goes in a pot that's split between everyone at the end." },
       { label = (d.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = d.plusOne, click = function() d.plusOne = not d.plusOne UI.render() end,

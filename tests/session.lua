@@ -180,6 +180,19 @@ check("matched names must be names", not S.valid(ns))
 ns.nm = "Ghost"
 check("and a list of them", not S.valid(ns))
 
+-- only the group can reserve
+local gs = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 800)
+S.set(gs, "Out-Dreamscythe", nil, { 28528, 28525 }, true, 801)
+check("off: anyone may reserve", S.groupOk(gs, "Out-Dreamscythe", { 28528, 28525, 28529 }, false))
+check("switched on", S.setGroupOnly(gs, true, 802) and gs.go == true and not S.setGroupOnly(gs, true, 803))
+check("someone in the group may", S.groupOk(gs, "In-Dreamscythe", { 28528 }, true))
+check("someone outside it can't add", select(2, S.groupOk(gs, "Out-Dreamscythe", { 28528, 28525, 28529 }, false)) == "GROUP_ONLY"
+  and not S.groupOk(gs, "Out-Dreamscythe", { 28528, 28529 }, false))
+check("but can take reserves back", S.groupOk(gs, "Out-Dreamscythe", { 28525 }, false) and S.groupOk(gs, "Out-Dreamscythe", {}, false))
+check("it's part of a valid session", S.valid(gs))
+gs.go = "yes"
+check("and must be on or off", not S.valid(gs))
+
 -- finding an award (to undo it)
 local fa = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 700)
 S.award(fa, 28528, "Ann-Dreamscythe", "MS", 50, 701)

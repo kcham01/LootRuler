@@ -37,6 +37,9 @@ local function myReserves(f, s)
     if s.dupes then line = line .. " You can put more than one on the same item." end
     p:text(line)
     if s.locked then p:note("|cffff5a4aReserves are locked.|r Ask " .. (LR.isLeader(s) and "yourself" or U.short(s.leader)) .. " if something needs changing.") end
+    if s.go and not LR.isLeader(s) and not LR.inGroup(s.leader) then
+      p:note(("|cffffd100Only players in %s's group can reserve.|r Ask them for an invite first."):format(U.short(s.leader)))
+    end
     if LR.pending(s) then p:note(pendingNote(s), K.GOLD) end
     p:gap(2)
     if #picks == 0 then

@@ -34,6 +34,8 @@
 --            { k = key, i = item id, b = boss ("" when not known), at = when it dropped, by = who recorded it (the
 --              loot master), src = what it dropped from, h = who has it now (nil: still on the corpse),
 --              ht = when it went into h's bags (the game's 2 hours to trade it start then) }
+--   go       only players in the group can reserve for themselves (the leader can still add for anyone, and imports
+--            still come in); nil or false: anyone the session reaches can (guild members before the raid forms)
 --   next     (while being handed over) "Name-Realm" the leader handed the session to; their addon takes it
 --   was      who led the session before, oldest first ("Name-Realm"; the session went on with the same id)
 --   created, updated   server times
@@ -56,6 +58,7 @@ S.WHY = {
   BAD_COUNT = "That's not a number of reserves this addon allows.",
   PRIO_ONLY = "This raid goes by the guild's priority lists, not reserves.",
   GDKP = "This raid auctions its loot for gold (GDKP): there are no reserves.",
+  GROUP_ONLY = "Only players in the group can reserve. Ask for an invite first.",
 }
 
 --- a new session. raidKey: a built-in raid, or LR.CUSTOM with name (a raid that isn't in the lists).
@@ -172,6 +175,27 @@ end
 function S.clearHR(s, id, now)
   if not s.hr[id] then return false end
   s.hr[id] = nil
+  bump(s, now)
+  return true
+end
+
+---------------------------------------------------------------------- who can reserve
+--- whether a player may change their reserves to items: when only the group can reserve, someone outside it can
+--- take reserves back but not add any. inGroup: whether they're in the group (the game says so)
+function S.groupOk(s, player, items, inGroup)
+  if not s.go or inGroup then return true end
+  local have = {}
+  for _, id in ipairs(S.reservesOf(s, player)) do have[id] = (have[id] or 0) + 1 end
+  for _, id in ipairs(items) do
+    if (have[id] or 0) > 0 then have[id] = have[id] - 1 else return false, "GROUP_ONLY" end
+  end
+  return true
+end
+--- switches "only players in the group can reserve" on or off
+function S.setGroupOnly(s, on, now)
+  on = on and true or false
+  if (s.go or false) == on then return false end
+  s.go = on
   bump(s, now)
   return true
 end
@@ -520,6 +544,7 @@ function S.valid(t)
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
   if t.next ~= nil and type(t.next) ~= "string" then return false end
+  if t.go ~= nil and type(t.go) ~= "boolean" then return false end
   if t.was ~= nil then
     if type(t.was) ~= "table" or #t.was > 20 then return false end
     for _, name in ipairs(t.was) do if type(name) ~= "string" then return false end end

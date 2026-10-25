@@ -186,6 +186,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Trade time warnings** (`Drops.tradeWarnings`, `Drops.WARN_AT`, setting `tradeWarn`, on to start with): checked every 30
   seconds; items the loot master holds ("held" or "toTrade") warn once at 15 and once at 5 minutes left, in chat and as
   the game's middle-of-the-screen message (`RaidNotice_AddMessage`, only on their screen).
+- **Only the group can reserve** (`s.go`, `S.groupOk`, `S.setGroupOnly`, `LR.setGroupOnly`): on for new sessions; the
+  leader's addon refuses new reserves from outside the group (picks `P`, whispers) with `GROUP_ONLY`, while taking
+  reserves back, the leader's own adds and imports still work. Switch it off for guild members to reserve pre-raid.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
