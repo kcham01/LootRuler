@@ -434,6 +434,55 @@ for _, p in ipairs({ lead, ann, bob, dan }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
 
+section("reminding who hasn't reserved")
+local rs = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+ann.LR.reserve(cur(ann), WATCH)
+srv:tick(2)
+local function raidSaid(text) for i = #srv.chat, 1, -1 do local m = srv.chat[i] if m.channel == "RAID" and m.text:find(text, 1, true) then return m.text end end end
+local before = #srv.chat
+local ok, n = lead.LR.Whisper.remind(rs)
+srv:tick(1)
+local said = raidSaid("Not reserved yet:") or ""
+check("one click names everyone in the group who hasn't reserved", ok and n == 3 and said:find("Not reserved yet: Bob-Faerlina, Dan, Pug.", 1, true) ~= nil, said)
+check("and says how to", said:find("Soft reserves are open for Karazhan (2 each). Type \"!lr <item link>\" in raid chat", 1, true) ~= nil, said)
+check("not the leader, nor who has reserved", not said:find("Lead", 1, true) and not said:find("Ann", 1, true))
+check("one line, under 255 characters", #srv.chat == before + 1 and #said <= 255)
+-- someone joins: off unless the leader switches it on
+local kim = srv:player({ name = "Kim", class = "HUNTER" })
+table.insert(srv.group.members, kim) kim.inGroup = true
+srv:rosterChanged()
+srv:tick(20)
+check("nobody is greeted while it's off", raidSaid("Welcome") == nil)
+lead.LR.db.settings.remindOnJoin = true
+srv:tick(1)
+local zed = srv:player({ name = "Zed", class = "ROGUE" })
+local yan = srv:player({ name = "Yan", class = "MAGE" })
+table.insert(srv.group.members, zed) zed.inGroup = true
+srv:rosterChanged()
+srv:tick(3)
+table.insert(srv.group.members, yan) yan.inGroup = true
+srv:rosterChanged()
+srv:tick(3)
+srv:whisper(yan, lead, "!lr brooch")                 -- Yan reserves straight away
+srv:tick(15)
+local hello = raidSaid("Welcome") or ""
+check("switched on: who joins and hasn't reserved hears how, in one line", hello:find("Welcome, Zed!", 1, true) ~= nil and hello:find("!lr <item link>", 1, true) ~= nil, hello)
+check("not who reserved meanwhile, nor who was there already", not hello:find("Yan", 1, true) and not hello:find("Kim", 1, true) and not hello:find("Bob", 1, true))
+lead.LR.setLocked(rs, true)
+srv:tick(2)
+local n2 = #srv.chat
+local xan = srv:player({ name = "Xan", class = "MAGE" })
+table.insert(srv.group.members, xan) xan.inGroup = true
+srv:rosterChanged()
+srv:tick(20)
+check("not once the reserves are locked", raidSaid("Welcome, Xan") == nil)
+check("a reminder for locked reserves is refused", not lead.LR.Whisper.remind(rs))
+lead.LR.db.settings.remindOnJoin = false
+for _, p in ipairs({ kim, zed, yan, xan }) do srv:leaveGroup(p) end
+lead.LR.endSession(rs)
+srv:tick(2)
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

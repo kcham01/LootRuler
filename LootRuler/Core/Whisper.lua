@@ -278,3 +278,67 @@ function W.announce(s)
   for _, line in ipairs(U.chatLines(text, 255)) do chat(line, channel) end
   return true
 end
+
+---------------------------------------------------------------------- reminding people who haven't reserved
+--- how to reserve, in a few words, for a raid chat line
+local function howTo(s)
+  return ("Soft reserves are open for %s (%s each). %s, or reserve in the LootRuler addon."):format(LR.raidOf(s).name,
+    s.sr, LR.db.settings.raidCommands and "Type \"!lr <item link>\" in raid chat" or ("Whisper " .. U.short(U.me()) .. " \"!lr <item link>\""))
+end
+--- whether players can reserve in a session now (open, and it goes by reserves)
+local function open(s) return s and not s.locked and not s.gdkp and s.prio ~= "only" end
+
+--- the players in the group who haven't reserved anything yet ("Name-Realm"), A to Z (not me: I'm asking)
+function W.notReserved(s)
+  local has, out = { [U.foldCase(U.me())] = true }, {}
+  for name, r in pairs(s.res) do if #r.i > 0 then has[U.foldCase(name)] = true end end
+  for _, m in ipairs(LR.roster()) do
+    if not has[U.foldCase(U.full(m.name))] then out[#out + 1] = U.full(m.name) end
+  end
+  table.sort(out, function(a, b) return U.foldCase(U.short(a)) < U.foldCase(U.short(b)) end)
+  return out
+end
+
+--- tells the raid who hasn't reserved yet, and how to. Returns true, or false and why not.
+function W.remind(s)
+  local channel = LR.groupChannel()
+  if not channel then return false, "You're not in a group." end
+  if not open(s) then return false, "Reserves aren't open: nobody can reserve now." end
+  local names = W.notReserved(s)
+  if #names == 0 then return false, "Everyone in the group has reserved." end
+  local text = ("%s Not reserved yet: %s. %s"):format(LR.TAG, table.concat(U.map(names, U.short), ", "), howTo(s))
+  for _, line in ipairs(U.chatLines(text, 255)) do chat(line, channel) end
+  return true, #names
+end
+
+-- someone joins while my reserves are open (Settings: remindOnJoin): a few seconds later, one line for everyone who
+-- joined meanwhile and still hasn't reserved. Whoever was in the group already isn't told again.
+W.JOIN_WAIT = 15
+local seen, joined, waiting = nil, {}, false
+LR.onChange(function(what)
+  if what ~= "roster" or not LR.db then return end
+  local now = {}
+  for _, m in ipairs(LR.roster()) do now[U.foldCase(U.full(m.name))] = U.full(m.name) end
+  local s = W.session()
+  if seen and IsInGroup() and LR.db.settings.remindOnJoin and open(s) then
+    for key, name in pairs(now) do if not seen[key] and not U.samePlayer(name, U.me()) then joined[key] = name end end
+  end
+  seen = IsInGroup() and now or nil
+  if next(joined) and not waiting then
+    waiting = true
+    C_Timer.After(W.JOIN_WAIT, function()
+      waiting = false
+      local list = joined
+      joined = {}
+      local sess = W.session()
+      local channel = LR.groupChannel()
+      if not channel or not LR.db.settings.remindOnJoin or not open(sess) then return end
+      local still = {}
+      for _, name in ipairs(W.notReserved(sess)) do if list[U.foldCase(name)] then still[#still + 1] = U.short(name) end end
+      if #still == 0 then return end
+      table.sort(still)
+      local text = ("%s Welcome, %s! %s"):format(LR.TAG, table.concat(still, ", "), howTo(sess))
+      for _, line in ipairs(U.chatLines(text, 255)) do chat(line, channel) end
+    end)
+  end
+end)

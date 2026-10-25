@@ -33,6 +33,13 @@ local function leaderTools(f, s)
         if LR.Whisper.announce(s) then UI.toast("Posted.") end
       end },
     }, "left")
+    local missing = LR.groupChannel() and #LR.Whisper.notReserved(s) or 0
+    p:buttons({
+      { label = missing > 0 and ("Remind who hasn't reserved (" .. missing .. ")") or "Remind who hasn't reserved", disabled = missing == 0, click = function()
+        local ok, why = LR.Whisper.remind(s)
+        UI.toast(ok and ("Reminded %s in raid chat."):format(U.plural(why, "player")) or why)
+      end },
+    }, "left")
   end)
 end
 

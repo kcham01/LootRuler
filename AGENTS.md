@@ -173,6 +173,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   with a higher rev), and a session's own leader yields only to a newer copy. Messages carry `fl` (what the
   sender's addon can do; 1 = can take a session) so only able players are offered (`LR.canLead`). Older versions
   still follow whoever sends the newest copy.
+- **Reminders** (`Whisper.notReserved`, `Whisper.remind`): one raid line naming who in the group hasn't reserved, with
+  how to. `remindOnJoin` (off to start with): people who join while reserves are open, batched for `Whisper.JOIN_WAIT`
+  seconds, hear it if they still haven't reserved.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
