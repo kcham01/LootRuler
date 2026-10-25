@@ -947,6 +947,12 @@ function M.env(player)
     local ic = b:CreateTexture("LootButton" .. i .. "IconTexture", "ARTWORK")
     ic:SetAllPoints()
     G["LootButton" .. i .. "IconTexture"] = ic
+    -- the item's name beside the icon, as the game lays it out (LootButtonTemplate: 93 x 38, 8 to the right)
+    local tx = b:CreateFontString("LootButton" .. i .. "Text", "ARTWORK", "GameFontNormal")
+    tx:SetSize(93, 38)
+    tx:SetPoint("LEFT", b, "RIGHT", 8, 0)
+    tx:SetJustifyH("LEFT")
+    G["LootButton" .. i .. "Text"] = tx
     G["LootButton" .. i] = b
     b:Hide()
   end
@@ -954,6 +960,8 @@ function M.env(player)
     local b = G["LootButton" .. index]
     b.slot = index
     b:SetShown(G.LootSlotHasItem(index))
+    local _, name = G.GetLootSlotInfo(index)
+    G["LootButton" .. index .. "Text"]:SetText(name or "")
   end
   G.GroupLootFrame1 = M.CreateFrame("Frame", "GroupLootFrame1", M.UIParent)
   G.GroupLootFrame1.IconFrame = M.CreateFrame("Button", nil, G.GroupLootFrame1)

@@ -43,6 +43,7 @@ UI\Loot.lua
 UI\Setup.lua
 UI\RollFrame.lua
 UI\Master.lua
+UI\ReserveStrip.lua
 UI\Guild.lua
 UI\Gdkp.lua
 UI\Settings.lua

@@ -159,6 +159,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   picks (`Gargul.unmatched`, `LR.matchName`, the import summary and the Reserves tab). `s.nm` remembers matches for
   re-imports; `Gargul.recheck` runs when someone joins. `U.samePlayer` ignores capitals in any letters (`U.foldCase`),
   not accents: Ghost and Ghøst are two characters. `R.key` is unchanged (its keys go over the network).
+- **Who reserved it, on screen** (`UI/ReserveStrip.lua`, `UI/Highlight.lua`): a click-through strip above the roll window
+  (or the loot master window) lists every reserver of the item being rolled for, in full; it follows the roll on now
+  (LootRuler's, or Gargul's in `Gargul.roll`). Gargul's rolls are read from raid chat with LootRuler's own patterns
+  for Gargul's English lines (`Gargul.ROLL_LINES`, `Gargul.END_LINES`); they also end when the item is looted or time
+  runs out. Other languages aren't read yet. The game's loot window gets "SR"/"HR" on the icon and the names under
+  the item's name (as many as fit). Switches: `reserveStrip`, `lootTags`. The test server now has the game's class colours.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

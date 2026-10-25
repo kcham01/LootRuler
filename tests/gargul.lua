@@ -198,6 +198,25 @@ do
   check("a name that was in the group isn't moved to a lookalike", #G.recheck(sk, group("Ånn-Dreamscythe")) == 0 and list(sk, "Ann-Dreamscythe") == "28528")
 end
 
+print("== Gargul's rolls, read from raid chat")
+do
+  local link = "|cffa335ee|Hitem:28528::::::::70:::::|h[Moroes' Lucky Pocket Watch]|h|r"
+  local id, l, secs = G.rollFromChat("You have 20 seconds to roll on " .. link)
+  check("Gargul's line gives the item, its link and the seconds", id == 28528 and l == link and secs == 20)
+  check("with anything in front of it", G.rollFromChat("{rt1} You have 15 seconds to roll on " .. link) == 28528)
+  check("other raid chat isn't a roll", G.rollFromChat("Roll for " .. link) == nil and G.rollFromChat("You have 20 seconds to roll on it") == nil
+    and G.rollFromChat(nil) == nil)
+  local stop = G.rollEndFromChat("Stop your rolls!")
+  local awarded, which = G.rollEndFromChat(link .. " was awarded to Ann. Congrats!")
+  check("\"Stop your rolls!\" ends it", stop == true)
+  check("so does the item going to someone", awarded == true and which == 28528)
+  check("the countdown doesn't", G.rollEndFromChat("5 seconds to roll") == false)
+  local r = G.startRoll(28528, link, nil, 100)
+  check("a roll that doesn't say how long lasts a minute", G.roll == r and r.ends == 160 and r.state == "open")
+  check("looting another item doesn't end it", not G.endRoll(28525) and G.roll == r)
+  check("looting the item does", G.endRoll(28528) and G.roll == nil)
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

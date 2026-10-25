@@ -385,3 +385,51 @@ function G.importInto(s, text, roster)
   LR.leaderChanged(s)
   return sum
 end
+
+---------------------------------------------------------------------- Gargul's rolls, read from raid chat
+-- When Gargul rolls an item out, it says so in raid chat. LootRuler reads that line with its own pattern (nothing of
+-- Gargul's is used) so raiders see who reserved the item (UI/ReserveStrip.lua). The roll is over when someone
+-- loots the item, another roll starts, or its time is up.
+-- Gargul's lines (English): "You have 20 seconds to roll on [item]" starts a roll; "Stop your rolls!" or
+-- "[item] was awarded to Ann. Congrats!" ends it. Each start pattern captures { seconds, link } in the order named.
+local LINK = "(|c%x+|Hitem:.-|h|r)"
+G.ROLL_LINES = { { "You have (%d+) seconds to roll on " .. LINK, "secs", "link" } }
+G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to .+%. Congrats!" }
+
+--- a raid chat line: the item, its link and the seconds when it's Gargul starting a roll, else nil
+function G.rollFromChat(text)
+  text = tostring(text or "")
+  for _, line in ipairs(G.ROLL_LINES) do
+    local a, b = text:match(line[1])
+    if a then
+      local got = { [line[2]] = a, [line[3]] = b }
+      local id = got.link and tonumber(got.link:match("item:(%d+)"))
+      if id then return id, got.link, tonumber(got.secs) end
+    end
+  end
+end
+--- a raid chat line that ends Gargul's roll: true, and the item when the line names one
+function G.rollEndFromChat(text)
+  text = tostring(text or "")
+  for _, pattern in ipairs(G.END_LINES) do
+    local s, e, link = text:find(pattern)
+    if s then return true, link and tonumber(link:match("item:(%d+)")) end
+  end
+  return false
+end
+
+G.DEFAULT_SECONDS = 60      -- (when the line doesn't say how long)
+--- Gargul's roll that's on now: { id, link, mode = "GARGUL", state = "open", ends }, or nil
+G.roll = nil
+function G.startRoll(id, link, secs, now)
+  G.roll = { id = id, link = link, mode = "GARGUL", state = "open", ends = now + (secs or G.DEFAULT_SECONDS) }
+  if LR.changed then LR.changed("gargul") end
+  return G.roll
+end
+--- the roll is over (any roll, or only the one for item id)
+function G.endRoll(id)
+  if not G.roll or (id and G.roll.id ~= id) then return false end
+  G.roll = nil
+  if LR.changed then LR.changed("gargul") end
+  return true
+end

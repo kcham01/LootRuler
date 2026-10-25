@@ -422,8 +422,8 @@ local function wanted(copy)
   return true
 end
 
---- shows a window for every roll that wants one (newest last), up to four
-function UI.rollWindows()
+--- where roll windows go (the top of the first one): the player can drag it
+function UI.rollAnchor()
   if not anchor then
     anchor = CreateFrame("Frame", "LootRulerRollAnchor", UIParent)
     anchor:SetSize(W, 1)
@@ -432,6 +432,12 @@ function UI.rollWindows()
     local pt = LR.db.ui.rollPoint
     if pt then anchor:SetPoint(pt[1], UIParent, pt[2], pt[3], pt[4]) else anchor:SetPoint("TOP", UIParent, "CENTER", 0, -120) end
   end
+  return anchor
+end
+
+--- shows a window for every roll that wants one (newest last), up to four
+function UI.rollWindows()
+  UI.rollAnchor()
   local show = {}
   for _, k in ipairs(LR.Rolls.order) do
     local copy = LR.Rolls.seen[k]

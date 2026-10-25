@@ -352,8 +352,14 @@ function Server:install(p)
     srv:deliver(function() p.M.fire("LOOT_SLOT_CLEARED", slot) end)
   end
   G.ChatFrameUtil = { AddMessageEventFilter = function(event, fn) p.filters = p.filters or {} p.filters[event] = p.filters[event] or {} table.insert(p.filters[event], fn) end }
+  -- the class colours (Blizzard_SharedXML/TBC/ClassColors.lua)
+  local COLORS = { HUNTER = { 0.67, 0.83, 0.45 }, WARLOCK = { 0.53, 0.53, 0.93 }, PRIEST = { 1, 1, 1 }, PALADIN = { 0.96, 0.55, 0.73 },
+    MAGE = { 0.25, 0.78, 0.92 }, ROGUE = { 1, 0.96, 0.41 }, DRUID = { 1, 0.49, 0.04 }, SHAMAN = { 0, 0.44, 0.87 }, WARRIOR = { 0.78, 0.61, 0.43 } }
   G.RAID_CLASS_COLORS = {}
-  for token in pairs(CLASS_NAME) do G.RAID_CLASS_COLORS[token] = { r = 0.8, g = 0.8, b = 0.8, colorStr = "ffcccccc" } end
+  for token in pairs(CLASS_NAME) do
+    local c = COLORS[token] or { 0.8, 0.8, 0.8 }
+    G.RAID_CLASS_COLORS[token] = { r = c[1], g = c[2], b = c[3], colorStr = ("ff%02x%02x%02x"):format(c[1] * 255 + 0.5, c[2] * 255 + 0.5, c[3] * 255 + 0.5) }
+  end
 end
 
 ---------------------------------------------------------------------- rolling and master loot
