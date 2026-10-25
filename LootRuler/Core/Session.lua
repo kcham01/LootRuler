@@ -34,6 +34,8 @@
 --            { k = key, i = item id, b = boss ("" when not known), at = when it dropped, by = who recorded it (the
 --              loot master), src = what it dropped from, h = who has it now (nil: still on the corpse),
 --              ht = when it went into h's bags (the game's 2 hours to trade it start then) }
+--   next     (while being handed over) "Name-Realm" the leader handed the session to; their addon takes it
+--   was      who led the session before, oldest first ("Name-Realm"; the session went on with the same id)
 --   created, updated   server times
 local _, LR = ...
 local U = LR.U
@@ -172,6 +174,47 @@ function S.clearHR(s, id, now)
   s.hr[id] = nil
   bump(s, now)
   return true
+end
+
+---------------------------------------------------------------------- a new leader
+--- the leader hands the session to someone; their addon takes it over when it hears (nil: the offer is taken back)
+function S.handTo(s, player, now)
+  player = player and U.full(player) or nil
+  if player and U.samePlayer(player, s.leader) then return false end
+  if s.next == player then return false end
+  s.next = player
+  bump(s, now)
+  return true
+end
+
+--- someone else leads the session from now on (it was handed to them, or they took it over); everything in it
+--- stays, and the old leader goes on the list of who led it
+function S.newLeader(s, player, now)
+  player = U.full(player)
+  if not player or U.samePlayer(player, s.leader) then return false end
+  s.was = s.was or {}
+  s.was[#s.was + 1] = s.leader
+  while #s.was > 10 do table.remove(s.was, 1) end
+  s.leader = player
+  s.next = nil
+  bump(s, now)
+  return true
+end
+
+--- whether a copy of a session that names a different leader may replace the one we have: it was handed to
+--- them, or they took it over. gone: our copy's leader isn't in the group (or is offline); boss: the one who sent
+--- it leads or assists the group (the game says so); ours: we lead it; fromUs: their copy says it carried on
+--- from us; newer: their copy is newer than ours. When it's ours, only a newer copy can take it from us (we were
+--- away, and it was taken over, or taken over and handed on): an old copy someone kept never wins it back.
+function S.newLeaderOk(known, leader, gone, boss, ours, fromUs, newer)
+  if known.next and U.samePlayer(known.next, leader) then return true end
+  if ours then return (newer and (boss or fromUs)) and true or false end
+  return (boss and gone) and true or false
+end
+--- whether a session says it was led by a player before
+function S.ledBy(s, player)
+  for _, name in ipairs(s.was or {}) do if U.samePlayer(name, player) then return true end end
+  return false
 end
 
 S.MAX_EXTRA = 5
@@ -468,6 +511,11 @@ function S.valid(t)
     end
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
+  if t.next ~= nil and type(t.next) ~= "string" then return false end
+  if t.was ~= nil then
+    if type(t.was) ~= "table" or #t.was > 20 then return false end
+    for _, name in ipairs(t.was) do if type(name) ~= "string" then return false end end
+  end
   if t.xr ~= nil then
     if type(t.xr) ~= "table" then return false end
     local n = 0

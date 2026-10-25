@@ -184,6 +184,21 @@ local function manage(f, s)
     end)
   end
 
+  f:panel("Hand over", function(p)
+    if s.next then
+      p:note(("Waiting for %s's LootRuler to take the reserves over. It does as soon as it hears from yours."):format(U.short(s.next)), K.GOLD)
+      p:buttons({ { label = "Take it back", click = function() LR.handOver(s, nil) end } }, "left")
+    else
+      p:note("Leaving, or letting someone else run the reserves? Hand them over: everything reserved and given out stays, and the raid is told who to whisper.")
+      p:buttons({ { label = "Hand the reserves over", click = function()
+        UI.pickLeader("Who runs the reserves now?", function(name)
+          local ok, why = LR.handOver(s, name)
+          if not ok and why then UI.toast(why) end
+        end)
+      end } }, "left")
+    end
+  end)
+
   f:panel("Disenchanter", function(p)
     if s.de then
       p:text(U.classText(U.short(s.de), LR.classOf(s.de)) .. " disenchants what nobody wants: the loot master's window has a Disenchant button.")
@@ -362,6 +377,28 @@ function UI.sessionView(f, s)
     manage(f, s)
   else
     if s then
+      if LR.leaderGone(s) then
+        f:panel("Nobody's running the reserves", function(p)
+          local gone = LR.inGroup(s.leader) and "is offline" or "has left the group"
+          if LR.mayTakeOver(s) then
+            p:note(("%s, who runs these reserves, %s. As the raid leader (or an assistant) you can take them over: everything reserved and given out so far stays, and the raid is told who to whisper."):format(U.short(s.leader), gone), K.GOLD)
+            p:buttons({
+              { label = "Take over the reserves", click = function()
+                local ok, why = LR.takeOver(s)
+                if ok then UI.toast("You run the reserves now.") elseif why then UI.toast(why) end
+              end },
+              { label = "Hand them to someone else", click = function()
+                UI.pickLeader("Who runs the reserves now?", function(name)
+                  local ok, why = LR.passOn(s, name)
+                  if ok then UI.toast(("Handed to %s."):format(U.short(name))) elseif why then UI.toast(why) end
+                end)
+              end },
+            }, "left")
+          else
+            p:note(("%s, who runs these reserves, %s. The raid leader or an assistant can take them over (Session tab)."):format(U.short(s.leader), gone), K.GOLD)
+          end
+        end)
+      end
       if s.gdkp and s.gk then UI.gdkpPanel(f, s) end
       f:panel("Session by " .. U.short(s.leader), function(p)
         p:kv({

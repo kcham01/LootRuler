@@ -273,18 +273,28 @@ function UI.textSheet(title, note, text)
   end)
 end
 
---- picks someone in the group (a sheet), then calls done("Name-Realm")
-function UI.pickPlayer(title, done)
+--- picks someone in the group (a sheet), then calls done("Name-Realm"). only(name): who may be picked; note:
+--- a line about who's left out
+function UI.pickPlayer(title, done, only, note)
   UI.openSheet(title, function(f, h)
     local people = LR.roster()
     if #people == 0 then people = { { name = U.me(), class = LR.myClass() } } end
     table.sort(people, function(a, b) return a.name < b.name end)
     local chips = {}
     for _, m in ipairs(people) do
-      chips[#chips + 1] = { label = U.classText(U.short(m.name), m.class), click = function() h.close() done(m.name) end }
+      if not only or only(m.name) then
+        chips[#chips + 1] = { label = U.classText(U.short(m.name), m.class), click = function() h.close() done(m.name) end }
+      end
     end
-    f:chips(chips)
+    if note then f:note(note) end
+    if #chips == 0 then f:note("Nobody in the group can be picked.", K.GOLD) else f:chips(chips) end
   end)
+end
+
+--- who to hand the reserves to: someone else in the group whose LootRuler can take them
+function UI.pickLeader(title, done)
+  UI.pickPlayer(title, done, function(name) return LR.canLead(name) and not U.samePlayer(name, U.me()) end,
+    "Only players whose LootRuler can take the reserves over are listed. Players with an older LootRuler, or none, aren't.")
 end
 
 local function byItem(f, s, leader)
