@@ -198,6 +198,9 @@ function W.handle(text, sender)
     return
   end
 
+  -- only the group can reserve (the leader's choice): someone outside it is told to ask for an invite
+  if s.go and not LR.inGroup(player) then W.reply(player, S.WHY.GROUP_ONLY) return end
+
   -- one or more item links, or one item name
   local wanted = {}
   for link in args:gmatch("|c%x+|Hitem:[^|]+|h%[.-%]|h|r") do wanted[#wanted + 1] = link end

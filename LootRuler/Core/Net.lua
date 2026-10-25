@@ -276,6 +276,7 @@ function LR.startSession(raidKey, sr, dupes, guild, name, any)
   local now = U.now()
   local s = S.new(U.me(), raidKey, sr, dupes, now, name, any)
   s.guild = guild and true or false
+  s.go = true                  -- (only the group can reserve, until the leader says otherwise)
   db.sessions[s.id] = s
   db.current = s.id
   LR.preload(raidKey)
@@ -357,6 +358,7 @@ LR.gdkpOut = gdkp(function(s, player, out) return LR.Gdkp.setOut(s, player, out,
 LR.gdkpPaid = gdkp(function(s, player, gold) return LR.Gdkp.paid(s, player, gold, U.now()) end)
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
+function LR.setGroupOnly(s, on) if LR.isLeader(s) and S.setGroupOnly(s, on, U.now()) then leaderChanged(s) end end
 function LR.setGuild(s, guild)
   s.guild = guild and true or false
   leaderChanged(s)
@@ -503,6 +505,8 @@ function LR.changeMine(s, edit, id)
   local items = U.copy(LR.myPicks(s))
   local before = #items
   edit(items)
+  -- only the group can reserve: outside it, I can take reserves back but not add (the leader's addon decides too)
+  if #items > before and s.go and not LR.inGroup(s.leader) then return false, "GROUP_ONLY" end
   -- no reserves in a GDKP raid, or one that goes by priority lists only (taking them back is fine)
   if #items > before and s.gdkp then return false, "GDKP" end
   if #items > before and s.prio == "only" then return false, "PRIO_ONLY" end
@@ -599,7 +603,8 @@ function handlers.P(msg, channel, sender)
   for _, id in ipairs(msg.i) do if type(id) == "number" then items[#items + 1] = id end end
   local class = LR.classOf(sender) or (type(msg.c) == "string" and LR.CLASS_BIT[msg.c] and msg.c) or nil
   local rev = s.rev
-  local ok, why, id = S.set(s, sender, class, items, false, U.now())
+  local ok, why, id = S.groupOk(s, sender, items, LR.inGroup(sender) and true or false)
+  if ok then ok, why, id = S.set(s, sender, class, items, false, U.now()) end
   local answer = { t = "A", id = s.id, to = sender, ok = ok, why = why, item = id, i = S.reservesOf(s, sender) }
   local route, target = channel, nil
   if channel == "WHISPER" or LR.inGroup(sender) then route, target = "WHISPER", sender end

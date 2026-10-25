@@ -193,6 +193,17 @@ check("and is confirmed", not ann.LR.pending(cur(ann)))
 
 section("reserving before the group is made")
 cara.LR.select(s.id)
+check("new sessions: only the group can reserve", s.go == true)
+local okC, whyC = cara.LR.reserve(cara.LR.session(s.id), ROYAL)
+check("so a guild member outside the group can't (her addon says why)", not okC and whyC == "GROUP_ONLY" and #lead.LR.Session.reservesOf(s, full(cara)) == 0)
+-- an older addon (or a hand-made message) sends picks anyway: the leader's addon refuses them
+cara.LR.Net.send({ t = "P", id = s.id, c = "DRUID", i = { ROYAL } }, "GUILD")
+srv:tick(2)
+check("and the leader's addon refuses her picks if they're sent anyway", #lead.LR.Session.reservesOf(s, full(cara)) == 0)
+-- the leader lets the guild reserve before the raid forms
+lead.LR.setGroupOnly(s, false)
+srv:tick(2)
+check("the leader switches it off, for everyone", s.go == false and cara.LR.session(s.id).go == false)
 cara.LR.reserve(cara.LR.session(s.id), ROYAL)
 srv:tick(2)
 check("a guild member outside the group reserves over the guild channel", same(lead.LR.Session.reservesOf(s, full(cara)), { ROYAL }))
@@ -433,6 +444,30 @@ check("the new leader ends it, for everyone", lead.LR.session(hs.id) == nil and 
 for _, p in ipairs({ lead, ann, bob, dan }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
+
+section("only the group can reserve")
+local gs = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+local stranger = srv:player({ name = "Stranger", class = "MAGE" })
+local n1 = #stranger.inbox
+srv:whisper(stranger, lead, "!lr watch")
+srv:tick(2)
+local answer = stranger.inbox[#stranger.inbox] and stranger.inbox[#stranger.inbox].text or ""
+check("a whisper from outside the group is refused", #lead.LR.Session.reservesOf(gs, "Stranger-Dreamscythe") == 0 and #stranger.inbox > n1
+  and answer:find("Only players in the group can reserve. Ask for an invite first.", 1, true) ~= nil, answer)
+check("the leader can still add for them", lead.LR.leaderAdd(gs, "Stranger-Dreamscythe", "MAGE", WATCH))
+srv:whisper(stranger, lead, "!lr clear")
+srv:tick(2)
+check("and they can still take reserves back", #lead.LR.Session.reservesOf(gs, "Stranger-Dreamscythe") == 0)
+table.insert(srv.group.members, stranger) stranger.inGroup = true
+srv:rosterChanged()
+srv:tick(2)
+srv:whisper(stranger, lead, "!lr watch")
+srv:tick(2)
+check("once in the group, they can", lead.LR.Session.reservesOf(gs, "Stranger-Dreamscythe")[1] == WATCH)
+srv:leaveGroup(stranger)
+lead.LR.endSession(gs)
+srv:tick(2)
 
 section("reminding who hasn't reserved")
 local rs = lead.LR.startSession("Karazhan", 2, true, false)
