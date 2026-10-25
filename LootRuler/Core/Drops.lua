@@ -171,6 +171,45 @@ function Drops.tradeLeft(d)
   return math.max(0, d.ht + Drops.TRADE_SECONDS - U.now())
 end
 
+-- the 2 hours running out: for each item I'm holding to roll out or trade, I'm told 15 minutes before I can't trade
+-- it any more, and again at 5: which item, who it's for (or that nobody has won it yet), and how long is left.
+-- Only on my own screen. Settings: tradeWarn.
+Drops.WARN_AT = { 15 * 60, 5 * 60 }       -- (largest first)
+local warned = {}                         -- drop key -> the last mark I was told at
+--- the warnings due now (and marks them told): lines of text
+function Drops.tradeWarnings()
+  local out = {}
+  local s = Rolls.session()
+  if not s or not LR.db.settings.tradeWarn then return out end
+  for _, d in ipairs(s.drops or {}) do
+    local left = d.h and U.samePlayer(d.h, U.me()) and Drops.tradeLeft(d)
+    local state, w = S.dropState(s, d)
+    if left and left > 0 and (state == "held" or state == "toTrade") then
+      local mark
+      for _, m in ipairs(Drops.WARN_AT) do if left <= m then mark = m end end
+      if mark and (not warned[d.k] or warned[d.k] > mark) then
+        warned[d.k] = mark
+        local mins = math.max(1, math.ceil(left / 60))
+        local time = U.plural(mins, "minute")
+        out[#out + 1] = state == "toTrade" and ("%s left to trade %s to %s."):format(time, LR.itemLink(d.i), U.short(w.p))
+          or ("%s left to roll out and trade %s: nobody has won it yet."):format(time, LR.itemLink(d.i))
+      end
+    end
+  end
+  return out
+end
+local function checkTradeTime()
+  if LR.db then
+    for _, line in ipairs(Drops.tradeWarnings()) do
+      LR.print(line)
+      if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
+      PlaySound(SOUNDKIT.RAID_WARNING or 8959, "Master")
+    end
+  end
+  C_Timer.After(30, checkTradeTime)
+end
+C_Timer.After(30, checkTradeTime)
+
 --- drops I'm holding that someone else won: { { drop, winner } }, the ones for a player when one is given
 function Drops.toDeliver(player)
   local out = {}
