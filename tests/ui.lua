@@ -1066,6 +1066,66 @@ run("a new leader for the reserves", function()
   LR.UI.go("reserve")
 end)
 
+run("the Test tab", function()
+  LR.UI.go("settings")
+  local tabShown = function()
+    for _, x in ipairs(M.findText("Test", true, G.LootRulerFrame)) do if M.plain(x.fs:GetText()) == "Test" and x.clickable and x.clickable:IsShown() then return true end end
+    return false
+  end
+  local ts = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  check("the Test tab is hidden to start with", not tabShown())
+  clickText("[  ] Show the Test tab")
+  check("switched on in Settings, it's there", tabShown())
+  clickText("Test")
+  check("pretend rolls, messages and names", visible("Pretend rolls") and visible("Pretend messages") and visible("Names from softres.it"))
+  -- eight made-up players reserved it, and me
+  clickText("+") clickText("+")
+  check("how many reserved it can be changed", visible("8"))
+  local chatBefore, rolledBefore = #srv.chat, #(M.rolled or {})
+  local annRolls = #ann.LR.Rolls.order
+  clickText("LootRuler roll: reserved")
+  srv:tick(0.5)
+  local strip = G.LootRulerReserveStrip
+  local names = strip and M.plain(strip.names:GetText()) or ""
+  check("a pretend reserved roll: the window and the strip with every name", strip and strip:IsShown() and names:find("Arthas", 1, true)
+    and names:find("Valeera", 1, true) and names:find("Malfurion", 1, true) and not names:find("+", 1, true), names)
+  local fr
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy and x.copy.test then fr = x end end
+  shot("test-roll", lead, { "LootRulerReserveStrip", fr and fr:GetName() or "LootRulerRollFrame1" })
+  M.click(fr.dice)
+  srv:tick(0.5)
+  check("its dice roll here, not with /roll", fr.copy.rolled[LR.Roll.key(LR.U.me())] ~= nil and #(M.rolled or {}) == rolledBefore)
+  check("nothing reaches chat or anyone else", #srv.chat == chatBefore and #ann.LR.Rolls.order == annRolls)
+  srv:tick(25)
+  check("the strip goes when the pretend roll ends", not strip:IsShown())
+  clickText("Gargul roll")
+  srv:tick(0.5)
+  check("a pretend Gargul roll shows the strip", strip:IsShown() and M.plain(strip.names:GetText()):find("Thrall", 1, true))
+  srv:tick(25)
+  check("and it goes too", not strip:IsShown())
+  local n = #M.notices
+  clickText("The 2 hours running out")
+  check("the trade warning, on screen only", #M.notices == n + 1 and M.notices[#M.notices]:find("14 minutes left to trade", 1, true) and #srv.chat == chatBefore)
+  clickText("The reminder")
+  check("the reminder, shown not posted", (function() for _, l in ipairs(M.chat) do if l:find("(pretend, not posted)", 1, true) then return true end end end)()
+    and #srv.chat == chatBefore)
+  local box
+  local function walk(fr2) for _, c in ipairs(fr2._children or {}) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
+  walk(G.LootRulerFrame)
+  M.click(box)
+  M.type("bøb")
+  srv:tick(0.5)
+  check("a softres.it name to try: who it goes to", visible("Bøb goes to Bob-Faerlina"))
+  shot("test-tab")
+  LR.UI.go("settings")
+  clickText("[x] Show the Test tab")
+  check("switched off, it's gone", not tabShown())
+  LR.endSession(ts)
+  srv:tick(1)
+  LR.UI.go("reserve")
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)

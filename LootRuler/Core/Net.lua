@@ -71,6 +71,7 @@ LR.DEFAULTS = {
   lootTags = true,         -- the game's loot window marks reserved items with who reserved them (UI/Highlight.lua)
   reserveStrip = true,     -- while an item is rolled for, a strip lists everyone who reserved it (UI/ReserveStrip.lua)
   remindOnJoin = false,    -- when I run reserves, people who join and haven't reserved are told how (Core/Whisper.lua)
+  testTab = false,         -- the Test tab: pretend rolls and messages, only on my screen (UI/Test.lua)
   rollShortcut = "ctrlalt", -- clicking an item with these keys held rolls it out (UI/Shortcuts.lua)
 }
 function LR.loadDB()

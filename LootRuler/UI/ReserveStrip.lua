@@ -32,7 +32,7 @@ local function current()
   if mine and mine.state == "open" then return mine end
   for i = #Rolls.order, 1, -1 do
     local c = Rolls.seen[Rolls.order[i]]
-    if c and c.state == "open" and not c.test then return c end
+    if c and c.state == "open" then return c end
   end
   return LR.Gargul.roll
 end
@@ -48,14 +48,18 @@ function UI.stripText(roll, s)
     return "|cffff5a4aHard reserved:|r " .. item, f ~= "" and ("For " .. f) or "For nobody in particular."
   end
   -- everyone with a reserve left on it: from the session, else from the roll itself (who may roll)
-  local list = UI.reservers(s, roll.id)
-  if #list == 0 and roll.mode == "SR" then
-    for _, w in ipairs(roll.who or {}) do list[#list + 1] = { R.nameOf(w), type(w) == "table" and w[2] or 1, LR.classOf(R.nameOf(w)) } end
+  -- (a pretend roll, from the Test tab: its made-up players, all "here")
+  local list = roll.test and {} or UI.reservers(s, roll.id)
+  if #list == 0 and (roll.mode == "SR" or roll.test) then
+    for _, w in ipairs(roll.who or {}) do
+      local name = R.nameOf(w)
+      list[#list + 1] = { name, type(w) == "table" and w[2] or 1, (roll.classes and roll.classes[name]) or LR.classOf(name) }
+    end
   end
   if #list == 0 then return nil end
   local here, away = {}, {}
   for _, w in ipairs(list) do
-    if LR.inGroup(w[1]) or not IsInGroup() then here[#here + 1] = UI.reserverText(w) else away[#away + 1] = U.short(w[1]) end
+    if roll.test or LR.inGroup(w[1]) or not IsInGroup() then here[#here + 1] = UI.reserverText(w) else away[#away + 1] = U.short(w[1]) end
   end
   local text = #here > 0 and table.concat(here, ", ") or "Nobody who reserved it is here."
   if #away > 0 then text = text .. "\n|cff9d9d9dNot here: " .. table.concat(away, ", ") .. "|r" end

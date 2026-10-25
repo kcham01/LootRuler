@@ -302,6 +302,11 @@ function W.notReserved(s)
   return out
 end
 
+--- the reminder line for these names
+function W.reminderText(s, names)
+  return ("%s Not reserved yet: %s. %s"):format(LR.TAG, table.concat(U.map(names, U.short), ", "), howTo(s))
+end
+
 --- tells the raid who hasn't reserved yet, and how to. Returns true, or false and why not.
 function W.remind(s)
   local channel = LR.groupChannel()
@@ -309,7 +314,7 @@ function W.remind(s)
   if not open(s) then return false, "Reserves aren't open: nobody can reserve now." end
   local names = W.notReserved(s)
   if #names == 0 then return false, "Everyone in the group has reserved." end
-  local text = ("%s Not reserved yet: %s. %s"):format(LR.TAG, table.concat(U.map(names, U.short), ", "), howTo(s))
+  local text = W.reminderText(s, names)
   for _, line in ipairs(U.chatLines(text, 255)) do chat(line, channel) end
   return true, #names
 end
