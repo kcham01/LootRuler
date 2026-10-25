@@ -1099,6 +1099,16 @@ run("the Test tab", function()
   check("nothing reaches chat or anyone else", #srv.chat == chatBefore and #ann.LR.Rolls.order == annRolls)
   srv:tick(25)
   check("the strip goes when the pretend roll ends", not strip:IsShown())
+  -- closing the pretend roll's window with its x takes the strip with it, though the roll is still on
+  clickText("LootRuler roll: reserved")
+  srv:tick(0.5)
+  local fr2
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy and x.copy.test and x.copy.state == "open" then fr2 = x end end
+  check("a second pretend roll shows the strip", fr2 and strip:IsShown())
+  M.click(fr2.pass)
+  srv:tick(0.3)
+  check("its x closes the window, and the strip goes with it", not fr2:IsShown() and not strip:IsShown() and fr2.copy == nil)
+  srv:tick(25)
   clickText("Gargul roll")
   srv:tick(0.5)
   check("a pretend Gargul roll shows the strip", strip:IsShown() and M.plain(strip.names:GetText()):find("Thrall", 1, true))

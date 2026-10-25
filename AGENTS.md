@@ -197,6 +197,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
+  - (fixed, owner's test) Closing a roll window with its x left the strip of reservers on screen until the roll
+    ended (seen with a pretend reserved roll on the Test tab). The strip now goes with the window, and with the
+    loot master window when it's hidden.
   - Not yet tried in the real game: everything is tested in the stand-in only. Keep the version at 1.0.0-beta
     until the owner's in-game test passes, then bump `LR.VERSION` and the TOC to 1.0.0.
   - softres.it names must match characters exactly (other realms need "-Realm"); a typo becomes a phantom player.

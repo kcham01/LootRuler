@@ -84,6 +84,7 @@ local function build()
     local roll = Rolls.mine()
     if roll and roll.state ~= "open" then Rolls.dismiss() elseif roll then master.hiddenFor = roll.k end
     master:Hide()
+    if UI.reserveStrip then UI.reserveStrip() end
   end)
   K.tooltipOn(master.close, function(tt)
     local roll = Rolls.mine()
@@ -321,6 +322,7 @@ function UI.showMaster()
   if not Rolls.mine() then LR.print("No loot is being rolled out. Open a corpse with master loot on, or /lr roll [item].") return end
   if master then master.hiddenFor = nil end
   UI.masterDraw()
+  if UI.reserveStrip then UI.reserveStrip() end
   master:Raise()
 end
 

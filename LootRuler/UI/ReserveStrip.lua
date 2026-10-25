@@ -25,14 +25,16 @@ local function build()
   strip:Hide()
 end
 
---- the roll on now: LootRuler's (the one I'm running, else the newest I'm following), else Gargul's
+--- the roll on now: LootRuler's (the one I'm running, else the newest I'm following), else Gargul's. A roll whose
+--- window I closed (or, running it, hid) doesn't count: the strip goes with the window.
 local function current()
   local Rolls = LR.Rolls
   local mine = Rolls.mine()
-  if mine and mine.state == "open" then return mine end
+  local master = _G.LootRulerMasterFrame
+  if mine and mine.state == "open" and not (master and master.hiddenFor == mine.k) then return mine end
   for i = #Rolls.order, 1, -1 do
     local c = Rolls.seen[Rolls.order[i]]
-    if c and c.state == "open" then return c end
+    if c and c.state == "open" and not c.closedByMe and not c.hidden and not (mine and c.k == mine.k) then return c end
   end
   return LR.Gargul.roll
 end
