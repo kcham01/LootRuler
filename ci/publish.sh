@@ -3,6 +3,8 @@
 mkdir -p results
 cp out/LootRuler.zip results/ 2>/dev/null || true
 mkdir -p results/shots && cp build/shots/*.png results/shots/ 2>/dev/null || true
+# each picture under its name alone too ("loot-master.png"), so the README's links don't move when a screen is added
+for f in build/shots/*.png; do [ -f "$f" ] && cp "$f" "results/shots/$(basename "$f" | sed 's/^[0-9]*-//')"; done
 cp build/*.log results/ 2>/dev/null || true
 echo "build $GITHUB_RUN_NUMBER of $GITHUB_SHA" > results/RUN.txt
 [ -f out/LootRuler.zip ] && echo "zip built" >> results/RUN.txt || echo "no zip" >> results/RUN.txt

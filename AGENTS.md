@@ -103,7 +103,8 @@ lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromi
 
 CI (`.github/workflows/build.yml`) runs all of it on every pull request and on `main`. Pull requests get the
 pictures and the zip as a download on the run; `main` publishes them to the `results` branch, which the
-README's download link points at.
+README's download link points at. Pictures are published numbered and under their name alone
+(`results/shots/loot-master.png`): the README links the names, so adding a screen doesn't move its pictures.
 
 The mock is strict on purpose: a method the client doesn't have is an error, and `check_api.lua` checks the
 mock and the addon against Blizzard's own interface code. When the addon needs a new game function, add it to
