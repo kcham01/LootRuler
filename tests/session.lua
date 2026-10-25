@@ -180,6 +180,14 @@ check("matched names must be names", not S.valid(ns))
 ns.nm = "Ghost"
 check("and a list of them", not S.valid(ns))
 
+-- finding an award (to undo it)
+local fa = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 700)
+S.award(fa, 28528, "Ann-Dreamscythe", "MS", 50, 701)
+S.award(fa, 28528, "Bob-Faerlina", "OS", 20, 702)
+S.award(fa, 28528, "Ann-Dreamscythe", "SR", 80, 703)
+check("an award is found: the latest for that player and item", S.findAward(fa, 28528, "ann-dreamscythe") == 3 and S.findAward(fa, 28528, "Bob-Faerlina") == 2)
+check("none for someone who didn't win it", S.findAward(fa, 28528, "Cara-Dreamscythe") == nil and S.findAward(fa, 28525, "Ann-Dreamscythe") == nil)
+
 -- a new leader for a session
 local hs = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 600)
 S.set(hs, "Ann-Dreamscythe", "PRIEST", { 28528 }, false, 601)

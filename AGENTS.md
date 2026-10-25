@@ -180,6 +180,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   item in the trade's "will not be traded" slot (`TRADE_ENCHANT_SLOT`) is `trade.enchant` and gets its own line, also as
   a note to an enchanter who isn't running loot. Gold in an enchant trade isn't a GDKP payment. The test server can
   put stacks (`giveItem`) and enchant in trades (`tradeToEnchant`, `enchantInTrade`).
+- **Undoing an award** (`Rolls.undo`, `S.findAward`): the loot master's roll goes back to "closed" (rolls kept), raiders get
+  `X` "closed" (old versions too) and the leader `X` "undone" to take it off `s.won`; boosted points are given back.
+  The queue's next-item timer skips an undone award.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
