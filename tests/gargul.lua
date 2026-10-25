@@ -116,6 +116,44 @@ check("but not with nonsense in it", not S.valid(s3))
 local bad, err = LR.Gargul.importInto(s2, "this isn't an export")
 check("rubbish is refused with a reason", bad == nil and type(err) == "string")
 
+print("== a changed sheet never gives anyone more reserves than they should have")
+do
+  local A, B, C, D = 28528, 28525, 28529, 28762
+  local roster = { { name = "Ann-Dreamscythe" } }
+  local function two(limit, own, first, second, won)
+    local sc = S.new("Lead-Dreamscythe", "Karazhan", limit, false, 1760000000)
+    if own then S.set(sc, "Ann-Dreamscythe", nil, own, false, 1760000000) end
+    local function page(items) local it = {} for _, id in ipairs(items) do it[#it + 1] = { id = id } end return pack({ softreserves = { { name = "Ann", items = it } } }) end
+    LR.Gargul.importInto(sc, page(first), roster)
+    if won then S.award(sc, won, "Ann-Dreamscythe", "SR", 90, 1760000001) end
+    local sum = LR.Gargul.importInto(sc, page(second), roster)
+    return list(sc, "Ann-Dreamscythe"), sum, sc
+  end
+  local function ids(...) local o = { ... } table.sort(o) return table.concat(o, ",") end
+  check("a swap: the old pick goes, the new one comes", two(2, nil, { A, B }, { A, C }) == ids(A, C))
+  check("both swapped", two(2, nil, { A, B }, { C, D }) == ids(C, D))
+  check("a pick dropped", two(2, nil, { A, B }, { A }) == ids(A))
+  local r, sum = two(2, nil, { A, B }, { A, B, C })
+  check("asking for more than the limit: the extra is skipped, and counted", r == ids(A, B) and sum.over == 1)
+  check("a reserve made only in LootRuler stays", two(2, { D }, { A }, { B }) == ids(B, D))
+  r, sum = two(1, { D }, { D }, { C })
+  check("an item reserved in both places follows the sheet when it changes", r == ids(C) and sum.over == 0)
+  check("and doesn't push out a pick they kept", two(2, { D }, { D, A }, { C, A }) == ids(A, C))
+  local sc
+  r, sum, sc = two(2, nil, { A, B }, { C, B }, A)
+  check("a pick that has already won stays (the reserve was used)", r == ids(A, B) and sum.used == 1)
+  check("so the new pick is past the limit: no extra reserve", sum.over == 1 and S.claims(sc, "Ann-Dreamscythe", C) == 0
+    and S.claims(sc, "Ann-Dreamscythe", A) == 0 and S.claims(sc, "Ann-Dreamscythe", B) == 1)
+  r, sum = two(2, nil, { A, B }, { B, C })
+  check("a new pick never pushes out one they had, whatever the sheet's order", r == ids(B, C))
+  -- gone from the sheet altogether, after winning with a pick: that one stays
+  local sg = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 1760000000)
+  LR.Gargul.importInto(sg, pack({ softreserves = { { name = "Ann", items = { { id = A }, { id = B } } } } }), roster)
+  S.award(sg, A, "Ann-Dreamscythe", "SR", 90, 1760000001)
+  local gone = LR.Gargul.importInto(sg, pack({ softreserves = { { name = "Zed", items = { { id = C } } } } }), roster)
+  check("off the sheet altogether: the picks go, except one that has won", list(sg, "Ann-Dreamscythe") == ids(A) and gone.used == 1 and gone.removed == 1)
+end
+
 print("== names on the sheet spelled differently from the characters")
 local G = LR.Gargul
 local function group(...) local o = {} for _, n in ipairs({ ... }) do o[#o + 1] = { name = n } end return o end

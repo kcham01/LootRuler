@@ -146,8 +146,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   with and spends its main's points; raid points go to each main once. Linking an alt takes its own alts along.
   Older versions don't know links (an alt shows its own points there). Gargul's "Name,Points,Alt,Alt" keeps them.
 - **softres.it imports** (`Gargul.importInto`): the session remembers what the last import brought (`s.sx`, `s.hx`),
-  so importing an updated sheet replaces those (swaps, removals) and leaves reserves made in LootRuler alone; an
-  item reserved in both places counts once. (Before this, re-importing skipped changed picks: the old ones stayed.)
+  so importing an updated sheet replaces those (swaps, removals) and leaves reserves made only in LootRuler alone; an
+  item reserved in both places counts once and from then on follows the sheet. Nobody passes their limit: picks they
+  already had go in before new ones, a pick that has already won its item stays (`used`), the rest are skipped (`over`).
 - **From Gargul:** +1s and boosted roll points as "Name,Number" lines (`Prio.parseCounts`, `Prio.countsText`), read
   straight from a loaded Gargul (`Gargul.counts`, its own export) or pasted. +1s set with `S.setPlusOnes`.
 - **Reserving for someone** (Reserves > By player > "Add a reserve for ..."): `UI.pickItem(s, title, nil, filter, many)`

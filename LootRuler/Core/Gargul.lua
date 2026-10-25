@@ -124,6 +124,16 @@ local function missing(a, b)
   for _, id in ipairs(a) do if (left[id] or 0) > 0 then left[id] = left[id] - 1 else n = n + 1 end end
   return n
 end
+-- a player's picks from the last import, split: the ones that have already won their item (used: they stay,
+-- whatever the sheet says now) and the rest
+local function usedOrNot(s, player, ids)
+  local used, rest, wins = {}, {}, {}
+  for _, id in ipairs(ids) do
+    wins[id] = wins[id] or S.srWins(s, player, id)
+    if wins[id] > 0 then wins[id] = wins[id] - 1 used[#used + 1] = id else rest[#rest + 1] = id end
+  end
+  return used, rest
+end
 -- takes one of each of ids off a list
 local function takeOff(list, ids)
   for _, id in ipairs(ids) do
@@ -196,7 +206,8 @@ function G.rename(s, from, to, class, now)
   for _, id in ipairs(mine) do have[id] = (have[id] or 0) + 1 end
   for _, id in ipairs(sheet) do
     count[id] = (count[id] or 0) + 1
-    if count[id] > (have[id] or 0) and fits(id) then mine[#mine + 1] = id moved[#moved + 1] = id end
+    if count[id] <= (have[id] or 0) then moved[#moved + 1] = id      -- (reserved by them too: counts once, follows the sheet)
+    elseif fits(id) then mine[#mine + 1] = id moved[#moved + 1] = id end
   end
   local oldClass = s.res[from] and s.res[from].c
   S.set(s, from, nil, {}, true, now)
@@ -260,21 +271,24 @@ end
 --- Items the session doesn't allow (not its raid's loot, unless any item is allowed) are skipped. Returns a summary.
 --- brings a softres.it export into a session. Importing again (the sheet changed) updates the session: the
 --- reserves the last import brought are replaced by the sheet's picks now, and anything gone from the sheet
---- comes off. Reserves made in LootRuler (the addon, or !lr) are never touched, and an item a player reserved
---- in both places counts once (twice only if the sheet itself has it twice). Hard reserves from the sheet
+--- comes off. Reserves made only in LootRuler (the addon, or !lr) are never touched. An item a player reserved
+--- in both places counts once (twice only if the sheet itself has it twice) and from then on follows the sheet:
+--- if they change that pick on softres.it, it comes off and the new pick goes in. Nobody ever ends up with more
+--- than their limit: picks past it are skipped (and counted in "over"). Hard reserves from the sheet
 --- work the same way. s.sx: "Name-Realm" -> the items the sheet gave them; s.hx: the sheet's hard reserves.
 --- Names on the sheet are matched to the characters in the group (roster: LR.roster()) and to players who
 --- reserved in LootRuler, and the reserves go under the game's spelling of the name, so nothing else has to
 --- match loosely (older versions included). A name that clearly is one character (capitals and accents aside,
 --- "Ghost" for "Ghøst") goes to them; one that could be several is left for the leader to pick (never a guess);
 --- one that's nobody's is kept as it is, with the closest spellings. s.nm remembers each match for next time.
---- Returns a summary { players, items (from the sheet now), added, removed, hard, hardRemoved, skipped, over,
+--- A pick that has already won its item stays, even if the sheet drops it (the reserve was used): "used".
+--- Returns a summary { players, items (from the sheet now), added, removed, hard, hardRemoved, skipped, over, used,
 --- matched = { { from, to } }, unsure = { { from, options } }, missing = { { from, near } } }, or nil and what's wrong.
 function G.importInto(s, text, roster)
   local data, err = G.decode(text)
   if not data then return nil, err end
   local now = U.now()
-  local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0,
+  local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0, used = 0,
     matched = {}, unsure = {}, missing = {} }
   roster = roster or (LR.roster and LR.roster()) or {}
   for _, m in ipairs(roster) do wasHere[U.foldCase(U.full(m.name))] = true end
@@ -343,29 +357,42 @@ function G.importInto(s, text, roster)
     local class = classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
     local before = s.sx[player] or {}
     local mine = U.copy(S.reservesOf(s, player))
-    takeOff(mine, before)                          -- what the last import brought
+    local used, gone = usedOrNot(s, player, before)
+    takeOff(mine, gone)                            -- what the last import brought (not a reserve that has won)
     local own = {}                                 -- what they reserved in LootRuler
     for _, id in ipairs(mine) do own[id] = (own[id] or 0) + 1 end
-    local fromSheet, count = {}, {}
+    local fromSheet, appended, count = {}, {}, {}
+    -- the sheet's picks, the ones they already had first: a new pick never pushes out one they're keeping
+    local picks, had, kept, fresh = {}, {}, {}, {}
+    for _, id in ipairs(before) do had[id] = (had[id] or 0) + 1 end
     for _, it in ipairs(type(e.items) == "table" and e.items or {}) do
       local id = tonumber(type(it) == "table" and it.id or it)
+      if id and (had[id] or 0) > 0 then had[id] = had[id] - 1 kept[#kept + 1] = id else fresh[#fresh + 1] = id or false end
+    end
+    for _, id in ipairs(kept) do picks[#picks + 1] = id end
+    for _, id in ipairs(fresh) do picks[#picks + 1] = id end
+    for _, id in ipairs(picks) do
+      id = id or nil
       if not id or not LR.allowedItem(s, id) or s.hr[id] then
         if id then sum.skipped = sum.skipped + 1 end
       else
         count[id] = (count[id] or 0) + 1
         if count[id] <= (own[id] or 0) then
-          -- (reserved in LootRuler too: it counts once)
+          -- reserved in LootRuler too: it counts once, and is the sheet's from now on (so it follows the sheet)
+          fromSheet[#fromSheet + 1] = id
         elseif #mine >= S.limit(s, player) or (not s.dupes and U.indexOf(mine, id)) then
           sum.over = sum.over + 1
         else
           mine[#mine + 1] = id
           fromSheet[#fromSheet + 1] = id
+          appended[#appended + 1] = id
         end
       end
     end
     if S.set(s, player, class, mine, true, now) then
-      sum.added = sum.added + missing(fromSheet, before)
-      sum.removed = sum.removed + missing(before, fromSheet)
+      sum.added = sum.added + missing(appended, before)
+      sum.removed = sum.removed + missing(gone, fromSheet)
+      sum.used = sum.used + missing(used, fromSheet)            -- (gone from the sheet, kept: it has won)
       s.sx[player] = #fromSheet > 0 and fromSheet or nil
       sum.items = sum.items + #fromSheet
       if #fromSheet > 0 then sum.players = sum.players + 1 end
@@ -375,8 +402,12 @@ function G.importInto(s, text, roster)
   for player, ids in pairs(s.sx) do
     if not seen[player] then
       local mine = U.copy(S.reservesOf(s, player))
-      takeOff(mine, ids)
-      if S.set(s, player, s.res[player] and s.res[player].c, mine, true, now) then sum.removed = sum.removed + #ids end
+      local used, gone = usedOrNot(s, player, ids)
+      takeOff(mine, gone)
+      if S.set(s, player, s.res[player] and s.res[player].c, mine, true, now) then
+        sum.removed = sum.removed + #gone
+        sum.used = sum.used + #used
+      end
       s.sx[player] = nil
     end
   end
