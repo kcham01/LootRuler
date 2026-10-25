@@ -939,6 +939,9 @@ function M.env(player)
   G.UnitGUID = function() return nil end
   G.UnitIsDead = function() return false end
   G.GetTradePlayerItemLink = function() return nil end
+  G.TRADE_ENCHANT_SLOT = 7                  -- (Blizzard_UIPanels_Game/Classic/TradeFrame.lua)
+  G.GetTradePlayerItemInfo = function() return nil end
+  G.GetTradeTargetItemInfo = function() return nil end
   -- the game's loot window buttons and a group loot (need/greed) window
   for i = 1, 4 do
     local b = M.CreateFrame("Button", "LootButton" .. i, G.LootFrame)

@@ -211,7 +211,7 @@ function Server:install(p)
     GetContainerItemID = function(bag, slot) local it = bagItem(bag, slot) return it and it.id or nil end,
     GetContainerItemInfo = function(bag, slot)
       local it = bagItem(bag, slot)
-      if it then return { itemID = it.id, hyperlink = it.link, isLocked = it.locked or false, stackCount = 1 } end
+      if it then return { itemID = it.id, hyperlink = it.link, isLocked = it.locked or false, stackCount = it.count or 1 } end
     end,
     UseContainerItem = function(bag, slot)
       local it = bagItem(bag, slot)
@@ -223,8 +223,32 @@ function Server:install(p)
       srv:deliver(function() p.M.fire("TRADE_PLAYER_ITEM_CHANGED", #p.tradeItems) end)
     end,
   }
-  G.GetTradePlayerItemLink = function(i) local it = p.tradeItems and p.tradeItems[i] return it and it.link end
-  G.GetTradeTargetItemLink = function(i) local q = p.trading local it = q and q.tradeItems and q.tradeItems[i] return it and it.link end
+  -- a trade's slots: 1 to 6 are traded; 7 holds an item that isn't, to be enchanted (the game's TRADE_ENCHANT_SLOT)
+  local function tradeSlot(q, i)
+    if not q then return nil end
+    if i == 7 then return q.tradeKeep end
+    return q.tradeItems and q.tradeItems[i]
+  end
+  local function slotInfo(it)
+    local d = srv.itemInfo and srv.itemInfo(it.id)
+    return d and d.name or ("item " .. it.id), 134400, it.count or 1, d and d.quality or 4
+  end
+  G.GetTradePlayerItemLink = function(i) local it = tradeSlot(p, i) return it and it.link end
+  G.GetTradeTargetItemLink = function(i) local it = tradeSlot(p.trading, i) return it and it.link end
+  -- (the game's order: name, texture, numItems, quality, enchantment, canLoseTransmog, isBound, itemID)
+  G.GetTradePlayerItemInfo = function(i)
+    local it = tradeSlot(p, i)
+    if not it then return nil end
+    local name, tex, n, q = slotInfo(it)
+    return name, tex, n, q, it.enchant, false, false, it.id
+  end
+  -- (name, texture, numItems, quality, isUsable, enchantment, itemID)
+  G.GetTradeTargetItemInfo = function(i)
+    local it = tradeSlot(p.trading, i)
+    if not it then return nil end
+    local name, tex, n, q = slotInfo(it)
+    return name, tex, n, q, true, it.enchant, it.id
+  end
   G.GetPlayerTradeMoney = function() return p.trading and p.tradeMoney or 0 end
   G.GetTargetTradeMoney = function() return p.trading and p.trading.tradeMoney or 0 end
   G.UnitIsConnected = function(unit) local q = unitPlayer(unit) return q and q.online or false end
@@ -417,10 +441,34 @@ end
 --- p targets a dead boss (for the loot window)
 function Server:target(p, name, guid) p.target = name and { name = name, guid = guid or ("Creature-0-" .. name), dead = true } or nil end
 
+--- puts a stack of an item in p's bags (count: how many in it); returns it
+function Server:giveItem(p, id, count)
+  p.bags = p.bags or {}
+  local slot = 1
+  while p.bags[slot] do slot = slot + 1 end
+  p.bags[slot] = { id = id, link = self:link(id), count = count }
+  return p.bags[slot], slot
+end
+--- p puts one of their items in the trade's "will not be traded" slot, to have it enchanted
+function Server:tradeToEnchant(p, it)
+  p.tradeKeep = it
+  if p.client then self:deliver(function() p.M.fire("TRADE_PLAYER_ITEM_CHANGED", 7) end) end
+  local q = p.trading
+  if q and q.client then self:deliver(function() q.M.fire("TRADE_TARGET_ITEM_CHANGED", 7) end) end
+end
+--- p casts an enchant on the item in the other side's "will not be traded" slot
+function Server:enchantInTrade(p, name)
+  local q = p.trading
+  q.tradeKeep.enchant = name
+  if p.client then self:deliver(function() p.M.fire("TRADE_TARGET_ITEM_CHANGED", 7) end) end
+  if q.client then self:deliver(function() q.M.fire("TRADE_PLAYER_ITEM_CHANGED", 7) end) end
+end
+
 --- a opens a trade with b
 function Server:openTrade(a, b)
   a.trading, b.trading = b, a
   a.tradeItems, b.tradeItems = {}, {}
+  a.tradeKeep, b.tradeKeep = nil, nil
   a.tradeMoney, b.tradeMoney = 0, 0
   for _, p in ipairs({ a, b }) do if p.client then p.G.TradeFrame:Show() p.M.fire("TRADE_SHOW") end end
 end
@@ -449,7 +497,7 @@ function Server:completeTrade(a)
       p.M.fire("UI_INFO_MESSAGE", 0, "Trade complete.")
       p.G.TradeFrame:Hide()
     end
-    p.trading, p.tradeItems, p.tradeMoney = nil, {}, 0
+    p.trading, p.tradeItems, p.tradeMoney, p.tradeKeep = nil, {}, 0, nil
   end
 end
 
