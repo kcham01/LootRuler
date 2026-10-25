@@ -940,6 +940,11 @@ function M.env(player)
   G.UnitIsDead = function() return false end
   G.GetTradePlayerItemLink = function() return nil end
   G.TRADE_ENCHANT_SLOT = 7                  -- (Blizzard_UIPanels_Game/Classic/TradeFrame.lua)
+  -- the big message in the middle of the screen (Blizzard_FrameXMLUtil/Classic/RaidWarning.lua): recorded
+  M.notices = {}
+  G.RaidWarningFrame = M.CreateFrame("Frame", "RaidWarningFrame", M.UIParent)
+  G.RaidNotice_AddMessage = function(frame, text, info) table.insert(M.notices, text) end
+  G.ChatTypeInfo = { RAID_WARNING = { r = 1, g = 0.28, b = 0 } }
   G.GetTradePlayerItemInfo = function() return nil end
   G.GetTradeTargetItemInfo = function() return nil end
   -- the game's loot window buttons and a group loot (need/greed) window

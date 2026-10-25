@@ -67,6 +67,7 @@ local function clickText(p, text, root)
   end
   error("nothing to click: " .. text, 2)
 end
+local function chatHasLead(text) for _, l in ipairs(lead.M.chat) do if l:find(text, 1, true) then return true end end return false end
 local function wonBy(s, id)
   local out = {}
   for _, w in ipairs(s.won or {}) do if w.i == id then out[#out + 1] = w.p .. ":" .. w.k end end
@@ -637,6 +638,46 @@ check("she undoes it: the leader takes it off", wonShawl() == shawlBefore)
 ann.LR.Rolls.dismiss()
 srv:closeLoot(lead)
 srv:tick(1)
+
+section("the 2 hours to trade running out")
+local HELD, OWED = 28762, 28767
+srv:lootTo(lead, HELD)
+srv:lootTo(lead, OWED)
+srv:tick(1)
+local function heldDrop(id) for i = #s.drops, 1, -1 do local d = s.drops[i] if d.i == id and d.h == full(lead) then return d end end end
+Rolls.start(OWED, { link = srv:link(OWED), drop = heldDrop(OWED).k })
+srv:tick(0.5)
+srv:roll(bob, 1, 100, 60)
+srv:tick(1)
+Rolls.stop()
+srv:tick(1)
+Rolls.award(full(bob))
+srv:tick(1)
+Rolls.dismiss()
+local function notices() return table.concat(lead.M.notices, " | ") end
+local n0 = #lead.M.notices
+srv:tick(31)
+check("nothing to warn about with plenty of time left", #lead.M.notices == n0)
+-- 14 minutes left on both
+for _, id in ipairs({ HELD, OWED }) do heldDrop(id).ht = lead.LR.U.now() - (lead.LR.Drops.TRADE_SECONDS - 14 * 60) end
+srv:tick(31)
+local said = table.concat({ unpack(lead.M.notices, n0 + 1) }, " | ")
+check("15 minutes before: which item, who it's for, and how long is left", said:find("14 minutes left to trade [The Decapitator] to Bob-Faerlina.", 1, true) ~= nil, said)
+check("and an item not rolled out yet says so", said:find("14 minutes left to roll out and trade [Adornment of Stolen Souls]: nobody has won it yet.", 1, true) ~= nil, said)
+check("in the middle of the screen and in chat", #lead.M.notices == n0 + 2 and chatHasLead("left to trade"))
+srv:tick(31)
+check("once, not every check", #lead.M.notices == n0 + 2)
+for _, id in ipairs({ HELD, OWED }) do heldDrop(id).ht = lead.LR.U.now() - (lead.LR.Drops.TRADE_SECONDS - 4 * 60) end
+srv:tick(31)
+check("and again at 5 minutes", #lead.M.notices == n0 + 4 and lead.M.notices[#lead.M.notices]:find("4 minutes left", 1, true) ~= nil, notices())
+check("only on the loot master's screen", #ann.M.notices == 0 and #bob.M.notices == 0)
+lead.LR.db.settings.tradeWarn = false
+srv:lootTo(lead, 28745)
+srv:tick(1)
+heldDrop(28745).ht = lead.LR.U.now() - (lead.LR.Drops.TRADE_SECONDS - 10 * 60)
+srv:tick(31)
+check("it can be turned off", #lead.M.notices == n0 + 4)
+lead.LR.db.settings.tradeWarn = true
 
 section("ending the session")
 lead.LR.endSession(s)

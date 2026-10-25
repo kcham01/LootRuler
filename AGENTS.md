@@ -183,6 +183,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Undoing an award** (`Rolls.undo`, `S.findAward`): the loot master's roll goes back to "closed" (rolls kept), raiders get
   `X` "closed" (old versions too) and the leader `X` "undone" to take it off `s.won`; boosted points are given back.
   The queue's next-item timer skips an undone award.
+- **Trade time warnings** (`Drops.tradeWarnings`, `Drops.WARN_AT`, setting `tradeWarn`, on to start with): checked every 30
+  seconds; items the loot master holds ("held" or "toTrade") warn once at 15 and once at 5 minutes left, in chat and as
+  the game's middle-of-the-screen message (`RaidNotice_AddMessage`, only on their screen).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
