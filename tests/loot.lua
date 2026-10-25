@@ -793,6 +793,53 @@ check("and it goes when someone loots the item", not strip(dan):IsShown())
 gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
 srv:tick(25)
 check("or when its time is up", not strip(dan):IsShown() and dan.LR.Gargul.roll == nil)
+-- a raider without Gargul gets a roll window for Gargul's roll, like one of LootRuler's
+local function annSays(text) ann.M.fire("CHAT_MSG_RAID_WARNING", text, "Lead-Dreamscythe") end
+local OPENITEM = 28745                     -- (nobody reserved it: everyone rolls)
+annSays("You have 20 seconds to roll on " .. srv:link(OPENITEM))
+srv:tick(0.5)
+local gw = frameFor(ann, OPENITEM)
+check("Gargul rolls an item: Ann (no Gargul) gets a roll window for it", gw ~= nil and gw.copy.gargul and gw.dice:IsEnabled() and gw.coin:IsShown())
+srv:willRoll(ann, 55)
+ann.M.click(gw.dice)
+srv:tick(1)
+check("its dice just /roll (1-100), for Gargul to count", status(ann, OPENITEM):find("You rolled 55", 1, true) ~= nil
+  and gw.copy.rolled[ann.LR.Roll.key(full(ann))].n == 55, status(ann, OPENITEM))
+srv:roll(bob, 1, 100, 77)
+srv:tick(1)
+check("everyone's /rolls show in it", status(ann, OPENITEM):find("77", 1, true) ~= nil, status(ann, OPENITEM))
+annSays("Stop your rolls!")
+srv:tick(0.5)
+check("Gargul stops the rolls: the window says Gargul gives it out", status(ann, OPENITEM):find("Gargul gives it out", 1, true) ~= nil, status(ann, OPENITEM))
+annSays(srv:link(OPENITEM) .. " was awarded to Bob-Faerlina. Congrats!")
+srv:tick(0.5)
+check("and who it went to", status(ann, OPENITEM):find("Given to Bob-Faerlina", 1, true) ~= nil, status(ann, OPENITEM))
+-- a reserved item: only the reservers roll, as with LootRuler's rolls
+annSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+srv:tick(0.5)
+local gs = frameFor(ann, SIGNET)
+check("on a reserved item, its window says who reserved it, and Ann can roll (she did)", gs and gs.copy.mode == "SR" and gs.dice:IsEnabled())
+check("with the strip of reservers", strip(ann):IsShown())
+ann.M.click(gs.pass)
+srv:tick(0.3)
+check("closing the window takes the strip too", not strip(ann):IsShown())
+annSays("Stop your rolls!")
+srv:tick(0.5)
+-- a raider with Gargul: Gargul shows its own window, so LootRuler only shows the strip
+ann.G.Gargul = {}
+annSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
+srv:tick(0.5)
+check("someone with Gargul gets no second window, just the strip", (frameFor(ann, SIGNET) == nil or not frameFor(ann, SIGNET).copy.gargul or frameFor(ann, SIGNET).copy.state ~= "open") and strip(ann):IsShown())
+annSays("Stop your rolls!")
+srv:tick(0.5)
+ann.G.Gargul = nil
+ann.LR.db.settings.gargulWindows = false
+annSays("You have 20 seconds to roll on " .. srv:link(OPENITEM))
+srv:tick(0.5)
+check("switched off: no window", frameFor(ann, OPENITEM) == nil or frameFor(ann, OPENITEM).copy.state ~= "open")
+annSays("Stop your rolls!")
+ann.LR.db.settings.gargulWindows = true
+srv:tick(0.5)
 dan.LR.db.settings.reserveStrip = false
 gargulSays("You have 20 seconds to roll on " .. srv:link(SIGNET))
 check("the strip can be turned off", not strip(dan):IsShown())

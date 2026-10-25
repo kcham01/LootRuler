@@ -66,6 +66,10 @@ function UI.rollStatus(copy)
     if copy.winner and U.samePlayer(copy.winner, me()) then return "|cff1eff00It's yours!|r" end
     return copy.winner and ("Given to " .. U.short(copy.winner) .. ".") or "Given out."
   end
+  if copy.state == "closed" and copy.gargul then
+    if top then return ("Rolls closed. Highest: %s %d (%s). Gargul gives it out."):format(who(top), top.n, R.label(copy, top)) end
+    return "Rolls closed. Gargul gives it out."
+  end
   if copy.state == "closed" then
     if tied then return ("Tied at %d: %s. The loot master decides."):format(top.n, R.names(tied)) end
     if top then
@@ -535,12 +539,21 @@ function UI.testRoll(opts)
 end
 
 --- a pretend Gargul roll: the strip shows, as it would for Gargul's line in raid chat (nothing is said in chat)
-function UI.testGargul(reservers, secs)
+function UI.testGargul(reservers, secs, mine)
   local id = UI.pretendItem()
   local roll = LR.Gargul.startRoll(id, LR.itemLink(id), secs or 20, GetTime())
-  roll.who, roll.classes, roll.test = UI.pretendPlayers(reservers or 3)
+  roll.who, roll.classes = UI.pretendPlayers(reservers or 3)
   roll.test = true
+  -- its roll window, as a raider without Gargul sees it (the made-up players reserved it, and roll)
+  local copy = LR.Rolls.followGargul(id, LR.itemLink(id), secs or 20, U.me(), true)
+  copy.who, copy.classes = U.copy(roll.who), roll.classes
+  if mine then table.insert(copy.who, 1, { U.me(), 1 }) table.insert(roll.who, 1, { U.me(), 1 }) end
+  copy.mode = #copy.who > 0 and "SR" or "OPEN"
+  roll.copy = copy
+  UI.rollWindows()
   LR.changed("gargul")
-  C_Timer.After(secs or 20, function() if LR.Gargul.roll == roll then LR.Gargul.endRoll() end end)
+  C_Timer.After(secs or 20, function()
+    if LR.Gargul.roll == roll then LR.Gargul.endRoll() LR.Rolls.gargulEnded(id) UI.rollWindows() end
+  end)
   return roll
 end

@@ -69,6 +69,7 @@ LR.DEFAULTS = {
   highlight = true,        -- the game's loot windows glow on items I reserved (UI/Highlight.lua)
   tooltipInfo = true,      -- item tooltips say who reserved the item
   lootTags = true,         -- the game's loot window marks reserved items with who reserved them (UI/Highlight.lua)
+  gargulWindows = true,    -- Gargul's rolls get a roll window like LootRuler's, unless Gargul is loaded (Core/Rolls.lua)
   reserveStrip = true,     -- while an item is rolled for, a strip lists everyone who reserved it (UI/ReserveStrip.lua)
   remindOnJoin = false,    -- when I run reserves, people who join and haven't reserved are told how (Core/Whisper.lua)
   testTab = false,         -- the Test tab: pretend rolls and messages, only on my screen (UI/Test.lua)

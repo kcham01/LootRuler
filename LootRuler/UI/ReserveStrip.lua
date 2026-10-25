@@ -36,7 +36,10 @@ local function current()
     local c = Rolls.seen[Rolls.order[i]]
     if c and c.state == "open" and not c.closedByMe and not c.hidden and not (mine and c.k == mine.k) then return c end
   end
-  return LR.Gargul.roll
+  -- Gargul's roll, unless I closed its window
+  local g = LR.Gargul.roll
+  if g and g.copy and (g.copy.closedByMe or (g.copy.state ~= "open")) then return nil end
+  return g
 end
 
 --- what the strip says for a roll: a heading and the names, or nil when there's nothing to say
@@ -107,17 +110,23 @@ end)
 local events = CreateFrame("Frame")
 for _, e in ipairs({ "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_RAID_WARNING", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER",
   "CHAT_MSG_LOOT" }) do events:RegisterEvent(e) end
-events:SetScript("OnEvent", function(_, event, text)
+local function ended(id, winner)
+  LR.Gargul.endRoll(id)
+  LR.Rolls.gargulEnded(id, winner)
+end
+events:SetScript("OnEvent", function(_, event, text, sender)
+  if not LR.db then return end
   local G = LR.Gargul
   if event == "CHAT_MSG_LOOT" then
     local id = tonumber(tostring(text or ""):match("item:(%d+)"))
-    if id then G.endRoll(id) end
+    if id then ended(id) end
     return
   end
-  local ended, endedId = G.rollEndFromChat(text)
-  if ended then G.endRoll(endedId) return end
+  local stop, endedId, winner = G.rollEndFromChat(text)
+  if stop then ended(endedId, winner) return end
   local id, link, secs = G.rollFromChat(text)
   if not id then return end
   local roll = G.startRoll(id, link, secs, GetTime())
-  C_Timer.After(roll.ends - GetTime() + 2, function() if G.roll == roll then G.endRoll() end end)
+  roll.copy = LR.Rolls.followGargul(id, link, secs, sender and U.full(sender) or nil)
+  C_Timer.After(roll.ends - GetTime() + 2, function() if G.roll == roll then ended() end end)
 end)
