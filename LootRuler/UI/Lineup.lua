@@ -34,6 +34,7 @@ end
 --- invites everyone on the list who isn't in the group. A party that would go over five becomes a raid first, and
 --- the rest are invited once it has. Returns how many were invited now, and how many will be.
 function LR.inviteMissing(plan)
+  if LR.Practice.on then return 0, 0 end              -- (nobody is invited to a practice raid)
   local missing = {}
   for _, e in ipairs(L.compare(plan, LR.roster()).missing) do
     if not U.samePlayer(U.full(e.name), U.me()) then missing[#missing + 1] = e.name end
@@ -131,8 +132,9 @@ function UI.lineupSheet()
       end
       local grouped = false
       for _, e in ipairs(plan) do if e.group then grouped = true end end
-      local can = LR.canSetUp()
-      if not can then f:note("Only the raid leader or an assistant can invite and move people.", K.RED) end
+      local can = LR.canSetUp() and not LR.Practice.on
+      if LR.Practice.on then f:note("A practice raid is on: no invites or moves until it ends.", K.GOLD)
+      elseif not can then f:note("Only the raid leader or an assistant can invite and move people.", K.RED) end
       f:buttons({
         { label = ("Invite %d"):format(#c.missing), disabled = not can or #c.missing == 0, click = function()
           local now, later = LR.inviteMissing(plan)

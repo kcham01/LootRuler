@@ -23,6 +23,9 @@ lua5.1 tests/loot.lua | tee build/loot.log
 echo "== a five-player party with master loot, run by someone who isn't its leader"
 lua5.1 tests/party.lua | tee build/party.log
 
+echo "== a practice raid: pretend players on the real rules, nothing leaving the player's screen"
+lua5.1 tests/practice.lua | tee build/practice.log
+
 echo "== a guild raid: the guild book, raid points and boosted rolls"
 lua5.1 tests/guild.lua | tee build/guild.log
 

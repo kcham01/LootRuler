@@ -2,7 +2,7 @@
 -- runs at all, file by file (build/coverage.txt). A function counts as reached when any line inside it runs.
 --   lua5.1 tools/coverage.lua            (all the tests)
 --   lua5.1 tools/coverage.lua loot ui    (some)
-local TESTS = { "session", "rolls", "raid", "loot", "party", "guild", "gdkp", "gargul", "ui" }
+local TESTS = { "session", "rolls", "raid", "loot", "party", "practice", "guild", "gdkp", "gargul", "ui" }
 if #arg > 0 then TESTS = arg end
 os.execute("mkdir -p build && rm -f build/coverage.lines")
 

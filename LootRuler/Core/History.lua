@@ -20,8 +20,8 @@ local function list()
   return LR.db.history
 end
 
---- whether there's anything worth keeping: loot given out (a GDKP's sales are too)
-local function worth(s) return s and #(s.won or {}) > 0 end
+--- whether there's anything worth keeping: loot given out (a GDKP's sales are too), and not in a practice raid
+local function worth(s) return s and not s.practice and #(s.won or {}) > 0 end
 
 --- keeps a session that's ending; returns the entry (nil when there was nothing to keep)
 function H.archive(s, now)

@@ -660,9 +660,7 @@ LR.onChange(function(what)
 end)
 
 -- made-up players for pretend rolls (the Test tab), with their classes
-UI.PRETEND = { { "Arthas", "PALADIN" }, { "Jaina", "MAGE" }, { "Thrall", "SHAMAN" }, { "Sylvanas", "HUNTER" }, { "Øyvind", "WARRIOR" },
-  { "Valeera", "ROGUE" }, { "Malfurion", "DRUID" }, { "Anduin", "PRIEST" }, { "Kael", "WARLOCK" }, { "Tyrande", "PRIEST" },
-  { "Muradin", "WARRIOR" }, { "Alleria", "HUNTER" } }
+UI.PRETEND = LR.Practice.PEOPLE
 --- the first n made-up players: who (names, with reserves), and their classes
 function UI.pretendPlayers(n)
   local who, classes = {}, {}

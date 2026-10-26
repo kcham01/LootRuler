@@ -158,7 +158,7 @@ function LR.loadDB()
   -- forget sessions nobody has touched for a week (what they gave out goes to past raids)
   local cutoff = U.now() - KEEP_DAYS * 86400
   for id, s in pairs(db.sessions) do
-    if not S.valid(s) then db.sessions[id] = nil db.mine[id] = nil
+    if not S.valid(s) or s.practice then db.sessions[id] = nil db.mine[id] = nil   -- (a practice raid isn't kept)
     elseif (s.updated or 0) < cutoff then
       LR.History.archive(s, s.updated or U.now())
       db.sessions[id] = nil db.mine[id] = nil
@@ -208,6 +208,7 @@ function LR.pending(s) local m = s and db.mine[s.id] return m ~= nil and m.dirty
 
 ---------------------------------------------------------------------- the group
 function LR.groupChannel()
+  if LR.Practice.on then return "RAID" end              -- (a practice raid: shown, never said; Core/Practice.lua)
   if IsInRaid() then return "RAID" end
   if IsInGroup() then return "PARTY" end
 end
@@ -233,6 +234,10 @@ function LR.roster()
       end
     end
   end
+  if LR.Practice.on then
+    out[1].leader = true
+    for _, m in ipairs(LR.Practice.roster()) do out[#out + 1] = m end
+  end
   return out
 end
 --- the unit ("raid3", "party1", "player") of someone in the group, for the game's functions that take one; nil if not
@@ -248,7 +253,7 @@ function LR.unitOf(name)
   end
 end
 function LR.inGroup(name)
-  if not name or not IsInGroup() then return false end
+  if not name or not (IsInGroup() or LR.Practice.on) then return false end
   for _, m in ipairs(LR.roster()) do if U.samePlayer(m.name, name) then return m end end
   return false
 end
@@ -274,7 +279,7 @@ end
 Net.encode, Net.decode = encode, decode
 
 local function send(msg, channel, target)
-  if not channel then return end
+  if not channel or LR.Practice.on then return end      -- (nothing is sent during a practice raid)
   Net:SendCommMessage(LR.PREFIX, encode(msg), channel, target, "NORMAL")
 end
 Net.send = send
@@ -283,6 +288,7 @@ Net.send = send
 --- out when there are many (answering a whole raid's "!lr"s at once would otherwise get you muted for spam).
 function LR.say(text, channel, target)
   if not channel then return end
+  if LR.Practice.on then LR.Practice.show(text, channel, target) return end
   if ChatThrottleLib and ChatThrottleLib.SendChatMessage then
     ChatThrottleLib:SendChatMessage("NORMAL", LR.PREFIX, text, channel, nil, target)
   else
@@ -566,6 +572,7 @@ function LR.matchName(s, from, to)
 end
 
 function LR.endSession(s)
+  if s.practice then LR.Practice.stop() return end      -- (ending a practice raid's session ends the practice)
   if not LR.isLeader(s) then return end
   LR.History.archive(s, U.now())                -- what it gave out is kept under Past raids (Core/History.lua)
   for _, ch in ipairs(publishTo(s)) do send({ t = "E", id = s.id }, ch) end
@@ -877,6 +884,7 @@ events:SetScript("OnEvent", function(_, event)
   elseif event == "GROUP_ROSTER_UPDATE" then
     if not db then return end
     local grouped = IsInGroup()
+    if grouped and LR.Practice.on then LR.Practice.stop("you joined a group, so the practice raid is over: it's forgotten.") end
     if grouped and not wasGrouped then
       C_Timer.After(2, function()
         LR.query()

@@ -22,7 +22,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. `Gdkp.lua` is GDKP's money (no game calls), `Pot.lua` does it in the game. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
@@ -99,7 +99,7 @@ Players don't update their addons, so every version has to work with every other
 ## How to check your work
 
 ```sh
-lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/party.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
+lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/party.lua && lua5.1 tests/practice.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
 lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
@@ -314,6 +314,17 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Test coverage** (`tools/coverage.lua`): every function but one is reached. The pass found and fixed two bugs: renaming a
   misspelt softres.it name with extra reserves lost all its reserves (`Gargul.rename` now moves the extra first), and saved
   data of the wrong type (`sessions`, `mine`, `ui`, saved picks) is now checked on load. The test server has `cancelTrade`.
+- **The practice raid** (`Core/Practice.lua`, the Test tab): `LR.Practice.on` makes `LR.groupChannel()` "RAID", adds the pretend
+  players (`Practice.PEOPLE`) to `LR.roster()`, shows every `LR.say` line instead of saying it (`Practice.show`) and drops every
+  `Net.send`; `LR.book()` is a copy. The session has `practice = true`: never archived, dropped by `loadDB`, never handed to
+  Gargul or mailed, `W.session(sender)` keeps real whispers out of it, ending it ends the practice. Only out of a group; joining
+  one ends it. Pretend players act through the real entry points (`Whisper.handle`, `Rolls.onRoll` with `RANDOM_ROLL_RESULT`,
+  `Rolls.onChat`, `Net.handlers.N`), answering each roll once (`Practice.react` on "roll" changes); reservers never pass;
+  `Practice.tie` makes the next roll a tie. **Every new feature adds itself to the practice raid** (so it can be tried in the game).
+- **Planned with the owner (in this order, one pull request each):** GDKP pot rules of your own (named, percent or flat, for
+  chosen players); GDKP bookkeeping (gold added by hand, a ledger of gold trades, the payout sheet in and out); bidding ahead on
+  queued items; several auctions at once (bids typed with the item's number work without the addon); bag checks; a gear
+  overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
