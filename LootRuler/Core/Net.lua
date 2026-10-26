@@ -102,6 +102,7 @@ function LR.loadDB()
   end
   db.settings.rollKinds = LR.Roll.checkKinds(db.settings.rollKinds) or {}
   db.notes = LR.Notes.check(db.notes)        -- my item notes (Core/Notes.lua)
+  db.wish = LR.Prio.checkWish(db.wish)       -- thatsmybis wishlists I brought in (Core/Prio.lua)
   -- guild books: checked like a message from another player
   db.guilds = type(db.guilds) == "table" and db.guilds or {}
   for g, book in pairs(db.guilds) do
@@ -706,6 +707,33 @@ function LR.setNote(id, text)
   if type(id) ~= "number" then return end
   db.notes[id] = LR.Notes.clean(text)
   LR.changed("notes")
+end
+
+--- who has an item on their thatsmybis wishlist, in order: { { p, n } }. here: only players in the group. Anyone who
+--- has already been given it this session is left out.
+function LR.wishFor(id, here)
+  local list = db and db.wish and db.wish[id]
+  if not list then return {} end
+  local s = LR.current()
+  local got, inGroup = {}, {}
+  if s then for _, w in ipairs(LR.Session.winners(s, id)) do got[U.foldCase(U.bare(w[1]))] = true end end
+  if here then for _, m in ipairs(IsInGroup() and LR.roster() or {}) do inGroup[U.foldCase(U.bare(m.name))] = m.name end end
+  local out = {}
+  for _, e in ipairs(list) do
+    local key = U.foldCase(U.bare(e.p))
+    -- (in the group: named the way the game names them)
+    if not got[key] and (not here or inGroup[key]) then out[#out + 1] = here and { p = inGroup[key], n = e.n } or e end
+  end
+  return out
+end
+--- a wishlist as a short line: "Ann (1), Bob (2), +3"
+function LR.wishLine(list, limit)
+  local parts = {}
+  for i, e in ipairs(list) do
+    if i > (limit or 5) then parts[#parts + 1] = "+" .. (#list - i + 1) break end
+    parts[#parts + 1] = ("%s (%d)"):format(U.short(U.full(e.p)), e.n)
+  end
+  return table.concat(parts, ", ")
 end
 
 --- everyone in the group and their LootRuler, the ones to do something about first:

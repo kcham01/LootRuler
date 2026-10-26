@@ -9,6 +9,8 @@
 --   thatsmybis          the Gargul download: JSON {"wishlists":{"id":["name|order|type|group",...]}}, or the
 --                       same zlib-compressed and base64-encoded. Its priorities (type 1) are used; when it
 --                       has none, its wishlists.
+-- Wishlists (Prio.wishlists): the thatsmybis download's wishlists (type 2), kept by whoever runs loot and shown with
+-- the item (rolls, raid chat, tooltips; Core/Rolls.lua, UI/Highlight.lua).
 -- Writes (Prio.export): Gargul's CSV (Gargul and LootRuler read it back), or a spreadsheet.
 local _, LR = ...
 local U = LR.U
@@ -114,8 +116,8 @@ local function tmb(text, inflate)
       end
     end
   end
-  if next(prio) then return prio end
-  return wish
+  if next(prio) then return prio, wish end
+  return wish, wish
 end
 
 --- reads priority lists in any format this knows: returns { [item id] = { { p, n, note }, ... } } and the
@@ -133,6 +135,36 @@ function P.parse(text, inflate)
   if items == 0 then return nil, ("That %s has no priorities in it."):format(kind == "thatsmybis" and "thatsmybis download" or kind) end
   if items > P.MAX_ITEMS then return nil, ("That's more than %d items."):format(P.MAX_ITEMS) end
   return lists, kind
+end
+
+--- the wishlists in a thatsmybis download: { [item id] = { { p, n }, ... } } (each list in order), or nil and why not
+function P.wishlists(text, inflate)
+  text = U.trim(tostring(text or ""))
+  if text == "" then return nil, "Paste thatsmybis's download into the box first." end
+  local _, wish = tmb(text, inflate)
+  if not wish then return nil, "That isn't thatsmybis's Gargul download." end
+  local items = count(wish)
+  if items == 0 then return nil, "That download has no wishlists in it." end
+  if items > P.MAX_ITEMS then return nil, ("That's more than %d items."):format(P.MAX_ITEMS) end
+  for _, list in pairs(wish) do table.sort(list, function(a, b) if a.n ~= b.n then return a.n < b.n end return a.p < b.p end) end
+  return wish
+end
+
+--- wishlists saved or received, checked: { [item id] = { { p, n }, ... } }
+function P.checkWish(lists)
+  local out, items = {}, 0
+  if type(lists) ~= "table" then return out end
+  for id, list in pairs(lists) do
+    if type(id) == "number" and id > 0 and id % 1 == 0 and type(list) == "table" and items < P.MAX_ITEMS then
+      local clean = {}
+      for _, e in ipairs(list) do
+        if type(e) == "table" then add({ [id] = clean }, id, e.p, e.n) end
+        if #clean >= P.MAX_PER_ITEM then break end
+      end
+      if #clean > 0 then out[id] = clean items = items + 1 end
+    end
+  end
+  return out
 end
 
 --- puts imported lists in a book: each item's list is replaced. replaceAll: items that aren't in the import

@@ -130,10 +130,12 @@ local function howToRoll(roll, link, secs)
   return ("Roll for %s: /roll for main spec, /roll 99 for off spec%s. %s.%s%s"):format(link, extra, t, po, away)
 end
 
--- what to roll, and my note on the item when I have one
+-- what to roll, then my note on the item and who in the group has it on their thatsmybis wishlist
 howTo = function(roll, link, secs)
   local text = howToRoll(roll, link, secs)
-  return roll.note and (text .. (" Note: %s."):format(roll.note:gsub("%.$", ""))) or text
+  if roll.note then text = text .. (" Note: %s."):format((roll.note:gsub("%.$", ""))) end
+  if roll.wish and #roll.wish > 0 and roll.mode ~= "BID" and roll.mode ~= "HR" then text = text .. (" Wishlisted: %s."):format(LR.wishLine(roll.wish)) end
+  return text
 end
 
 local function resultText(roll, link)
@@ -159,7 +161,7 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, nt = roll.note, pn = roll.mode == "PR" and roll.n or nil,
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, nt = roll.note, wl = roll.wish, pn = roll.mode == "PR" and roll.n or nil,
     mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil }
 end
 
@@ -247,6 +249,8 @@ function Rolls.start(id, opts)
   roll.boosted = plan.boosted            -- (a tie roll) who rolled boosted before: name -> points
   roll.by = U.me()
   roll.note = LR.noteFor(id)
+  local wish = LR.wishFor(id, true)
+  roll.wish = #wish > 0 and { unpack(wish, 1, math.min(#wish, 8)) } or nil
   roll.link = opts.link or LR.itemLink(id)
   roll.slot = opts.slot
   -- which of the raid's drops this is: the one asked for, the one in that loot slot, else the first not given out
@@ -621,6 +625,17 @@ function Rolls.follow(msg, sender)
       strict = bid and msg.sb == true or nil })
     copy.by = sender
     copy.note = LR.Notes.clean(msg.nt)
+    -- who has it on their wishlist: { { p, n } }, checked
+    if type(msg.wl) == "table" then
+      local wish = {}
+      for i, e in ipairs(msg.wl) do
+        if i > 10 then break end
+        if type(e) == "table" and type(e.p) == "string" and #e.p <= 40 and not e.p:find("|", 1, true) and type(e.n) == "number" then
+          wish[#wish + 1] = { p = e.p, n = math.max(1, math.floor(e.n)) }
+        end
+      end
+      copy.wish = #wish > 0 and wish or nil
+    end
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"
     Rolls.seen[msg.k] = copy
