@@ -250,6 +250,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   on `START_LOOT_ROLL` the first rule matching the item (`AutoLoot.matches`: an item, a quality or a kind) is rolled with
   `RollOnLoot` if `GetLootRollItemInfo` allows it, else the player is told. `CONFIRM_LOOT_ROLL` / `CONFIRM_DISENCHANT_ROLL` are
   answered (`ConfirmLootRoll`) only for a roll a rule made, with that switched on. The mock has `M.groupRoll`.
+- **More loot rules** (`Core/AutoLoot.lua`): kinds `q0`, `q1`, `lt3`, `lt4` (below rare / epic); `to = "rr"` (each in turn: the
+  group by name, after `A.lastInTurn`) and `to = "skip"` (matched, nothing done, no later rule). Setting `lootGold` (off)
+  takes money slots with `LootSlot` when the master looter opens a corpse. Need / Greed rules get the new kinds too.
+  The test server has money in corpses (`{ "money", copper }`).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

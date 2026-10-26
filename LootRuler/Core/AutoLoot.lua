@@ -3,8 +3,10 @@
 -- matches an item decides. An item anyone has soft or hard reserved is never handed out by a rule: it's
 -- rolled for as usual. Off until the loot master turns it on (Settings tab).
 --
--- A rule: { what = "q2" / "q3" / "q4" (a quality: uncommon, rare, epic) / "recipe" / "gem" / "trade" /
---           "item:<id>", to = "de" (the disenchanter) / "me" / "Name-Realm" }
+-- A rule: { what = "q0".."q4" (a quality: poor to epic) / "lt3" / "lt4" (anything below rare, below epic) / "recipe" /
+--           "gem" / "trade" / "item:<id>", to = "de" (the disenchanter) / "me" / "Name-Realm" / "rr" (everyone in
+--           the group in turn) / "skip" (left where it is: nothing else is done with it) }
+-- Picking up the gold (setting lootGold) is its own switch.
 local _, LR = ...
 local U, S = LR.U, LR.Session
 local Rolls = LR.Rolls
@@ -13,12 +15,16 @@ local A = {}
 LR.AutoLoot = A
 
 A.WHAT = {
+  { "q0", "Poor (grey) items" },
+  { "q1", "Common (white) items" },
   { "q2", "Uncommon (green) items" },
   { "q3", "Rare (blue) items" },
   { "q4", "Epic (purple) items" },
   { "recipe", "Recipes and patterns" },
   { "gem", "Gems" },
   { "trade", "Trade goods" },
+  { "lt3", "Anything below rare" },
+  { "lt4", "Anything below epic" },
 }
 local WHAT_NAME = {}
 for _, w in ipairs(A.WHAT) do WHAT_NAME[w[1]] = w[2] end
@@ -43,6 +49,8 @@ end
 function A.toText(to, s)
   if to == "de" then return "the disenchanter" .. ((s and s.de) and (" (" .. U.short(s.de) .. ")") or "") end
   if to == "me" then return "me" end
+  if to == "rr" then return "everyone in turn" end
+  if to == "skip" then return "nobody: it's left where it is" end
   return U.short(to)
 end
 
@@ -53,12 +61,28 @@ function A.matches(rule, id, q)
   if item then return item == id end
   local quality = tonumber(tostring(what):match("^q(%d)$"))
   if quality then return q == quality end
+  local below = tonumber(tostring(what):match("^lt(%d)$"))
+  if below then return q ~= nil and q < below end
   if CLASS_OF[what] then return LR.itemClass(id) == CLASS_OF[what] end
   return false
 end
 
 --- who a rule gives an item to ("Name-Realm"), or nil when it can't (no disenchanter, say)
+-- round robin: who had the last item, by name; the next is whoever comes after them in the group, by name
+A.lastInTurn = nil
+--- whose turn it is in the group (by name, after whoever had the last one), or nil out of a group
+function A.nextInTurn()
+  local names = {}
+  for _, m in ipairs(LR.roster()) do if m.online ~= false then names[#names + 1] = m.name end end
+  if #names == 0 then return nil end
+  table.sort(names)
+  for _, n in ipairs(names) do if A.lastInTurn and n > A.lastInTurn then return n end end
+  return names[1]
+end
+
 function A.target(rule, s)
+  if rule.to == "skip" then return nil end
+  if rule.to == "rr" then return A.nextInTurn() end
   if rule.to == "de" then return s and s.de end
   if rule.to == "me" then return U.me() end
   return type(rule.to) == "string" and U.full(rule.to) or nil
@@ -90,12 +114,22 @@ end
 --- the open loot window: hands out what the rules say, one item at a time
 function A.apply()
   local set = LR.db.settings
-  if not set.autoLoot or not Rolls.lootOpen or not IsInGroup() or not LR.isMasterLooter() then return end
+  if not Rolls.lootOpen or not IsInGroup() or not LR.isMasterLooter() then return end
+  -- the gold, when that's on (the game shares it out)
+  if set.lootGold then
+    for slot = 1, GetNumLootItems() do
+      if GetLootSlotType(slot) == 2 then LootSlot(slot) end
+    end
+  end
+  if not set.autoLoot then return end
   local s = Rolls.session()
   local jobs = {}
   for _, it in ipairs(Rolls.loot()) do
     local rule, to = A.ruleFor(set.autoLootRules, s, it.id, it.quality)
-    if rule then jobs[#jobs + 1] = { slot = it.slot, id = it.id, link = it.link, to = to, de = rule.to == "de" } end
+    if rule then
+      if rule.to == "rr" then A.lastInTurn = to end      -- (each in turn: the next item goes to the next player)
+      jobs[#jobs + 1] = { slot = it.slot, id = it.id, link = it.link, to = to, de = rule.to == "de" }
+    end
   end
   local given = {}
   local function step(i)

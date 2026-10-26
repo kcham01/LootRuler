@@ -160,6 +160,7 @@ function UI.settingsView(f)
   end)
 
   f:panel("Loot rules (master looter)", function(p)
+    toggle(p, "lootGold", "Pick up the gold", "When you open a corpse with master loot, its gold is picked up (the game shares it out with the group).")
     toggle(p, "autoLoot", "Hand out loot by my rules", "When you open a corpse with master loot, items your rules match go straight to whoever the rule says. Anything someone reserved is always rolled for instead.")
     local s = LR.Rolls.session()
     if #set.autoLootRules == 0 then
@@ -224,7 +225,9 @@ function UI.addLootRule()
     f:chips({
       { label = "The disenchanter", on = to == "de", click = function() to = "de" h.redraw(true) end },
       { label = "Me", on = to == "me", click = function() to = "me" h.redraw(true) end },
-      { label = (to and to ~= "de" and to ~= "me") and U.short(to) or "Someone in the group...", on = to ~= nil and to ~= "de" and to ~= "me",
+      { label = "Everyone in turn", on = to == "rr", click = function() to = "rr" h.redraw(true) end },
+      { label = "Nobody: leave it", on = to == "skip", click = function() to = "skip" h.redraw(true) end },
+      { label = (to and to ~= "de" and to ~= "me" and to ~= "rr" and to ~= "skip") and U.short(to) or "Someone in the group...", on = to ~= nil and to ~= "de" and to ~= "me" and to ~= "rr" and to ~= "skip",
         click = function() UI.pickPlayer("Who gets them?", function(name) to = name h.redraw(true) end) end },
     })
     if what and to then
