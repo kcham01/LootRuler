@@ -383,6 +383,19 @@ run("rolling out loot", function()
   check("the loot panel beside the loot window", panel and panel:IsShown() and #M.findText("Click an item to roll it out", true, panel) > 0)
   check("with who reserved what", #M.findText("SR: Ann, Lead", true, panel) > 0 and #M.findText("Hard reserved for Ann", true, panel) > 0, s.res["Lead-Dreamscythe"] and s.res["Lead-Dreamscythe"].i[1])
   shot("loot-panel", lead, { "LootStandIn", "LootRulerLootPanel" })
+  -- giving one out without a roll: the panel's Give
+  local giveBtn
+  for _, x in ipairs(M.findText("Give", true, panel)) do if M.plain(x.fs:GetText()) == "Give" and x.clickable then giveBtn = giveBtn or x.clickable end end
+  check("each item in the panel can be given out without a roll", giveBtn ~= nil)
+  M.click(giveBtn)
+  srv:tick(0.3)
+  check("a sheet to pick who and how", visible("Pick who gets it and how") and visible("Main spec") and visible("Off spec") and visible("Bob-Faerlina"))
+  clickText("Bob-Faerlina")
+  check("picking someone names the button", visible("Give to Bob-Faerlina"))
+  LR.UI.win:SetFrameStrata("HIGH")
+  shot("give")
+  LR.UI.closeAll()
+  LR.UI.win:Hide()
   -- roll out the cloak Ann and the leader reserved
   local hit
   for _, x in ipairs(M.findText("Royal Cloak of Arathi Kings", true, panel)) do if x.clickable then hit = x.clickable end end

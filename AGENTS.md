@@ -200,6 +200,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   rolls!" closes it, "[item] was awarded to X" gives the winner.
 - **Posting a corpse's loot** (`Drops.announce`, setting `announceLoot`, on to start with): the first time the loot master
   opens a corpse, each epic or better item, and anything reserved, gets one raid line with who reserved it.
+- **Giving an item without a roll** (`Rolls.give`, `UI.giveSheet`): the loot panel's Give, or clicking an item still to
+  give out on the Loot tab. It's a closed roll (`roll.given`) awarded straight away through `Rolls.award`, so it's
+  recorded, announced, undoable and traded like any other award. Kinds: MS, OS, SR (their reserve), or disenchant.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
