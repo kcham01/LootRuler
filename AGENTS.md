@@ -372,7 +372,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   (DE for `de`), gold spent, raids attended, last win. Attendance is `s.att` (`S.saw`, `S.cleanAtt`, `S.MAX_ATT`): the leader's session notes
   everyone in the group when it starts and on each roster change; past raids keep it (and a GDKP's `gk.seen` counts too). Older versions
   ignore `att`.
-- **Planned with the owner (in this order, one pull request each):** reserve swap requests after the lock.
+- **Reserve swap requests** (`Core/Swap.lua`; `Swap.ask`, `allow`, `deny`, `pending`, `request`, `Swap.list` (the leader's, in memory),
+  `Swap.mine` (a raider's own, until it's answered); message `S` = { id, f, n }; feature bit `FEATURE_SWAP` 4; `!lr swap [old] [new]` or
+  `!lr swap old for new`; `UI.swapSheet` on a locked Reserve tab, "Swap requests" panel on the leader's Reserves tab): only while
+  locked, one per player (a new one replaces it), checked like a reserve (`S.set` of the whole new list, so it can't half-happen);
+  the answer is whispered. Locking a practice raid makes a pretend player ask.
+- **The owner's plan from the Gargul comparison is done:** the practice raid, pot rules, GDKP bookkeeping, bidding ahead, several
+  auctions at once, bag checks, the gear overview, branding, loot council, fairness history and swap requests.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.

@@ -241,6 +241,28 @@ function W.handle(text, sender)
     return
   end
 
+  -- a swap, once reserves are locked: "!lr swap [old] [new]", "!lr swap old for new" (Core/Swap.lua)
+  local swapArg = args:match("^[Ss][Ww][Aa][Pp]%s+(.+)$")
+  if swapArg then
+    local ids = {}
+    for id in swapArg:gmatch("|Hitem:(%d+)") do ids[#ids + 1] = tonumber(id) end
+    local from, to
+    if #ids >= 2 then
+      from, to = ids[1], ids[2]
+    else
+      local a, b = swapArg:match("^(.-)%s+[Ff][Oo][Rr]%s+(.+)$")
+      if a then
+        from = ownReserve(s, player, a)
+        if not from then W.reply(player, ("You haven't reserved \"%s\" (or it could be more than one of yours)."):format(U.plain(a))) return end
+        to = pick(s, player, b)
+        if not to then return end                -- (pick has said what went wrong)
+      end
+    end
+    if not from or not to then W.reply(player, "To swap: \"!lr swap [old item] [new item]\", or \"!lr swap old for new\".") return end
+    local ok, why = LR.Swap.ask(s, player, from, to)
+    W.reply(player, ok and ("Your swap request is in: %s for %s. %s decides."):format(LR.itemLink(from), LR.itemLink(to), U.short(s.leader)) or why)
+    return
+  end
   local removeArg = args:match("^[Rr][Ee][Mm][Oo][Vv][Ee]%s+(.+)$") or args:match("^[Rr][Ee][Mm]%s+(.+)$") or args:match("^%-%s*(.+)$")
   if removeArg then
     -- look among their own reserves first ("remove signet" means the signet they reserved)

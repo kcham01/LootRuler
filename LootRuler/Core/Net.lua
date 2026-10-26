@@ -16,7 +16,7 @@
 --   D                             the raid's drops (Core/Drops.lua)
 --   V  anyone -> group            "I have LootRuler, this version" (on joining a group, and when asked)
 -- Every message also says what the sender's addon can do (fl, bits added together): 1 = it can take over a session
--- (a new leader), 2 = it takes bids ahead on queued auctions (B, Core/Rolls.lua).
+-- (a new leader), 2 = it takes bids ahead on queued auctions (B, Core/Rolls.lua), 4 = it takes reserve swap requests (S, Core/Swap.lua).
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
 --
@@ -30,8 +30,8 @@ local _, LR = ...
 local U, S = LR.U, LR.Session
 
 local PROTOCOL = 1
-LR.FEATURE_LEAD, LR.FEATURE_AHEAD = 1, 2
-local FEATURES = LR.FEATURE_LEAD + LR.FEATURE_AHEAD   -- what this version can do, sent as fl (see the top)
+LR.FEATURE_LEAD, LR.FEATURE_AHEAD, LR.FEATURE_SWAP = 1, 2, 4
+local FEATURES = LR.FEATURE_LEAD + LR.FEATURE_AHEAD + LR.FEATURE_SWAP   -- what this version can do, sent as fl (see the top)
 local KEEP_DAYS = 7
 
 local Net = {}

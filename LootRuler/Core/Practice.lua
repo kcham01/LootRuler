@@ -463,6 +463,28 @@ function P.react()
   end
 end
 
+-- reserves locked: one pretend player asks to swap a reserve, by whisper, as a player without the addon would
+local swapAsked
+LR.onChange(function(what)
+  local s = what == "session" and P.session()
+  if not s then return end
+  if not s.locked then swapAsked = nil return end
+  if swapAsked == s.id then return end
+  swapAsked = s.id
+  for _, x in ipairs(shuffled(P.players)) do
+    local mine = S.reservesOf(s, x.name)
+    if #mine > 0 then
+      local items = {}
+      for _, id in ipairs(LR.raidOf(s).order or {}) do if not s.hr[id] and not U.indexOf(mine, id) then items[#items + 1] = id end end
+      if #items > 0 then
+        local text = ("!lr swap %s %s"):format(LR.itemLink(mine[1]), LR.itemLink(pick(items)))
+        after(1.5, function() P.whisper(x, text) end)
+        return
+      end
+    end
+  end
+end)
+
 LR.onChange(function(what)
   if P.on and (what == "roll" or what == "rolls") then P.react() end
   -- several auctions at once (Core/Batch.lua)
