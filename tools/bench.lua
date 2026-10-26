@@ -207,6 +207,7 @@ local function decodeAll(list)
         kinds[t] = k
         k.n = k.n + 1
         k.biggest = math.max(k.biggest, #whole)
+        if m.from == lead then k.ch = k.ch or {} k.ch[m.channel] = (k.ch[m.channel] or 0) + 1 end
       end
       kinds._pending = (kinds._pending or 0) + #m.text
       kinds._parts = (kinds._parts or 0) + 1
@@ -259,7 +260,7 @@ local function moment(name, about, fn)
     local mine = m.from == lead
     sent[mine and "leadMsgs" or "otherMsgs"] = sent[mine and "leadMsgs" or "otherMsgs"] + 1
     sent[mine and "leadBytes" or "otherBytes"] = sent[mine and "leadBytes" or "otherBytes"] + #m.text
-    sent.byChannel[m.channel] = (sent.byChannel[m.channel] or 0) + 1
+    if mine then sent.byChannel[m.channel] = (sent.byChannel[m.channel] or 0) + 1 end
   end
   sent.kinds = decodeAll(net.addon)
   local chat = { lead = 0, leadBytes = 0, others = 0, byChannel = {} }
@@ -569,12 +570,22 @@ for _, r in ipairs(results) do
     k(r.raider.instr), k(r.raider.maxInstr), ms(r.raider.cpu), ms(r.raider.longest), kb(r.raider.alloc), r.raider.timers, r.raider.frames, r.raider.onUpdate)
   say("   network: the leader sent %d messages (%s), everyone else %d (%s); chat lines: the leader %d, others %d",
     r.addon.leadMsgs, kb(r.addon.leadBytes / 1024), r.addon.otherMsgs, kb(r.addon.otherBytes / 1024), r.chat.lead, r.chat.others)
+  local chans = {}
+  for ch, n in pairs(r.addon.byChannel) do chans[#chans + 1] = ("%s %d"):format(ch:lower(), n) end
+  table.sort(chans)
+  if #chans > 0 then say("   the leader's messages by channel: %s", table.concat(chans, ", ")) end
   local kinds = {}
   for t, x in pairs(r.addon.kinds) do kinds[#kinds + 1] = { t = t, x = x } end
   table.sort(kinds, function(a, b) return a.x.bytes > b.x.bytes end)
   if #kinds > 0 then
     local parts = {}
-    for _, e in ipairs(kinds) do parts[#parts + 1] = ("%s x%d (%d parts, %s, biggest %d)"):format(e.t, e.x.n, e.x.parts, kb(e.x.bytes / 1024), e.x.biggest) end
+    for _, e in ipairs(kinds) do
+      local ch = {}
+      for c, n in pairs(e.x.ch or {}) do ch[#ch + 1] = c:lower() .. " " .. n end
+      table.sort(ch)
+      parts[#parts + 1] = ("%s x%d (%d parts, %s, biggest %d%s)"):format(e.t, e.x.n, e.x.parts, kb(e.x.bytes / 1024), e.x.biggest,
+        #ch > 0 and ("; the leader's: " .. table.concat(ch, ", ")) or "")
+    end
     say("   by kind: %s", table.concat(parts, "; "))
   end
   local ex = {}
