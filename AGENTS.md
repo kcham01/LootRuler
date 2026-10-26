@@ -22,9 +22,9 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. `Gdkp.lua` is GDKP's money (no game calls), `Pot.lua` does it in the game. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `guild.lua`, `gdkp.lua` (whole raids), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
-| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `gen_loot.py`, `art.mjs` |
+| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
 
 ## Working rules
@@ -99,11 +99,16 @@ Players don't update their addons, so every version has to work with every other
 ## How to check your work
 
 ```sh
-lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
+lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/party.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
 lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
+lua5.1 tools/coverage.lua                                   # functions no test reaches: build/coverage.txt
 ```
+
+`tools/coverage.lua` runs the tests with a line hook and lists every function no test runs (`build/coverage.lines` has
+every line that ran). Not part of CI; run it after a feature lands and add tests for anything new it lists. Only
+`UI.masterNote` (a one-line print) isn't reached now.
 
 CI (`.github/workflows/build.yml`) runs all of it on every pull request and on `main`. Pull requests get the
 pictures and the zip as a download on the run; `main` publishes them to the `results` branch, which the
@@ -306,7 +311,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   of `Drops.holding()` with each item's time left and who it's for.
 - **Sounds** (`LR.sound(id, ui)`, settings `sounds`, on, and `soundChannel`, `LR.SOUND_CHANNELS`): every sound goes through it; a window's
   own open and close sounds stay on the effects channel. Use it for any new sound. The mock keeps `M.sounds` ({ id, channel }).
-- **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
+- **Test coverage** (`tools/coverage.lua`): every function but one is reached. The pass found and fixed two bugs: renaming a
+  misspelt softres.it name with extra reserves lost all its reserves (`Gargul.rename` now moves the extra first), and saved
+  data of the wrong type (`sessions`, `mine`, `ui`, saved picks) is now checked on load. The test server has `cancelTrade`.
+- **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
+  copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
@@ -317,7 +326,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
     until the owner's in-game test passes, then bump `LR.VERSION` and the TOC to 1.0.0.
   - softres.it names must match characters exactly (other realms need "-Realm"); a typo becomes a phantom player.
     (Mostly fixed: capitals, accents and a missing realm are matched; a typo is listed with a one-click fix.)
-  - Party (5-man) master loot is coded and unit-tested but has had less whole-group testing than raids.
+  - (tested) Party (5-man) master loot now has its own whole-group test (`tests/party.lua`), with a master looter
+    who isn't the party's leader.
 - **Feedback this plan follows** (an experienced player and engineer):
   - only the loot runner should need the addon;
   - onboarding a pug must be quick;

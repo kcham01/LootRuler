@@ -163,6 +163,16 @@ srv:tick(1)
 check("whoever wins the tie still spends their points", ok and points(lead, bob) == 0 and points(kay, bob) == 0 and note:find("Bob's 10 points", 1, true), note)
 check("and it's marked boosted", s.won[#s.won].br == true and s.won[#s.won].p == full(bob))
 
+section("undoing a boosted win")
+local bobPoints = points(lead, bob)
+local okU, noteU = Rolls.undo()
+srv:tick(1)
+check("taken back: Bob gets his points back, everywhere", okU and points(lead, bob) == bobPoints + 10 and points(kay, bob) == bobPoints + 10
+  and noteU and noteU:find("Bob gets their 10 points back", 1, true), noteU)
+ok, note = Rolls.award(full(bob))
+srv:tick(1)
+check("given again: spent again", ok and points(lead, bob) == bobPoints)
+
 section("players without the addon ask")
 srv:whisper(pug, lead, "!lr points")
 srv:tick(1)
@@ -235,6 +245,9 @@ check("priority lists only: nobody can reserve", not zed.LR.reserve(zed.LR.curre
 srv:whisper(pug, lead, "!lr " .. srv:link(SIGNET))
 srv:tick(1)
 check("players without the addon are told", whisperTo(pug, "goes by the guild's priority lists, not reserves") ~= nil)
+srv:whisper(pug, lead, "!lr")
+srv:tick(1)
+check("!lr on its own says so, and how to see their places", whisperTo(pug, "goes by the guild's priority lists, not reserves. \"!lr prio\": your place") ~= nil)
 roll = Rolls.start(BROOCH, {})
 srv:tick(0.5)
 check("reserves don't count: everyone rolls", roll.mode == "OPEN")
@@ -287,6 +300,39 @@ check("officers can't any more", not lead.LR.canEditBook() and not edit(lead, fu
 mira.LR.Guild.setEditRank(1)
 srv:tick(1)
 check("and can again", lead.LR.canEditBook())
+
+section("running loot without the right to change the book")
+srv:setAssist(ann, true)
+srv:setMasterLooter(ann)
+srv:tick(1)
+local ar = ann.LR.Rolls.start(28525, {})
+srv:tick(0.5)
+srv:roll(pug, 11, 110, 100)                 -- Pug's boosted roll
+srv:tick(22)
+local okA, noteA = ann.LR.Rolls.award(full(pug))
+srv:tick(1)
+check("an assistant who isn't an officer: Pug's points stay, and she's told to ask an officer", ar and okA and points(lead, pug) == 10
+  and noteA and noteA:find("Ask an officer to take Pug's 10 points", 1, true), noteA)
+local okB, noteB = ann.LR.Rolls.undo()
+check("taking it back: ask an officer to give them back", okB and noteB and noteB:find("Ask an officer to give Pug their 10 points back", 1, true), noteB)
+ann.LR.Rolls.dismiss()
+lead.LR.setSessionPrio(s, "both")
+srv:tick(1)
+local wlist = ann.LR.Book.prio(ann.LR.book(), WATCH) or {}
+local first = wlist[1] and wlist[1].p
+local okP, noteP = ann.LR.Rolls.give(WATCH, first, "MS", {})
+srv:tick(1)
+check("an item off a priority list: she's told to ask an officer to take them off", first and okP and noteP
+  and noteP:find("Ask an officer to take " .. lead.LR.U.short(first) .. " off its priority list: you can't change the lists.", 1, true)
+  and #(lead.LR.Book.prio(lead.LR.book(), WATCH) or {}) == #wlist, noteP)
+local okQ, noteQ = ann.LR.Rolls.undo()
+check("taking it back says to put them back on if they came off", okQ and noteQ
+  and noteQ:find("If " .. lead.LR.U.short(first) .. " came off its priority list, put them back on the Guild tab.", 1, true), noteQ)
+ann.LR.Rolls.dismiss()
+lead.LR.setSessionPrio(s, nil)
+srv:setMasterLooter(lead)
+srv:setAssist(ann, false)
+srv:tick(1)
 
 section("ending the session")
 lead.LR.endSession(s)

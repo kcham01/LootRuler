@@ -236,6 +236,33 @@ do
   check("a name that was in the group isn't moved to a lookalike", #G.recheck(sk, group("Ånn-Dreamscythe")) == 0 and list(sk, "Ann-Dreamscythe") == "28528")
 end
 
+print("== handing the reserves to a loaded Gargul (a stand-in here: Gargul itself is never used)")
+do
+  local G = LR.Gargul
+  check("no Gargul: nothing to hand to", not G.available() and select(2, G.send(s)) == "Gargul isn't loaded.")
+  local got, errors = nil, {}
+  env.geterrorhandler = function() return function(e) errors[#errors + 1] = e end end
+  env.Gargul = { SoftRes = { import = function(_, text, show) got = { text = text, show = show } return true end } }
+  check("a loaded Gargul takes the export", G.available() and G.send(s, true) and got.text == G.export(s) and got.show == true and s.sentToGargul == s.rev)
+  env.Gargul.SoftRes.import = function() return false end
+  check("one that says no: the leader is told", select(2, G.send(s)) == "Gargul didn't accept the reserves.")
+  env.Gargul.SoftRes.import = function() error("boom") end
+  local ok, why = G.send(s)
+  check("one that breaks: LootRuler carries on, and the error is shown the game's way", not ok and why == "Gargul ran into an error importing the reserves."
+    and #errors == 1 and tostring(errors[1]):find("boom", 1, true))
+  env.Gargul, env.geterrorhandler = nil, nil
+end
+
+print("== moving a misspelt name's reserves keeps its extra reserves")
+do
+  local sx = S.new("Lead-Dreamscythe", "Karazhan", 1, true, 1760000000)
+  S.setExtra(sx, "Typo-Dreamscythe", 1, 1760000001)
+  S.set(sx, "Typo-Dreamscythe", nil, { 28528, 28530 }, true, 1760000001)
+  check("two picks, with an extra", S.limit(sx, "Typo-Dreamscythe") == 2 and #S.reservesOf(sx, "Typo-Dreamscythe") == 2)
+  check("moved to the right character", LR.Gargul.rename(sx, "Typo-Dreamscythe", "Ann-Dreamscythe", "PRIEST", 1760000002)
+    and sx.xr["Ann-Dreamscythe"] == 1 and sx.xr["Typo-Dreamscythe"] == nil and #S.reservesOf(sx, "Ann-Dreamscythe") == 2)
+end
+
 print("== Gargul's rolls, read from raid chat")
 do
   local link = "|cffa335ee|Hitem:28528::::::::70:::::|h[Moroes' Lucky Pocket Watch]|h|r"

@@ -179,6 +179,19 @@ ns.nm = { ["Ghost-Dreamscythe"] = 5 }
 check("matched names must be names", not S.valid(ns))
 ns.nm = "Ghost"
 check("and a list of them", not S.valid(ns))
+ns.nm = nil
+ns.hx = { 28528, 28530 }
+check("what the last import hard reserved is fine", S.valid(ns))
+ns.hx = { 28528, "x" }
+check("but must be items", not S.valid(ns))
+ns.hx = nil
+-- softres.it's JSON writes accented names with \u escapes
+check("JSON escapes become the letters they stand for", U.fromJSON('"Gh\\u00f8st"') == "Ghøst" and U.fromJSON('"\\u20ac"') == "€"
+  and U.fromJSON('"\\ud83d\\ude00"') == "\240\159\152\128" and U.fromJSON('"a\\nb\\/c\\t\\"d"') == 'a\nb/c\t"d')
+check("and an accented name goes through JSON and back", U.fromJSON(U.toJSON({ n = "Ghøst" })).n == "Ghøst")
+check("a bad escape is refused, with a reason", (function() local v, why = U.fromJSON('"\\q"') return v == nil and why == "bad escape" end)())
+check("numbers that aren't whole keep their part", U.toJSON(1.5) == "1.5" and U.fromJSON("1.5") == 1.5 and U.toJSON(0 / 0) == "null")
+check("JSON can't hold a function", not pcall(U.toJSON, print))
 
 -- only the group can reserve
 local gs = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 800)
