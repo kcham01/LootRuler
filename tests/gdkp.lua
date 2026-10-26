@@ -472,6 +472,47 @@ check("and their bars stop: nothing runs every frame", ann.G.LootRulerBatchFrame
   and lead.G.LootRulerBatchFrame._scripts.OnUpdate == nil)
 check("the pot has both", G.pot(s) == potBatch + 975)
 srv:closeLoot(lead)
+srv:tick(5)
+
+-- a busy moment: the loot master's sending is backed up, and bids come in fast
+do
+  srv:openLoot(lead, { { HANDWRAPS, 4 }, { WATCH, 4 } })
+  srv:tick(0.5)
+  local busy = Bt.start(Bt.candidates(), 60)
+  srv:tick(3)
+  local zs, parts = 0, {}
+  local real = srv.addonMessage
+  srv.addonMessage = function(self, from, prefix, text, channel, target)
+    if from == lead and prefix == lead.LR.PREFIX then
+      local c, rest = text:match("^([\001-\003])(.*)$")
+      local whole
+      if c == "\001" then parts[channel] = { rest } elseif c == "\002" then table.insert(parts[channel], rest)
+      elseif c == "\003" then table.insert(parts[channel], rest) whole = table.concat(parts[channel]) else whole = text end
+      local msg = whole and lead.LR.Net.decode(whole)
+      if msg and msg.t == "Z" then zs = zs + 1 end
+    end
+    return real(self, from, prefix, text, channel, target)
+  end
+  local seed = 5
+  for _ = 1, 20 do
+    local pad = {}
+    for k = 1, 400 do seed = (seed * 1103515245 + 12345) % 2147483648 pad[k] = string.char(33 + seed % 90) end
+    lead.LR.Net.send({ t = "ZZ", pad = table.concat(pad) }, "RAID")      -- (a kind nobody knows: ignored)
+  end
+  for i = 1, 10 do
+    say(i % 2 == 0 and pug or bob, ("#1 %d"):format(100 + i * 50))
+    srv:tick(0.35)
+  end
+  srv:tick(20)
+  srv.addonMessage = real
+  check("ten fast bids while the loot master's sending is backed up: fewer updates of the batch go out", zs > 0 and zs < 10, zs)
+  local acopy2 = ann.LR.Batch.seen[busy.k]
+  check("and raiders end up with the newest bids", acopy2 and acopy2.items[1].top and acopy2.items[1].top.n == 600 and acopy2.items[1].top.p == busy.items[1].top.p)
+  Bt.cancel()
+  srv:tick(2)
+  srv:closeLoot(lead)
+  srv:tick(2)
+end
 for i = #s.won, wonBefore + 1, -1 do lead.LR.unaward(s, i) end
 srv:tick(10)
 check("(taken back, for what follows)", G.pot(s) == potBatch)
