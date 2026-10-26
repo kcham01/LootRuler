@@ -542,6 +542,20 @@ for _, p in ipairs({ kim, zed, yan, xan }) do srv:leaveGroup(p) end
 lead.LR.endSession(rs)
 srv:tick(2)
 
+section("the softres.it link")
+local ls = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+check("only a softres.it link is taken", not lead.LR.setLink(ls, "https://example.com/x") and lead.LR.setLink(ls, "https://softres.it/raid/abc123"))
+srv:tick(2)
+check("raiders' addons have it", cur(ann) and cur(ann).url == "https://softres.it/raid/abc123")
+check("a raider can't set it", not ann.LR.setLink(cur(ann), "https://softres.it/raid/zzz"))
+local before = #srv.chat
+check("posted in raid chat in one line", lead.LR.postLink(ls))
+srv:tick(1)
+check("saying where to reserve", srv.chat[before + 1] and srv.chat[before + 1].text:find("Reserve on softres.it: https://softres.it/raid/abc123", 1, true) ~= nil)
+lead.LR.endSession(ls)
+srv:tick(2)
+
 section("raid setup")
 -- the leader starts on their own, with a list of who's coming pasted in
 for _, p in ipairs(srv.group.members) do p.inGroup = false end

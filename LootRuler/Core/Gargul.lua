@@ -59,8 +59,78 @@ function G.encode(data) return U.b64encode(LibDeflate:CompressZlib(U.toJSON(data
 --- the string for Gargul's soft-reserve importer
 function G.export(s) return G.encode(G.data(s, G.plusOnes())) end
 
---- reads a Gargul / softres.it string; returns the data, or nil and what's wrong with it
+--- one line of a spreadsheet (CSV): its fields (quotes taken off)
+local function csvFields(line)
+  local out, i, n = {}, 1, #line
+  while i <= n + 1 do
+    if line:sub(i, i) == '"' then
+      local j, buf = i + 1, {}
+      while j <= n do
+        local c = line:sub(j, j)
+        if c == '"' and line:sub(j + 1, j + 1) == '"' then buf[#buf + 1] = '"' j = j + 2
+        elseif c == '"' then j = j + 1 break
+        else buf[#buf + 1] = c j = j + 1 end
+      end
+      out[#out + 1] = table.concat(buf)
+      local comma = line:find("[,;\t]", j)
+      i = comma and comma + 1 or n + 2
+    else
+      local comma = line:find("[,;\t]", i)
+      out[#out + 1] = U.trim(line:sub(i, comma and comma - 1 or n))
+      i = comma and comma + 1 or n + 2
+    end
+  end
+  return out
+end
+G.csvFields = csvFields
+
+local NAME_COLS = { name = true, player = true, character = true, ["character name"] = true, charactername = true }
+local ITEM_COLS = { itemid = true, ["item id"] = true, item_id = true, id = true }
+--- reserves from a spreadsheet: softres.it's CSV export, or any with a column for the player's name and one for the
+--- item's number (a "Class" column is used when there is one). Lines with just a name and an item number work too.
+--- Returns the same data as an export (G.decode), or nil and what's wrong.
+function G.fromCSV(text)
+  local lines = {}
+  for line in tostring(text or ""):gmatch("[^\r\n]+") do if line:find("%S") then lines[#lines + 1] = line end end
+  if #lines == 0 then return nil, "Paste the reserves into the box first." end
+  local nameCol, itemCol, classCol
+  for i, h in ipairs(csvFields(lines[1])) do
+    local k = U.trim(h):lower()
+    if NAME_COLS[k] and not nameCol then nameCol = i end
+    if ITEM_COLS[k] and not itemCol then itemCol = i end
+    if k == "class" then classCol = i end
+  end
+  local first = 1
+  if nameCol and itemCol then first = 2 end
+  local byName, order = {}, {}
+  for i = first, #lines do
+    local f = csvFields(lines[i])
+    local name, id, class
+    if nameCol and itemCol then
+      name, id, class = f[nameCol], tonumber(f[itemCol]), classCol and f[classCol] or nil
+    elseif #f == 2 then
+      -- "Name,28525" or "28525,Name"
+      if tonumber(f[2]) then name, id = f[1], tonumber(f[2]) elseif tonumber(f[1]) then name, id = f[2], tonumber(f[1]) end
+    end
+    name = name and U.trim(name)
+    if name and name ~= "" and #name <= 40 and not name:find("[%d|]") and id and id > 0 and id % 1 == 0 then
+      local key = U.foldCase(name)
+      if not byName[key] then
+        byName[key] = { name = name, class = class or "", items = {} }
+        order[#order + 1] = byName[key]
+      end
+      local list = byName[key].items
+      if #list < 40 then list[#list + 1] = { id = id } end
+    end
+  end
+  if #order == 0 then return nil, "That spreadsheet has no reserves LootRuler can read: it needs a column for the player's name and one for the item's number." end
+  return { softreserves = order, hardreserves = {} }
+end
+
+--- reads a Gargul / softres.it string, or a spreadsheet (G.fromCSV); returns the data, or nil and what's wrong with it
 function G.decode(text)
+  local trimmed = U.trim(text or "")
+  if trimmed:find("[,;\t]") and (trimmed:find("\n") or not trimmed:find("^[%w+/=]+$")) then return G.fromCSV(trimmed) end
   local raw = U.b64decode(U.trim(text or ""))
   if not raw or raw == "" then return nil, "That isn't a Gargul or softres.it export (it isn't base64)." end
   local json = LibDeflate:DecompressZlib(raw)
@@ -288,6 +358,9 @@ function G.importInto(s, text, roster)
   local data, err = G.decode(text)
   if not data then return nil, err end
   local now = U.now()
+  -- the sheet's own page on softres.it, to post in raid chat
+  local sid = type(data.metadata) == "table" and type(data.metadata.id) == "string" and data.metadata.id
+  if sid and sid:match("^[%w%-]+$") and #sid <= 40 and not sid:find("^LootRuler") then S.setLink(s, "https://softres.it/raid/" .. sid, now) end
   local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0, used = 0,
     matched = {}, unsure = {}, missing = {} }
   roster = roster or (LR.roster and LR.roster()) or {}

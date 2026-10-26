@@ -389,6 +389,20 @@ LR.gdkpPaid = gdkp(function(s, player, gold) return LR.Gdkp.paid(s, player, gold
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGroupOnly(s, on) if LR.isLeader(s) and S.setGroupOnly(s, on, U.now()) then leaderChanged(s) end end
+--- the session's softres.it page: set it (the leader; false when it isn't a softres.it link), and post it in raid chat
+function LR.setLink(s, url)
+  if not LR.isLeader(s) then return false end
+  local t = U.trim(url or "")
+  if t ~= "" and not S.okLink(t) then return false end
+  if S.setLink(s, t, U.now()) then leaderChanged(s) end
+  return true
+end
+function LR.postLink(s)
+  local ch = LR.groupChannel()
+  if not s.url or not ch then return false end
+  LR.say(("%s Reserve on softres.it: %s"):format(LR.TAG, s.url), ch)
+  return true
+end
 function LR.setGuild(s, guild)
   s.guild = guild and true or false
   leaderChanged(s)

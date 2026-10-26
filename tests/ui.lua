@@ -302,7 +302,7 @@ run("softres.it import", function()
   clickText("Session")
   clickText("Import from softres.it")
   local box
-  local function walk(f) for _, c in ipairs(f._children) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
+  local function walk(f) for _, c in ipairs(f._children) do if c._type == "EditBox" and c:IsVisible() and not box then box = c end walk(c) end end
   walk(root())
   M.click(box)
   box:SetText(site) box._scripts.OnTextChanged(box, true)
@@ -332,6 +332,26 @@ run("softres.it import", function()
   srv:tick(2)
   clickText("By item")
   clickText("Session")
+  -- the export brought its softres.it page: one click posts it
+  check("the softres.it link came with the export", s.url == "https://softres.it/raid/x1" and visible("Post the softres.it link"))
+  local before = #srv.chat
+  clickText("Post the softres.it link")
+  srv:tick(1)
+  check("posted in raid chat", srv.chat[before + 1] and srv.chat[before + 1].text:find("Reserve on softres.it", 1, true) ~= nil)
+  -- a spreadsheet works too
+  clickText("Import from softres.it")
+  local first
+  local function walk2(f) for _, c in ipairs(f._children) do if c._type == "EditBox" and c:IsVisible() and not first then first = c end walk2(c) end end
+  walk2(root())
+  first:SetText("Name,ItemId\nKel,28524\nKel,28477") first._scripts.OnTextChanged(first, true)
+  shot("import-csv")
+  clickText("Import")
+  srv:tick(2)
+  check("a spreadsheet's reserves come in", #LR.Session.reservesOf(s, "Kel-Dreamscythe") == 2)
+  LR.UI.closeAll()
+  LR.leaderRemove(s, "Kel-Dreamscythe", 28524)
+  LR.leaderRemove(s, "Kel-Dreamscythe", 28477)
+  srv:tick(2)
 end)
 
 run("a raider's window", function()
