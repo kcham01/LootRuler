@@ -1195,6 +1195,32 @@ run("a bag check", function()
   LR.UI.go("reserve")
 end)
 
+run("the gear overview", function()
+  ann.M.player.links = { [1] = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", [5] = "|cffa335ee|Hitem:28530::::::::70:::::|h[Brooch]|h|r",
+    [16] = "|cffa335ee|Hitem:28525::::::::70:::::|h[Signet]|h|r" }
+  pug.links = { [1] = "|cffa335ee|Hitem:28528::::::::70:::::|h[Watch]|h|r" }
+  M.player.links = { [3] = "|cffa335ee|Hitem:28529::::::::70:::::|h[Cloak]|h|r" }
+  local sg = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  LR.UI.show("loot")
+  srv:tick(0.3)
+  clickText("Raid gear")
+  srv:tick(LR.Overview.WAIT + 6)
+  check("everyone, with their item level and when it was read", visible("Raid gear") and visible("item level 115") and visible("just now") and visible("(inspected)"))
+  shot("raid-gear")
+  local annRow = rowFor("Ann")
+  M.click(annRow.act)
+  srv:tick(0.3)
+  check("a click shows what they wear, slot by slot", visible("Head") and visible("Chest") and visible("Main hand") and visible("[Helm]") == false
+    and visible("Helm") and visible("Nothing in: Neck, Shoulder"))
+  shot("raid-gear-player")
+  LR.UI.closeAll()
+  ann.M.player.links, pug.links, M.player.links = nil, nil, nil
+  LR.endSession(sg)
+  srv:tick(1)
+  LR.UI.go("reserve")
+end)
+
 run("extra reserves", function()
   local s8 = LR.startSession("Karazhan", 1, true, false)
   srv:tick(1)

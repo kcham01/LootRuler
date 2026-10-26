@@ -615,6 +615,31 @@ srv:tick(Bg.WAIT + 1)
 check("switched off: no answer, and the report says so", rowOf(full(bob)).why == "silent" and not bc.answers[full(bob)])
 bob.LR.db.settings.answerBagChecks = true
 
+section("the gear overview")
+local HEAD, CHEST = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", "|cffa335ee|Hitem:29066::::::::70:::::|h[Chest]|h|r"
+ann.M.player.links = { [1] = HEAD, [5] = CHEST }
+bob.M.player.links = { [1] = HEAD }
+pug.links = { [5] = CHEST, [4] = "|cffffffff|Hitem:45::::::::70:::::|h[Shirt]|h|r" }
+lead.LR.db.settings.inspectGear = true
+local O = lead.LR.Overview
+check("only someone running loot asks", not bob.LR.Overview.ask())
+check("the loot runner asks", O.ask())
+srv:tick(O.WAIT + 6)
+local function gearOf(p) return O.data[lead.LR.Roll.key(full(p))] end
+check("Ann's addon sends her gear", gearOf(ann) and gearOf(ann).how == "addon" and gearOf(ann).slots[1] == HEAD and gearOf(ann).slots[5] == CHEST)
+check("Bob's too", gearOf(bob) and gearOf(bob).slots[1] == HEAD)
+check("Pug has no addon: he's inspected (not the shirt)", gearOf(pug) and gearOf(pug).how == "inspect" and gearOf(pug).slots[5] == CHEST and gearOf(pug).slots[4] == nil)
+check("mine too", gearOf(lead) and gearOf(lead).how == "self")
+local list = O.list()
+-- (this test's game hasn't loaded the items, so item levels are unknown here: tests/ui.lua has them)
+check("the overview lists everyone, with how many items", #list == #lead.LR.roster() and (function()
+  for _, r in ipairs(list) do if r.name == full(ann) then return r.items == 2 end end end)())
+check("and how old it is", O.age(gearOf(ann).at) == "just now")
+-- nonsense in an answer isn't kept
+lead.LR.Net.handlers.I({ t = "I", k = O.k, e = { [1] = "not a link", [99] = HEAD, [5] = CHEST } }, "WHISPER", full(bob))
+check("an answer is checked: only item links, only real slots", gearOf(bob).slots[1] == nil and gearOf(bob).slots[5] == CHEST)
+ann.M.player.links, bob.M.player.links, pug.links = nil, nil, nil
+
 section("raid setup")
 -- the leader starts on their own, with a list of who's coming pasted in
 for _, p in ipairs(srv.group.members) do p.inGroup = false end

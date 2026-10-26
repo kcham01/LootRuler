@@ -352,8 +352,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   items, counted in bags and bank (`C_Item.GetItemCount(id, true)`; the test server has `p.bank`). Only from someone who may run loot,
   each check answered once. The report lists players without LootRuler (`why = "none"`) and, after `Bags.WAIT` seconds, those who
   didn't answer (`"silent"`). The practice raid's pretend players answer.
-- **Planned with the owner (in this order, one pull request each):** a gear
-  overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
+- **The gear overview** (`Core/Overview.lua`, `UI/Gear.lua` (not `UI/Overview.lua`, which is the Reserves screen); `Overview.ask`, `got`,
+  `list`, `level`, `age`, `clean`, `mine`, `SLOTS`; messages `H` (asked) and `I` (gear, by whisper); Loot tab "Raid gear", `/lr gear`): answered
+  when `shareGear` is on; players without LootRuler, and those who don't answer within `Overview.WAIT` seconds, are inspected through the
+  roll inspect queue, now general (`Rolls.inspect(player, read, failed)`), when `inspectGear` is on. Answers are checked (item links in real
+  slots only). Item level from `C_Item.GetItemInfo(link)` (the test server takes links now). Pretend players send gear from the loot lists.
+- **Planned with the owner (in this order, one pull request each):** organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
