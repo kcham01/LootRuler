@@ -189,6 +189,15 @@ check("an icon this version doesn't have shows as the raid's own", S.brandIcon({
 check("setting it bumps the session; the same again doesn't", S.setBrand(ns, { n = "Kings" }, 600) and not S.setBrand(ns, { n = "Kings" }, 601) and ns.br.n == "Kings")
 ns.br = { n = 5, m = { "x" }, i = "lots" }
 check("a copy with nonsense branding keeps the session, without the branding", S.valid(ns) and ns.br == nil)
+-- reserves of players who aren't here
+local ab = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 700)
+S.set(ab, "Ann-Dreamscythe", "PRIEST", { 28528 }, true, 701)
+S.set(ab, "Gone-Dreamscythe", "MAGE", { 28530, 28525 }, true, 702)
+ab.sx = { ["Gone-Dreamscythe"] = { 28530 } }
+local here = function(n) return n == "Ann-Dreamscythe" end
+check("who has reserves but isn't here", table.concat(S.absent(ab, here), ",") == "Gone-Dreamscythe")
+check("cleared: theirs go, the rest stay, and the import forgets them", #S.clearAbsent(ab, here, 703) == 1 and ab.res["Gone-Dreamscythe"] == nil
+  and #S.reservesOf(ab, "Ann-Dreamscythe") == 1 and ab.sx["Gone-Dreamscythe"] == nil)
 -- who came (attendance)
 check("who came is noted once each", S.saw(ns, { "Ann", "Bob-Faerlina", "ann" }, 610) and #ns.att == 2 and not S.saw(ns, { "Ann" }, 611))
 ns.att = { "Ann-Dreamscythe", 5, "x|y" }

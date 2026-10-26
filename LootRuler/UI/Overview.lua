@@ -59,6 +59,20 @@ local function leaderTools(f, s)
         UI.toast(ok and ("Reminded %s in raid chat."):format(U.plural(why, "player")) or why)
       end },
     }, "left")
+    -- reserves of players who aren't in the group (left, or never came): cleared after a confirm
+    local away = LR.absent(s)
+    p:buttons({
+      { label = #away > 0 and ("Clear reserves of players not in the group (" .. #away .. ")") or "Clear reserves of players not in the group",
+        disabled = #away == 0, click = function()
+          local names = table.concat(U.map(away, U.short), ", ")
+          UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
+            names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
+            "Clear " .. #away, function()
+              local cleared = LR.clearAbsent(s)
+              UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
+            end)
+        end },
+    }, "left")
   end)
 end
 

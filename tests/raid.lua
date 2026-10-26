@@ -666,6 +666,28 @@ check("none left", #Sw.pending(s) == 0)
 lead.LR.endSession(s)
 srv:tick(2)
 
+section("clearing reserves of players not in the group")
+local sa = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+lead.LR.leaderAdd(sa, full(ann), "PRIEST", WATCH)
+lead.LR.leaderAdd(sa, full(bob), "MAGE", SIGNET)
+lead.LR.leaderAdd(sa, "Gone-Dreamscythe", "ROGUE", BROOCH)
+lead.LR.leaderAdd(sa, full(cara), "DRUID", ROYAL)
+srv:tick(2)
+local bobDB = srv:logout(bob)                 -- (offline, but still in the group)
+srv:tick(2)
+check("who's not in the group: Gone and Cara (Bob is offline, still in it)", table.concat(U.map(lead.LR.absent(sa), U.short), ",") == "Cara,Gone")
+check("only the leader clears them", #ann.LR.clearAbsent(cur(ann)) == 0)
+local cleared = lead.LR.clearAbsent(sa)
+srv:tick(2)
+check("their reserves go; everyone in the group keeps theirs", #cleared == 2 and #lead.LR.Session.reservesOf(sa, "Gone-Dreamscythe") == 0
+  and #lead.LR.Session.reservesOf(sa, full(cara)) == 0 and #lead.LR.Session.reservesOf(sa, full(bob)) == 1 and #lead.LR.Session.reservesOf(sa, full(ann)) == 1)
+check("raiders' copies agree", cur(ann).res["Gone-Dreamscythe"] == nil)
+srv:login(bob, bobDB)
+srv:tick(6)
+lead.LR.endSession(sa)
+srv:tick(2)
+
 section("the gear overview")
 local HEAD, CHEST = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", "|cffa335ee|Hitem:29066::::::::70:::::|h[Chest]|h|r"
 ann.M.player.links = { [1] = HEAD, [5] = CHEST }

@@ -65,6 +65,13 @@ check("their whispers are answered, on my screen only", shown("(whisper to") and
 check("and their lines show too", shown("whispers: !lr") ~= nil)
 check("everyone reserved all they could: nothing more", P.reserve() == 0)
 
+section("someone who left")
+LR.leaderAdd(s, LR.U.full("Gone"), "WARRIOR", S.reservesOf(s, P.players[1].name)[1])
+local away = LR.absent(s)
+check("a reserve of someone not in the practice raid is listed; the pretend players aren't", #away == 1 and LR.U.short(away[1]) == "Gone", table.concat(away, ","))
+check("clearing takes theirs only", #LR.clearAbsent(s) == 1 and #S.reservesOf(s, LR.U.full("Gone")) == 0 and #S.reservesOf(s, P.players[1].name) > 0)
+srv:tick(1)
+
 section("a swap request")
 LR.setLocked(s, true)
 srv:tick(3)

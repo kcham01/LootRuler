@@ -339,6 +339,26 @@ function S.setLink(s, url, now)
   return true
 end
 
+---------------------------------------------------------------------- reserves of players who aren't here
+--- who has reserves but isn't in the group: inGroup(name) says who is. Sorted names.
+function S.absent(s, inGroup)
+  local out = {}
+  for name, r in pairs(s.res) do if #(r.i or {}) > 0 and not inGroup(name) then out[#out + 1] = name end end
+  table.sort(out)
+  return out
+end
+--- clears those players' reserves (the leader); returns the names cleared
+function S.clearAbsent(s, inGroup, now)
+  local cleared = {}
+  for _, name in ipairs(S.absent(s, inGroup)) do
+    if S.set(s, name, nil, {}, true, now) then
+      cleared[#cleared + 1] = name
+      if s.sx then s.sx[name] = nil end          -- (what the last import brought them: a new import brings it back)
+    end
+  end
+  return cleared
+end
+
 ---------------------------------------------------------------------- who came (attendance, for the fairness history)
 -- s.att = { "Name-Realm", ... }: everyone who was in the group while the leader ran the session (S.MAX_ATT at most).
 -- Older versions don't know it and leave it alone.
