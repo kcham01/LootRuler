@@ -39,6 +39,7 @@ local function chatHas(p, text)
 end
 local function same(a, b) return table.concat(a, ",") == table.concat(b, ",") end
 local U = lead.LR.U
+local function LR_link(id) return lead.LR.itemLink(id) end
 local function has(list, x) for _, v in ipairs(list or {}) do if v == x then return true end end return false end
 
 -- Karazhan items used below
@@ -627,6 +628,43 @@ bc = Bg.ask({ KEY })
 srv:tick(Bg.WAIT + 1)
 check("switched off: no answer, and the report says so", rowOf(full(bob)).why == "silent" and not bc.answers[full(bob)])
 bob.LR.db.settings.answerBagChecks = true
+
+section("swap requests")
+local Sw = lead.LR.Swap
+local s = lead.LR.startSession("Karazhan", 2, true, false)      -- (a session of its own: the first one has ended)
+srv:tick(2)
+lead.LR.setHR(s, HANDWRAPS, "Ann", "")
+lead.LR.leaderAdd(s, full(pug), "WARRIOR", WATCH)
+lead.LR.leaderAdd(s, full(ann), "PRIEST", BROOCH)
+srv:tick(2)
+local okU, whyU = ann.LR.Swap.request(cur(ann), BROOCH, SIGNET)
+check("not locked: change it yourself", not okU and whyU:find("change your reserves yourself", 1, true))
+lead.LR.setLocked(s, true)
+srv:tick(2)
+check("locked: Ann asks from her addon", ann.LR.Swap.request(cur(ann), BROOCH, SIGNET))
+srv:tick(2)
+check("the leader has it, and Ann is told it's in", #Sw.pending(s) == 1 and Sw.pending(s)[1].p == full(ann) and chatHas(lead, "Ann asks to swap")
+  and (function() for _, m in ipairs(ann.inbox) do if m.text:find("Your swap request is in", 1, true) then return true end end end)())
+check("her window says she's waiting", ann.LR.Swap.mine[s.id] ~= nil)
+r = ask("!lr swap pocket watch for signet of unshakable")
+check("Pug asks by whisper, by name", r:find("Your swap request is in", 1, true) and #Sw.pending(s) == 2, r)
+r = ask("!lr swap brooch for signet")
+check("he can't swap what he hasn't reserved", r:find("You haven't reserved", 1, true) ~= nil, r)
+r = ask("!lr swap " .. LR_link(WATCH) .. " " .. LR_link(HANDWRAPS))
+check("nor for a hard reserved item; his last good request still stands", r:find("hard reserved", 1, true) and #Sw.pending(s) == 2, r)
+local annReq, pugReq
+for _, x in ipairs(Sw.pending(s)) do if x.p == full(ann) then annReq = x else pugReq = x end end
+check("allowing Ann's swaps it, for raiders too", Sw.allow(s, annReq) and same(lead.LR.Session.reservesOf(s, full(ann)), { SIGNET }))
+srv:tick(2)
+check("she's told, and her addon has it", (function() for _, m in ipairs(ann.inbox) do if m.text:find("Your swap is done", 1, true) then return true end end end)()
+  and same(picks(ann), { SIGNET }) and ann.LR.Swap.mine[s.id] == nil)
+Sw.deny(s, pugReq)
+srv:tick(2)
+check("saying no to Pug's leaves his reserve, and he's told", same(lead.LR.Session.reservesOf(s, full(pug)), { WATCH })
+  and (function() for _, m in ipairs(pug.inbox) do if m.text:find("said no to swapping", 1, true) then return true end end end)())
+check("none left", #Sw.pending(s) == 0)
+lead.LR.endSession(s)
+srv:tick(2)
 
 section("the gear overview")
 local HEAD, CHEST = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", "|cffa335ee|Hitem:29066::::::::70:::::|h[Chest]|h|r"

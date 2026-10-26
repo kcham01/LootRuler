@@ -5,8 +5,27 @@ local _, LR = ...
 local U, K, S = LR.U, LR.K, LR.Session
 local UI = LR.UI
 
+--- the swap requests waiting (Core/Swap.lua): allow or refuse each
+local function swapRequests(f, s)
+  local list = LR.Swap.pending(s)
+  if #list == 0 then return end
+  f:panel(("Swap requests (%d)"):format(#list), function(p)
+    for _, r in ipairs(list) do
+      p:text(("%s: %s for %s"):format(U.classText(U.short(r.p), LR.classOf(r.p)), LR.coloredName(r.from), LR.coloredName(r.to)), { gap = 2 })
+      p:buttons({
+        { label = "Allow", width = 80, click = function()
+          local ok, why = LR.Swap.allow(s, r)
+          UI.toast(ok and "Swapped." or ("Couldn't swap: " .. why))
+        end },
+        { label = "No", width = 80, click = function() LR.Swap.deny(s, r) end },
+      }, "left")
+    end
+  end)
+end
+
 --- the leader's tools for the whole list
 local function leaderTools(f, s)
+  swapRequests(f, s)
   local gargul = LR.Gargul.available()
   f:panel("Raid leader", function(p)
     local sent = s.sentToGargul

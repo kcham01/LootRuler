@@ -36,7 +36,16 @@ local function myReserves(f, s)
       .. (extra > 0 and (" (" .. U.short(s.leader) .. " gave you " .. U.plural(extra, "extra reserve") .. ".)") or "")
     if s.dupes then line = line .. " You can put more than one on the same item." end
     p:text(line)
-    if s.locked then p:note("|cffff5a4aReserves are locked.|r Ask " .. (LR.isLeader(s) and "yourself" or U.short(s.leader)) .. " if something needs changing.") end
+    if s.locked then
+      p:note("|cffff5a4aReserves are locked.|r Ask " .. (LR.isLeader(s) and "yourself" or U.short(s.leader)) .. " if something needs changing.")
+      -- a swap request (Core/Swap.lua): one of mine for another item, the leader allows it
+      local asked = LR.Swap.mine[s.id]
+      if asked then
+        p:note(("You asked to swap %s for %s: waiting for %s."):format(LR.coloredName(asked.from), LR.coloredName(asked.to), U.short(s.leader)), K.GOLD)
+      elseif not LR.isLeader(s) and #picks > 0 then
+        p:buttons({ { label = "Ask to swap one", click = function() UI.swapSheet(s) end } }, "left")
+      end
+    end
     if s.go and not LR.isLeader(s) and not LR.inGroup(s.leader) then
       p:note(("|cffffd100Only players in %s's group can reserve.|r Ask them for an invite first."):format(U.short(s.leader)))
     end
@@ -63,6 +72,29 @@ local function myReserves(f, s)
       b:SetScript("OnLeave", function() GameTooltip:Hide() end)
       p:place(b, 36)
       p:gap(3)
+    end
+  end)
+end
+
+--- asking to swap a reserve once they're locked: which of mine, then which item instead
+function UI.swapSheet(s)
+  UI.openSheet("Swap a reserve", function(f, h)
+    f:note(("Pick the reserve you'd give up, then the item you'd like instead. %s decides."):format(U.short(s.leader)))
+    local seen = {}
+    for _, id in ipairs(LR.myPicks(s)) do
+      if not seen[id] then
+        seen[id] = true
+        local b = K.get(f.owner, "item", f.parent)
+        K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), "", { text = "Swap", width = 50, click = function()
+          h.close()
+          UI.pickItem(s, ("Swap %s for which item?"):format(LR.itemName(id)), function(to)
+            local ok, why = LR.Swap.request(s, id, to)
+            UI.toast(ok and "Asked: you'll be told by whisper." or why)
+          end, function(to) return to ~= id and not s.hr[to] end)
+        end })
+        f:place(b, 36)
+        f:gap(2)
+      end
     end
   end)
 end

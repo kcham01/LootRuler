@@ -65,6 +65,15 @@ check("their whispers are answered, on my screen only", shown("(whisper to") and
 check("and their lines show too", shown("whispers: !lr") ~= nil)
 check("everyone reserved all they could: nothing more", P.reserve() == 0)
 
+section("a swap request")
+LR.setLocked(s, true)
+srv:tick(3)
+local asks = LR.Swap.pending(s)
+check("reserves locked: a pretend player asks to swap one, by whisper", #asks == 1 and shown("whispers: !lr swap") ~= nil)
+check("allowing it swaps it", LR.Swap.allow(s, asks[1]) and LR.U.indexOf(S.reservesOf(s, asks[1].p), asks[1].to) ~= nil)
+LR.setLocked(s, false)
+srv:tick(1)
+
 section("loot and a reserved roll")
 local drops = P.drop(3)
 srv:tick(1)
