@@ -26,6 +26,13 @@ function UI.settingsView(f)
     toggle(p, "reservedAlert", "Tell me when my item is rolled out", "When an item you reserved (or are on the priority list for) is rolled out, a message in the middle of your screen, a sound, and the game's icon flashes if you're in another window.")
     toggle(p, "gargulWindows", "Roll windows for Gargul's rolls", "When Gargul rolls an item out (read from raid chat), a roll window like LootRuler's pops up, with the reserves. Not if you have Gargul yourself: it shows its own.", function() UI.rollWindows() end)
     toggle(p, "rollOnlyMine", "Only for items I can roll on", "Leaves out items other players reserved, and ties you're not in.", function() UI.rollWindows() end)
+    toggle(p, "rollHideUnusable", "Not for items my class can't use", "Leaves out items everyone can roll on that your class can't use (a plate chest for a mage, say). You can still /roll.", function() UI.rollWindows() end)
+    toggle(p, "rollCloseAfter", "Close the window once I've rolled", "It goes a moment after you roll, instead of staying to show who wins.", function() UI.rollWindows() end)
+    local sizes = { { plain = true, label = "Size:" } }
+    for _, x in ipairs(UI.ROLL_SIZES) do
+      sizes[#sizes + 1] = { label = x[2], on = set.rollScale == x[1], click = function() set.rollScale = x[1] UI.rollWindows() UI.render() end }
+    end
+    p:chips(sizes, { gap = 2 })
     p:buttons({
       { label = "Try the roll window", click = function() UI.testRoll() end },
       { label = "Put windows back", click = function()

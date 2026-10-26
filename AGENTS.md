@@ -260,6 +260,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   only; `S.valid` drops any other), set from an export's `metadata.id` or typed in the import sheet; `LR.postLink`.
 - **Who got what, in guild chat** (setting `awardGuild`, off; `toGuild` in `Core/Rolls.lua`): the award line (and an undo) also goes
   to GUILD, prefixed with the raid's name. Chat goes through ChatThrottleLib, so tests wait a few seconds for it.
+- **Roll window options** (settings `rollHideUnusable`, `rollCloseAfter`, off; `rollScale`, `UI.ROLL_SIZES`): `wanted` leaves out open
+  rolls on known items the class can't use; `UI.afterMyRoll` closes the window 1.5 seconds after a click roll; frames get
+  `SetScale`. The stand-in doesn't draw scale, so pictures show windows at their normal size.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

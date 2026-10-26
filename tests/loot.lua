@@ -790,6 +790,31 @@ lead.LR.db.settings.awardGuild = false
 srv:closeLoot(lead)
 srv:tick(1)
 
+section("roll window options")
+local bobWindows = bob.LR.db.settings.rollWindow
+bob.LR.db.settings.rollWindow = true
+bob.LR.db.settings.rollHideUnusable = true
+ann.LR.db.settings.rollCloseAfter = true
+srv:openLoot(lead, { { HANDS, 4 } })
+srv:tick(0.5)
+Rolls.start(HANDS, { link = srv:link(HANDS), slot = 1 })
+srv:tick(0.5)
+check("a mage who leaves out what they can't use gets no window for a mace", frameFor(bob, HANDS) == nil and copyOf(bob, HANDS) ~= nil)
+check("a priest gets one", frameFor(ann, HANDS) ~= nil)
+srv:willRoll(ann, 42)
+ann.M.click(frameFor(ann, HANDS).dice)
+srv:tick(0.5)
+check("she rolls, and the window stays a moment", Rolls.mine().rolled["ann-dreamscythe"] ~= nil and frameFor(ann, HANDS) ~= nil)
+srv:tick(2)
+check("then it goes, as she likes it, while the roll goes on", frameFor(ann, HANDS) == nil and Rolls.mine().state == "open")
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+srv:closeLoot(lead)
+bob.LR.db.settings.rollWindow, bob.LR.db.settings.rollHideUnusable = bobWindows, false
+ann.LR.db.settings.rollCloseAfter = false
+srv:tick(1)
+
 section("the loot master's own roll types")
 lead.LR.db.settings.rollKinds = { { n = "Transmog", hi = 98 } }
 srv:openLoot(lead, { { TALISMAN, 4 } })
