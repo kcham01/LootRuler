@@ -374,6 +374,21 @@ end
 --- come, a "Bid ahead" button instead (when the loot master's LootRuler takes bids ahead)
 local function extraRow(f, copy)
   for _, b in ipairs(f.extras) do b.action = nil end
+  -- a loot council member: a button to vote (Core/Council.lua)
+  local s = LR.current()
+  if LR.Council.isMember(s, U.me()) and LR.Council.votable(copy) and next(copy.rolled) then
+    local b = f.extras[1]
+    b.kind, b.shows = nil, nil
+    b.action = function() UI.councilSheet(copy) end
+    K.setChip(b, copy.myVote and ("Council: " .. U.short(copy.myVote)) or "Council: vote", false)
+    setButton(b, true)
+    b:ClearAllPoints()
+    b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.note:IsShown() and f.note or f.status, "BOTTOMLEFT", 0, -6)
+    b:SetWidth(150)
+    b:Show()
+    for i = 2, #f.extras do f.extras[i]:Hide() end
+    return true
+  end
   if copy.mode == "BID" and copy.upNext and copy.state == "open" and LR.hasFeature(copy.by, LR.FEATURE_AHEAD) then
     local b = f.extras[1]
     b.kind, b.shows = nil, nil
@@ -548,7 +563,14 @@ function UI.rollTick(f)
     f.bar.fill:SetWidth(BAR)
     f.bar.fill:SetVertexColor(0.45, 0.45, 0.45)
     if f.shownSecs then f.shownSecs = nil f.secs:SetText("") end
-    if copy.endedAt and t - copy.endedAt > HIDE_AFTER and f:IsShown() then copy.closedByMe = true UI.rollWindows() end
+    if copy.endedAt and t - copy.endedAt > HIDE_AFTER and f:IsShown() then
+      -- (a loot council member's stays up until it's given out: they vote after the rolls are in)
+      if copy.council == nil then copy.council = LR.Council.isMember(LR.current(), me()) end      -- (looked up once)
+      if not (copy.council and copy.state == "closed" and LR.Council.votable(copy)) then
+        copy.closedByMe = true
+        UI.rollWindows()
+      end
+    end
   end
 end
 
@@ -699,6 +721,33 @@ function UI.pretendItem()
   local s = LR.current()
   local raid = s and LR.raidOf(s)
   return raid and raid.order and raid.order[1] or 28830
+end
+
+--- the loot council's vote: everyone who rolled, with how they rolled and the votes so far
+function UI.councilSheet(copy)
+  UI.show()
+  UI.openSheet("Loot council: " .. LR.itemName(copy.id), function(f, h)
+    f:note("Vote for who gets it. You can change your vote until it's given out. The loot master sees the votes and hands it over.")
+    local good = R.standings(copy)
+    if #good == 0 then f:note("Nobody has rolled yet.") end
+    for _, e in ipairs(good) do
+      local votes = copy.votes and copy.votes[e.p]
+      local b = K.get(f.owner, "item", f.parent)
+      local mine = copy.myVote and U.samePlayer(copy.myVote, e.p)
+      K.setItem(b, f.width, LR.LOGO, U.classText(U.short(e.p), (copy.classes and copy.classes[e.p]) or LR.classOf(e.p)),
+        ("%s %d%s"):format(R.label(copy, e), e.n, votes and ("  |cff1eff00%s|r"):format(U.plural(votes, "vote")) or ""),
+        mine and "|cff1eff00Your vote|r" or "",
+        { text = mine and "Take back" or "Vote", width = 70, click = function()
+          local ok, why = LR.Council.myVote(copy, mine and "" or e.p)
+          if not ok then UI.toast(why) end
+          h.redraw(true)
+          UI.rollWindows()
+        end })
+      f:place(b, 36)
+      f:gap(2)
+    end
+    if copy.voted then f:note(("%d of the council voted so far."):format(copy.voted)) end
+  end, { full = true })
 end
 
 --- bids ahead on what's coming up after an auction: each item, my bid ahead on it, and a box to change it

@@ -66,6 +66,9 @@ local function noRoll(roll) return roll.mode == "HR" or (roll.mode == "PR" and #
 
 local function selectedPlayer(roll)
   if roll.pick then return roll.pick end
+  -- a loot council: their choice, when they've made one
+  local choice = LR.Council.choice(roll)
+  if choice and roll.state == "closed" then return choice end
   if roll.mode == "PR" and #roll.who == 1 then return roll.who[1] end
   if roll.mode == "BID" then local top = R.topBid(roll) return top and top.p end
   if roll.mode == "HR" then
@@ -194,7 +197,8 @@ local function rowFor(f, roll, e, rank, pick)
   b:SetWidth(f.width)
   local class = LR.classOf(e.p)
   b.rank:SetText(rank and tostring(rank) or "")
-  b.name:SetText(U.classText(U.short(e.p), class))
+  local votes = e.kind and LR.Council.counts(roll)[e.p]
+  b.name:SetText(U.classText(U.short(e.p), class) .. (votes and ("  |cff1eff00%s|r"):format(U.plural(votes, "vote")) or ""))
   b.name:SetWidth(f.width - 150)
   local links = roll.gear and roll.gear[R.key(e.p)]
   if links then
@@ -242,7 +246,8 @@ function UI.masterDraw()
   local name, hex = LR.linkParts(roll.link, roll.id)
   master.item.icon:SetTexture(LR.itemIcon(roll.id))
   master.item.name:SetText("|cff" .. hex .. name .. "|r")
-  master.item.sub:SetText(modeLine(roll))
+  local council = LR.Council.on(Rolls.session()) and roll.mode ~= "BID" and roll.mode ~= "HR"
+  master.item.sub:SetText(modeLine(roll) .. (council and "; |cff1eff00the council picks|r" or ""))
   local f = K.flow("master", master.body, 0, 0, MW - 32)
   local good, bad = R.standings(roll)
   local pick = selectedPlayer(roll)
@@ -255,6 +260,14 @@ function UI.masterDraw()
     for _, e in ipairs(bad) do rowFor(f, roll, e, nil, pick) end
     local waiting = R.waiting(roll)
     if waiting and #waiting > 0 and roll.state == "open" then f:note("Still to roll: " .. R.names(waiting, 8)) end
+    -- the loot council's votes so far
+    local s = Rolls.session()
+    if LR.Council.on(s) and LR.Council.votable(roll) then
+      local _, voted = LR.Council.counts(roll)
+      local choice, top = LR.Council.choice(roll)
+      f:note(("Loot council: %d of %d voted.%s"):format(voted, #s.lc, choice and (" Their choice: %s (%s)."):format(U.short(choice), U.plural(top, "vote"))
+        or (voted > 0 and " A tie so far." or "")), K.GOLD)
+    end
     local passed = {}
     for _, name in pairs(roll.passed) do passed[#passed + 1] = U.short(name) end
     table.sort(passed)

@@ -117,6 +117,13 @@ function W.handle(text, sender)
     return
   end
 
+  -- the loot council: "!lr vote Name" (Core/Council.lua), from a member without the addon
+  local voteFor = lower:match("^vote%s*(.*)$")
+  if voteFor and LR.Council.on(s) then
+    local ok, who = LR.Council.vote(player, U.trim(args:sub(5)))
+    if ok then W.reply(player, who and ("Your vote for %s is in."):format(U.short(who)) or "Your vote is taken back.") else W.reply(player, who) end
+    return
+  end
   -- GDKP: several auctions at once: "!lr bid #2 300", "!lr max #2 800" (Core/Batch.lua)
   local batch = LR.Batch.current
   if s.gdkp and batch and batch.state == "open" then

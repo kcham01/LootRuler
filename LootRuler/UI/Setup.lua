@@ -247,6 +247,30 @@ local function manage(f, s)
     end
   end)
 
+  -- the loot council (Core/Council.lua): who's on it
+  if not s.gdkp then
+    f:panel("Loot council", function(p)
+      p:note("Pick a council and they vote on who gets each item, from the players who roll for it. The loot master sees the votes and hands it over. Votes stay between the council and the loot master. Council members without LootRuler whisper you \"!lr vote Name\".")
+      local list, seen = {}, {}
+      for _, m in ipairs(LR.roster()) do list[#list + 1] = { name = U.full(m.name), class = m.class } seen[U.full(m.name):lower()] = true end
+      for _, n in ipairs(s.lc or {}) do if not seen[n:lower()] then list[#list + 1] = { name = n } end end
+      table.sort(list, function(a, b) return a.name < b.name end)
+      local chips = {}
+      for _, m in ipairs(list) do
+        local on = LR.Council.isMember(s, m.name)
+        chips[#chips + 1] = { label = (on and "[x] " or "[  ] ") .. U.short(m.name), on = on, click = function()
+          local names = {}
+          for _, n in ipairs(s.lc or {}) do if not U.samePlayer(n, m.name) then names[#names + 1] = n end end
+          if not on then names[#names + 1] = m.name end
+          LR.setCouncil(s, names)
+        end }
+      end
+      if #chips > 0 then p:chips(chips, { gap = 2 }) else p:note("Nobody in the group yet.") end
+      p:note(LR.Council.on(s) and ("On: %s on the council."):format(U.plural(#s.lc, "player")) or "Off: nobody on the council, so rolls decide.",
+        LR.Council.on(s) and K.GREEN or nil)
+    end)
+  end
+
   f:panel("Disenchanter", function(p)
     if s.de then
       p:text(U.classText(U.short(s.de), LR.classOf(s.de)) .. " disenchants what nobody wants: the loot master's window has a Disenchant button.")

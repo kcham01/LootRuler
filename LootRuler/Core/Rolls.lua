@@ -145,6 +145,7 @@ end
 -- what to roll, then my note on the item and who in the group has it on their thatsmybis wishlist
 howTo = function(roll, link, secs)
   local text = howToRoll(roll, link, secs)
+  if roll.mode ~= "BID" and roll.mode ~= "HR" and LR.Council and LR.Council.on(session()) then text = text .. " " .. LR.Council.howTo() end
   if roll.note then text = text .. (" Note: %s."):format((roll.note:gsub("%.$", ""))) end
   if roll.wish and #roll.wish > 0 and roll.mode ~= "BID" and roll.mode ~= "HR" then text = text .. (" Wishlisted: %s."):format(LR.wishLine(roll.wish)) end
   return text
