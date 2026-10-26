@@ -434,6 +434,19 @@ end
 function LR.leaderAdd(s, player, class, id) local ok, why = S.add(s, player, class, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
 function LR.removeDrop(s, k) if LR.isLeader(s) and S.removeDrop(s, k, U.now()) then leaderChanged(s) return true end return false end
 function LR.unaward(s, index) if LR.isLeader(s) and S.unaward(s, index, U.now()) then leaderChanged(s) return true end return false end
+--- changes an award (the leader) and tells the raid
+local HOW = { SR = "their reserve", MS = "main spec", OS = "off spec", DE = "to disenchant" }
+function LR.editAward(s, index, player, kind)
+  local w = s.won and s.won[index]
+  local was = w and w.p
+  if not LR.isLeader(s) or not S.editAward(s, index, player, kind, U.now()) then return false end
+  leaderChanged(s)
+  local link = LR.itemLink(w.i)
+  local line = U.samePlayer(was, w.p) and ("Changed: %s is %s's for %s."):format(link, U.short(w.p), HOW[kind])
+    or ("Changed: %s is %s's (%s), not %s's."):format(link, U.short(w.p), HOW[kind], U.short(was))
+  LR.Rolls.say(line)
+  return true
+end
 function LR.leaderRemove(s, player, id) local ok, why = S.remove(s, player, id, true, U.now()) if ok then leaderChanged(s) end return ok, why end
 
 ---------------------------------------------------------------------- a new leader for a session

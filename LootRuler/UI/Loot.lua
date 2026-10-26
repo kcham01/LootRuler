@@ -94,6 +94,7 @@ local function dropRow(f, s, d, runner, leader)
   b:SetScript("OnEnter", function(self)
     UI.itemTooltip(self, s, d.i)
     if runner and (state == "corpse" or state == "held") then GameTooltip:AddLine("Click to give it to someone without a roll.", 0.7, 0.7, 0.7) GameTooltip:Show() end
+    if leader and (state == "given" or state == "toTrade") then GameTooltip:AddLine("Click to change who got it, or how.", 0.7, 0.7, 0.7) GameTooltip:Show() end
     if leader then GameTooltip:AddLine("Right-click to take it off the loot list.", 0.7, 0.7, 0.7) GameTooltip:Show() end
   end)
   b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -106,6 +107,12 @@ local function dropRow(f, s, d, runner, leader)
       UI.giveSheet({ id = d.i, link = slot and GetLootSlotLink(slot) or LR.itemLink(d.i), slot = slot, drop = d.k })
       return
     end
+    -- given out: change who got it, or how (a mistake)
+    if button == "LeftButton" and leader and (state == "given" or state == "toTrade") then
+      local _, idx = S.dropWin(s, d.k)
+      if idx then UI.editAwardSheet(s, idx) end
+      return
+    end
     if button == "RightButton" and leader then
       UI.confirm("Take it off the loot list", LR.itemName(d.i) .. " comes off the raid's loot list (it didn't really drop, or it's there twice).", "Take it off", function()
         LR.removeDrop(s, d.k)
@@ -114,6 +121,32 @@ local function dropRow(f, s, d, runner, leader)
   end)
   f:place(b, 36)
   f:gap(2)
+end
+
+--- changes an award: who got it, and how
+function UI.editAwardSheet(s, index)
+  local w = s.won and s.won[index]
+  if not w then return end
+  local who, how = w.p, w.de and "DE" or w.k
+  UI.openSheet("Change the award", function(f, h)
+    f:text(("%s went to %s."):format(LR.itemLink(w.i), U.classText(U.short(w.p), LR.classOf(w.p))))
+    f:gap(4)
+    f:text("Who has it?", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    f:chips({ { label = U.short(who), on = true, click = function() end },
+      { label = "Someone else...", click = function() UI.pickPlayer("Who has it?", function(name) who = name h.redraw(true) end) end } })
+    f:text("How did they get it?", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local kinds = {}
+    for _, k in ipairs({ { "SR", "Their reserve" }, { "MS", "Main spec" }, { "OS", "Off spec" }, { "DE", "To disenchant" } }) do
+      kinds[#kinds + 1] = { label = k[2], on = how == k[1], click = function() how = k[1] h.redraw(true) end }
+    end
+    f:chips(kinds)
+    f:note("The raid is told. Reserves used, +1s and who has it to trade follow the change.")
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Save", click = function()
+        if LR.editAward(s, index, who, how) then UI.toast("Changed.") end
+        h.close()
+      end } })
+  end)
 end
 
 --- who won what, to copy out (a sheet with a choice of formats)

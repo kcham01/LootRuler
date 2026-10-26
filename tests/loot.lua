@@ -957,6 +957,22 @@ Rolls.dismiss()
 srv:closeLoot(lead)
 srv:tick(10)                     -- (what was sent goes out a little at a time)
 
+section("changing an award afterwards")
+lead.LR.Session.award(s, 30030, full(dan), "MS", 70, lead.LR.U.now())
+lead.LR.leaderChanged(s)
+srv:tick(2)
+local ei = #s.won
+check("a raider can't change an award", not ann.LR.editAward(ann.LR.current(), ei, full(ann), "MS"))
+check("the leader gives it to Bob instead, as off spec", lead.LR.editAward(s, ei, full(bob), "OS") and s.won[ei].p == full(bob) and s.won[ei].k == "OS")
+srv:tick(10)
+check("the raid is told", chat("is Bob-Faerlina's (off spec), not Dan's.") ~= nil)
+check("raiders' copies follow", ann.LR.current().won[ei].p == full(bob) and ann.LR.current().won[ei].k == "OS")
+check("the same player, another way", lead.LR.editAward(s, ei, full(bob), "MS") and s.won[ei].k == "MS")
+srv:tick(10)
+check("says so too", chat("is Bob-Faerlina's for main spec.") ~= nil)
+lead.LR.unaward(s, ei)
+srv:tick(2)
+
 section("roll window options")
 local bobWindows = bob.LR.db.settings.rollWindow
 bob.LR.db.settings.rollWindow = true

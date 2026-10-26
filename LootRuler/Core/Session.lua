@@ -360,6 +360,19 @@ function S.unaward(s, index, now)
   return true
 end
 
+--- changes an award (a mistake): who got it and how ("SR", "MS", "OS", or "DE" to disenchant). What it changes follows
+--- by itself: reserves used up, +1s, who has it to trade. A boosted roll's mark goes (points are the guild's call).
+function S.editAward(s, index, player, kind, now)
+  local w = s.won and s.won[index]
+  if not w or type(player) ~= "string" or w.k == "BID" or w.k == "HR" then return false end
+  if kind ~= "SR" and kind ~= "MS" and kind ~= "OS" and kind ~= "DE" then return false end
+  local k, de = kind == "DE" and "OS" or kind, kind == "DE" or nil
+  if U.samePlayer(w.p, player) and w.k == k and (w.de or nil) == de then return false end
+  w.p, w.k, w.de, w.br, w.xn = U.full(player), k, de, nil, nil
+  bump(s, now)
+  return true
+end
+
 --- the place in the list of loot given out of a player's latest award of an item (from a drop, when known), or nil
 function S.findAward(s, id, player, dropKey)
   for i = #(s.won or {}), 1, -1 do
