@@ -15,7 +15,8 @@
 --   R, X, N                       rolling out loot (Core/Rolls.lua)
 --   D                             the raid's drops (Core/Drops.lua)
 --   V  anyone -> group            "I have LootRuler, this version" (on joining a group, and when asked)
--- Every message also says what the sender's addon can do (fl): 1 = it can take over a session (a new leader).
+-- Every message also says what the sender's addon can do (fl, bits added together): 1 = it can take over a session
+-- (a new leader), 2 = it takes bids ahead on queued auctions (B, Core/Rolls.lua).
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
 --
@@ -29,7 +30,8 @@ local _, LR = ...
 local U, S = LR.U, LR.Session
 
 local PROTOCOL = 1
-local FEATURES = 1          -- what this version can do, sent as fl (see the top)
+LR.FEATURE_LEAD, LR.FEATURE_AHEAD = 1, 2
+local FEATURES = LR.FEATURE_LEAD + LR.FEATURE_AHEAD   -- what this version can do, sent as fl (see the top)
 local KEEP_DAYS = 7
 
 local Net = {}
@@ -774,10 +776,12 @@ function LR.heardFrom(sender, version, fl)
 end
 
 --- whether a player's LootRuler can take over a session (we've heard from it, and it's new enough)
-function LR.canLead(name)
+function LR.hasFeature(name, bit)
   if U.samePlayer(name, U.me()) then return true end
-  return (name and features[U.full(name):lower()] or 0) >= 1
+  local fl = name and features[U.full(name):lower()] or 0
+  return math.floor(fl / bit) % 2 == 1
 end
+function LR.canLead(name) return LR.hasFeature(name, LR.FEATURE_LEAD) end
 
 --- the version of LootRuler a player has, if we've heard from them (and nil if not)
 function LR.versionOf(name)

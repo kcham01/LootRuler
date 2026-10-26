@@ -322,6 +322,7 @@ local function makeFrame(i)
     b.text:SetPoint("RIGHT", -6, 0)
     b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     b:SetScript("OnClick", function(self)
+      if self.action then self.action() return end
       if f.copy and self.kind then
         LR.Rolls.roll(f.copy, self.kind)
         UI.afterMyRoll(f.copy)
@@ -329,6 +330,11 @@ local function makeFrame(i)
       end
     end)
     K.tooltipOn(b, function(tt)
+      if b.action then
+        tt:SetText("Bid ahead", 1, 1, 1)
+        tt:AddLine("On what's coming up next: LootRuler bids for you when it comes up, as little as it takes, up to what you say.", 1, 0.82, 0, true)
+        return
+      end
       local x = f.copy and R.extra(f.copy, b.kind or b.shows)
       if not x then return end
       tt:SetText(x.n, 1, 1, 1)
@@ -364,8 +370,25 @@ local function rollList(f, copy)
   f.list:Show()
 end
 
---- the row of the loot master's own roll types (a roll open to everyone that has them)
+--- the row of the loot master's own roll types (a roll open to everyone that has them); in an auction with more to
+--- come, a "Bid ahead" button instead (when the loot master's LootRuler takes bids ahead)
 local function extraRow(f, copy)
+  for _, b in ipairs(f.extras) do b.action = nil end
+  if copy.mode == "BID" and copy.upNext and copy.state == "open" and LR.hasFeature(copy.by, LR.FEATURE_AHEAD) then
+    local b = f.extras[1]
+    b.kind, b.shows = nil, nil
+    b.action = function() UI.bidAheadSheet(copy) end
+    local n = 0
+    for _, id in ipairs(copy.upNext) do if LR.Rolls.myAhead[id] then n = n + 1 end end
+    K.setChip(b, n > 0 and ("Bid ahead (%d)"):format(n) or "Bid ahead", false)
+    setButton(b, true)
+    b:ClearAllPoints()
+    b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.note:IsShown() and f.note or f.status, "BOTTOMLEFT", 0, -6)
+    b:SetWidth(110)
+    b:Show()
+    for i = 2, #f.extras do f.extras[i]:Hide() end
+    return true
+  end
   local xk = copy.mode == "OPEN" and copy.xk or {}
   local can = {}
   if copy.state == "open" and not copy.rolled[R.key(me())] and not copy.passedByMe then
@@ -676,6 +699,31 @@ function UI.pretendItem()
   local s = LR.current()
   local raid = s and LR.raidOf(s)
   return raid and raid.order and raid.order[1] or 28830
+end
+
+--- bids ahead on what's coming up after an auction: each item, my bid ahead on it, and a box to change it
+function UI.bidAheadSheet(copy)
+  UI.show()
+  UI.openSheet("Bid ahead", function(f, h)
+    f:note("The most you'll pay for an item coming up. When its auction starts, LootRuler bids for you, as little as it takes to keep you on top, up to that. Nobody else sees it. Players without the addon whisper the loot master \"!lr bid 300 [item]\".")
+    for _, id in ipairs(copy.upNext or {}) do
+      local mine = LR.Rolls.myAhead[id]
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), mine and ("Your bid ahead: up to " .. LR.Gdkp.gold(mine)) or "No bid ahead yet", "",
+        { text = mine and "Change" or "Bid", width = 60, click = function()
+          UI.goldSheet("Bid ahead on " .. LR.itemName(id), "The most you'll pay (0 takes it back).", mine, function(g)
+            local ok, why = LR.Rolls.bidAhead(copy, id, g)
+            if not ok then UI.toast(why) end
+            h.redraw(true)
+            UI.rollWindows()
+          end)
+        end })
+      f:place(b, 36)
+      f:gap(2)
+    end
+    local more = (copy.upNext and (copy.upNext.n or #copy.upNext) or 0) - (copy.upNext and #copy.upNext or 0)
+    if more > 0 then f:note(("%s more after these."):format(U.plural(more, "item"))) end
+  end, { full = true })
 end
 
 --- a pretend roll, only on this screen, to see the window (and move it): /lr test, and the Test tab.

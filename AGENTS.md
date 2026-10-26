@@ -330,8 +330,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   by hand is in `Gdkp.pot`; every payment is logged with how ("trade", "mail", "hand"), at most `Gdkp.MAX_LOG`; a payout set by hand
   is all that player gets (no share, bonus or cut) and the rest is split between the others (`split.sharers`), scaled to fit.
   "Name,Gold" lines go out and come back in (`Prio.parseCounts`). Older versions ignore all three.
-- **Planned with the owner (in this order, one pull request each):** bidding ahead on
-  queued items; several auctions at once (bids typed with the item's number work without the addon); bag checks; a gear
+- **Bidding ahead** (`Rolls.ahead` item -> key -> { p, g, at } on the loot master's addon; `Rolls.setAhead`, `aheadCount`,
+  `applyAhead`; `Rolls.bidAhead`, `Rolls.myAhead` on a raider's; message `B` = { id, g }; `UI.bidAheadSheet`): on items in the
+  queue only, at least the item's starting bid; when its auction starts they become `roll.maxes` and `autoBids` bids. 0 takes
+  one back; `clearQueue` forgets them. By whisper: `!lr bid 300 [item]` / `!lr max 800 [item]` (an item on now is an ordinary bid).
+  Messages' `fl` is now bits (`LR.hasFeature(name, bit)`: `FEATURE_LEAD` 1, `FEATURE_AHEAD` 2); a raider's window only offers it
+  when the loot master's addon has bit 2. The practice raid's pretend players bid ahead by whisper.
+- **Planned with the owner (in this order, one pull request each):** several auctions at once (bids typed with the item's number work without the addon); bag checks; a gear
   overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has

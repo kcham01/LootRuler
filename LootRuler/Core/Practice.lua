@@ -296,6 +296,13 @@ local function answerAuction(roll)
   end
   if #bidders == 0 then return end
   local s = P.session()
+  -- one of them bids ahead on something coming up after this (by whisper, as a player without the addon would)
+  local nextUp = LR.Rolls.queue[1]
+  if nextUp and s and s.gk then
+    local x = pick(P.players)
+    local g = math.floor(LR.Gdkp.minFor(s, nextUp.id) * (2 + math.random() * 2))
+    after(1 + math.random() * 2, function() P.whisper(x, ("!lr bid %d %s"):format(g, LR.itemLink(nextUp.id))) end)
+  end
   local maxer = #bidders >= 3 and bidders[#bidders] or nil
   if maxer then
     table.remove(bidders)
