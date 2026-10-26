@@ -26,6 +26,7 @@ Core\Gdkp.lua
 Core\Roll.lua
 Core\Gargul.lua
 Core\Lineup.lua
+Core\Notes.lua
 Core\Net.lua
 Core\Whisper.lua
 Core\Rolls.lua

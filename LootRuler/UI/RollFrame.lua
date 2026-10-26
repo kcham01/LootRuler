@@ -299,10 +299,14 @@ local function makeFrame(i)
   f.status:SetWidth(W - 28)
   f.status:SetPoint("TOPLEFT", 14, -72)
   f.status:SetWordWrap(true)
+  -- the loot master's note on the item ("Warrior > Rogue")
+  f.note = K.fs(f, "GameFontHighlightSmall")
+  f.note:SetWidth(W - 28)
+  f.note:SetPoint("TOPLEFT", f.status, "BOTTOMLEFT", 0, -4)
+  f.note:SetTextColor(0.5, 0.8, 1)
   -- everyone's rolls that count, best first (Settings: rollList)
   f.list = K.fs(f, "GameFontHighlightSmall")
   f.list:SetWidth(W - 28)
-  f.list:SetPoint("TOPLEFT", f.status, "BOTTOMLEFT", 0, -4)
   f.list:SetJustifyH("LEFT")
   -- the loot master's own roll types, in a row underneath
   f.extras = {}
@@ -375,7 +379,7 @@ local function extraRow(f, copy)
       setButton(b, b.kind ~= nil)
       b:ClearAllPoints()
       if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
-      else b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.status, "BOTTOMLEFT", 0, -6) end
+      else b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.note:IsShown() and f.note or f.status, "BOTTOMLEFT", 0, -6) end
       b:Show()
       prev = b
     else
@@ -386,11 +390,16 @@ local function extraRow(f, copy)
   return prev ~= nil
 end
 
---- the list and the row go under the status line; the window grows to fit them
+--- the note, the list and the row go under the status line; the window grows to fit them
 local function underneath(f, copy)
+  f.note:SetText(copy.note and ("Note: " .. copy.note) or "")
+  f.note:SetShown(copy.note ~= nil)
+  f.list:ClearAllPoints()
+  f.list:SetPoint("TOPLEFT", copy.note and f.note or f.status, "BOTTOMLEFT", 0, -4)
   rollList(f, copy)
   local row = extraRow(f, copy)
-  local h = 72 + f.status:GetStringHeight() + (f.list:IsShown() and (4 + f.list:GetStringHeight()) or 0) + (row and 26 or 0) + 14
+  local h = 72 + f.status:GetStringHeight() + (copy.note and (4 + f.note:GetStringHeight()) or 0)
+    + (f.list:IsShown() and (4 + f.list:GetStringHeight()) or 0) + (row and 26 or 0) + 14
   f:SetHeight(math.max(H, h))
 end
 
@@ -638,6 +647,7 @@ function UI.testRoll(opts)
   local copy = R.new(k, id, { mode = mode, who = who, xk = mode == "OPEN" and R.checkKinds(LR.db.settings.rollKinds) or nil })
   copy.by = U.me()
   copy.link = LR.itemLink(id)
+  copy.note = LR.noteFor(id)
   copy.classes = classes
   local secs = opts.secs or 20
   copy.secs, copy.ends, copy.state, copy.test = secs, GetTime() + secs, "open", true

@@ -104,6 +104,26 @@ function UI.settingsView(f)
     if #acts > 0 then p:buttons(acts, "left") end
   end)
 
+  f:panel("Item notes", function(p)
+    p:note("Your own note on an item, like \"Warrior > Rogue\" or \"Tanks first\". When you roll the item out, raid chat and everyone's roll window show it, and you see it in the item's tooltip. Kept between raids.")
+    local ids = {}
+    for id in pairs(LR.db.notes) do ids[#ids + 1] = id end
+    table.sort(ids)
+    for i, id in ipairs(ids) do
+      if i > 8 then p:note(("...and %d more (Copy them out to see them all)."):format(#ids - 8)) break end
+      local b = K.get(p.owner, "item", p.parent)
+      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), LR.db.notes[id], "",
+        { text = "x", tip = "Take the note off", click = function() LR.setNote(id, nil) UI.render() end })
+      b:SetScript("OnClick", function() UI.noteSheet(id) end)
+      p:place(b, 36)
+      p:gap(2)
+    end
+    p:buttons({
+      { label = "Add a note", click = function() UI.noteSheet() end },
+      { label = "Bring in or copy out", click = function() UI.notesSheet() end },
+    }, "left")
+  end)
+
   f:panel("Loot rules (master looter)", function(p)
     toggle(p, "autoLoot", "Hand out loot by my rules", "When you open a corpse with master loot, items your rules match go straight to whoever the rule says. Anything someone reserved is always rolled for instead.")
     local s = LR.Rolls.session()
@@ -177,6 +197,69 @@ function UI.addLootRule()
     end
     f:buttons({ { label = "Cancel", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and to), click = function() LR.AutoLoot.add(what, to) h.close() UI.render() end } })
+  end)
+end
+
+--- a sheet to write my note on an item (id: that item, else shift-click one in)
+function UI.noteSheet(id)
+  local text, note = id and LR.itemLink(id) or "", id and LR.noteFor(id) or ""
+  UI.show()
+  UI.openSheet("Item note", function(f, h)
+    f:text("Which item?", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetText(text)
+    K.takeLinks(e)
+    e:SetScript("OnTextChanged", function(self, user)
+      if not user then return end
+      text = self:GetText()
+      local was = id
+      id = LR.idFrom(text)
+      if id ~= was then note = id and LR.noteFor(id) or note h.redraw(true) end
+    end)
+    f:note(id and LR.coloredName(id) or "Shift-click the item into the box (from your bags, a chat link, anywhere).")
+    f:gap(6)
+    f:text("The note", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local n = K.get(f.owner, "edit", f.parent)
+    f:place(n, 22, 6, f.width - 12)
+    n:SetMaxLetters(LR.Notes.MAX_LEN)
+    n:SetText(note)
+    n:SetScript("OnTextChanged", function(self, user) if user then note = self:GetText() end end)
+    f:note("Short and plain: it goes in raid chat. Leave it empty to take the note off.")
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Save", disabled = not id, click = function() LR.setNote(id, note) h.close() UI.render() end } })
+  end)
+end
+
+--- all my notes as text: copy them out, or paste notes in (one item a line, "28525: Warrior > Rogue")
+function UI.notesSheet()
+  local pasted = ""
+  UI.show()
+  UI.openSheet("Item notes in and out", function(f, h)
+    f:text("Copy out", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local out = K.get(f.owner, "memo", f.parent)
+    f:place(out, 110, 0)
+    K.setMemo(out, f.width, 110, LR.Notes.text(LR.db.notes))
+    f:gap(8)
+    f:text("Bring in", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    f:note("Paste notes, one item a line: its number or link, then the note (\"28525: Warrior > Rogue\"). A note for an item that has one already replaces it.")
+    local into = K.get(f.owner, "memo", f.parent)
+    f:place(into, 110, 0)
+    K.setEditMemo(into, f.width, 110, pasted, function(t) pasted = t end)
+    out.edit:ClearFocus()
+    f:gap(6)
+    f:buttons({ { label = "Close", click = function() h.close() end },
+      { label = "Bring them in", click = function()
+        local notes, bad = LR.Notes.parse(pasted)
+        local n = 0
+        for id, note in pairs(notes) do LR.db.notes[id] = note n = n + 1 end
+        LR.db.notes = LR.Notes.check(LR.db.notes)
+        LR.changed("notes")
+        UI.toast(("%s brought in.%s"):format(U.plural(n, "note"), bad > 0 and (" %s not understood."):format(U.plural(bad, "line")) or ""))
+        pasted = ""
+        h.redraw(true)
+        UI.render()
+      end } })
   end)
 end
 

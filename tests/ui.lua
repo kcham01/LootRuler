@@ -1222,6 +1222,46 @@ run("the Test tab", function()
   LR.UI.go("reserve")
 end)
 
+run("item notes", function()
+  LR.UI.go("settings")
+  srv:tick(0.3)
+  check("an Item notes panel on the Settings tab", visible("Item notes") and visible("Add a note"))
+  clickText("Add a note")
+  local edits = {}
+  local function walk(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() then edits[#edits + 1] = c end walk(c) end end
+  walk(LR.UI.topSheet())
+  M.click(edits[1])
+  G.ChatEdit_InsertLink(srv.itemInfo(28525).link)
+  srv:tick(0.3)
+  edits = {}
+  walk(LR.UI.topSheet())
+  edits[2]:SetText("Warrior > Rogue") edits[2]._scripts.OnTextChanged(edits[2], true)
+  clickText("Save")
+  check("a note on an item", LR.noteFor(28525) == "Warrior > Rogue" and visible("Warrior > Rogue"))
+  clickText("Bring in or copy out")
+  check("copied out, one a line", visible("28525: Warrior > Rogue"))
+  local memo
+  edits = {}
+  walk(LR.UI.topSheet())
+  for _, e in ipairs(edits) do if e._multi then memo = e end end
+  memo:SetText("28530: Tanks first\nnot a note\n28525: Warrior > Paladin") memo._scripts.OnTextChanged(memo, true)
+  clickText("Bring them in")
+  check("brought in: new notes, and changed ones replaced", LR.noteFor(28530) == "Tanks first" and LR.noteFor(28525) == "Warrior > Paladin")
+  shot("item-notes-io")
+  LR.UI.closeAll()
+  -- a pretend roll on an item with a note shows it
+  local copy = LR.UI.testRoll({ quiet = true })
+  copy.note = "Warrior > Paladin"
+  LR.UI.rollWindows()
+  local fr
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy == copy then fr = x end end
+  check("a roll window shows the note", fr and fr.note:IsShown() and fr.note:GetText() == "Note: Warrior > Paladin")
+  shot("roll-note", lead, { fr and fr:GetName() or "LootRulerRollFrame1" })
+  copy.closedByMe = true
+  LR.UI.rollWindows()
+  for id in pairs(LR.db.notes) do LR.setNote(id, nil) end
+end)
+
 run("raid setup", function()
   G.SlashCmdList.LOOTRULER("raid")
   srv:tick(0.3)

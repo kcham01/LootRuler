@@ -742,6 +742,33 @@ srv:closeLoot(lead)
 lead.LR.db.settings.rollKinds = {}
 srv:tick(1)
 
+section("item notes")
+lead.LR.setNote(TALISMAN, "Hunters > Rogues")
+srv:openLoot(lead, { { TALISMAN, 4 } })
+srv:tick(0.5)
+local nroll = Rolls.start(TALISMAN, { link = srv:link(TALISMAN), slot = 1 })
+srv:tick(0.5)
+check("rolling it out says the note in raid chat", chat("Note: Hunters > Rogues.", "RAID_WARNING") ~= nil)
+local fn = frameFor(ann, TALISMAN)
+check("and everyone's roll window shows it", fn and fn.note:IsShown() and fn.note:GetText() == "Note: Hunters > Rogues", fn and fn.note:GetText())
+check("raiders don't keep it as their own note", ann.LR.noteFor(TALISMAN) == nil)
+local tips = lead.LR.UI.tooltipLines(s, TALISMAN)
+check("the loot master sees it in the item's tooltip", tips[1] and tips[1][1] == "LootRuler note: Hunters > Rogues")
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+-- a roll from the loot master with a note carrying colours and links: shown as plain text
+local fake = lead.LR.Net.encode({ t = "R", k = "fake:1", id = TALISMAN, s = 20, left = 20, m = "OPEN", w = {}, nt = "|cffff0000Free|r |Hitem:1|h[loot]|h\nfor all" })
+srv:addonMessage(lead, "LootRuler", fake, "RAID")
+srv:tick(0.5)
+check("a note from a message is made safe first", ann.LR.Rolls.seen["fake:1"] and ann.LR.Rolls.seen["fake:1"].note == "Free [loot] for all",
+  ann.LR.Rolls.seen["fake:1"] and ann.LR.Rolls.seen["fake:1"].note)
+srv:addonMessage(lead, "LootRuler", lead.LR.Net.encode({ t = "X", k = "fake:1", e = "cancelled" }), "RAID")
+srv:closeLoot(lead)
+lead.LR.setNote(TALISMAN, "")
+srv:tick(1)
+check("an empty note takes it off", lead.LR.noteFor(TALISMAN) == nil)
+
 section("the 2 hours to trade running out")
 local HELD, OWED = 28762, 28767
 srv:lootTo(lead, HELD)
