@@ -35,6 +35,7 @@ UI.goldSheet = goldSheet
 local function payoutText(s, name, row)
   local parts = {}
   if row.role then parts[#parts + 1] = row.role .. (row.roleCut > 0 and (" cut " .. G.gold(row.roleCut)) or "") end
+  if (row.ruleCut or 0) > 0 then parts[#parts + 1] = table.concat(row.ruleNames or {}, ", ") .. " " .. G.gold(row.ruleCut) end
   if row.spent > 0 then parts[#parts + 1] = "bought " .. G.gold(row.spent) end
   parts[#parts + 1] = row.out and "left out of the split" or ("share " .. G.gold(row.gets))
   if row.paid ~= 0 then parts[#parts + 1] = (row.paid > 0 and "paid " or "had ") .. G.gold(math.abs(row.paid)) end
@@ -82,8 +83,13 @@ function UI.payoutSheet(s)
       { "Your cut (" .. s.gk.cut .. "%)", G.gold(split.cut) },
       split.bonuses > 0 and { "Bonuses", G.gold(split.bonuses) } or false,
       split.roles > 0 and { "Tank and healer cuts", G.gold(split.roles) } or false,
-      { "Split " .. #split.players .. " ways", G.gold(split.share) .. " each" },
     })
+    local rows = {}
+    for i, r in ipairs(s.gk.rules or {}) do
+      if (split.ruleTotals[i] or 0) > 0 then rows[#rows + 1] = { r.n, G.gold(split.ruleTotals[i]) } end
+    end
+    rows[#rows + 1] = { "Split " .. #split.players .. " ways", G.gold(split.share) .. " each" }
+    f:kv(rows)
     f:gap(6)
     local names = {}
     for name in pairs(split.rows) do names[#names + 1] = name end
@@ -178,6 +184,78 @@ function UI.pricesSheet(s)
   end)
 end
 
+--- the people a rule can name: the group, and everyone who's been in the split
+local function people(s)
+  local out, seen = {}, {}
+  for _, m in ipairs(LR.roster()) do out[#out + 1] = { name = U.full(m.name), class = m.class } seen[U.full(m.name)] = true end
+  for name in pairs(s.gk.seen or {}) do if not seen[name] then out[#out + 1] = { name = name } seen[name] = true end end
+  table.sort(out, function(a, b) return a.name < b.name end)
+  return out
+end
+
+--- one of the organiser's own pot rules: its name, how much, and who gets it
+local function ruleSheet(s, index)
+  local typed
+  UI.openSheet("A pot rule", function(f, h)
+    local r = s.gk.rules and s.gk.rules[index]
+    if not r then h.close() return end
+    f:text("Name", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, 200)
+    e:SetMaxLetters(G.MAX_RULE_NAME)
+    e:SetText(typed or r.n)
+    e:SetScript("OnTextChanged", function(self, user) if user then typed = self:GetText() end end)
+    e:SetScript("OnEnterPressed", function(self) LR.gdkpEditRule(s, index, { n = self:GetText() }) typed = nil self:ClearFocus() h.redraw(true) end)
+    f:note("Press Enter to keep a new name.")
+    local pcts = { { plain = true, label = "Percent of the pot:" } }
+    for _, v in ipairs({ 0, 1, 2, 3, 5, 10 }) do
+      pcts[#pcts + 1] = { label = v .. "%", on = (r.pct or 0) == v, click = function() LR.gdkpEditRule(s, index, { pct = v }) h.redraw(true) end }
+    end
+    f:chips(pcts, { gap = 2 })
+    f:buttons({ { label = r.g and ("Gold: " .. G.gold(r.g)) or "Gold: none", click = function()
+      goldSheet("Gold for " .. r.n, "Gold out of the pot for each player in this rule (0: none).", r.g or 0, function(g) LR.gdkpEditRule(s, index, { g = g }) end)
+    end } }, "left")
+    f:gap(4)
+    f:text("Who gets it", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local list = people(s)
+    if #list == 0 then f:note("Nobody in the group yet.") end
+    for _, m in ipairs(list) do
+      local on = U.indexOf(r.to, m.name) ~= nil
+      f:chips({ { label = (on and "[x] " or "[  ] ") .. U.classText(U.short(m.name), m.class or LR.classOf(m.name)), on = on, width = 200,
+        click = function() LR.gdkpRuleTo(s, index, m.name, not on) h.redraw(true) end } }, { gap = 2 })
+    end
+    f:gap(6)
+    f:buttons({
+      { label = "Take this rule away", click = function()
+        UI.confirm("Take the rule away", ("%s comes out of the split."):format(r.n), "Take it away", function() LR.gdkpRemoveRule(s, index) h.close() end)
+      end },
+      { label = "Done", click = function() if typed then LR.gdkpEditRule(s, index, { n = typed }) end h.close() end },
+    }, "left")
+  end, { full = true })
+end
+
+--- the organiser's own pot rules: each with who gets it and how much
+function UI.potRulesSheet(s)
+  UI.openSheet("Your pot rules", function(f, h)
+    f:note("Cuts of your own, paid out of the pot before it's split: a percent of the pot, gold, or both, for each player you pick (\"Raid leader: 5%\", \"Pumper: 500g\"). They come after your cut, bonuses and tank and healer cuts, and are made smaller if they'd ever add up to more than is left.")
+    local split = G.split(s)
+    for i, r in ipairs(s.gk.rules or {}) do
+      local b = K.get(f.owner, "item", f.parent)
+      local who = #r.to > 0 and table.concat(U.map(r.to, U.short), ", ") or "nobody yet"
+      K.setItem(b, f.width, LR.LOGO, r.n, G.ruleText(r) .. ": " .. who, (split.ruleTotals[i] or 0) > 0 and G.gold(split.ruleTotals[i]) or "",
+        { text = "Edit", width = 40, click = function() ruleSheet(s, i) end })
+      b:SetScript("OnClick", function() ruleSheet(s, i) end)
+      f:place(b, 36)
+      f:gap(2)
+    end
+    if not s.gk.rules or #s.gk.rules == 0 then f:note("None yet.") end
+    f:gap(6)
+    f:buttons({ { label = "Add a rule", disabled = s.gk.rules ~= nil and #s.gk.rules >= G.MAX_RULES, click = function()
+      if LR.gdkpAddRule(s) then ruleSheet(s, #s.gk.rules) end
+    end } }, "left")
+  end, { full = true })
+end
+
 --- who tanks and who heals (for their cuts): each player, and a choice
 function UI.rolesSheet(s)
   UI.openSheet("Tanks and healers", function(f, h)
@@ -254,6 +332,7 @@ function UI.gdkpPanel(f, s)
         { label = "Payouts", click = function() UI.payoutSheet(s) end },
         { label = "Tanks and healers", click = function() UI.rolesSheet(s) end },
       }, "left")
+      p:buttons({ { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), click = function() UI.potRulesSheet(s) end } }, "left")
       p:buttons({
         { label = ("Sales (%d)"):format(#G.sales(s)), click = function() UI.salesSheet(s) end },
         { label = "Starting bids in and out", click = function() UI.pricesSheet(s) end },

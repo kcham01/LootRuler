@@ -27,6 +27,7 @@ function Pot.line(s, player)
   if row.spent > 0 then parts[#parts + 1] = "you bought " .. G.gold(row.spent) end
   local extras = {}
   if row.roleCut > 0 then extras[#extras + 1] = "a " .. G.gold(row.roleCut) .. " " .. row.role .. " cut" end
+  if row.ruleCut > 0 then extras[#extras + 1] = G.gold(row.ruleCut) .. " for " .. table.concat(row.ruleNames or {}, " and ") end
   if row.bonus > 0 then extras[#extras + 1] = "a " .. G.gold(row.bonus) .. " bonus" end
   parts[#parts + 1] = row.out and "you're not in the split" or ("your share is " .. G.gold(row.gets) .. (#extras > 0 and (" (with " .. table.concat(extras, " and ") .. ")") or ""))
   if row.paid > 0 then parts[#parts + 1] = "you've paid " .. G.gold(row.paid) end
@@ -42,9 +43,13 @@ end
 --- the raid's summary, in a few chat lines
 function Pot.summary(s)
   local split = G.split(s)
+  local own = ""
+  for i, r in ipairs(s.gk.rules or {}) do
+    if (split.ruleTotals[i] or 0) > 0 then own = own .. (", %s %s"):format(r.n, G.gold(split.ruleTotals[i])) end
+  end
   local lines = { ("GDKP pot: %s from %d items. %s's cut: %s (%d%%)%s. Split %d ways: %s each."):format(
     G.gold(split.pot), #G.sales(s), U.short(s.leader), G.gold(split.cut), s.gk.cut,
-    (split.bonuses > 0 and (", bonuses " .. G.gold(split.bonuses)) or "") .. (split.roles > 0 and (", tank and healer cuts " .. G.gold(split.roles)) or ""),
+    (split.bonuses > 0 and (", bonuses " .. G.gold(split.bonuses)) or "") .. (split.roles > 0 and (", tank and healer cuts " .. G.gold(split.roles)) or "") .. own,
     #split.players, G.gold(split.share)) }
   lines[#lines + 1] = ("Whisper %s \"!lr pot\" to see what you owe or are owed."):format(U.short(s.leader))
   return lines
