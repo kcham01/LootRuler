@@ -454,7 +454,7 @@ function Rolls.award(player, kind, n, de)
   local slot = lootSlot(roll)
   if slot then
     local i = candidate(slot, player)
-    if i then GiveMasterLoot(slot, i)
+    if i then GiveMasterLoot(slot, i) Rolls.watchHandout(roll, slot, player)
     else note = ("%s isn't on the loot list for this item (too far away, or can't loot it), so it's marked as theirs: trade it to them."):format(U.short(player)) end
   end
   roll.state = "awarded"
@@ -554,7 +554,7 @@ end
 
 --- the item went to the wrong player: the award is undone, and the roll is back as it was when it closed, to give it
 --- to someone else or roll it again. Returns true and a note for the loot master, or false and why not.
-function Rolls.undo()
+function Rolls.undo(failed)
   local roll = Rolls.current
   if not roll or roll.state ~= "awarded" or not roll.winner then return false, "There's nothing given out to undo." end
   local player, kind = roll.winner, roll.winKind
@@ -584,8 +584,11 @@ function Rolls.undo()
   sendGroup({ t = "X", k = roll.k, id = roll.id, e = "closed" })
   sendGroup({ t = "X", k = roll.k, id = roll.id, e = "undone", p = player, sid = s and s.id, d = roll.drop })
   Rolls.ended(roll.k, "closed")
-  say(("Undone: %s isn't %s's after all.%s"):format(roll.link, U.short(player),
-    theyHaveIt and (" %s, please trade it to whoever gets it."):format(U.short(player)) or ""))
+  if failed then say(("%s couldn't go to %s (%s): it's still to give out."):format(roll.link, U.short(player), failed))
+  else
+    say(("Undone: %s isn't %s's after all.%s"):format(roll.link, U.short(player),
+      theyHaveIt and (" %s, please trade it to whoever gets it."):format(U.short(player)) or ""))
+  end
   toGuild(("Undone: %s isn't %s's after all."):format(roll.link, U.short(player)))
   changed()
   return true, #notes > 0 and table.concat(notes, " ") or nil
@@ -1008,7 +1011,10 @@ end
 events:RegisterEvent("LOOT_OPENED")
 events:RegisterEvent("LOOT_CLOSED")
 events:RegisterEvent("LOOT_SLOT_CLEARED")
+events:RegisterEvent("UI_ERROR_MESSAGE")
 events:SetScript("OnEvent", function(_, event, ...)
+  if event == "UI_ERROR_MESSAGE" then Rolls.handoutError(select(2, ...)) return end
+  if event == "LOOT_SLOT_CLEARED" and Rolls.handout and Rolls.handout.slot == ... then Rolls.handout = nil end
   if event == "CHAT_MSG_SYSTEM" then
     local ok, err = pcall(Rolls.onRoll, ...)
     if not ok then geterrorhandler()(err) end
@@ -1030,6 +1036,48 @@ events:SetScript("OnEvent", function(_, event, ...)
     LR.changed("loot")
   end
 end)
+
+---------------------------------------------------------------------- did the game hand it over?
+-- Giving an item through master loot can fail: their bags are full, it's unique and they have one, they're too far
+-- away. The game says so in a red error line and the item stays in the corpse. Then the award is taken back (the
+-- raid is told it's still to give out) and the loot master is told why. The game's own error texts (GlobalStrings)
+-- are read by name; anything else is caught by the item still being there a couple of seconds later.
+local HANDOUT_ERRORS = {
+  { "ERR_LOOT_MASTER_INV_FULL", "their bags are full" },
+  { "ERR_LOOT_MASTER_UNIQUE_ITEM", "it's unique, and they have one" },
+  { "ERR_ITEM_MAX_COUNT", "they can't carry another one" },
+  { "ERR_LOOT_PLAYER_NOT_FOUND", "they aren't on the loot list" },
+  { "ERR_LOOT_TOO_FAR", "they're too far away" },
+}
+Rolls.HANDOUT_WAIT = 2
+Rolls.handout = nil          -- { roll, slot, player }: an item the game is handing over now
+
+function Rolls.watchHandout(roll, slot, player)
+  local h = { roll = roll, slot = slot, player = player }
+  Rolls.handout = h
+  C_Timer.After(Rolls.HANDOUT_WAIT, function()
+    if Rolls.handout == h and Rolls.lootOpen and LootSlotHasItem(slot) then Rolls.handoutFailed("the game didn't hand it over") end
+  end)
+end
+
+--- the game's red error line, while an item is being handed over
+function Rolls.handoutError(message)
+  if not Rolls.handout or type(message) ~= "string" then return end
+  for _, e in ipairs(HANDOUT_ERRORS) do
+    local text = _G[e[1]]
+    if type(text) == "string" and message == text then Rolls.handoutFailed(e[2]) return end
+  end
+end
+
+function Rolls.handoutFailed(why)
+  local h = Rolls.handout
+  Rolls.handout = nil
+  if not h or Rolls.current ~= h.roll or h.roll.state ~= "awarded" then return end
+  local link = h.roll.link
+  Rolls.undo(why)
+  LR.print(("couldn't give %s to %s: %s. Give it to someone else, or try again."):format(link, U.short(h.player), why))
+  LR.toast(("%s couldn't go to %s: %s."):format(U.plain(link), U.short(h.player), why))
+end
 
 --- what's in the open loot window that's worth rolling for: { { slot, id, link, quality } }
 function Rolls.loot()

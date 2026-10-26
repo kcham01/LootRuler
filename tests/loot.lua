@@ -897,6 +897,33 @@ lead.LR.UI.closeAll()
 lead.LR.UI.win:Hide()
 srv:tick(1)
 
+section("when the game won't hand an item over")
+srv:openLoot(lead, { { 30020, 4 }, { 30021, 4 } })
+srv:tick(0.5)
+srv.bagsFull = { [bob] = true }
+local hr1 = Rolls.give(30020, full(bob), "MS", { link = srv:link(30020), slot = 1 })
+srv:tick(1)
+local function onList(id) for _, w in ipairs(s.won) do if w.i == id then return w.p end end end
+check("Bob's bags are full: the award is taken back", hr1 and Rolls.mine().state == "closed" and onList(30020) == nil)
+check("the raid hears it's still to give out", chat("couldn't go to Bob-Faerlina (their bags are full): it's still to give out.") ~= nil)
+check("and the loot master why", lead.M.chat[#lead.M.chat]:find("their bags are full", 1, true) ~= nil)
+check("raiders' copies don't have it either", (function() for _, w in ipairs(ann.LR.current().won or {}) do if w.i == 30020 then return false end end return true end)())
+srv.bagsFull = nil
+Rolls.dismiss()
+Rolls.give(30020, full(ann), "MS", { link = srv:link(30020), slot = 1 })
+srv:tick(3)
+check("given to someone else instead, it stays given", onList(30020) == full(ann))
+Rolls.dismiss()
+-- the game says nothing, but the item is still there a moment later
+srv.lostHandout = true
+Rolls.give(30021, full(dan), "OS", { link = srv:link(30021), slot = 2 })
+srv:tick(3)
+check("an item still in the corpse after a moment: taken back too", onList(30021) == nil and chat("couldn't go to Dan (the game didn't hand it over)") ~= nil)
+srv.lostHandout = nil
+Rolls.dismiss()
+srv:closeLoot(lead)
+srv:tick(10)                     -- (what was sent goes out a little at a time)
+
 section("roll window options")
 local bobWindows = bob.LR.db.settings.rollWindow
 bob.LR.db.settings.rollWindow = true

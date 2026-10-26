@@ -284,6 +284,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   shows `UI.tour` (the test server marks players as toured unless `newPlayer`). `UI.WHATS_NEW` (newest first): after an update
   (`db.ui.seenVersion` differs) one chat line; add the next version's list there when bumping `LR.VERSION`. Profiles are
   `db.profiles` (name -> settings, checked with `LR.checkSettings`, which `loadDB` now uses too); `LR.useProfile` copies one in.
+- **Failed handouts** (`Rolls.watchHandout`, `Rolls.handoutError`, `Rolls.handoutFailed`; `Rolls.undo(failed)`): after `GiveMasterLoot`,
+  the game's red error (`UI_ERROR_MESSAGE`, matched against GlobalStrings read by name) or the item still being in the slot
+  `Rolls.HANDOUT_WAIT` seconds later takes the award back. `LOOT_SLOT_CLEARED` for that slot means it went. The test server
+  refuses handouts with `srv.bagsFull[player]` or `srv.lostHandout`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
