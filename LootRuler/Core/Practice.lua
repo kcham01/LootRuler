@@ -1,0 +1,335 @@
+-- The practice raid (the Test tab): a pretend raid run alone, on LootRuler's real rules and screens. Made-up
+-- players count as being in the group: they reserve by whisper and in raid chat, roll, pass and bid, through the
+-- same code real players' messages go through (Whisper.handle, Rolls.onRoll, Rolls.onChat, the pass message).
+-- Nothing leaves this screen: while it's on, chat lines are shown here instead of said (LR.say), addon messages
+-- aren't sent (Net.send), the guild book is a copy that's thrown away, and the session is never kept under past
+-- raids or past a reload. It only runs out of a group: joining one ends it.
+local _, LR = ...
+local U, S, R = LR.U, LR.Session, LR.Roll
+
+local P = LR.Practice           -- (Init.lua makes it, off, so earlier files can ask)
+P.players, P.byKey = {}, {}
+
+-- the made-up players (also the Test tab's pretend roll windows)
+P.PEOPLE = { { "Arthas", "PALADIN" }, { "Jaina", "MAGE" }, { "Thrall", "SHAMAN" }, { "Sylvanas", "HUNTER" }, { "Øyvind", "WARRIOR" },
+  { "Valeera", "ROGUE" }, { "Malfurion", "DRUID" }, { "Anduin", "PRIEST" }, { "Kael", "WARLOCK" }, { "Tyrande", "PRIEST" },
+  { "Muradin", "WARRIOR" }, { "Alleria", "HUNTER" } }
+P.MIN, P.MAX = 3, #P.PEOPLE
+
+local gen = 0                 -- bumped when practice ends, so timers from it do nothing
+local reacted = {}            -- roll key -> true: the pretend players have answered it
+
+--- runs fn after a while, unless practice has ended (or started again) since
+local function after(secs, fn)
+  local mine = gen
+  C_Timer.After(secs, function() if P.on and gen == mine then fn() end end)
+end
+
+---------------------------------------------------------------------- what the raid would hear
+local WHERE = { RAID = "raid", RAID_WARNING = "raid warning", PARTY = "party", GUILD = "guild", INSTANCE_CHAT = "raid" }
+
+--- a line LootRuler would have said: shown here instead (LR.say)
+function P.show(text, channel, target)
+  local where = channel == "WHISPER" and ("whisper to " .. U.short(target or "?")) or (WHERE[channel] or tostring(channel):lower())
+  print(("|cff66bbffPractice|r |cff9d9d9d(%s)|r %s"):format(where, text))
+end
+--- what a pretend player says or does, as it would look in chat: "Jaina whispers: ...", "Jaina (raid): ..."
+local function heard(player, text, how)
+  print(("|cff66bbffPractice|r %s %s %s"):format(U.short(player.name), how, text))
+end
+
+---------------------------------------------------------------------- who's here
+function P.isPretend(name) return P.on and name ~= nil and P.byKey[R.key(name)] ~= nil end
+--- the pretend players as group members (LR.roster adds them)
+function P.roster()
+  local out = {}
+  for _, x in ipairs(P.players) do out[#out + 1] = { name = x.name, class = x.class, online = true, leader = false, assist = false } end
+  return out
+end
+
+--- whether a practice raid can start now; false and why when it can't
+function P.canStart()
+  if P.on then return false, "A practice raid is on already." end
+  if IsInGroup() then return false, "Leave your group first: a practice raid only runs on your own." end
+  local cur = LR.Rolls.current
+  if cur and cur.state == "open" then return false, "Finish the roll for " .. U.plain(cur.link) .. " first." end
+  return true
+end
+
+--- starts a practice raid. opts: { raid = key, players = how many, sr = reserves each }. Returns the session.
+function P.start(opts)
+  local ok, why = P.canStart()
+  if not ok then return nil, why end
+  opts = opts or {}
+  local raid = LR.raid(opts.raid) and opts.raid or "Karazhan"
+  P.prev = LR.db.current
+  P.players, P.byKey = {}, {}
+  for i = 1, math.max(P.MIN, math.min(opts.players or 8, P.MAX)) do
+    local x = { name = U.full(P.PEOPLE[i][1]), class = P.PEOPLE[i][2] }
+    P.players[i] = x
+    P.byKey[R.key(x.name)] = x
+  end
+  -- the guild book: a copy to try priority lists and boosted rolls on, thrown away at the end
+  local g = LR.guildName and LR.guildName()
+  P.book = g and LR.db.guilds and LR.db.guilds[g] and U.copy(LR.db.guilds[g]) or nil
+  gen = gen + 1
+  reacted = {}
+  P.on = true
+  P.tie = false
+  local s = LR.startSession(raid, math.max(1, math.min(opts.sr or 2, S.MAX_SR)), true, false)
+  s.practice = true
+  P.sid = s.id
+  LR.print(("a practice raid of %s with %s. Nothing you do leaves your screen. End it on the Test tab."):format(
+    LR.raidOf(s).name, U.plural(#P.players, "pretend player")))
+  LR.changed("roster")
+  LR.changed("session")
+  return s
+end
+
+--- ends the practice raid: its session, rolls and guild book copy are forgotten. why: said in chat (optional)
+function P.stop(why)
+  if not P.on then return false end
+  local Rolls = LR.Rolls
+  local roll = Rolls.current
+  if roll and roll.practice then
+    if roll.state == "open" then Rolls.cancel() end
+    Rolls.current = nil
+  end
+  for i = #Rolls.order, 1, -1 do
+    local k = Rolls.order[i]
+    local copy = Rolls.seen[k]
+    if copy and copy.practice then Rolls.seen[k] = nil table.remove(Rolls.order, i) end
+  end
+  if P.sid then
+    LR.db.sessions[P.sid] = nil
+    LR.db.mine[P.sid] = nil
+    if LR.db.current == P.sid then LR.db.current = P.prev and LR.db.sessions[P.prev] and P.prev or nil end
+  end
+  P.on, P.sid, P.prev, P.book, P.tie = false, nil, nil, nil, false
+  P.players, P.byKey = {}, {}
+  gen = gen + 1
+  reacted = {}
+  LR.print(why or "the practice raid is over: it's forgotten.")
+  if LR.UI and LR.UI.rollWindows then LR.UI.rollWindows() end
+  LR.changed("roster")
+  LR.changed("session")
+  LR.changed("rolls")
+  return true
+end
+
+--- the practice raid's session (nil when none)
+function P.session() return P.on and P.sid and LR.db.sessions[P.sid] or nil end
+
+---------------------------------------------------------------------- the pretend players
+--- a pretend player whispers me (Core/Whisper.lua answers, as it would anyone)
+function P.whisper(player, text)
+  heard(player, text, "whispers:")
+  LR.Whisper.handle(text, player.name)
+end
+--- a pretend player types in raid chat: "!lr" lines (when that's on) and bids
+function P.raidSay(player, text)
+  heard(player, text, "(raid):")
+  if LR.Whisper.isCommand(text) then
+    if LR.db.settings.raidCommands then LR.Whisper.handle(text, player.name) end
+    return
+  end
+  LR.Rolls.onChat(text, player.name)
+end
+--- a pretend player rolls (the game's own roll line, read like any other)
+function P.roll(player, n, lo, hi)
+  local line = RANDOM_ROLL_RESULT:format(U.short(player.name), n, lo, hi)
+  print(("|cff66bbffPractice|r |cffffff00%s|r"):format(line))
+  LR.Rolls.onRoll(line)
+end
+
+local function pick(list) return list[math.random(1, #list)] end
+local function shuffled(list)
+  local out = U.copy(list)
+  for i = #out, 2, -1 do local j = math.random(1, i) out[i], out[j] = out[j], out[i] end
+  return out
+end
+
+--- everyone reserves what they still can: some by whisper, some in raid chat, a few seconds apart
+function P.reserve()
+  local s = P.session()
+  if not s then return 0 end
+  local raid = LR.raidOf(s)
+  local items = {}
+  for _, id in ipairs(raid.order or {}) do if not s.hr[id] then items[#items + 1] = id end end
+  if #items == 0 then return 0 end
+  -- a handful of items most people want, so reserved rolls have a few players in them
+  local popular = {}
+  for i = 1, math.min(4, #items) do popular[i] = items[math.random(1, #items)] end
+  local n = 0
+  for i, x in ipairs(P.players) do
+    local left = S.limit(s, x.name) - #S.reservesOf(s, x.name)
+    for j = 1, left do
+      local id = (math.random() < 0.6) and pick(popular) or pick(items)
+      local text = "!lr " .. LR.itemLink(id)
+      n = n + 1
+      after(0.4 * n, function()
+        if math.random() < 0.5 and LR.db.settings.raidCommands then P.raidSay(x, text) else P.whisper(x, text) end
+      end)
+      if j == 1 and i == 2 then after(0.4 * n + 0.2, function() P.whisper(x, "!lr") end) end
+    end
+  end
+  return n
+end
+
+--- a boss drops loot: some of its items (one or two of them reserved, when anyone did) go into my bags,
+--- as if I'd looted them, and the raid hears what dropped. Returns the drops.
+function P.drop(count)
+  local s = P.session()
+  if not s then return {} end
+  local raid = LR.raidOf(s)
+  -- a boss with something reserved, when there is one (that's what there's most to try with)
+  local wanted = {}
+  for _, b in ipairs(raid.bosses or {}) do
+    for _, id in ipairs(b.items) do if S.byItem(s)[id] then wanted[#wanted + 1] = b break end end
+  end
+  local boss = (#wanted > 0 and pick(wanted)) or (raid.bosses and #raid.bosses > 0 and pick(raid.bosses)) or nil
+  local pool = boss and U.copy(boss.items) or U.copy(raid.order or {})
+  if #pool == 0 then pool = { 28830 } end
+  local reserved = {}
+  for id in pairs(S.byItem(s)) do if not boss or U.indexOf(boss.items, id) then reserved[#reserved + 1] = id end end
+  local ids = {}
+  for _, id in ipairs(shuffled(reserved)) do if #ids < 2 then ids[#ids + 1] = id end end
+  for _, id in ipairs(shuffled(pool)) do if #ids < (count or 3) and not U.indexOf(ids, id) then ids[#ids + 1] = id end end
+  local now = U.now()
+  local list = {}
+  for _, id in ipairs(ids) do
+    local d = { k = LR.Drops.newKey(id), i = id, b = boss and boss.name or "", at = now, by = U.me(), src = "practice", h = U.me(), ht = now }
+    if S.addDrop(s, d, now) then
+      list[#list + 1] = { k = d.k, i = id, q = LR.quality(id), link = LR.itemLink(id) }
+    end
+  end
+  LR.Drops.announce(s, list)
+  LR.leaderChanged(s)
+  return list
+end
+
+--- the next drop still to give out (for "Roll out the next item")
+function P.nextDrop()
+  local s = P.session()
+  if not s then return nil end
+  for _, d in ipairs(s.drops or {}) do
+    local st = S.dropState(s, d)
+    if st ~= "given" and st ~= "toTrade" and not S.dropWin(s, d.k) then return d end
+  end
+end
+
+--- rolls the next drop out
+function P.rollNext()
+  local d = P.nextDrop()
+  if not d then return nil, "Nothing left to give out: have a boss drop loot first." end
+  return LR.Rolls.start(d.i, { drop = d.k, link = LR.itemLink(d.i) })
+end
+
+-- who may roll in a roll, of the pretend players
+local function rollers(roll)
+  if roll.mode == "HR" then return {} end
+  if roll.mode == "OPEN" then return U.copy(P.players) end
+  local out = {}
+  for _, w in ipairs(roll.who or {}) do
+    local x = P.byKey[R.key(type(w) == "table" and w[1] or w)]
+    if x then out[#out + 1] = x end
+  end
+  return out
+end
+
+-- the kind a pretend player rolls: their reserve, a tie's kind, boosted when they have points, mostly main spec.
+-- plain: no boosted or off spec rolls (a tie asked for: it's between two plain rolls of the best kind)
+local function kindFor(roll, x, plain)
+  if roll.mode == "SR" then return "SR" end
+  if roll.mode == "TIE" then return roll.tie or "MS" end
+  if roll.mode == "PR" or plain then return "MS" end
+  if roll.bp and roll.bp[R.key(x.name)] and math.random() < 0.7 then return "BR" end
+  local r = math.random()
+  if roll.xk and #roll.xk > 0 and r < 0.15 then return "X" .. math.random(1, #roll.xk) end
+  return r < 0.7 and "MS" or "OS"
+end
+
+-- answers a roll: on one open to everyone some pass; the rest roll within the time (a tie, when asked for,
+-- between the first two)
+local function answerRoll(roll)
+  local who = shuffled(rollers(roll))
+  local window = math.max(2, math.min((roll.secs or 20) - 4, 10))
+  local tie = P.tie and #who >= 2 and roll.mode ~= "TIE"
+  if tie then P.tie = false end            -- (kept for the next roll when this one can't tie: one roller)
+  local tiedAt
+  for i, x in ipairs(who) do
+    local wait = 0.5 + math.random() * window
+    if not tie and roll.mode == "OPEN" and math.random() < 0.15 then      -- (who reserved it, rolls for it)
+      after(wait, function()
+        if roll.state == "open" then
+          LR.Net.handlers.N({ t = "N", k = roll.k }, "WHISPER", x.name)
+          heard(x, "on " .. U.plain(roll.link or "?"), "passes")
+        end
+      end)
+    else
+      local kind = kindFor(roll, x, tie)
+      local lo, hi
+      if kind == "BR" then lo, hi = R.boostRange(roll, x.name) else lo, hi = R.kind(roll, kind) end
+      if lo then
+        local n = math.random(lo, hi)
+        if tie and i <= 2 then
+          tiedAt = tiedAt or hi
+          n = tiedAt
+          wait = 0.5 + i
+        elseif tie then
+          n = math.random(lo, math.max(lo, hi - 1))
+        end
+        after(wait, function() if roll.state == "open" then P.roll(x, n, lo, hi) end end)
+      end
+    end
+  end
+end
+
+-- answers an auction: a few bidders, each with a limit of their own; one of them sets a max bid by whisper.
+-- They bid against each other, a few seconds apart, until nobody will go higher or it closes.
+local function answerAuction(roll)
+  local bidders = {}
+  for i, x in ipairs(shuffled(P.players)) do
+    if i > 4 then break end
+    local min = roll.min or 1
+    bidders[#bidders + 1] = { x = x, cap = math.floor(min * (1.5 + math.random() * 4)) }
+  end
+  if #bidders == 0 then return end
+  local s = P.session()
+  local maxer = #bidders >= 3 and bidders[#bidders] or nil
+  if maxer then
+    table.remove(bidders)
+    after(1.5, function() if roll.state == "open" then P.whisper(maxer.x, "!lr max " .. maxer.cap) end end)
+  end
+  local function step()
+    if roll.state ~= "open" then return end
+    local need = R.nextBid(roll)
+    local can = {}
+    for _, b in ipairs(bidders) do
+      if b.cap >= need and not (roll.top and U.samePlayer(roll.top.p, b.x.name)) then can[#can + 1] = b end
+    end
+    if #can == 0 then return end
+    local b = pick(can)
+    -- (some raise by a step or two, some jump a fifth, so a practice auction doesn't drag on)
+    local jump = math.random() < 0.3 and math.floor(need * 0.2) or (roll.inc or 1) * math.random(0, 2)
+    local g = math.min(b.cap, need + jump)
+    P.raidSay(b.x, (s and s.gk and s.gk.strict) and ("bid " .. g) or tostring(g))
+    after(1.5 + math.random() * 2.5, step)
+  end
+  after(2 + math.random() * 2, step)
+end
+
+--- the pretend players answer a roll or auction that's just started
+function P.react()
+  local roll = LR.Rolls.current
+  if not (P.on and roll and roll.state == "open") or reacted[roll.k] then return end
+  reacted[roll.k] = true
+  roll.practice = true
+  local copy = LR.Rolls.seen[roll.k]
+  if copy then copy.practice = true end
+  if roll.mode == "BID" then answerAuction(roll) else answerRoll(roll) end
+end
+
+LR.onChange(function(what)
+  if P.on and (what == "roll" or what == "rolls") then P.react() end
+end)

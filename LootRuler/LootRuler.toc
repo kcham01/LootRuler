@@ -38,6 +38,7 @@ Core\Export.lua
 Core\AutoLoot.lua
 Core\AutoRoll.lua
 Core\GroupLoot.lua
+Core\Practice.lua
 UI\Kit.lua
 UI\Main.lua
 UI\Reserve.lua

@@ -113,6 +113,7 @@ function Pot.mailOpen() return SendMailFrame ~= nil and SendMailFrame:IsShown() 
 
 --- fills in the Send Mail tab for a payout; true, or false and why not
 function Pot.fillMail(s, name, gold)
+  if s.practice then return false, "A practice raid's payouts aren't mailed." end
   if not Pot.mailOpen() then return false, "Open a mailbox, and its Send Mail tab, first." end
   SendMailNameEditBox:SetText(U.short(name))
   SendMailSubjectEditBox:SetText(("GDKP payout: %s"):format(LR.raidOf(s).name))

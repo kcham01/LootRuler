@@ -171,6 +171,7 @@ end
 --- hands the session to Gargul. show: open Gargul's soft-reserve overview (and let Gargul share it with
 --- the raid, as its own importer does). Returns true when Gargul took it.
 function G.send(s, show)
+  if s.practice then return false, "A practice raid's reserves aren't handed to Gargul." end
   if not G.available() then return false, "Gargul isn't loaded." end
   local g = gargul()
   local ok, res = pcall(g.SoftRes.import, g.SoftRes, G.export(s), show and true or false)

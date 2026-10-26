@@ -42,6 +42,7 @@ end
 
 --- this guild's book (made the first time); nil when not in a guild
 function LR.book()
+  if LR.Practice.on then return LR.Practice.book end      -- (a copy, thrown away at the end)
   local g = LR.guildName()
   if not g then return nil end
   LR.db.guilds = LR.db.guilds or {}
@@ -52,6 +53,7 @@ end
 
 --- whether a player may change the book: the guild master, and ranks up to the one the guild master picked
 function LR.canEditBook(name)
+  if LR.Practice.on then return LR.Practice.book ~= nil end
   local book = LR.book()
   local r = Guild.rank(name or U.me())
   return book ~= nil and r ~= nil and r <= book.editRank

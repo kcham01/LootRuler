@@ -160,7 +160,7 @@ local function drawTop(s)
   local raid = LR.raidOf(s)
   top.icon:SetTexture(LR.raidIcon(s.raid))
   top.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-  top.name:SetText(raid.name)
+  top.name:SetText(s.practice and ("Practice: " .. raid.name) or raid.name)
   -- GDKP, or priority lists only: there are no reserves, so the box shows the pot (or nothing)
   if s.gdkp and s.gk then
     top.sub:SetText((LR.isLeader(s) and "Your GDKP" or ("GDKP by " .. U.short(s.leader))) .. " - bids from " .. LR.Gdkp.gold(s.gk.min))

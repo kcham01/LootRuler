@@ -84,6 +84,7 @@ local function newKey(id)
   seq = seq + 1
   return ("%s:%d:%d:%d"):format(U.bare(U.me()), U.now() % 100000000, id, seq)
 end
+Drops.newKey = newKey
 
 ---------------------------------------------------------------------- corpses (master loot)
 --- the loot window opened on the master looter's screen (Core/Rolls.lua tells us): anything new in it goes on the list

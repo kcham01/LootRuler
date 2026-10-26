@@ -21,6 +21,7 @@
 --                     UI/Lineup.lua raid setup (Core/Lineup.lua reads the list and works out the moves)
 --                     UI/Welcome.lua the tour, what's new, and settings profiles
 --                     UI/Timers.lua bars for the items I hold to roll out or trade, with the trade time left
+--   Core/Practice.lua the practice raid: pretend players on the real rules, nothing leaving the screen (UI/Test.lua)
 local ADDON, LR = ...
 LR.NAME = ADDON
 LR.PREFIX = "LootRuler"          -- addon message prefix (16 characters at most)
@@ -29,3 +30,4 @@ LR.VERSION = "1.0.0-beta"
 LR.LOGO = "Interface\\AddOns\\LootRuler\\Media\\Logo"   -- Media/Logo.tga (drawn by tools/art.mjs)
 
 _G.LootRuler = LR                -- for other addons (and /dump)
+LR.Practice = { on = false }     -- the practice raid (Core/Practice.lua); off until it starts

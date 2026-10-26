@@ -14,10 +14,13 @@ LR.Whisper = W
 local COMMAND = "!lr"
 
 --- the session a whisper is about: the newest open one we lead
-function W.session()
+function W.session(sender)
   local best
+  local pretend = sender and LR.Practice.isPretend(sender)
   for _, s in ipairs(LR.sessions()) do
-    if LR.isLeader(s) and not s.ended and (not best or s.created > best.created) then best = s end
+    -- (a practice raid only hears its pretend players, and they only it)
+    local fits = sender == nil or (s.practice and true or false) == (pretend and true or false)
+    if fits and LR.isLeader(s) and not s.ended and (not best or s.created > best.created) then best = s end
   end
   return best
 end
@@ -85,7 +88,7 @@ local function ownReserve(s, player, text)
 end
 
 function W.handle(text, sender)
-  local s = W.session()
+  local s = W.session(sender)
   if not s then
     -- a GDKP that's over, with payouts still to do: "!lr pot" still answers
     local lower = U.trim(text:sub(#COMMAND + 1)):lower()
