@@ -214,6 +214,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Everyone's rolls in the roll window** (`rollList` in `UI/RollFrame.lua`, setting `rollList`, on to start with): the best five rolls
   that count (`R.standings`), with class colours and kind, under the timer; the window grows to fit and stacked windows
   move down. Timer bars only rebuild their text when the second changes.
+- **Roll types of the loot master's own** (`R.checkKinds`, `R.addKind`, `R.kind`, `R.extra`; setting `rollKinds`, empty to start with):
+  a roll open to everyone carries them as `roll.xk` ({ n = name, hi }), kinds "X1".."X4", ranked after off spec in that order.
+  A tie on one is rolled again the same way. A win on one is an award of kind `OS` with `xn` = its name (`X` messages carry
+  `xn`), so older versions read it as off spec. Older raiders' windows don't show the buttons, and count those rolls as
+  wrong rolls on their own screen; the loot master's addon decides. The Test tab's pretend roll shows them.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

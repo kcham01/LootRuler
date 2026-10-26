@@ -16,6 +16,11 @@
 --         priority)
 -- Each player's first roll that counts is the one that counts.
 --
+-- Extra roll types (the loot master's own, Settings: rollKinds): a roll open to everyone can have up to
+-- R.MAX_EXTRA more, each a /roll 1-hi with a name ("Transmog", /roll 98). They rank after off spec, in the order
+-- they're listed. roll.xk holds them ({ { n = name, hi = top } }); their kinds are "X1", "X2"... A win on one is
+-- recorded as off spec with its name (older versions read it as off spec).
+--
 -- The +1 rule (when the session has it on): every item won on a main spec roll is a +1, and among main spec
 -- rolls, players with fewer +1s win over players with more, whatever they rolled. roll.po holds the +1s of
 -- everyone in the group when the roll started (name, lower case -> count).
@@ -43,6 +48,58 @@ R.WHY = {
   raised = "bid again",
   hard = "it's hard reserved",
 }
+
+R.MAX_EXTRA = 4
+R.EXTRA_NAME = 16
+
+--- a list of extra roll types, checked (from settings or a message): { { n = name, hi = top } }, or nil when none.
+--- Each top is 2-98 (99 and 100 are off spec and main spec) and used once; names are plain and short.
+function R.checkKinds(list)
+  if type(list) ~= "table" then return nil end
+  local out, used = {}, {}
+  for _, x in ipairs(list) do
+    if #out >= R.MAX_EXTRA then break end
+    local n, hi = type(x) == "table" and x.n, type(x) == "table" and tonumber(x.hi)
+    if type(n) == "string" then n = n:gsub("[|%c]", ""):gsub("^%s+", ""):gsub("%s+$", ""):sub(1, R.EXTRA_NAME) end
+    if type(n) == "string" and n ~= "" and hi and hi == math.floor(hi) and hi >= 2 and hi <= 98 and not used[hi] then
+      used[hi] = true
+      out[#out + 1] = { n = n, hi = hi }
+    end
+  end
+  return #out > 0 and out or nil
+end
+
+--- a list of extra roll types with one more: the new list, or nil and why not (for people)
+function R.addKind(list, name, hi)
+  list = R.checkKinds(list) or {}
+  name = type(name) == "string" and name:gsub("[|%c]", ""):gsub("^%s+", ""):gsub("%s+$", "") or ""
+  hi = tonumber(hi)
+  if name == "" then return nil, "Give it a name." end
+  if #name > R.EXTRA_NAME then return nil, ("Keep the name to %d letters."):format(R.EXTRA_NAME) end
+  if #list >= R.MAX_EXTRA then return nil, ("That's %d already: take one off first."):format(R.MAX_EXTRA) end
+  if not hi or hi ~= math.floor(hi) or hi < 2 or hi > 98 then return nil, "Pick a number from 2 to 98 (100 is main spec, 99 off spec)." end
+  for _, x in ipairs(list) do
+    if x.hi == hi then return nil, ("/roll %d is %s already."):format(hi, x.n) end
+    if x.n:lower() == name:lower() then return nil, ("There's one called %s already."):format(x.n) end
+  end
+  list[#list + 1] = { n = name, hi = hi }
+  return list
+end
+
+--- an extra roll type in a roll ("X2" -> its { n, hi }), or nil
+function R.extra(roll, kind)
+  local i = type(kind) == "string" and tonumber(kind:match("^X(%d)$"))
+  return i and roll.xk and roll.xk[i] or nil
+end
+
+--- a kind's range and rank in a roll: lo, hi, rank (lower wins), or nil when the roll has no such kind
+function R.kind(roll, kind)
+  local k = R.KINDS[kind]
+  if k then return k[1], k[2], k[3] end
+  local x = R.extra(roll, kind)
+  if x then return 1, x.hi, 10 + tonumber(kind:sub(2)) end
+end
+local function rank(roll, kind) return select(3, R.kind(roll, kind)) or 99 end
 
 local function key(name) return (U.full(name) or ""):lower() end
 R.key = key
@@ -77,7 +134,7 @@ end
 --- a new roll (the loot master's, or a raider's copy of it)
 function R.new(k, id, plan)
   return { k = k, id = id, mode = plan.mode, who = plan.who or {}, away = plan.away or {}, f = plan.f, n = plan.n,
-    tie = plan.tie, po = plan.po, bp = plan.bp, min = plan.min, inc = plan.inc, strict = plan.strict, entries = {}, rolled = {}, passed = {} }
+    tie = plan.tie, po = plan.po, bp = plan.bp, xk = plan.xk, min = plan.min, inc = plan.inc, strict = plan.strict, entries = {}, rolled = {}, passed = {} }
 end
 
 --- a player's boosted roll range in a roll, or nil when they have no points
@@ -92,7 +149,8 @@ function R.plusOnes(roll, player) return roll.po and roll.po[key(player)] or 0 e
 
 --- what a roll counts as, for people: "MS", "MS +1", "SR 2"...
 function R.label(roll, e)
-  local l = R.LABEL[e.kind] or tostring(e.kind)
+  local x = R.extra(roll, e.kind)
+  local l = x and x.n or R.LABEL[e.kind] or tostring(e.kind)
   local po = (e.kind == "MS" or e.kind == "BR") and R.plusOnes(roll, e.p) or 0
   return po > 0 and (l .. " +" .. po) or l
 end
@@ -109,7 +167,11 @@ end
 --- the ranges a player may roll with: { kind, ... } (most wanted first)
 function R.options(roll, player)
   if not R.canRoll(roll, player) then return {} end
-  if roll.mode == "OPEN" then return R.boostRange(roll, player) and { "MS", "BR", "OS" } or { "MS", "OS" } end
+  if roll.mode == "OPEN" then
+    local out = R.boostRange(roll, player) and { "MS", "BR", "OS" } or { "MS", "OS" }
+    for i in ipairs(roll.xk or {}) do out[#out + 1] = "X" .. i end
+    return out
+  end
   if roll.mode == "SR" then return { "SR" } end
   if roll.mode == "TIE" then return { roll.tie } end
   if roll.mode == "PR" then return { "MS" } end
@@ -123,7 +185,7 @@ local function kindOf(roll, player, lo, hi)
   local ok, why = R.canRoll(roll, player)
   if not ok then return nil, why end
   for _, kind in ipairs(R.options(roll, player)) do
-    local a, b = R.KINDS[kind][1], R.KINDS[kind][2]
+    local a, b = R.kind(roll, kind)
     if kind == "BR" then a, b = R.boostRange(roll, player) end
     if lo == a and hi == b then return kind end
   end
@@ -229,7 +291,7 @@ function R.standings(roll)
     if e.kind then good[#good + 1] = e else bad[#bad + 1] = e end
   end
   table.sort(good, function(a, b)
-    local ra, rb = R.KINDS[a.kind][3], R.KINDS[b.kind][3]
+    local ra, rb = rank(roll, a.kind), rank(roll, b.kind)
     if ra ~= rb then return ra < rb end
     if ra == 2 then              -- main spec and boosted: fewer +1s first
       local pa, pb = R.plusOnes(roll, a.p), R.plusOnes(roll, b.p)
@@ -250,7 +312,7 @@ function R.result(roll)
   local tied = { top.p }
   for i = 2, #good do
     local e = good[i]
-    if R.KINDS[e.kind][3] == R.KINDS[top.kind][3] and e.n == top.n and (R.KINDS[e.kind][3] ~= 2 or R.plusOnes(roll, e.p) == R.plusOnes(roll, top.p)) then
+    if rank(roll, e.kind) == rank(roll, top.kind) and e.n == top.n and (rank(roll, e.kind) ~= 2 or R.plusOnes(roll, e.p) == R.plusOnes(roll, top.p)) then
       tied[#tied + 1] = e.p
     else break end
   end

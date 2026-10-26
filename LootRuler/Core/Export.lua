@@ -24,6 +24,7 @@ local function how(w)
   if w.de then return "disenchant" end
   if w.br then return "MS (boosted)" end
   if w.k == "BID" then return "GDKP" end
+  if w.xn then return w.xn end
   return LR.Roll.LABEL[w.k] or tostring(w.k)
 end
 

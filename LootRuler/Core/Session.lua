@@ -15,7 +15,8 @@
 --   res      soft reserves: "Name-Realm" -> { c = class token ("PALADIN", may be nil), i = { item ids } }
 --   won      loot given out while the session was open (Core/Rolls.lua), oldest first:
 --            { i = item id, p = "Name-Realm", k = "SR" / "MS" / "OS" / "HR" (how it was won), r = the roll, at = time,
---              d = the drop it was (its key, when known), de = to disenchant, br = won with a boosted roll (k "MS") }
+--              d = the drop it was (its key, when known), de = to disenchant, br = won with a boosted roll (k "MS"),
+--              xn = won on one of the loot master's own roll types, by its name (k "OS") }
 --            A reserve that has won its item is used up: it doesn't count when another copy drops.
 --   de       the disenchanter ("Name-Realm"): items nobody wants go to them. Their awards are kind "OS" with
 --            de = true, so versions that don't know about disenchanting still read them.
@@ -328,13 +329,13 @@ S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true, BID = true }
 
 --- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
 --- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
-function S.award(s, id, player, kind, roll, now, dropKey, de, boosted)
+function S.award(s, id, player, kind, roll, now, dropKey, de, boosted, xn)
   if type(id) ~= "number" or type(player) ~= "string" or not S.WON_KINDS[kind] then return false end
   local d = dropKey and S.drop(s, dropKey) or S.openDrops(s, id)[1]
   if d and d.i ~= id then d = nil end
   s.won = s.won or {}
   s.won[#s.won + 1] = { i = id, p = player, k = kind, r = tonumber(roll), at = now, d = d and d.k or nil, de = de and true or nil,
-    br = boosted and true or nil }
+    br = boosted and true or nil, xn = type(xn) == "string" and xn or nil }
   bump(s, now)
   return true
 end
@@ -540,6 +541,7 @@ function S.valid(t)
     for _, w in ipairs(t.won) do
       -- a kind this version doesn't know (a newer version's) is kept and shown as it is
       if type(w) ~= "table" or type(w.i) ~= "number" or type(w.p) ~= "string" or type(w.k) ~= "string" or #w.k > 12 then return false end
+      if w.xn ~= nil and (type(w.xn) ~= "string" or #w.xn > 32) then return false end
     end
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end

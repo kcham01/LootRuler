@@ -21,6 +21,7 @@ local function how(w)
   if w.de then return "to disenchant" end
   if w.br then return "boosted roll" .. (w.r and (" " .. w.r) or "") end
   if w.k == "BID" then return "bought for " .. LR.Gdkp.gold(w.r) end
+  if w.xn then return w.xn .. (w.r and (" " .. w.r) or "") end
   return w.k == "HR" and "hard reserved" or ((R.LABEL[w.k] or tostring(w.k)) .. (w.r and (" " .. w.r) or ""))
 end
 

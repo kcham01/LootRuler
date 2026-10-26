@@ -6,6 +6,7 @@
 --   green dice  a boosted roll: /roll 1+points to 100+points, spending your guild points if you win (boosted
 --         rolls on, and you have points)
 --   x     pass
+--   a row of buttons under it: the loot master's own roll types ("Transmog": /roll 98), when the roll has them
 -- Only what you may roll with can be clicked; the buttons just /roll, so the loot master's addon (or anyone
 -- reading chat) counts them like any other roll.
 local _, LR = ...
@@ -303,6 +304,33 @@ local function makeFrame(i)
   f.list:SetWidth(W - 28)
   f.list:SetPoint("TOPLEFT", f.status, "BOTTOMLEFT", 0, -4)
   f.list:SetJustifyH("LEFT")
+  -- the loot master's own roll types, in a row underneath
+  f.extras = {}
+  for i = 1, R.MAX_EXTRA do
+    local b = CreateFrame("Button", nil, f, "BackdropTemplate")
+    b:SetBackdrop(K.INSET)
+    b:SetHeight(20)
+    b.text = K.fs(b, "GameFontHighlightSmall")
+    b.text:SetJustifyH("CENTER")
+    b.text:SetJustifyV("MIDDLE")
+    b.text:SetPoint("LEFT", 6, 0)
+    b.text:SetPoint("RIGHT", -6, 0)
+    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    b:SetScript("OnClick", function(self)
+      if f.copy and self.kind then
+        LR.Rolls.roll(f.copy, self.kind)
+        UI.rollWindows()
+      end
+    end)
+    K.tooltipOn(b, function(tt)
+      local x = f.copy and R.extra(f.copy, b.kind or b.shows)
+      if not x then return end
+      tt:SetText(x.n, 1, 1, 1)
+      tt:AddLine(("/roll %d. It counts after main spec and off spec."):format(x.hi), 1, 0.82, 0, true)
+    end)
+    b:Hide()
+    f.extras[i] = b
+  end
 
   f:SetScript("OnUpdate", function(self) UI.rollTick(self) end)
   f:Hide()
@@ -316,7 +344,6 @@ local function rollList(f, copy)
   if #good == 0 then
     f.list:SetText("")
     f.list:Hide()
-    f:SetHeight(H)
     return
   end
   local lines = {}
@@ -329,7 +356,42 @@ local function rollList(f, copy)
   if #good > LIST_MAX then lines[#lines + 1] = ("|cff9d9d9d+%d more|r"):format(#good - LIST_MAX) end
   f.list:SetText(table.concat(lines, "\n"))
   f.list:Show()
-  f:SetHeight(math.max(H, 72 + f.status:GetStringHeight() + 4 + f.list:GetStringHeight() + 14))
+end
+
+--- the row of the loot master's own roll types (a roll open to everyone that has them)
+local function extraRow(f, copy)
+  local xk = copy.mode == "OPEN" and copy.xk or {}
+  local can = {}
+  if copy.state == "open" and not copy.rolled[R.key(me())] and not copy.passedByMe then
+    for _, k in ipairs(R.options(copy, me())) do can[k] = true end
+  end
+  local prev
+  for i, b in ipairs(f.extras) do
+    local x = xk[i]
+    if x then
+      b.shows = "X" .. i
+      b.kind = can[b.shows] and b.shows or nil
+      K.setChip(b, ("%s (%d)"):format(x.n, x.hi), false)
+      setButton(b, b.kind ~= nil)
+      b:ClearAllPoints()
+      if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
+      else b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.status, "BOTTOMLEFT", 0, -6) end
+      b:Show()
+      prev = b
+    else
+      b.kind, b.shows = nil, nil
+      b:Hide()
+    end
+  end
+  return prev ~= nil
+end
+
+--- the list and the row go under the status line; the window grows to fit them
+local function underneath(f, copy)
+  rollList(f, copy)
+  local row = extraRow(f, copy)
+  local h = 72 + f.status:GetStringHeight() + (f.list:IsShown() and (4 + f.list:GetStringHeight()) or 0) + (row and 26 or 0) + 14
+  f:SetHeight(math.max(H, h))
 end
 
 local function fill(f, copy)
@@ -368,7 +430,7 @@ local function fill(f, copy)
     f.dice.tip = ("Types \"%s%d\" in raid chat: the least that beats the highest bid."):format(word, a1)
     f.coin.tip = ("Types \"%s%d\" in raid chat. Any other amount: type it yourself."):format(word, a2)
     f.status:SetText(UI.rollStatus(copy))
-    rollList(f, copy)
+    underneath(f, copy)
     return
   end
   f.dice.amount, f.coin.amount = nil, nil
@@ -400,7 +462,7 @@ local function fill(f, copy)
   end
   local srMine = copy.mode == "SR" and #opts > 0
   -- (beside a green dice there's no room for the label: the line underneath says which is which)
-  f.dice.label:SetText(boosted and "" or srMine and "SR" or copy.mode == "SR" and "" or copy.mode == "TIE" and R.LABEL[copy.tie] or "MS")
+  f.dice.label:SetText(boosted and "" or srMine and "SR" or copy.mode == "SR" and "" or copy.mode == "TIE" and (R.LABEL[copy.tie] or "") or "MS")
   f.coin.label:SetText("OS")
   f.dice.tipTitle = srMine and "Roll for your reserve" or "Main spec"
   f.coin.tipTitle = "Off spec"
@@ -410,7 +472,10 @@ local function fill(f, copy)
     f.dice.tip = "Only " .. R.names(copy.who, 4) .. " roll for this."
   elseif copy.mode == "TIE" then
     f.dice.tipTitle = "Roll again"
-    f.dice.tip = "/roll, for the tie."
+    local _, hi = R.kind(copy, copy.tie)
+    local x = R.extra(copy, copy.tie)
+    f.dice.tipTitle = x and ("Roll again: " .. x.n) or f.dice.tipTitle
+    f.dice.tip = (hi and hi < 100 and ("/roll " .. hi) or "/roll") .. ", for the tie."
   elseif copy.mode == "PR" then
     f.dice.tipTitle = "Priority"
     f.dice.tip = "Only " .. R.names(copy.who, 4) .. ", who share the top priority, roll for this."
@@ -419,7 +484,7 @@ local function fill(f, copy)
   end
   if copy.rolled[R.key(me())] then f.dice.tip = "You've rolled." f.coin.tip = "You've rolled." f.boost.tip = "You've rolled." end
   f.status:SetText(UI.rollStatus(copy))
-  rollList(f, copy)
+  underneath(f, copy)
 end
 
 --- the timer bar and the seconds left (every frame)
@@ -569,7 +634,8 @@ function UI.testRoll(opts)
     who, classes = UI.pretendPlayers(opts.reservers or 3)
     if opts.mine then table.insert(who, 1, { U.me(), 1 }) end
   end
-  local copy = R.new(k, id, { mode = opts.mode or "OPEN", who = who })
+  local mode = opts.mode or "OPEN"
+  local copy = R.new(k, id, { mode = mode, who = who, xk = mode == "OPEN" and R.checkKinds(LR.db.settings.rollKinds) or nil })
   copy.by = U.me()
   copy.link = LR.itemLink(id)
   copy.classes = classes

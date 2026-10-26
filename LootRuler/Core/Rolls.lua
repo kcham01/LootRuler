@@ -97,7 +97,8 @@ local function howTo(roll, link, secs)
   if roll.mode == "SR" then
     return ("%s is soft reserved by %s: only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
   elseif roll.mode == "TIE" then
-    return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), roll.tie == "OS" and "/roll 99" or "/roll", t)
+    local _, hi = R.kind(roll, roll.tie)
+    return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), (hi or 100) < 100 and ("/roll " .. hi) or "/roll", t)
   elseif roll.mode == "BID" then
     local s = session()
     local max = (s and LR.isLeader(s)) and (" To bid up to a max, whisper %s \"!lr max 800\"."):format(U.short(U.me())) or ""
@@ -123,7 +124,9 @@ local function howTo(roll, link, secs)
     end
     if #parts > 0 then po = po .. " Boosted rolls (your points are spent if you win): " .. table.concat(parts, ", ") .. "." end
   end
-  return ("Roll for %s: /roll for main spec, /roll 99 for off spec. %s.%s%s"):format(link, t, po, away)
+  local extra = ""
+  for _, x in ipairs(roll.xk or {}) do extra = extra .. (", /roll %d for %s"):format(x.hi, x.n) end
+  return ("Roll for %s: /roll for main spec, /roll 99 for off spec%s. %s.%s%s"):format(link, extra, t, po, away)
 end
 
 local function resultText(roll, link)
@@ -149,7 +152,7 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, pn = roll.mode == "PR" and roll.n or nil,
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, pn = roll.mode == "PR" and roll.n or nil,
     mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil }
 end
 
@@ -201,7 +204,7 @@ function Rolls.start(id, opts)
   local s = session()
   local plan
   if opts.tie then
-    plan = { mode = "TIE", who = opts.tie.names, tie = opts.tie.kind }
+    plan = { mode = "TIE", who = opts.tie.names, tie = opts.tie.kind, xk = opts.tie.xk }
     plan.boosted = opts.tie.boosted
   elseif opts.mode == "OPEN" then
     plan = R.plan(nil, id, LR.roster())
@@ -219,6 +222,8 @@ function Rolls.start(id, opts)
       elseif s.prio == "only" then plan = R.plan(nil, id, LR.roster()) end
     end
   end
+  -- my own roll types (Settings: rollKinds), when it's open to everyone
+  if plan.mode == "OPEN" then plan.xk = R.checkKinds(LR.db.settings.rollKinds) end
   -- the +1 rule: everyone's +1s as the roll starts
   if s and s.plusOne then plan.po = S.plusOneTable(s, U.map(LR.roster(), function(m) return m.name end)) end
   -- boosted rolls: everyone's guild points (Core/Book.lua), when the session uses them
@@ -364,7 +369,7 @@ function Rolls.again(mode)
       end
       kind = "MS"
     end
-    opts.tie = { kind = kind, names = roll.tied, boosted = boosted }
+    opts.tie = { kind = kind, names = roll.tied, boosted = boosted, xk = R.extra(roll, kind) and roll.xk or nil }
   elseif mode == "OPEN" then
     opts.mode = "OPEN"
   end
@@ -398,11 +403,11 @@ local function candidate(slot, player)
 end
 
 --- records that a player won an item (on the session, when I'm its leader)
-local function record(s, id, player, kind, n, drop, de)
+local function record(s, id, player, kind, n, drop, de, xn)
   if not s or not LR.isLeader(s) then return end
   local boosted = kind == "BR"
   if boosted then kind = "MS" end            -- a boosted roll is a main spec win (and a +1), marked as boosted
-  if S.award(s, id, player, kind, n, U.now(), drop, de, boosted) then LR.leaderChanged(s) end
+  if S.award(s, id, player, kind, n, U.now(), drop, de, boosted, xn) then LR.leaderChanged(s) end
 end
 
 --- gives the item to a player: straight from the loot window when it's still there (master loot), else it's
@@ -432,8 +437,12 @@ function Rolls.award(player, kind, n, de)
   roll.undoNote = nil
   roll.de = de
   local s = session()
-  record(s, roll.id, player, kind, n, roll.drop, de)
-  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop, de = de or nil })
+  -- won on one of my own roll types: off spec, by its name (so older versions take it as off spec)
+  local x = not de and R.extra(roll, kind)
+  local xn = x and x.n or nil
+  if x then kind = "OS" end
+  record(s, roll.id, player, kind, n, roll.drop, de, xn)
+  sendGroup({ t = "X", k = roll.k, id = roll.id, e = "awarded", p = player, n = n, kd = kind, sid = s and s.id, d = roll.drop, de = de or nil, xn = xn })
   -- the guild's priority lists: whoever gets an item comes off its list (not the disenchanter)
   local book = not de and s and s.prio and LR.book and LR.book()
   if book and R.inList(U.map(LR.Book.prio(book, roll.id), function(x) return x.p end), player) then
@@ -476,7 +485,7 @@ function Rolls.award(player, kind, n, de)
   elseif roll.given then
     say(("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
       kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec"))
-  else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
+  else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
   -- the next item in the queue, a moment later (the loot master's window shows this one until then; not if the
   -- award is undone meanwhile)
   if #Rolls.queue > 0 then
@@ -596,8 +605,9 @@ function Rolls.follow(msg, sender)
       end
     end
     local bid = msg.m == "BID"
-    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp,
-      tie = msg.tie ~= "BID" and R.KINDS[msg.tie] and msg.tie or (msg.m == "TIE" and "MS" or nil),
+    local xk = R.checkKinds(msg.xk)
+    local tie = msg.tie ~= "BID" and (R.KINDS[msg.tie] or R.extra({ xk = xk }, msg.tie)) and msg.tie or (msg.m == "TIE" and "MS" or nil)
+    copy = R.new(msg.k, msg.id, { mode = msg.m, who = who, po = po, bp = bp, xk = xk, tie = tie,
       n = msg.m == "PR" and tonumber(msg.pn) or nil,
       min = bid and math.max(0, math.min(R.MAX_BID, tonumber(msg.mn) or 0)) or nil, inc = bid and math.max(1, math.min(R.MAX_BID, tonumber(msg.inc) or 1)) or nil,
       strict = bid and msg.sb == true or nil })
@@ -671,11 +681,11 @@ end
 
 --- I roll in a roll (the window's buttons)
 function Rolls.roll(copy, kind)
-  local r = R.KINDS[kind]
-  if not r or kind == "BID" or copy.state ~= "open" then return false end
+  local a, b = R.kind(copy, kind)
+  if not a or kind == "BID" or copy.state ~= "open" then return false end
   -- a pretend roll (the Test tab): rolled here, nobody else sees it
   if copy.test then
-    local lo, hi = r[1], r[2]
+    local lo, hi = a, b
     if kind == "BR" then lo, hi = R.boostRange(copy, U.me()) end
     if not lo then return false end
     R.add(copy, U.me(), math.random(lo, hi), lo, hi)
@@ -690,7 +700,7 @@ function Rolls.roll(copy, kind)
     copy.myRoll = kind
     return true
   end
-  RandomRoll(r[1], r[2])
+  RandomRoll(a, b)
   copy.myRoll = kind
   return true
 end
@@ -888,7 +898,8 @@ Net.handlers.X = function(msg, channel, sender)
   if msg.e == "awarded" and winner and kind and fromLooter(sender) then
     local s = msg.sid and LR.session(msg.sid) or session()
     local id = copy and copy.id or tonumber(msg.id)
-    if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil, msg.de == true) end
+    local xn = type(msg.xn) == "string" and msg.xn:gsub("[|%c]", ""):sub(1, R.EXTRA_NAME) or nil
+    if s and id and LR.isLeader(s) then record(s, id, winner, kind, msg.n, type(msg.d) == "string" and msg.d or nil, msg.de == true, xn) end
   elseif msg.e == "undone" and winner and fromLooter(sender) and not U.samePlayer(sender, U.me()) then
     local s = msg.sid and LR.session(msg.sid) or session()
     local id = copy and copy.id or tonumber(msg.id)
