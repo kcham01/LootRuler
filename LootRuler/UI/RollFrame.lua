@@ -258,6 +258,7 @@ local function makeFrame(i)
       if f.copy and self.kind then
         if IsShiftKeyDown() and self ~= f.boost then UI.alwaysDo(f.copy, self.kind == "OS" and "OS" or "MS") end
         LR.Rolls.roll(f.copy, self.kind)
+        UI.afterMyRoll(f.copy)
         UI.rollWindows()
       end
     end)
@@ -323,6 +324,7 @@ local function makeFrame(i)
     b:SetScript("OnClick", function(self)
       if f.copy and self.kind then
         LR.Rolls.roll(f.copy, self.kind)
+        UI.afterMyRoll(f.copy)
         UI.rollWindows()
       end
     end)
@@ -530,9 +532,25 @@ end
 ---------------------------------------------------------------------- which windows are up
 local function wanted(copy)
   if copy.hidden or copy.closedByMe or copy.state == "cancelled" then return false end
-  if not LR.db.settings.rollWindow then return false end
-  if LR.db.settings.rollOnlyMine and #R.options(copy, me()) == 0 then return false end
+  local set = LR.db.settings
+  if not set.rollWindow then return false end
+  if set.rollOnlyMine and #R.options(copy, me()) == 0 then return false end
+  -- an item everyone may roll on that my class can't use (when the item is known)
+  if set.rollHideUnusable and not copy.test and copy.mode == "OPEN" and LR.ITEMS[copy.id] and not LR.usableBy(copy.id, LR.myClass()) then return false end
   return true
+end
+
+UI.ROLL_SIZES = { { 0.8, "Small" }, { 1, "Normal" }, { 1.15, "Big" }, { 1.3, "Bigger" } }
+
+--- I rolled from a window: it goes a moment later, when that's how I like it (Settings: rollCloseAfter)
+function UI.afterMyRoll(copy)
+  if not LR.db.settings.rollCloseAfter then return end
+  C_Timer.After(1.5, function()
+    if copy.rolled[R.key(me())] or copy.passedByMe or copy.myRoll then
+      copy.closedByMe = true
+      UI.rollWindows()
+    end
+  end)
 end
 
 --- where roll windows go (the top of the first one): the player can drag it
@@ -563,6 +581,7 @@ function UI.rollWindows()
     if copy then
       frames[i] = frames[i] or makeFrame(i)
       local f = frames[i]
+      f:SetScale(LR.db.settings.rollScale or 1)
       fill(f, copy)
       f:ClearAllPoints()
       f:SetPoint("TOP", anchor, "TOP", 0, -y)              -- (each below the one before, however tall it's grown)

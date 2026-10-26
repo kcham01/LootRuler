@@ -1309,6 +1309,23 @@ run("thatsmybis wishlists", function()
   check("and forgotten", next(LR.db.wish) == nil)
 end)
 
+run("roll window options", function()
+  LR.UI.go("settings")
+  srv:tick(6)
+  check("new options, off to start with", visible("[  ] Not for items my class can't use") and visible("[  ] Close the window once I've rolled") and visible("Size:"))
+  clickText("Bigger")
+  check("bigger roll windows", LR.db.settings.rollScale == 1.3)
+  local copy = LR.UI.testRoll({ quiet = true })
+  local fr
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy == copy then fr = x end end
+  check("the window is bigger", fr and fr:GetScale() == 1.3)
+  shot("roll-options")
+  clickText("Normal")
+  check("and back", fr:GetScale() == 1)
+  copy.closedByMe = true
+  LR.UI.rollWindows()
+end)
+
 run("more loot rules", function()
   LR.UI.go("settings")
   srv:tick(6)

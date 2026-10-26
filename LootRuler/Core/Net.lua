@@ -56,6 +56,9 @@ LR.DEFAULTS = {
   hideWhispers = true,     -- "!lr" messages (whispers and raid chat) and the answers don't show in my chat
   rollWindow = true,       -- roll windows pop up
   rollOnlyMine = false,    -- ...only for items I may roll on
+  rollHideUnusable = false, -- ...not for items my class can't use (open to everyone)
+  rollCloseAfter = false,  -- my roll window closes once I've rolled
+  rollScale = 1,           -- how big roll windows are (UI.ROLL_SIZES)
   reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
   rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
@@ -106,6 +109,7 @@ function LR.loadDB()
     if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
   end
   db.settings.rollKinds = LR.Roll.checkKinds(db.settings.rollKinds) or {}
+  if db.settings.rollScale < 0.5 or db.settings.rollScale > 2 then db.settings.rollScale = 1 end
   db.settings.groupLootRules = LR.GroupLoot.check(db.settings.groupLootRules)
   db.notes = LR.Notes.check(db.notes)        -- my item notes (Core/Notes.lua)
   db.wish = LR.Prio.checkWish(db.wish)       -- thatsmybis wishlists I brought in (Core/Prio.lua)
