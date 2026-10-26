@@ -520,6 +520,21 @@ srv:lootTo(dan, 22829)
 srv:tick(1)
 check("an epic someone loots goes on the list", dropOf(DRAPE) and dropOf(DRAPE).h == full(bob) and stateOf(DRAPE) == "looted" and dropOf(DRAPE).b == "Shade of Aran")
 check("a grey doesn't", dropOf(22829) == nil)
+check("group loot wins aren't given out, to start with", wonBy(s, DRAPE) == "")
+lead.LR.db.settings.recordGroupWins = true
+srv:lootTo(bob, 28530)                          -- an epic nobody reserved, won with Need / Greed
+lead.LR.leaderAdd(s, full(pug), "WARRIOR", 28504)     -- Pug reserves the crossbow, then wins it
+srv:tick(1)
+srv:lootTo(pug, 28504)
+srv:lootTo(dan, 22829)                          -- a grey
+srv:tick(2)
+check("switched on: an epic won with group loot is given out, as main spec", wonBy(s, 28530):find(full(bob) .. ":MS", 1, true) ~= nil, wonBy(s, 28530))
+check("as their reserve when they had one on it", wonBy(s, 28504):find(full(pug) .. ":SR", 1, true) ~= nil, wonBy(s, 28504))
+check("raiders' copies have it", wonBy(ann.LR.current(), 28530):find(full(bob), 1, true) ~= nil)
+lead.LR.db.settings.recordGroupWins = false
+for i = #s.won, 1, -1 do if s.won[i].i == 28530 or s.won[i].i == 28504 then lead.LR.unaward(s, i) end end
+lead.LR.leaderRemove(s, full(pug), 28504)
+srv:tick(2)
 -- Ann's own Need / Greed rules (off until she turns them on)
 local GL = ann.LR.GroupLoot
 local GREEN, BLUE, BOUND = 1001, 1002, 1003
