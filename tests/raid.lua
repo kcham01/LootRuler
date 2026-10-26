@@ -136,6 +136,8 @@ srv:tick(3)
 check("shared again: they catch up", cara.LR.session(s.id).guild and not cara.LR.session(s.id).locked)
 lead.LR.setLocked(s, true)
 srv:tick(2)
+check("in a group, the guild's copy waits a few seconds after the last one (raiders get theirs at once)", cur(ann).locked and not cara.LR.session(s.id).locked)
+srv:tick(3)
 check("and hear the next change", cara.LR.session(s.id).locked)
 lead.LR.setLocked(s, false)
 srv:tick(2)
@@ -791,6 +793,67 @@ check("settings of the wrong kind go back to how they start", sdb.settings.rollS
 check("profiles are checked the same way", sdb.profiles.Healer and sdb.profiles.Healer.rollScale == 1.5 and sdb.profiles.Healer.raidWarning == true
   and sdb.profiles[5] == nil and sdb.profiles["A name far too long for a profile"] == nil and sdb.profiles.Bad == nil)
 check("the window's saved places start over", type(sdb.ui) == "table")
+
+section("fewer copies of the session")
+-- what one player's addon sends: { channel, target, kind } (AceComm's parts put back together)
+local function sendsOf(p, fn)
+  local out, parts = {}, {}
+  local real = srv.addonMessage
+  srv.addonMessage = function(self, from, prefix, text, channel, target)
+    if from == p and prefix == p.LR.PREFIX then
+      local key = channel .. (target or "")
+      local c, rest = text:match("^([\001-\003])(.*)$")
+      local whole
+      if c == "\001" then parts[key] = { rest } elseif c == "\002" then table.insert(parts[key], rest)
+      elseif c == "\003" then table.insert(parts[key], rest) whole = table.concat(parts[key]) else whole = text end
+      if whole then
+        local msg = p.LR.Net.decode(whole)
+        out[#out + 1] = { channel = channel, target = target, kind = msg and msg.t }
+      end
+    end
+    return real(self, from, prefix, text, channel, target)
+  end
+  fn()
+  srv.addonMessage = real
+  return out
+end
+local function count(list, kind, channel)
+  local n = 0
+  for _, m in ipairs(list) do if m.kind == kind and (not channel or m.channel == channel) then n = n + 1 end end
+  return n
+end
+local fs = lead.LR.startSession("Karazhan", 2, true, true)
+srv:tick(3)
+local quiet = srv:player({ name = "Quietone", class = "HUNTER" })
+local sent = sendsOf(lead, function()
+  table.insert(srv.group.members, quiet)
+  quiet.inGroup = true
+  srv:rosterChanged()
+  srv:tick(3)
+end)
+check("someone joins: they're noted as having come", U.indexOf(fs.att or {}, full(quiet)) ~= nil)
+check("but that alone sends no copy of the session", count(sent, "T") == 0, #sent)
+lead.LR.setLocked(fs, true)
+srv:tick(2)
+check("it goes out with the next change", U.indexOf(cur(ann).att or {}, full(quiet)) ~= nil)
+lead.LR.setLocked(fs, false)
+srv:tick(6)                                           -- (the guild's copy of that comes a few seconds later)
+local dorran = srv:client({ name = "Dorran", class = "ROGUE" })
+sent = sendsOf(lead, function()
+  table.insert(srv.group.members, dorran)
+  dorran.inGroup = true
+  srv:rosterChanged()
+  srv:tick(6)
+end)
+check("someone with LootRuler joins and asks what's open: only they're sent it, by whisper",
+  count(sent, "T", "WHISPER") == 1 and count(sent, "T", "RAID") == 0 and count(sent, "T", "GUILD") == 0, #sent)
+check("and they have it", dorran.LR.session(fs.id) ~= nil and dorran.LR.current() and dorran.LR.current().id == fs.id)
+check("the leader's version is said to the raid, once in a while, not whispered to each newcomer", count(sent, "V", "WHISPER") == 0)
+srv:leaveGroup(quiet)
+srv:leaveGroup(dorran)
+srv:logout(dorran)
+lead.LR.endSession(fs)
+srv:tick(2)
 
 section("the group is read once and kept until it changes")
 srv:setGroup({ lead, ann, pug }, lead, true)

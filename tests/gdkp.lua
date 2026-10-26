@@ -513,6 +513,27 @@ local old = srv:client({ name = "Old", class = "WARRIOR" }, { history = { { arch
 srv:tick(1)
 check("broken ones are thrown away", #old.LR.History.all() == 1 and old.LR.History.all()[1].id == s.id)
 
+section("who's in the pot goes out slowly")
+do
+  local cs = lead.LR.current()
+  if cs and lead.LR.isLeader(cs) then lead.LR.endSession(cs) srv:tick(2) end
+  local gs = lead.LR.startSession("Karazhan", 2, true, false)
+  lead.LR.setGdkp(gs, true)
+  srv:tick(3)
+  local late = srv:player({ name = "Latecomer", class = "PRIEST" })
+  table.insert(srv.group.members, late)
+  late.inGroup = true
+  srv:rosterChanged()
+  srv:tick(2)
+  check("someone joins: they're in the pot on the organiser's screen at once", gs.gk.seen[full(late)] == true)
+  check("raiders hear it a little later, not at once", not ann.LR.session(gs.id).gk.seen[full(late)])
+  srv:tick(10)
+  check("within a few seconds", ann.LR.session(gs.id).gk.seen[full(late)] == true)
+  srv:leaveGroup(late)
+  lead.LR.endSession(gs)
+  srv:tick(2)
+end
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end

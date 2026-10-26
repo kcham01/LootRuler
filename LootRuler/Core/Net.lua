@@ -340,17 +340,38 @@ local function routeTo(s)
   if s.guild and IsInGuild() then return "GUILD" end
 end
 
---- the leader sends the session out (once, shortly after a burst of changes)
-local publishSeq = {}
-function LR.publish(s, now)
+--- the leader sends the session out (once, shortly after a burst of changes). slow: a change nobody needs to see at once
+--- (who's in a GDKP's pot): it goes out within SLOW_PUBLISH seconds, or with the next change, whichever is first.
+--- In a group, the guild's copy (for guild members not in the group) goes out at most every GUILD_EVERY seconds.
+local publishSeq, publishWaiting, guildSent, guildWaiting = {}, {}, {}, {}
+local SLOW_PUBLISH, GUILD_EVERY = 10, 5
+local function sendGuild(s)
+  guildSent[s.id] = GetTime()
+  send({ t = "T", s = s }, "GUILD")
+end
+local function toGuild(s)
+  if not IsInGroup() or not guildSent[s.id] or GetTime() - guildSent[s.id] >= GUILD_EVERY then sendGuild(s) return end
+  if guildWaiting[s.id] then return end                                  -- (one is on its way, and it'll be the newest)
+  guildWaiting[s.id] = true
+  C_Timer.After(GUILD_EVERY - (GetTime() - guildSent[s.id]), function()
+    guildWaiting[s.id] = nil
+    if LR.isLeader(s) and db.sessions[s.id] == s and s.guild and IsInGuild() then sendGuild(s) end
+  end)
+end
+function LR.publish(s, now, slow)
   if not LR.isLeader(s) then return end
+  if slow and not now and publishWaiting[s.id] then return end           -- (one is on its way: it carries this too)
   publishSeq[s.id] = (publishSeq[s.id] or 0) + 1
   local mine = publishSeq[s.id]
+  publishWaiting[s.id] = not now or nil
   local function go()
     if publishSeq[s.id] ~= mine then return end
-    for _, ch in ipairs(publishTo(s)) do send({ t = "T", s = s }, ch) end
+    publishWaiting[s.id] = nil
+    for _, ch in ipairs(publishTo(s)) do
+      if ch == "GUILD" then toGuild(s) else send({ t = "T", s = s }, ch) end
+    end
   end
-  if now then go() else C_Timer.After(0.5, go) end
+  if now then go() else C_Timer.After(slow and SLOW_PUBLISH or 0.5, go) end
 end
 
 --- asks for open sessions
@@ -397,7 +418,8 @@ LR.onChange(function(what)
   if what ~= "roster" or not db then return end
   local s = LR.current()
   if s and LR.isLeader(s) and not s.archived and (IsInGroup() or LR.Practice.on) then
-    if S.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) then LR.leaderChanged(s) end
+    -- (raiders don't need it now: it goes out with the next change to the session)
+    if S.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) then s.updated = U.now() LR.changed("session") end
   end
 end)
 
@@ -755,14 +777,17 @@ end
 -- someone asks which sessions are open: leaders answer (once every few seconds per channel), and everyone
 -- in the group says they have the addon
 function handlers.Q(msg, channel, sender)
+  -- the session goes to the one asking, by whisper: the rest of the raid or guild has it already (every version takes
+  -- a session from its leader by whisper). Versions are still said to the group, once in a while: one message each
+  -- instead of a whisper to every newcomer.
   if channel ~= "GUILD" then LR.hello(channel == "WHISPER" and sender or nil) end
   local now = GetTime()
   for _, s in pairs(db.sessions) do
     if LR.isLeader(s) and (channel ~= "GUILD" or s.guild) then
-      local key = s.id .. channel
+      local key = s.id .. sender
       if not queryAnswered[key] or now - queryAnswered[key] > 5 then
         queryAnswered[key] = now
-        send({ t = "T", s = s }, channel == "WHISPER" and "WHISPER" or channel, channel == "WHISPER" and sender or nil)
+        send({ t = "T", s = s }, "WHISPER", sender)
       end
     end
   end
