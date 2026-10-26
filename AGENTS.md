@@ -295,6 +295,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Changing an award** (`S.editAward`, `LR.editAward`, `UI.editAwardSheet`; click a given item on the Loot tab): the leader changes `w.p`
   and `w.k` (DE = `OS` with `de`), dropping `br` and `xn`; sales and hard reserves aren't changed here. Everything that reads
   `s.won` (reserves used, +1s, trade help) follows. One raid line says what changed.
+- **Bidders' extras** (`Rolls.checkOutbid`, `UI.outbidAlert`, `UI.sound`; `Rolls.upNext`, sent as `qn` = { ids, n }; settings `outbidAlert`,
+  `finalCall`, `potAfterSale`, all on): a copy whose top bid was mine and isn't now alerts (chat, middle of the screen, sound); the
+  roll window shows "Next:" from `copy.upNext` (any queued roll); the loot master's tick makes a raid warning final call with
+  `FINAL_CALL` seconds left on auctions of 20 seconds or more; a sale's line ends "Pot: ... so far."
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

@@ -398,6 +398,12 @@ local function underneath(f, copy)
   if copy.note then lines[#lines + 1] = "Note: " .. copy.note end
   if copy.wish and copy.mode ~= "BID" then lines[#lines + 1] = "Wishlist: " .. LR.wishLine(copy.wish, 4) end
   if copy.mine then lines[#lines + 1] = "|cff9d9d9dYou have:|r " .. table.concat(copy.mine, " ") end
+  if copy.upNext and copy.state == "open" then
+    local names = {}
+    for i = 1, math.min(3, #copy.upNext) do names[#names + 1] = LR.coloredName(copy.upNext[i]) end
+    local more = (copy.upNext.n or #copy.upNext) - #names
+    lines[#lines + 1] = "|cff9d9d9dNext:|r " .. table.concat(names, ", ") .. (more > 0 and (" |cff9d9d9d+" .. more .. "|r") or "")
+  end
   local noted = #lines > 0
   f.note:SetText(table.concat(lines, "\n"))
   f.note:SetShown(noted)
@@ -628,6 +634,16 @@ function UI.reservedAlert(copy)
   C_Timer.After(0.8, function() PlaySound(SOUNDKIT.READY_CHECK or 8960, "Master") end)   -- (after the raid warning's sound)
   if FlashClientIcon then FlashClientIcon() end
 end
+--- someone bid more than me: a line, the middle of the screen and a sound (Settings: outbidAlert)
+function UI.outbidAlert(copy, top)
+  if not LR.db.settings.outbidAlert then return end
+  local line = ("Outbid on %s: %s bid %s. Bid %s or more to get it back."):format(copy.link, U.short(top.p), LR.Gdkp.gold(top.n), LR.Gdkp.gold(R.nextBid(copy)))
+  LR.print(line)
+  if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
+  UI.sound(SOUNDKIT.ALARM_CLOCK_WARNING_3 or 12889)
+end
+--- a LootRuler sound (all of them go through here)
+function UI.sound(id) PlaySound(id, "Master") end
 function UI.rollEnded(copy) UI.rollWindows() end
 function UI.rollFrames() return frames end
 
