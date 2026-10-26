@@ -16,6 +16,7 @@
 --   Core/History.lua  past raids: what each gave out, kept after it ends (and a GDKP's payouts)
 --   UI/*              the window; UI/RollFrame.lua the roll windows, UI/Master.lua the loot master's,
 --                     UI/ReserveStrip.lua who reserved the item being rolled for (LootRuler's rolls and Gargul's)
+--                     UI/Lineup.lua raid setup (Core/Lineup.lua reads the list and works out the moves)
 --                     UI/Timers.lua bars for the items I hold to roll out or trade, with the trade time left
 local ADDON, LR = ...
 LR.NAME = ADDON

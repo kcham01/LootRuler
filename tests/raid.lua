@@ -542,6 +542,55 @@ for _, p in ipairs({ kim, zed, yan, xan }) do srv:leaveGroup(p) end
 lead.LR.endSession(rs)
 srv:tick(2)
 
+section("raid setup")
+-- the leader starts on their own, with a list of who's coming pasted in
+for _, p in ipairs(srv.group.members) do p.inGroup = false end
+srv.group = nil
+srv:rosterChanged(lead)
+srv:tick(1)
+local recruits = {}
+for _, n in ipairs({ "Rae", "Sol", "Tam", "Uma", "Vic", "Wes", "Xia" }) do recruits[n] = srv:player({ name = n, class = "HUNTER" }) end
+local Ln = lead.LR.Lineup
+local plan = Ln.parse("Group 1\nLead\nRae\nsol\nAnn (Holy Priest)\nGroup 2: Tam, Uma, Vic\nWes\nXia\nNobody")
+check("the list is read", #plan == 10 and plan[3].name == "Sol" and plan[4].name == "Ann" and plan[5].group == 2)
+local now, later = lead.LR.inviteMissing(plan)
+local function invited(name) for _, inv in ipairs(srv.invites or {}) do if inv.name == name then return true end end return false end
+check("on their own: a party's worth invited first, the rest once it's a raid", now == 4 and later == 5 and invited("Rae") and invited("Tam") and not invited("Uma"))
+srv:acceptInvite(recruits.Rae)
+srv:tick(1)
+check("once someone joins, the party becomes a raid", srv.group.raid == true)
+check("and the rest are invited", invited("Uma") and invited("Vic") and invited("Wes") and invited("Xia") and invited("Nobody"))
+for _, n in ipairs({ "Sol", "Tam", "Uma", "Vic", "Wes", "Xia" }) do srv:acceptInvite(recruits[n]) end
+srv:acceptInvite(ann)
+srv:tick(1)
+local cmp = Ln.compare(plan, lead.LR.roster())
+check("who's missing", #cmp.missing == 1 and cmp.missing[1].name == "Nobody" and #cmp.extra == 0)
+local said = #srv.chat
+check("the raid is told who's missing", lead.LR.postMissing(plan) == 1)
+srv:tick(1)
+check("in one line", srv.chat[said + 1] and srv.chat[said + 1].text:find("Not here yet (1): Nobody.", 1, true) ~= nil, srv.chat[said + 1] and srv.chat[said + 1].text)
+-- sorting: the list wants the two groups the other way round
+local function groupOfName(name) for _, m in ipairs(lead.LR.raidRoster()) do if lead.LR.U.samePlayer(m.name, lead.LR.U.full(name)) then return m.group end end end
+check("everyone's in group 1 or 2 by when they joined", groupOfName("Lead") == 1 and groupOfName("Uma") == 1 and groupOfName("Vic") == 2)
+local swap = Ln.parse("Group 1: Uma, Vic, Wes, Xia, Ann\nGroup 2: Lead, Rae, Sol, Tam")
+check("a raider can't move people", not ann.LR.canSetUp())
+local doneMoves, doneStuck
+srv.inCombat = { [lead] = true }
+lead.LR.sortGroups(swap, function(m, stuck) doneMoves, doneStuck = m, stuck end)
+srv:tick(3)
+check("in combat the game moves nobody, and the leader is told", doneStuck == true and groupOfName("Lead") == 1 and groupOfName("Vic") == 2)
+srv.inCombat = nil
+doneMoves = nil
+lead.LR.sortGroups(swap, function(m, stuck) doneMoves, doneStuck = m, stuck end)
+srv:tick(10)
+local right = true
+for _, n in ipairs({ "Uma", "Vic", "Wes", "Xia", "Ann" }) do if groupOfName(n) ~= 1 then right = false end end
+for _, n in ipairs({ "Lead", "Rae", "Sol", "Tam" }) do if groupOfName(n) ~= 2 then right = false end end
+check("sorted into the list's groups, one move at a time", right and doneMoves and doneMoves > 0 and not doneStuck, doneMoves)
+lead.LR.sortGroups(swap, function(m) doneMoves = m end)
+srv:tick(2)
+check("sorting again moves nobody", doneMoves == 0)
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

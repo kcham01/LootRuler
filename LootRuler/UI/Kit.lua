@@ -259,6 +259,22 @@ function K.setMemo(f, width, height, text)
   f.edit:HighlightText()
 end
 
+--- a memo that can be typed and pasted in (several lines); changed(text) on each change
+function K.setEditMemo(f, width, height, text, changed)
+  f:SetSize(width, height)
+  f.edit:SetWidth(width - 20)
+  f.edit:SetText(text)
+  f.edit:SetHeight(height - 12)
+  f.scroll:setContentHeight(height - 12)
+  f.edit:SetScript("OnTextChanged", function(self, user)
+    if not user then return end
+    local lines = select(2, self:GetText():gsub("\n", "\n")) + 1
+    self:SetHeight(math.max(height - 12, lines * 13 + 6))
+    f.scroll:setContentHeight(math.max(height - 12, lines * 13 + 6))
+    changed(self:GetText())
+  end)
+end
+
 --- text boxes that take item links: shift-clicking an item (in your bags, chat, anywhere) while one has the
 --- focus puts the item's link in it, as it would in the chat box
 function K.takeLinks(e) linkBoxes[e] = true end

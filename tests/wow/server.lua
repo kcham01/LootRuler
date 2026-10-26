@@ -78,6 +78,23 @@ function Server:leaveGroup(p)
   self:rosterChanged(p)
 end
 function Server:inGroup(p) return self.group and p.inGroup end
+--- p says yes to an invite (a party holds five: past that, the invite fails as the game's does)
+function Server:acceptInvite(p)
+  local ok = false
+  for i, inv in ipairs(self.invites or {}) do
+    if inv.name:lower() == p.name:lower() or inv.name:lower() == (p.name .. "-" .. p.realm):lower() then
+      table.remove(self.invites, i)
+      if not self.group then self.group = { members = { inv.from }, leader = inv.from, raid = false, assists = {} } inv.from.inGroup = true end
+      if not self.group.raid and #self.group.members >= 5 then return false end
+      table.insert(self.group.members, p)
+      p.inGroup = true
+      ok = true
+      break
+    end
+  end
+  if ok then self:rosterChanged() end
+  return ok
+end
 function Server:rosterChanged(extra)
   for _, q in ipairs(self.players) do
     if q.client and (self:inGroup(q) or q == extra) then q.M.fire("GROUP_ROSTER_UPDATE") end
@@ -296,7 +313,27 @@ function Server:install(p)
   G.GetRaidRosterInfo = function(i)
     local q = srv:inGroup(p) and srv.group.members[i]
     if not q then return nil end
-    return seenAs(q, p), srv.group.leader == q and 2 or (srv.group.assists[q] and 1 or 0), 1, 70, CLASS_NAME[q.class], q.class, "Karazhan", q.online, false, "NONE", false
+    return seenAs(q, p), srv.group.leader == q and 2 or (srv.group.assists[q] and 1 or 0), q.subgroup or math.ceil(i / 5), 70, CLASS_NAME[q.class], q.class, "Karazhan", q.online, false, "NONE", false
+  end
+  -- forming the raid (the leader; an assistant may move people): invites wait for Server:acceptInvite
+  G.ConvertToRaid = function()
+    if srv:inGroup(p) and srv.group.leader == p and not srv.group.raid then srv.group.raid = true srv:deliver(function() srv:rosterChanged() end) end
+  end
+  local function mayMove() return srv:inGroup(p) and srv.group.raid and (srv.group.leader == p or srv.group.assists[p]) end
+  local function groupOf(i) local q = srv.group.members[i] return q and (q.subgroup or math.ceil(i / 5)) end
+  G.SetRaidSubgroup = function(i, g)
+    if not mayMove() or not srv.group.members[i] then return end
+    local n = 0
+    for j = 1, #srv.group.members do if groupOf(j) == g then n = n + 1 end end
+    if n >= 5 or (srv.inCombat and srv.inCombat[p]) then return end
+    srv.group.members[i].subgroup = g
+    srv:deliver(function() srv:rosterChanged() end)
+  end
+  G.SwapRaidSubgroup = function(i, j)
+    if not mayMove() or not srv.group.members[i] or not srv.group.members[j] or (srv.inCombat and srv.inCombat[p]) then return end
+    local gi, gj = groupOf(i), groupOf(j)
+    srv.group.members[i].subgroup, srv.group.members[j].subgroup = gj, gi
+    srv:deliver(function() srv:rosterChanged() end)
   end
   G.GetFramerate = function() return 60 end
   G.Enum = { TooltipDataType = { Item = 0 }, LootMethod = { Freeforall = 0, Roundrobin = 1, Masterlooter = 2, Group = 3, Needbeforegreed = 4, Personal = 5 },
@@ -336,6 +373,11 @@ function Server:install(p)
   G.ChatEdit_InsertLink = function() return false end
   G.RandomRoll = function(lo, hi) srv:roll(p, tonumber(lo), tonumber(hi)) end
   G.C_PartyInfo = {
+    InviteUnit = function(name)
+      if type(name) ~= "string" then error("InviteUnit needs a name") end
+      srv.invites = srv.invites or {}
+      table.insert(srv.invites, { from = p, name = name })
+    end,
     GetLootMethod = function()
       local ml = srv:inGroup(p) and srv.masterLooter
       if not ml then return 3 end

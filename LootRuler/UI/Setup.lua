@@ -422,4 +422,11 @@ function UI.sessionView(f, s)
     newSession(f)
   end
   others(f, s)
+  -- who's coming, for whoever forms the raid
+  if LR.canSetUp() then
+    f:panel("Raid setup", function(p)
+      p:note("Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups.")
+      p:buttons({ { label = "Raid setup", click = function() UI.lineupSheet() end } }, "left")
+    end)
+  end
 end
