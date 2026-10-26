@@ -377,6 +377,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `!lr swap old for new`; `UI.swapSheet` on a locked Reserve tab, "Swap requests" panel on the leader's Reserves tab): only while
   locked, one per player (a new one replaces it), checked like a reserve (`S.set` of the whole new list, so it can't half-happen);
   the answer is whispered. Locking a practice raid makes a pretend player ask.
+- **Clearing reserves of players not in the group** (`S.absent(s, inGroup)`, `S.clearAbsent(s, inGroup, now)`; `LR.absent`, `LR.clearAbsent`,
+  leader only, in a group or the practice raid): a button on the leader's Reserves tab with the count, after `UI.confirm` naming them.
+  Offline members are still in the group. Each is cleared like a reserve taken back (`S.set` with no items) and dropped from `s.sx`, so a
+  re-import counts what the sheet gives them as new again.
 - **The owner's plan from the Gargul comparison is done:** the practice raid, pot rules, GDKP bookkeeping, bidding ahead, several
   auctions at once, bag checks, the gear overview, branding, loot council, fairness history and swap requests.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session

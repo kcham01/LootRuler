@@ -464,7 +464,18 @@ LR.gdkpRuleTo = gdkp(function(s, index, player, on) return LR.Gdkp.ruleTo(s, ind
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGroupOnly(s, on) if LR.isLeader(s) and S.setGroupOnly(s, on, U.now()) then leaderChanged(s) end end
---- the session's softres.it page: set it (the leader; false when it isn't a softres.it link), and post it in raid chat
+--- clears the reserves of everyone not in the group (offline members count as in it); returns the names
+function LR.clearAbsent(s)
+  if not LR.isLeader(s) or not (IsInGroup() or LR.Practice.on) then return {} end
+  local cleared = S.clearAbsent(s, function(name) return LR.inGroup(name) ~= false or U.samePlayer(name, U.me()) end, U.now())
+  if #cleared > 0 then leaderChanged(s) end
+  return cleared
+end
+--- who has reserves but isn't in the group
+function LR.absent(s)
+  if not (IsInGroup() or LR.Practice.on) then return {} end
+  return S.absent(s, function(name) return LR.inGroup(name) ~= false or U.samePlayer(name, U.me()) end)
+end
 --- the loot council (Core/Council.lua): names, or nil for none
 function LR.setCouncil(s, names)
   if not LR.isLeader(s) then return false end
@@ -479,6 +490,7 @@ function LR.setBrand(s, br)
   if S.setBrand(s, br, U.now()) then leaderChanged(s) end
   return true
 end
+--- the session's softres.it page: set it (the leader; false when it isn't a softres.it link), and post it in raid chat
 function LR.setLink(s, url)
   if not LR.isLeader(s) then return false end
   local t = U.trim(url or "")
