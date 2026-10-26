@@ -288,6 +288,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   the game's red error (`UI_ERROR_MESSAGE`, matched against GlobalStrings read by name) or the item still being in the slot
   `Rolls.HANDOUT_WAIT` seconds later takes the award back. `LOOT_SLOT_CLEARED` for that slot means it went. The test server
   refuses handouts with `srv.bagsFull[player]` or `srv.lostHandout`.
+- **Gear of raiders without LootRuler** (`Rolls.wantGear`, `Rolls.inspectReady`, setting `inspectGear`, on): each roller with no gear
+  after `Rolls.INSPECT_WAIT` seconds is queued; one `NotifyInspect` at a time (in range, `CanInspect`, not in combat, not while the
+  game's `InspectFrame` is open), read on `INSPECT_READY` into `roll.gear`, then `ClearInspectPlayer`. The test server has inspect
+  (`srv.inspects` counts them; `q.links` is a player's gear).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
