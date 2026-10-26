@@ -626,9 +626,17 @@ end
 --- Settings: reservedAlert.
 function UI.reservedAlert(copy)
   if copy.alerted or copy.state ~= "open" or not LR.db.settings.reservedAlert then return end
-  if (copy.mode ~= "SR" and copy.mode ~= "PR") or not R.inList(copy.who, me()) then return end
+  local line
+  if (copy.mode == "SR" or copy.mode == "PR") and R.inList(copy.who, me()) then
+    line = (copy.mode == "PR" and "You're on the priority list for %s: roll for it now!" or "You reserved %s: roll for it now!"):format(copy.link)
+  elseif copy.mode == "OPEN" and copy.wish then
+    -- on my thatsmybis wishlist (the loot master's addon says who in the group has it there)
+    for _, e in ipairs(copy.wish) do
+      if U.samePlayer(e.p, me()) then line = ("It's on your wishlist (%d): %s is being rolled for now!"):format(e.n, copy.link) end
+    end
+  end
+  if not line then return end
   copy.alerted = true
-  local line = (copy.mode == "PR" and "You're on the priority list for %s: roll for it now!" or "You reserved %s: roll for it now!"):format(copy.link)
   LR.print(line)
   if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
   C_Timer.After(0.8, function() PlaySound(SOUNDKIT.READY_CHECK or 8960, "Master") end)   -- (after the raid warning's sound)

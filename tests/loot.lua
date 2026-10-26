@@ -1050,6 +1050,7 @@ check("the loot master sees it in the item's tooltip", tips[1] and tips[1][1] ==
 check("and the whole wishlist", tips[2] and tips[2][1] == "LootRuler wishlist: Bob (1), Nobody (2), Ann (3)", tips[2] and tips[2][1])
 check("raid chat says who in the group wishlisted it", chat("Note: Hunters > Rogues. Wishlisted: Bob-Faerlina (1), Ann (3).", "RAID_WARNING") ~= nil)
 check("so does the roll window", fn.note:GetText():find("Wishlist: Bob-Faerlina (1), Ann (3)", 1, true) ~= nil, fn.note:GetText())
+check("Ann is told it's on her wishlist", noticed(ann, "It's on your wishlist (3)") and not noticed(dan, "It's on your wishlist"))
 Rolls.cancel()
 srv:tick(0.5)
 Rolls.dismiss()
