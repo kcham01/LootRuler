@@ -1,4 +1,4 @@
-# LootRuler: notes for whoever works on this repo (people and AI agents)
+# LootRuler: notes for whoever works on this repo
 
 Read this first. It says how the project is built and checked, the rules every change follows, and where
 the work stands. Keep it up to date: when a feature lands or a plan changes, change the roadmap at the end in
@@ -30,7 +30,9 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 ## Working rules
 
 - **Commits are the owner's.** Author and committer: `Jamesthefishguy <94383428+kcham01@users.noreply.github.com>`.
-  No AI author, no `Co-Authored-By` lines, no "generated with" lines, in commits or pull requests.
+  No other authors, co-author lines or signatures in commits or pull requests.
+- **Names are one plain word:** every commit message and pull request title (for example "Give", "Strip").
+  The pull request's description says what changed.
 - **Never push to `main`.** One branch and one pull request per feature. The owner reviews and merges.
 - **A pull request says** what changed for players (in plain words, not code words), how it was tested, and
   shows pictures of anything on screen (from `build/shots`).
