@@ -15,6 +15,13 @@ G.ACTS = { { "need", "Need", 1 }, { "greed", "Greed", 2 }, { "de", "Disenchant",
 local ACT = {}
 for _, a in ipairs(G.ACTS) do ACT[a[1]] = a end
 G.MAX_RULES = 40
+-- the Disenchant roll came with Wrath: TBC's Need / Greed windows don't have it (registering its event is an error
+-- there), so it's only offered, and its question only listened for, where the game has it
+G.HAS_DE = C_EventUtils ~= nil and C_EventUtils.IsEventValid ~= nil and C_EventUtils.IsEventValid("CONFIRM_DISENCHANT_ROLL") or false
+--- the rolls a new rule can make here
+function G.choices()
+  return U.filter(G.ACTS, function(a) return a[1] ~= "de" or G.HAS_DE end)
+end
 
 --- what a rule does, for people
 function G.actText(act) return ACT[act] and ACT[act][2] or tostring(act) end
@@ -65,7 +72,7 @@ function G.onRoll(rollID)
   return rule.act
 end
 
---- the game asks "this item will bind to you" (CONFIRM_LOOT_ROLL / CONFIRM_DISENCHANT_ROLL): only for a roll one of my
+--- the game asks "this item will bind to you" (CONFIRM_LOOT_ROLL, or CONFIRM_DISENCHANT_ROLL where there is one): only for a roll one of my
 --- rules made, and only when that's switched on, it's answered yes
 function G.onConfirm(rollID, kind)
   if not LR.db.settings.groupLootConfirm or rolledByRule[rollID] ~= kind then return false end
@@ -77,7 +84,7 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("START_LOOT_ROLL")
 events:RegisterEvent("CONFIRM_LOOT_ROLL")
-events:RegisterEvent("CONFIRM_DISENCHANT_ROLL")
+if G.HAS_DE then events:RegisterEvent("CONFIRM_DISENCHANT_ROLL") end
 events:SetScript("OnEvent", function(_, event, rollID, kind)
   if not LR.db or type(rollID) ~= "number" then return end
   if event == "START_LOOT_ROLL" then G.onRoll(rollID)

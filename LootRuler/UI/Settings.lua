@@ -419,7 +419,7 @@ function UI.addGroupRule()
     f:gap(6)
     f:text("Roll", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
     local acts = {}
-    for _, a in ipairs(LR.GroupLoot.ACTS) do acts[#acts + 1] = { label = a[2], on = act == a[1], click = function() act = a[1] h.redraw(true) end } end
+    for _, a in ipairs(LR.GroupLoot.choices()) do acts[#acts + 1] = { label = a[2], on = act == a[1], click = function() act = a[1] h.redraw(true) end } end
     f:chips(acts)
     if what and act then f:note(("%s: %s."):format(LR.AutoLoot.whatText(what), LR.GroupLoot.actText(act)), K.GREEN) end
     f:buttons({ { label = "Cancel", click = function() h.close() end },

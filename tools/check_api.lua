@@ -4,7 +4,9 @@
 --     documentation for that widget type, so the UI tests can't pass on a method the game lacks;
 --  2. every global the addon reads is a Lua built-in, a documented client function, something the
 --     client's interface code defines, or the addon's own;
---  3. every C_Namespace.Function the addon calls is documented for the client (or called by Blizzard's code).
+--  3. every C_Namespace.Function the addon calls is documented for the client (or called by Blizzard's code);
+--  4. every event the addon registers (loading and logging in, in the stand-in) is one the client has: registering
+--     an event it doesn't have is an error in the game.
 -- The bundled libraries (Libs/) are left out: they check for what they use themselves.
 -- lua5.1 tools/check_api.lua <wow-ui-source checkout>
 local src = assert(arg[1], "usage: lua5.1 tools/check_api.lua <wow-ui-source>")
@@ -175,5 +177,40 @@ for _, k in ipairs(nsNames) do
     failures = failures + 1
   end
 end
-print(("checked %d widget types, %d globals and %d C_ functions; problems %d"):format(11, #names, #nsNames, failures))
+-- events: the client's documented ones, and those Blizzard's own code registers
+local knownEvents = {}
+for _, d in ipairs(docs) do
+  for _, e in ipairs(d.Events or {}) do if e.LiteralName then knownEvents[e.LiteralName] = true end end
+end
+p = io.popen('grep -rhoE "RegisterEvent\\(\"[A-Z_0-9]+\"" "' .. src .. '/Interface" --include=*.lua')
+for w in p:lines() do local e = w:match('"([%w_]+)"') if e then knownEvents[e] = true end end
+p:close()
+-- what the addon registers: loaded into a fresh stand-in, logged in, its first timers run
+-- (through the test server, as the tests do; every event name is let through here, to be checked below)
+local Server = require("server")
+local srv = Server.new(".")
+local seen = {}
+local loadMock = dofile
+dofile = function(path)        -- (the client's stand-in: every name may be registered, and it knows the client's list)
+  local M2 = loadMock(path)
+  if path:match("mock%.lua$") then
+    M2.MISSING_EVENTS, M2.VALID_EVENTS = {}, knownEvents
+    seen[#seen + 1] = M2
+  end
+  return M2
+end
+srv:client({ name = "Check", class = "PALADIN" })
+dofile = loadMock
+srv:tick(10)
+local evSet, evNames = {}, {}
+for _, M2 in ipairs(seen) do for e in pairs(M2.events) do evSet[e] = true end end
+for e in pairs(evSet) do evNames[#evNames + 1] = e end
+table.sort(evNames)
+for _, e in ipairs(evNames) do
+  if not knownEvents[e] then
+    print(("event %s is registered but the client doesn't have it"):format(e))
+    failures = failures + 1
+  end
+end
+print(("checked %d widget types, %d globals, %d C_ functions and %d events; problems %d"):format(11, #names, #nsNames, #evNames, failures))
 if failures > 0 then os.exit(1) end

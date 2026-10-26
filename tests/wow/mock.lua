@@ -184,7 +184,13 @@ function Frame:HasScript(name)
   if name == "OnVerticalScroll" or name == "OnScrollRangeChanged" then return self._type == "ScrollFrame" end
   return SCRIPTS[name] ~= nil
 end
-function Frame:RegisterEvent(e) self._events[e] = true M.events[e] = M.events[e] or {} M.events[e][self] = true end
+-- events the TBC client doesn't have (later expansions' ones): registering one is an error in the game, so here too
+-- (tools/check_api.lua checks every event the addon registers against the client's own list)
+M.MISSING_EVENTS = { CONFIRM_DISENCHANT_ROLL = true }
+function Frame:RegisterEvent(e)
+  if M.MISSING_EVENTS[e] then error(('Frame:RegisterEvent(): Attempt to register unknown event "%s"'):format(tostring(e)), 2) end
+  self._events[e] = true M.events[e] = M.events[e] or {} M.events[e][self] = true
+end
 function Frame:UnregisterEvent(e) self._events[e] = nil if M.events[e] then M.events[e][self] = nil end end
 function Frame:UnregisterAllEvents() for e in pairs(self._events) do self:UnregisterEvent(e) end end
 function Frame:IsEventRegistered(e) return self._events[e] == true end
@@ -836,6 +842,11 @@ function M.env(player)
   G.time, G.date = os.time, os.date
   G.GetTime = function() return M.clock or 0 end
   G.debugprofilestop = function() return os.clock() * 1000 end
+  -- (M.VALID_EVENTS, when set: the client's own list, as tools/check_api.lua reads it from Blizzard's code)
+  G.C_EventUtils = { IsEventValid = function(e)
+    if M.VALID_EVENTS then return M.VALID_EVENTS[e] == true end
+    return type(e) == "string" and not M.MISSING_EVENTS[e]
+  end }
   G.C_Timer = { After = function(d, fn) table.insert(timers, { at = (M.clock or 0) + d, fn = fn }) end, NewTicker = function() return { Cancel = function() end } end }
   G.CreateFrame = M.CreateFrame
   M.UIParent = newObject("Frame", nil, "UIParent")
@@ -1019,6 +1030,7 @@ function M.env(player)
   G.RollOnLoot = function(rollID, kind)
     if not M.lootRollInfo[rollID] then error("RollOnLoot on a roll that isn't on") end
     M.lootRolled[rollID] = kind
+    if kind == 3 and M.MISSING_EVENTS.CONFIRM_DISENCHANT_ROLL then error("RollOnLoot: TBC has no disenchant roll") end
     if M.lootRollInfo[rollID].bop and kind ~= 0 then M.fire(kind == 3 and "CONFIRM_DISENCHANT_ROLL" or "CONFIRM_LOOT_ROLL", rollID, kind) end
   end
   G.ConfirmLootRoll = function(rollID, kind) M.lootConfirmed[rollID] = kind end

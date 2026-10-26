@@ -130,6 +130,11 @@ numbers are in [docs/benchmark.md](docs/benchmark.md).
 
 ### Fixed
 
+- Every login showed an error: LootRuler listened for the game's "disenchant roll" question, which TBC doesn't have (it
+  came with Wrath). It now asks the game first, and the Need / Greed rules only offer Disenchant where the game has it.
+  ([#100](https://github.com/kcham01/LootRuler/pull/100))
+- "Forget it" on someone else's session (and the x beside one in the list) gave an error instead of forgetting it.
+  ([#100](https://github.com/kcham01/LootRuler/pull/100))
 - A GDKP session can't be ended by mistake while gold is still owed. ([#17](https://github.com/kcham01/LootRuler/pull/17))
 - Re-importing an updated softres.it sheet didn't apply changed picks. ([#27](https://github.com/kcham01/LootRuler/pull/27))
 - Closing a roll window left the strip of reservers on screen. ([#42](https://github.com/kcham01/LootRuler/pull/42))
