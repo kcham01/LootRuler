@@ -504,6 +504,45 @@ rs.gk.rules[3].pct = "lots"
 check("nor a percent that isn't a number", not Gd.valid(rs.gk))
 rs.gk.rules = nil
 check("a session without rules (an older version's) is fine", Gd.valid(rs.gk) and Gd.split(rs).rules == 0)
+-- bookkeeping: gold by hand, the ledger, payouts set by hand, the payouts as text
+check("before: 1,000g, 100g cut, 20g healer cut, 880g four ways", Gd.split(rs).share == 220)
+check("gold put in by hand goes in the pot", Gd.addGold(rs, 200, "|cffffffffvendor|r greys", 725) and Gd.pot(rs) == 1200 and Gd.split(rs).share == 264
+  and rs.gk.adds[1].n == "vendor greys" and Gd.split(rs).added == 200)
+check("and taken out", Gd.addGold(rs, -50, "repairs", 726) and Gd.pot(rs) == 1150 and Gd.added(rs) == 150)
+check("nothing, or nonsense, isn't", not Gd.addGold(rs, 0, "x", 727) and not Gd.addGold(rs, "lots", "x", 727))
+check("taking one back", Gd.removeAdd(rs, 2, 728) and Gd.pot(rs) == 1200 and not Gd.removeAdd(rs, 5, 728))
+check("payments are logged, with how", Gd.paid(rs, BOB, 1000, 730, "trade") and Gd.paid(rs, DAN, -264, 731, "mail") and Gd.paid(rs, ANN, -10, 732)
+  and #rs.gk.log == 3 and rs.gk.log[1].w == "trade" and rs.gk.log[2].w == "mail" and rs.gk.log[3].w == "hand")
+local led = Gd.ledger(rs)
+check("the ledger: the sale, the gold, the payments, oldest first", #led == 5 and led[1].kind == "sale" and led[1].p == BOB and led[1].g == 1000
+  and led[2].kind == "add" and led[2].g == 200 and led[3].kind == "trade" and led[4].kind == "mail" and led[5].kind == "hand")
+check("a payout set by hand: all they get; the rest is split between the others", Gd.setFixed(rs, DAN, 500, 740)
+  and Gd.split(rs).rows[DAN].gets == 500 and Gd.split(rs).rows[DAN].fixed and Gd.split(rs).share == 185 and Gd.split(rs).sharers == 3)
+Gd.setFixed(rs, BOB, 900, 741)
+local fx = Gd.split(rs)
+check("never more than is left: made smaller to fit", fx.fixed <= 1056 and fx.fixed > 1050 and fx.rows[BOB].gets < 900 and fx.share >= 0, fx.fixed)
+check("back to a share", Gd.setFixed(rs, BOB, nil, 742) and not Gd.split(rs).rows[BOB].fixed)
+check("brought in from lines, replacing the ones before", Gd.setFixedAll(rs, LR.Prio.parseCounts("Ann,300\nLead,100", 10000000), 743) == 2
+  and Gd.split(rs).rows[ANN].gets == 300 and not Gd.split(rs).rows[DAN].fixed and Gd.split(rs).sharers == 2)
+local cuts = Gd.payoutsText(rs, "cuts")
+check("the payouts as Name,Gold lines", cuts:find("Ann,300", 1, true) and cuts:find("Lead,100", 1, true) and cuts:find("Bob-Faerlina,", 1, true))
+check("and for a spreadsheet", Gd.payoutsText(rs, "sheet"):find("^Name,Bought,Payout,Paid,Owed\nAnn,0,300,%-10,") ~= nil, Gd.payoutsText(rs, "sheet"))
+check("Name,Gold lines come back in the same", (function()
+  local before = Gd.split(rs)
+  Gd.setFixedAll(rs, LR.Prio.parseCounts(cuts, 10000000), 744)
+  local after = Gd.split(rs)
+  return after.rows[ANN].gets == before.rows[ANN].gets and after.rows[BOB].gets == before.rows[BOB].gets
+end)())
+check("it's all valid", Gd.valid(rs.gk) and S.valid(rs))
+rs.gk.adds[1].g = "lots"
+check("gold by hand with nonsense isn't", not Gd.valid(rs.gk))
+rs.gk.adds[1].g = 200
+rs.gk.log[1].p = 7
+check("nor a log", not Gd.valid(rs.gk))
+rs.gk.log[1].p = BOB
+rs.gk.fixed[ANN] = "x"
+check("nor payouts set by hand", not Gd.valid(rs.gk))
+rs.gk.fixed = nil
 check("gold handed over counts", sp.rows[ANN].owed == 0 and sp.rows[DAN].owed == 0 and sp.rows[BOB].owed == -175)
 check("it's all a valid session", S.valid(gs) and Gd.valid(gs.gk))
 local owing = Gd.unsettled(gs)

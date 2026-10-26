@@ -15,6 +15,10 @@
 --   strict   bids must start with "bid" ("bid 150"), so someone saying "500" in raid chat doesn't bid
 --   rules    the organiser's own pot rules, in order: { { n = name, pct = percent of the pot, g = gold, to = { names } } };
 --            each player named gets pct of the pot and g gold (older versions don't know them and leave them alone)
+--   adds     gold put in the pot (or taken out) by hand: { { g = gold (- taken out), n = what for, at = when } }
+--   log      every payment, in order: { { p = player, g = gold (as in paid), at = when, w = "trade" / "mail" / "hand" } }
+--   fixed    "Name-Realm" -> their whole payout, set by hand (brought in from a spreadsheet): the rest is split evenly
+--            between everyone else. Older versions don't know adds, log or fixed (their screens show the plain split).
 -- Addons can't put gold in a trade, so LootRuler says who owes what and counts what changes hands.
 local _, LR = ...
 local U, S = LR.U, LR.Session
@@ -247,15 +251,75 @@ function G.setBonus(s, player, gold, now)
   return true
 end
 
---- gold changed hands with a player: + they gave the organiser gold, - the organiser gave them gold
-function G.paid(s, player, gold, now)
+G.MAX_LOG, G.MAX_ADDS, G.MAX_NOTE = 300, 100, 40
+
+--- gold changed hands with a player: + they gave the organiser gold, - the organiser gave them gold.
+--- how: "trade", "mail" or "hand" (marked as settled), for the ledger
+function G.paid(s, player, gold, now, how)
   player = U.full(player)
   gold = tonumber(gold)
   if not s.gk or not gold or gold == 0 then return false end
   s.gk.paid[player] = (s.gk.paid[player] or 0) + gold
   if math.abs(s.gk.paid[player]) < 0.0001 then s.gk.paid[player] = nil end
+  s.gk.log = s.gk.log or {}
+  table.insert(s.gk.log, { p = player, g = gold, at = now, w = (how == "trade" or how == "mail") and how or "hand" })
+  while #s.gk.log > G.MAX_LOG do table.remove(s.gk.log, 1) end
   S.bump(s, now)
   return true
+end
+
+local function note(text)
+  text = tostring(text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|", "")
+  return U.trim(text):sub(1, G.MAX_NOTE)
+end
+
+--- gold put in the pot by hand (vendor money, a donation), or taken out (repairs: a negative amount), with what for
+function G.addGold(s, gold, what, now)
+  gold = tonumber(gold)
+  if not s.gk or not gold or gold == 0 or math.abs(gold) > G.MAX_GOLD then return false end
+  s.gk.adds = s.gk.adds or {}
+  if #s.gk.adds >= G.MAX_ADDS then return false end
+  table.insert(s.gk.adds, { g = math.floor(gold), n = note(what), at = now })
+  S.bump(s, now)
+  return true
+end
+function G.removeAdd(s, index, now)
+  if not (s.gk and s.gk.adds and s.gk.adds[index]) then return false end
+  table.remove(s.gk.adds, index)
+  if #s.gk.adds == 0 then s.gk.adds = nil end
+  S.bump(s, now)
+  return true
+end
+--- the gold put in (or taken out) by hand, in all
+function G.added(s)
+  local n = 0
+  for _, a in ipairs(s.gk and s.gk.adds or {}) do n = n + a.g end
+  return n
+end
+
+--- a player's whole payout set by hand (nil: back to their share of the split)
+function G.setFixed(s, player, gold, now)
+  if not s.gk then return false end
+  player = U.full(player)
+  gold = gold ~= nil and num(gold, 0, G.MAX_GOLD) or nil
+  gold = gold and math.floor(gold) or nil
+  s.gk.fixed = s.gk.fixed or {}
+  if s.gk.fixed[player] == gold then return false end
+  s.gk.fixed[player] = gold
+  if not next(s.gk.fixed) then s.gk.fixed = nil end
+  S.bump(s, now)
+  return true
+end
+--- payouts set by hand from "Name,Gold" lines ({ { p, n } }, Prio.parseCounts); replaces any set before. Returns how many.
+function G.setFixedAll(s, list, now)
+  if not s.gk then return 0 end
+  s.gk.fixed = nil
+  local n = 0
+  for _, x in ipairs(list or {}) do
+    if n < G.MAX_PEOPLE and G.setFixed(s, x.p, x.n, now) then n = n + 1 end
+  end
+  S.bump(s, now)
+  return n
 end
 
 ---------------------------------------------------------------------- the pot
@@ -268,10 +332,11 @@ function G.sales(s)
   return out
 end
 
+--- the pot: what was sold, and gold put in (or taken out) by hand; never below nothing
 function G.pot(s)
   local n = 0
   for _, x in ipairs(G.sales(s)) do n = n + x.g end
-  return n
+  return math.max(0, n + G.added(s))
 end
 
 --- who the pot is split between: everyone who was in the group, and everyone who bought something, but not
@@ -295,14 +360,17 @@ function G.split(s)
   local gk = s.gk or {}
   local cut = math.floor(pot * (gk.cut or 0) / 100)
   local players = G.players(s)
+  -- a payout set by hand is all that player gets: no share, bonus or cut on top
+  local fixed = gk.fixed or {}
+  local function counts(name) return not (gk.out and gk.out[name]) and not fixed[name] end
   local bonuses = 0
-  for name, b in pairs(gk.bonus or {}) do if not (gk.out and gk.out[name]) then bonuses = bonuses + b end end
+  for name, b in pairs(gk.bonus or {}) do if counts(name) then bonuses = bonuses + b end end
   bonuses = math.min(bonuses, pot - cut)
   -- cuts by role: a percent of the pot for each player in the role (tanks, healers), out of what's left
   local rolePay, roles = {}, 0
   for name, role in pairs(gk.role or {}) do
     local pct = gk.rp and gk.rp[role] or 0
-    if pct > 0 and not (gk.out and gk.out[name]) then
+    if pct > 0 and counts(name) then
       rolePay[name] = math.floor(pot * pct / 100)
       roles = roles + rolePay[name]
     end
@@ -317,7 +385,7 @@ function G.split(s)
   for i, r in ipairs(gk.rules or {}) do
     for _, name in ipairs(r.to or {}) do
       local g = math.floor(pot * (r.pct or 0) / 100) + (r.g or 0)
-      if g > 0 and not (gk.out and gk.out[name]) then
+      if g > 0 and counts(name) then
         rulePay[name] = (rulePay[name] or 0) + g
         ruleNames[name] = ruleNames[name] or {}
         table.insert(ruleNames[name], r.n)
@@ -334,7 +402,18 @@ function G.split(s)
     for i, g in pairs(ruleTotals) do ruleTotals[i] = math.floor(g * scale) end
   end
   local rest = pot - cut - bonuses - roles - rules
-  local share = #players > 0 and math.floor(rest / #players) or 0
+  -- payouts set by hand, out of what's left (made smaller if they'd be more); everyone else splits the rest
+  local fixedPay, fixedTotal, sharers = {}, 0, 0
+  for _, p in ipairs(players) do
+    if fixed[p] then fixedPay[p] = fixed[p] fixedTotal = fixedTotal + fixed[p] else sharers = sharers + 1 end
+  end
+  if fixedTotal > rest then
+    local scale = fixedTotal > 0 and rest / fixedTotal or 0
+    fixedTotal = 0
+    for p, g in pairs(fixedPay) do fixedPay[p] = math.floor(g * scale) fixedTotal = fixedTotal + fixedPay[p] end
+  end
+  rest = rest - fixedTotal
+  local share = sharers > 0 and math.floor(rest / sharers) or 0
   local rows = {}
   local spent = {}
   for _, x in ipairs(G.sales(s)) do spent[x.p] = (spent[x.p] or 0) + x.g end
@@ -344,16 +423,18 @@ function G.split(s)
   for p in pairs(gk.paid or {}) do everyone[p] = true end
   for p in pairs(everyone) do
     local inSplit = not (gk.out and gk.out[p])
-    local bonus = inSplit and (gk.bonus and gk.bonus[p]) or 0
+    local isFixed = inSplit and fixedPay[p] ~= nil
+    local bonus = (inSplit and not isFixed) and (gk.bonus and gk.bonus[p]) or 0
     local roleCut = inSplit and rolePay[p] or 0
     local ruleCut = inSplit and rulePay[p] or 0
-    local gets = inSplit and (share + bonus + roleCut + ruleCut) or 0
+    local gets = isFixed and fixedPay[p] or (inSplit and (share + bonus + roleCut + ruleCut) or 0)
     local paid = gk.paid and gk.paid[p] or 0
     rows[p] = { spent = spent[p] or 0, bonus = bonus, role = gk.role and gk.role[p], roleCut = roleCut, ruleCut = ruleCut,
-      ruleNames = ruleCut > 0 and ruleNames[p] or nil, gets = gets, paid = paid,
+      ruleNames = ruleCut > 0 and ruleNames[p] or nil, fixed = isFixed or nil, gets = gets, paid = paid,
       owed = gets - (spent[p] or 0) + paid, out = not inSplit }
   end
-  return { pot = pot, cut = cut, bonuses = bonuses, roles = roles, rules = rules, ruleTotals = ruleTotals, share = share, players = players, rows = rows }
+  return { pot = pot, cut = cut, bonuses = bonuses, roles = roles, rules = rules, ruleTotals = ruleTotals, fixed = fixedTotal, sharers = sharers,
+    added = G.added(s), share = share, players = players, rows = rows }
 end
 
 --- who still owes the organiser or is owed by them: { { name, owed } }, biggest first (not the organiser)
@@ -365,6 +446,42 @@ function G.unsettled(s)
   end
   table.sort(out, function(a, b) return math.abs(a[2]) > math.abs(b[2]) end)
   return out
+end
+
+---------------------------------------------------------------------- the ledger, and the payouts as text
+--- everything the gold did, oldest first: { at, kind = "sale" / "add" / "trade" / "mail" / "hand", p, g, i (sales), n (adds) }
+function G.ledger(s)
+  local out = {}
+  for _, w in ipairs(s.won or {}) do
+    if w.k == "BID" and tonumber(w.r) then out[#out + 1] = { at = w.at or 0, kind = "sale", p = w.p, g = tonumber(w.r), i = w.i } end
+  end
+  for _, a in ipairs(s.gk and s.gk.adds or {}) do out[#out + 1] = { at = a.at or 0, kind = "add", g = a.g, n = a.n } end
+  for _, x in ipairs(s.gk and s.gk.log or {}) do out[#out + 1] = { at = x.at or 0, kind = x.w, p = x.p, g = x.g } end
+  -- (sorted by time; same time: the order they were made in)
+  for i, e in ipairs(out) do e.seq = i end
+  table.sort(out, function(a, b) if a.at ~= b.at then return a.at < b.at end return a.seq < b.seq end)
+  return out
+end
+
+--- the payouts as text: "sheet" (a spreadsheet: Name,Bought,Payout,Paid,Owed) or "cuts" ("Name,Gold" lines of each
+--- payout, which bring back in as payouts set by hand)
+function G.payoutsText(s, format)
+  local split = G.split(s)
+  local names = {}
+  for name, row in pairs(split.rows) do if not row.out then names[#names + 1] = name end end
+  table.sort(names)
+  local lines = {}
+  if format == "cuts" then
+    for _, name in ipairs(names) do lines[#lines + 1] = ("%s,%d"):format(U.short(name), split.rows[name].gets) end
+  else
+    lines[1] = "Name,Bought,Payout,Paid,Owed"
+    for _, name in ipairs(names) do
+      local r = split.rows[name]
+      local function amount(v) return (("%.2f"):format(v):gsub("%.00$", "")) end
+      lines[#lines + 1] = ("%s,%d,%d,%s,%s"):format(U.short(name), r.spent, r.gets, amount(r.paid), amount(r.owed))
+    end
+  end
+  return table.concat(lines, "\n")
 end
 
 --- "1,250g" (whole gold; silver and copper as "12g 50s" when there are any)
@@ -395,6 +512,21 @@ function G.valid(gk)
   end
   if gk.rp ~= nil and not map(gk.rp, "string", "number") then return false end
   if gk.role ~= nil and not map(gk.role, "string", "string") then return false end
+  if gk.fixed ~= nil and not map(gk.fixed, "string", "number") then return false end
+  if gk.adds ~= nil then
+    if type(gk.adds) ~= "table" or #gk.adds > G.MAX_ADDS then return false end
+    for _, a in ipairs(gk.adds) do
+      if type(a) ~= "table" or type(a.g) ~= "number" or math.abs(a.g) > G.MAX_GOLD or (a.n ~= nil and type(a.n) ~= "string")
+        or (a.at ~= nil and type(a.at) ~= "number") then return false end
+    end
+  end
+  if gk.log ~= nil then
+    if type(gk.log) ~= "table" or #gk.log > G.MAX_LOG then return false end
+    for _, x in ipairs(gk.log) do
+      if type(x) ~= "table" or type(x.p) ~= "string" or type(x.g) ~= "number" or (x.at ~= nil and type(x.at) ~= "number")
+        or (x.w ~= nil and type(x.w) ~= "string") then return false end
+    end
+  end
   if gk.rules ~= nil then
     if type(gk.rules) ~= "table" or #gk.rules > G.MAX_RULES then return false end
     for _, r in ipairs(gk.rules) do

@@ -452,7 +452,7 @@ function Drops.tradeDone()
   -- raid going on, or one that ended with payouts left to do (Core/History.lua). Gold for an enchant doesn't.
   if partner and gotMoney ~= gaveMoney and not enchant then
     local pot = (s and s.gdkp and LR.isLeader(s)) and s or LR.History.owing(partner)
-    if pot and LR.Gdkp.paid(pot, partner, (gotMoney - gaveMoney) / 10000, U.now()) then
+    if pot and LR.Gdkp.paid(pot, partner, (gotMoney - gaveMoney) / 10000, U.now(), "trade") then
       if pot.archived then LR.changed("history") else LR.leaderChanged(pot) end
     end
   end

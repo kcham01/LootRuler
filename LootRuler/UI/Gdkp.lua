@@ -37,7 +37,7 @@ local function payoutText(s, name, row)
   if row.role then parts[#parts + 1] = row.role .. (row.roleCut > 0 and (" cut " .. G.gold(row.roleCut)) or "") end
   if (row.ruleCut or 0) > 0 then parts[#parts + 1] = table.concat(row.ruleNames or {}, ", ") .. " " .. G.gold(row.ruleCut) end
   if row.spent > 0 then parts[#parts + 1] = "bought " .. G.gold(row.spent) end
-  parts[#parts + 1] = row.out and "left out of the split" or ("share " .. G.gold(row.gets))
+  parts[#parts + 1] = row.out and "left out of the split" or ((row.fixed and "payout set by hand " or "share ") .. G.gold(row.gets))
   if row.paid ~= 0 then parts[#parts + 1] = (row.paid > 0 and "paid " or "had ") .. G.gold(math.abs(row.paid)) end
   local badge
   if U.samePlayer(name, s.leader) then badge = "|cffffd100holds the pot|r"
@@ -61,12 +61,18 @@ local function playerSheet(s, name)
         goldSheet("Bonus for " .. U.short(name), "Gold out of the pot on top of their share (for tanks, healers, whoever you said).", row.bonus, function(g) LR.gdkpBonus(s, name, g) end)
       end },
       { label = s.gk.out[name] and "Put back in the split" or "Leave out of the split", click = function() h.close() LR.gdkpOut(s, name, not s.gk.out[name]) end },
+      { label = row.fixed and "Change their payout" or "Set their payout", click = function()
+        h.close()
+        goldSheet("Payout for " .. U.short(name), "All they get from the pot, instead of a share (no bonus or cut on top). The others split what's left.",
+          row.fixed and row.gets or nil, function(g) LR.gdkpFixed(s, name, g) end)
+      end },
     }
+    if row.fixed then list[#list + 1] = { label = "Back to their share", click = function() h.close() LR.gdkpFixed(s, name, nil) end } end
     if math.abs(row.owed) >= 0.01 and not U.samePlayer(name, s.leader) then
       list[#list + 1] = { label = "Mark as settled", click = function()
         h.close()
         -- (gold handed over some other way: the mail, or someone else's trade)
-        LR.gdkpPaid(s, name, -row.owed)
+        LR.gdkpPaid(s, name, -row.owed, "hand")
       end }
     end
     f:buttons(list, "left")
@@ -82,13 +88,15 @@ function UI.payoutSheet(s)
       { "Pot", G.gold(split.pot) .. "  (" .. U.plural(#G.sales(s), "item") .. ")" },
       { "Your cut (" .. s.gk.cut .. "%)", G.gold(split.cut) },
       split.bonuses > 0 and { "Bonuses", G.gold(split.bonuses) } or false,
+      split.added ~= 0 and { split.added > 0 and "Added by hand" or "Taken out by hand", G.gold(math.abs(split.added)) } or false,
       split.roles > 0 and { "Tank and healer cuts", G.gold(split.roles) } or false,
     })
     local rows = {}
     for i, r in ipairs(s.gk.rules or {}) do
       if (split.ruleTotals[i] or 0) > 0 then rows[#rows + 1] = { r.n, G.gold(split.ruleTotals[i]) } end
     end
-    rows[#rows + 1] = { "Split " .. #split.players .. " ways", G.gold(split.share) .. " each" }
+    if split.fixed > 0 then rows[#rows + 1] = { "Payouts set by hand", G.gold(split.fixed) } end
+    rows[#rows + 1] = { "Split " .. split.sharers .. " ways", G.gold(split.share) .. " each" }
     f:kv(rows)
     f:gap(6)
     local names = {}
@@ -113,6 +121,11 @@ function UI.payoutSheet(s)
       { label = "Tell the raid", disabled = LR.groupChannel() == nil, click = function() if LR.Pot.post(s) then UI.toast("Posted in raid chat.") end end },
       { label = "Whisper everyone", disabled = not IsInGroup(), click = function() UI.toast(("Whispered %s their payout."):format(U.plural(LR.Pot.whisperAll(s), "player"))) end },
     }, "left")
+    f:buttons({
+      { label = "Copy out", click = function() UI.payoutsOutSheet(s) end },
+      { label = "Bring in payouts", click = function() UI.payoutsInSheet(s) end },
+      split.fixed > 0 and { label = "Back to an even split", click = function() LR.gdkpFixedAll(s, {}) h.redraw(true) end } or nil,
+    }, "left")
     f:note("Addons can't put gold in a trade: open a trade with each player and LootRuler says what to give or take. Gold that changes hands is counted.")
     -- by mail: LootRuler fills in the Send Mail tab, the organiser presses Send
     local queue = LR.Pot.toMail(s)
@@ -125,6 +138,105 @@ function UI.payoutSheet(s)
       f:note(LR.Pot.mailOpen() and ("%s still to mail. Each click fills in the next one."):format(U.plural(#queue, "payout"))
         or "Or by mail: at a mailbox, open the Send Mail tab and LootRuler fills in each payout for you to send.")
     end
+  end, { full = true })
+end
+
+--- the payouts as text: for a spreadsheet, or "Name,Gold" lines that bring back in as payouts set by hand
+local payoutFormat = "sheet"
+function UI.payoutsOutSheet(s)
+  UI.openSheet("Payouts, to copy", function(f, h)
+    f:chips({
+      { label = "Spreadsheet", on = payoutFormat == "sheet", click = function() payoutFormat = "sheet" h.redraw() end },
+      { label = "Name,Gold", on = payoutFormat == "cuts", click = function() payoutFormat = "cuts" h.redraw() end },
+    })
+    f:note(payoutFormat == "sheet" and "Name, what they bought, their payout, what they've paid (- what they've had) and what's still owed (- they owe you)."
+      or "Each player's payout. Change it in a spreadsheet and bring it back in to pay those amounts instead.")
+    local m = K.get(f.owner, "memo", f.parent)
+    f:place(m, 200, 0)
+    K.setMemo(m, f.width, 200, G.payoutsText(s, payoutFormat))
+    f:gap(4)
+    f:note("It's all selected: press Ctrl+C to copy it.")
+  end)
+end
+
+--- payouts set by hand, pasted in as "Name,Gold" lines
+function UI.payoutsInSheet(s)
+  local pasted = ""
+  UI.openSheet("Bring in payouts", function(f, h)
+    f:note("One player a line, a name and gold (\"Ann,350\"), from a spreadsheet or \"Copy out\". Each player listed gets that much instead of a share; everyone else splits what's left. It replaces any payouts brought in before.")
+    local into = K.get(f.owner, "memo", f.parent)
+    f:place(into, 140, 0)
+    K.setEditMemo(into, f.width, 140, pasted, function(t) pasted = t end)
+    f:gap(6)
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Bring them in", click = function()
+        local list, why = LR.Prio.parseCounts(pasted, G.MAX_GOLD)
+        if not list then UI.toast(why) return end
+        local total = 0
+        for _, x in ipairs(list) do total = total + x.n end
+        LR.gdkpFixedAll(s, list)
+        h.close()
+        UI.toast(("%s set by hand, %s in all."):format(U.plural(#list, "payout"), G.gold(total)))
+      end } })
+  end)
+end
+
+--- gold put in the pot by hand, or taken out: what's there, and a new one
+function UI.goldInOutSheet(s)
+  local amount, what = "", ""
+  UI.openSheet("Gold in or out of the pot", function(f, h)
+    f:note("Gold that wasn't from an auction: put in (vendor money, a donation), or taken out (repairs). The pot, the split and everyone's payout change with it.")
+    for i, a in ipairs(s.gk.adds or {}) do
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.LOGO, (a.g > 0 and "|cff1eff00+" or "|cffff5a4a-") .. G.gold(math.abs(a.g)) .. "|r", a.n ~= "" and a.n or "(no note)",
+        a.at and date("%H:%M", a.at) or "", { text = "x", tip = "Take this back", click = function() LR.gdkpRemoveAdd(s, i) h.redraw(true) end })
+      f:place(b, 36)
+      f:gap(2)
+    end
+    f:gap(4)
+    f:text("Gold", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, 100)
+    e:SetMaxLetters(8)
+    e:SetText(amount)
+    e:SetScript("OnTextChanged", function(self) amount = self:GetText() end)
+    f:text("What for", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local n = K.get(f.owner, "edit", f.parent)
+    f:place(n, 22, 6, 260)
+    n:SetMaxLetters(G.MAX_NOTE)
+    n:SetText(what)
+    n:SetScript("OnTextChanged", function(self) what = self:GetText() end)
+    f:gap(8)
+    local function go(sign)
+      local g = tonumber((U.trim(amount):gsub("[gG]$", "")))
+      if not g or g <= 0 then UI.toast("That's not an amount of gold.") return end
+      if LR.gdkpAddGold(s, sign * math.floor(g), what) then amount, what = "", "" h.redraw(true) end
+    end
+    f:buttons({
+      { label = "Put in the pot", click = function() go(1) end },
+      { label = "Take out of the pot", click = function() go(-1) end },
+    }, "left")
+  end, { full = true })
+end
+
+--- the ledger: every sale, gold put in or out, and payment, with its time
+function UI.ledgerSheet(s)
+  UI.openSheet("Ledger", function(f, h)
+    local list = G.ledger(s)
+    if #list == 0 then f:note("Nothing yet: sales, gold put in or out, and payments show here as they happen.") end
+    for _, e in ipairs(list) do
+      local when = e.at > 0 and ("|cff9d9d9d%s|r  "):format(date("%H:%M", e.at)) or ""
+      local who = e.p and U.classText(U.short(e.p), LR.classOf(e.p)) or ""
+      local text
+      if e.kind == "sale" then text = ("%s bought %s for %s"):format(who, LR.coloredName(e.i), G.gold(e.g))
+      elseif e.kind == "add" then text = (e.g > 0 and "Put in the pot: %s%s" or "Taken out of the pot: %s%s"):format(G.gold(math.abs(e.g)), e.n ~= "" and (" (" .. e.n .. ")") or "")
+      elseif e.kind == "trade" then text = e.g > 0 and ("%s gave you %s in a trade"):format(who, G.gold(e.g)) or ("You gave %s %s in a trade"):format(who, G.gold(-e.g))
+      elseif e.kind == "mail" then text = ("You mailed %s %s"):format(who, G.gold(math.abs(e.g)))
+      else text = ("%s marked as settled (%s %s)"):format(who, G.gold(math.abs(e.g)), e.g > 0 and "paid" or "had") end
+      f:text(when .. text, { font = "GameFontHighlightSmall", gap = 3 })
+    end
+    f:gap(6)
+    f:note(("Pot %s. Payments counted from trades, the mail and \"Mark as settled\"."):format(G.gold(G.pot(s))))
   end, { full = true })
 end
 
@@ -332,7 +444,11 @@ function UI.gdkpPanel(f, s)
         { label = "Payouts", click = function() UI.payoutSheet(s) end },
         { label = "Tanks and healers", click = function() UI.rolesSheet(s) end },
       }, "left")
-      p:buttons({ { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), click = function() UI.potRulesSheet(s) end } }, "left")
+      p:buttons({
+        { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), click = function() UI.potRulesSheet(s) end },
+        { label = "Gold in or out", click = function() UI.goldInOutSheet(s) end },
+      }, "left")
+      p:buttons({ { label = "Ledger", click = function() UI.ledgerSheet(s) end } }, "left")
       p:buttons({
         { label = ("Sales (%d)"):format(#G.sales(s)), click = function() UI.salesSheet(s) end },
         { label = "Starting bids in and out", click = function() UI.pricesSheet(s) end },
