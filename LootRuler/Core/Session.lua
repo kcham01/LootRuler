@@ -339,6 +339,47 @@ function S.setLink(s, url, now)
   return true
 end
 
+---------------------------------------------------------------------- the organiser's branding
+-- s.br = { n = the raid's name ("<Kings> GDKP"), m = a short message ("Sign up on our Discord: ..."), i = an icon (its
+-- place in S.BRAND_ICONS) }: raiders see it in their window and the raid hears it when reserves open. Older versions
+-- don't know it and leave it alone; a newer version's icon this one doesn't have shows as the raid's own.
+S.BRAND_NAME, S.BRAND_MSG = 40, 120
+S.BRAND_ICONS = {
+  { "Coin", "Interface\\Icons\\INV_Misc_Coin_01" }, { "Gold", "Interface\\Icons\\INV_Misc_Coin_02" },
+  { "Dragon", "Interface\\Icons\\INV_Misc_Head_Dragon_01" }, { "Sword", "Interface\\Icons\\INV_Sword_04" },
+  { "Shield", "Interface\\Icons\\INV_Shield_06" }, { "Light", "Interface\\Icons\\Spell_Holy_HolyBolt" },
+  { "Fire", "Interface\\Icons\\Spell_Fire_Fire" }, { "Shadow", "Interface\\Icons\\Spell_Shadow_ShadowBolt" },
+  { "Frost", "Interface\\Icons\\Spell_Frost_FrostBolt02" }, { "Storm", "Interface\\Icons\\Spell_Nature_Lightning" },
+  { "Banner", "Interface\\Icons\\Ability_Warrior_BattleShout" }, { "Bag", "Interface\\Icons\\INV_Misc_Bag_10" },
+}
+
+local function brandText(text, max)
+  if type(text) ~= "string" then return "" end
+  text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|", ""):gsub("[%c]", " ")
+  return U.trim(text):sub(1, max)
+end
+
+--- branding checked: { n, m, i } with only what's right in it, or nil when there's nothing
+function S.okBrand(br)
+  if type(br) ~= "table" then return nil end
+  local n, m = brandText(br.n, S.BRAND_NAME), brandText(br.m, S.BRAND_MSG)
+  local i = tonumber(br.i)
+  i = i and i % 1 == 0 and i >= 1 and i <= 100 and i or nil
+  if n == "" and m == "" and not i then return nil end
+  return { n = n ~= "" and n or nil, m = m ~= "" and m or nil, i = i }
+end
+--- the icon's texture (nil: one this version doesn't have)
+function S.brandIcon(br) local x = br and br.i and S.BRAND_ICONS[br.i] return x and x[2] or nil end
+
+function S.setBrand(s, br, now)
+  br = S.okBrand(br)
+  local same = (br == nil and s.br == nil) or (br and s.br and br.n == s.br.n and br.m == s.br.m and br.i == s.br.i)
+  if same then return false end
+  s.br = br
+  bump(s, now)
+  return true
+end
+
 --- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
 --- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
 function S.award(s, id, player, kind, roll, now, dropKey, de, boosted, xn)
@@ -571,6 +612,7 @@ function S.valid(t)
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
   if t.url ~= nil and not S.okLink(t.url) then t.url = nil end      -- (a link that isn't softres.it's is dropped)
+  if t.br ~= nil then t.br = S.okBrand(t.br) end                    -- (branding: only what's right in it is kept)
   if t.next ~= nil and type(t.next) ~= "string" then return false end
   if t.go ~= nil and type(t.go) ~= "boolean" then return false end
   if t.was ~= nil then

@@ -326,6 +326,11 @@ function W.announce(s)
   local channel = LR.groupChannel()
   if not channel then return false end
   for _, line in ipairs(U.chatLines(text, 255)) do chat(line, channel) end
+  -- the organiser's branding: their raid's name and message, on a line of its own
+  if s.br and (s.br.n or s.br.m) then
+    local brand = (s.br.n and s.br.m) and (s.br.n .. ": " .. s.br.m) or s.br.n or s.br.m
+    for _, line in ipairs(U.chatLines(LR.TAG .. " " .. brand, 255)) do chat(line, channel) end
+  end
   return true
 end
 

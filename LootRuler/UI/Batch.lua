@@ -107,7 +107,9 @@ function UI.batchDraw()
   win:ClearAllPoints()
   local pt = LR.db.ui.batchPoint
   if pt then win:SetPoint(pt[1], UIParent, pt[2], pt[3], pt[4]) else win:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 540, -120) end
-  win.title:SetText(("Auction: %d items%s"):format(#copy.items, mine and "" or (" by " .. U.short(copy.by))))
+  local s = LR.Rolls.session()
+  local by = (s and s.br and s.br.n) or (not mine and U.short(copy.by)) or nil
+  win.title:SetText(("Auction: %d items%s"):format(#copy.items, by and (" by " .. by) or ""))
   local f = K.flow("batch", win.body, 0, 0, W - 32)
   for _, item in ipairs(copy.items) do
     local b = K.get(f.owner, "item", f.parent)

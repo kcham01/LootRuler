@@ -222,6 +222,8 @@ function UI.reserveView(f, s)
     noSession(f)
     return browse(f)
   end
+  -- the organiser's message (Session tab: Your raid's name)
+  if s.br and s.br.m and not LR.isLeader(s) then f:note((s.br.n and (s.br.n .. ": ") or "") .. s.br.m, K.GOLD) end
   if s.gdkp then
     f:panel("GDKP auctions", function(p)
       p:text(LR.raidOf(s).name .. " auctions its loot for gold: nobody reserves anything.")

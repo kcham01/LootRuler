@@ -1221,6 +1221,49 @@ run("the gear overview", function()
   LR.UI.go("reserve")
 end)
 
+run("the organiser's branding", function()
+  local sbr = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  LR.UI.go("session")
+  srv:tick(0.3)
+  check("the Session tab has the raid's name", visible("Your raid's name") and visible("Icon:"))
+  local boxes = {}
+  local function walk(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() and not c._multi then boxes[#boxes + 1] = c end walk(c) end end
+  walk(G.LootRulerFrame)
+  local nameBox, msgBox
+  for _, b in ipairs(boxes) do
+    if math.abs(b:GetWidth() - 240) < 1 then nameBox = b elseif b:GetWidth() > 300 then msgBox = msgBox or b end
+  end
+  nameBox:SetText("<Kings> Karazhan") nameBox._scripts.OnTextChanged(nameBox, true)
+  msgBox:SetText("Sign up on our Discord: kings-guild") msgBox._scripts.OnTextChanged(msgBox, true)
+  clickText("Dragon")
+  clickText("Save")
+  srv:tick(1)
+  check("saved: name, message and icon", sbr.br and sbr.br.n == "<Kings> Karazhan" and sbr.br.m == "Sign up on our Discord: kings-guild" and sbr.br.i == 3)
+  check("the window's header shows it", visible("<Kings> Karazhan - 2 reserves each"))
+  local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+  local sf = scrollers(G.LootRulerFrame, {})[1]
+  local panelText = M.findText("Your raid's name", true, G.LootRulerFrame)[1]
+  sf:SetVerticalScroll(math.min(sf:GetVerticalScrollRange(), math.max(0, sf:GetVerticalScroll() + (sf:GetTop() or 0) - (panelText.fs:GetTop() or 0) - 20)))
+  shot("brand")
+  sf:SetVerticalScroll(0)
+  ann.LR.UI.show("reserve")
+  srv:tick(0.3)
+  check("raiders see the name and message", visible("<Kings> Karazhan: Sign up on our Discord: kings-guild", ann))
+  shot("brand-raider", ann)
+  ann.LR.UI.win:Hide()
+  LR.endSession(sbr)
+  srv:tick(1)
+  local nextOne = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(2)
+  check("the next session starts with it", nextOne.br and nextOne.br.n == "<Kings> Karazhan")
+  check("raiders are told whose raid it is", (function() for _, l in ipairs(ann.M.chat) do if l:find("opened soft reserves for Karazhan (<Kings> Karazhan)", 1, true) then return true end end end)())
+  LR.setBrand(nextOne, nil)
+  LR.endSession(nextOne)
+  srv:tick(1)
+  LR.UI.go("reserve")
+end)
+
 run("extra reserves", function()
   local s8 = LR.startSession("Karazhan", 1, true, false)
   srv:tick(1)

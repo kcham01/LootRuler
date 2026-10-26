@@ -110,6 +110,19 @@ check("and so does the short how-to", W.howTo() == "Whisper me !lr [linked item]
 lead.LR.db.settings.raidCommands = true
 check("the short how-to otherwise says raid chat", W.howTo():find("Type !lr [linked item] in raid chat", 1, true) == 1)
 
+section("the organiser's branding")
+check("only the leader names the raid", not ann.LR.setBrand(cur(ann), { n = "Mine" }))
+lead.LR.setBrand(s, { n = "<Kings> Karazhan", m = "Sign up on our Discord.", i = 3 })
+srv:tick(2)
+check("raiders' copies have it", cur(ann).br and cur(ann).br.n == "<Kings> Karazhan" and cur(ann).br.m == "Sign up on our Discord." and cur(ann).br.i == 3)
+check("it's kept for the leader's next session", lead.LR.db.ui.brand and lead.LR.db.ui.brand.n == "<Kings> Karazhan")
+W.announce(s)
+srv:tick(3)
+check("the raid hears it after the reserves line", said("[LootRuler] <Kings> Karazhan: Sign up on our Discord."))
+lead.LR.setBrand(s, nil)
+srv:tick(2)
+check("cleared, for raiders too", s.br == nil and cur(ann).br == nil and lead.LR.db.ui.brand == nil)
+
 section("sharing with the guild")
 lead.LR.setGuild(s, false)
 srv:tick(2)

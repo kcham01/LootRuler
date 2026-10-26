@@ -357,7 +357,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   when `shareGear` is on; players without LootRuler, and those who don't answer within `Overview.WAIT` seconds, are inspected through the
   roll inspect queue, now general (`Rolls.inspect(player, read, failed)`), when `inspectGear` is on. Answers are checked (item links in real
   slots only). Item level from `C_Item.GetItemInfo(link)` (the test server takes links now). Pretend players send gear from the loot lists.
-- **Planned with the owner (in this order, one pull request each):** organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
+- **Organiser branding** (`s.br` = { n, m, i }; `S.okBrand`, `S.setBrand`, `S.brandIcon`, `S.BRAND_ICONS` (game icon paths, by place);
+  `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid's name"): shown in the window's header (icon and name),
+  as a note on raiders' Reserve tab, after `Whisper.announce`'s line, in the "opened soft reserves" note and the batch window's title.
+  `S.valid` keeps the session and only the right parts of `br` (a newer version's icon number shows as the raid's own).
+- **Planned with the owner (in this order, one pull request each):** loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
