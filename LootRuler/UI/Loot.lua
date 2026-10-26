@@ -118,22 +118,66 @@ end
 
 --- who won what, to copy out (a sheet with a choice of formats)
 local exportFormat = "csv"
+--- the choice of format (and, for your own, its template); returns the format and its options
+local function formatPicker(f, h)
+  local set = LR.db.settings
+  local chips = {}
+  for _, x in ipairs(LR.Export.FORMATS) do
+    chips[#chips + 1] = { label = x[2], on = exportFormat == x[1], click = function() exportFormat = x[1] h.redraw() end }
+  end
+  f:chips(chips)
+  f:note(({ csv = "For a spreadsheet: paste into Google Sheets or Excel.", tmb = "For thatsmybis.com's loot import.",
+    dftus = "For the DFT sheet's import (month/day dates). Disenchanted items are left out.",
+    dfteu = "For the DFT sheet's import (day/month dates). Disenchanted items are left out.",
+    own = "Write how each line looks. These are filled in for each item: " .. table.concat(U.map(LR.Export.FIELDS, function(x) return "{" .. x[1] .. "}" end), " ") .. "." })[exportFormat])
+  if exportFormat ~= "own" then return exportFormat end
+  for _, box in ipairs({ { "exportTemplate", "Each line" }, { "exportHeader", "First line (optional, like column names)" } }) do
+    f:text(box[2], { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetMaxLetters(LR.Export.MAX_TEMPLATE)
+    e:SetText(set[box[1]])
+    e:SetScript("OnTextChanged", function(self, user) if user then set[box[1]] = self:GetText() end end)
+    e:SetScript("OnEnterPressed", function(self) self:ClearFocus() h.redraw(true) end)
+    f:gap(4)
+  end
+  f:buttons({ { label = "Show it", click = function() h.redraw(true) end } }, "left")
+  return exportFormat, { template = set.exportTemplate, header = set.exportHeader }
+end
+
+local function exportBox(f, text)
+  local m = K.get(f.owner, "memo", f.parent)
+  f:place(m, 200, 0)
+  K.setMemo(m, f.width, 200, text)
+  f:gap(4)
+  f:note("It's all selected: press Ctrl+C to copy it.")
+end
+
 function UI.exportSheet(s)
   UI.openSheet("Export who won what", function(f, h)
+    local format, opts = formatPicker(f, h)
+    exportBox(f, LR.Export.text(s, format, opts))
+  end)
+end
+
+--- who won what in several raids (past raids, and the one on now), from a number of days ago
+local exportDays = 30
+local DAYS = { { 7, "Last 7 days" }, { 30, "Last 30 days" }, { 90, "Last 90 days" }, { 0, "Everything" } }
+function UI.exportManySheet()
+  UI.openSheet("Export several raids", function(f, h)
     local chips = {}
-    for _, x in ipairs(LR.Export.FORMATS) do
-      chips[#chips + 1] = { label = x[2], on = exportFormat == x[1], click = function() exportFormat = x[1] h.redraw() end }
-    end
+    for _, x in ipairs(DAYS) do chips[#chips + 1] = { label = x[2], on = exportDays == x[1], click = function() exportDays = x[1] h.redraw() end } end
     f:chips(chips)
-    f:note(({ csv = "For a spreadsheet: paste into Google Sheets or Excel.", tmb = "For thatsmybis.com's loot import.",
-      dftus = "For the DFT sheet's import (month/day dates). Disenchanted items are left out.",
-      dfteu = "For the DFT sheet's import (day/month dates). Disenchanted items are left out." })[exportFormat])
-    local text = LR.Export.text(s, exportFormat)
-    local m = K.get(f.owner, "memo", f.parent)
-    f:place(m, 200, 0)
-    K.setMemo(m, f.width, 200, text)
-    f:gap(4)
-    f:note("It's all selected: press Ctrl+C to copy it.")
+    local sessions, seen = {}, {}
+    local cur = LR.current()
+    if cur and #(cur.won or {}) > 0 then sessions[1] = cur seen[cur.id] = true end
+    for _, e in ipairs(LR.History.all()) do if not seen[e.id] then sessions[#sessions + 1] = e seen[e.id] = true end end
+    local entries = LR.Export.entriesOf(sessions, exportDays > 0 and (U.now() - exportDays * 86400) or nil)
+    local raids = {}
+    for _, e in ipairs(entries) do raids[e.s.id] = true end
+    f:note(("%s from %s, oldest first."):format(U.plural(#entries, "item"), U.plural(#U.keys(raids), "raid")), K.GOLD)
+    local format, opts = formatPicker(f, h)
+    exportBox(f, LR.Export.write(entries, format, opts))
   end)
 end
 
@@ -175,6 +219,7 @@ function UI.historySheet()
     local all = LR.History.all()
     if #all == 0 then f:note("None yet. When a raid's soft reserves end, what it gave out is kept here.") return end
     f:note(("Raids you were in that gave loot out (up to the last %d), kept on this character. Click one for its loot."):format(LR.History.MAX))
+    f:buttons({ { label = "Export several raids", click = function() UI.exportManySheet() end } }, "left")
     for _, e in ipairs(all) do
       local b = K.get(f.owner, "item", f.parent)
       local badge = ""

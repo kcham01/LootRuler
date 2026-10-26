@@ -233,6 +233,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   the next roster change. Sorting makes one move (`SetRaidSubgroup` / `SwapRaidSubgroup`) every half second, each putting one
   player where the list wants them for good, and stops if the game didn't make a move (combat). The list is kept in
   `db.ui.lineup`. The test server now has invites (`Server:acceptInvite`), raid groups and `srv.inCombat`.
+- **Exports of your own, and of several raids** (`E.FIELDS`, `E.fill`, `E.entriesOf`, `E.write`; settings `exportTemplate`,
+  `exportHeader`; `UI.exportManySheet`): format "own" fills `{field}`s per item (unknown ones stay as typed); past raids and
+  the session on now go out as one list between two times, oldest first, each entry carrying its session (`e.s`, `e.n`).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
