@@ -96,6 +96,7 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("GROUP_ROSTER_UPDATE")
 events:SetScript("OnEvent", function()
+  LR.rosterChanged()                -- (the kept group is out of date: this may run before Core/Net.lua's handler)
   local s = Pot.mine()
   if s and G.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) then LR.leaderChanged(s) end
 end)

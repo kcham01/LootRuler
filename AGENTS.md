@@ -95,6 +95,9 @@ Players don't update their addons, so every version has to work with every other
 - **Debounce network sends** (`LR.publish`); don't resend what hasn't changed.
 - **Look things up once**: build indexes (`raid.has`) instead of scanning lists in loops; no string building
   inside `OnUpdate`.
+- **The group is kept** (`LR.roster`, `LR.inGroup`): read once, until the game says it changed. A new handler for
+  `GROUP_ROSTER_UPDATE` (or any event that changes who's in the group) calls `LR.rosterChanged()` first: the game
+  doesn't say which addon frame hears an event first. `S.byItem` is kept too: don't change what it returns.
 
 ## How to check your work
 

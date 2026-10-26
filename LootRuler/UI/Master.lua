@@ -603,6 +603,7 @@ mlEvents:RegisterEvent("PARTY_LOOT_METHOD_CHANGED")
 mlEvents:RegisterEvent("GROUP_ROSTER_UPDATE")
 mlEvents:RegisterEvent("PLAYER_LOGIN")
 mlEvents:SetScript("OnEvent", function(_, event)
+  if event == "GROUP_ROSTER_UPDATE" then LR.rosterChanged() end   -- (may run before Core/Net.lua's handler)
   if event == "PLAYER_LOGIN" then
     C_Timer.After(5, function() wasML = IsInGroup() and LR.isMasterLooter() or false end)
     return

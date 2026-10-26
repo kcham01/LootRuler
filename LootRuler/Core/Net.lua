@@ -46,6 +46,7 @@ local listeners = {}
 
 --- something changed that the window shows
 function LR.changed(what)
+  if what == "roster" and LR.rosterChanged then LR.rosterChanged() end
   for _, fn in ipairs(listeners) do fn(what) end
 end
 function LR.onChange(fn) listeners[#listeners + 1] = fn end
@@ -218,7 +219,12 @@ function LR.groupChannel()
 end
 
 --- group members: { name = "Name-Realm", class = "PALADIN", online = bool, leader = bool, assist = bool }
-function LR.roster()
+--- The group is read from the game once and kept until it changes (the roster events below, a practice raid starting or
+--- ending, or KEEP_ROSTER seconds at most), with an index by name for LR.inGroup.
+local rosterKept, rosterByName, rosterAt
+local KEEP_ROSTER = 10
+function LR.rosterChanged() rosterKept, rosterByName, rosterAt = nil, nil, nil end
+local function readRoster()
   local out = {}
   if IsInRaid() then
     for i = 1, GetNumGroupMembers() do
@@ -244,6 +250,22 @@ function LR.roster()
   end
   return out
 end
+local function keptRoster()
+  if rosterKept and GetTime() - rosterAt < KEEP_ROSTER then return rosterKept, rosterByName end
+  local list, byName = readRoster(), {}
+  for _, m in ipairs(list) do byName[U.foldCase(m.name)] = m end
+  -- (someone the game hasn't loaded yet has no name: read again next time rather than keep a short list)
+  local whole = not IsInGroup() or LR.Practice.on or #list >= GetNumGroupMembers()
+  if whole then rosterKept, rosterByName, rosterAt = list, byName, GetTime() end
+  return list, byName
+end
+--- the group (a new list each time, so it can be sorted or added to; the members in it are shared: don't change them)
+function LR.roster()
+  local list = keptRoster()
+  local out = {}
+  for i, m in ipairs(list) do out[i] = m end
+  return out
+end
 --- the unit ("raid3", "party1", "player") of someone in the group, for the game's functions that take one; nil if not
 function LR.unitOf(name)
   if not name then return nil end
@@ -258,8 +280,8 @@ function LR.unitOf(name)
 end
 function LR.inGroup(name)
   if not name or not (IsInGroup() or LR.Practice.on) then return false end
-  for _, m in ipairs(LR.roster()) do if U.samePlayer(m.name, name) then return m end end
-  return false
+  local _, byName = keptRoster()
+  return byName[U.foldCase(U.full(name))] or false
 end
 function LR.classOf(name)
   local m = LR.inGroup(name)
@@ -919,8 +941,14 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("GROUP_ROSTER_UPDATE")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+-- (the group as last read is kept: Core/Net.lua's LR.roster. These change it without a roster update.)
+events:RegisterEvent("UNIT_CONNECTION")
+events:RegisterEvent("PARTY_LEADER_CHANGED")
+events:RegisterEvent("UNIT_NAME_UPDATE")
 events:SetScript("OnEvent", function(_, event)
-  if event == "PLAYER_LOGIN" then
+  if event == "UNIT_CONNECTION" or event == "PARTY_LEADER_CHANGED" or event == "UNIT_NAME_UPDATE" then
+    LR.rosterChanged()
+  elseif event == "PLAYER_LOGIN" then
     if not db then LR.loadDB() end
     C_ChatInfo.RegisterAddonMessagePrefix(LR.PREFIX)
     Net:RegisterComm(LR.PREFIX, "OnComm")
@@ -934,6 +962,7 @@ events:SetScript("OnEvent", function(_, event)
       end
     end)
   elseif event == "GROUP_ROSTER_UPDATE" then
+    LR.rosterChanged()
     if not db then return end
     local grouped = IsInGroup()
     if grouped and LR.Practice.on then LR.Practice.stop("you joined a group, so the practice raid is over: it's forgotten.") end
