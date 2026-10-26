@@ -258,6 +258,32 @@ do
   check("looting the item does", G.endRoll(28528) and G.roll == nil)
 end
 
+print("== spreadsheets, and the softres.it link")
+do
+  local G = LR.Gargul
+  check("a spreadsheet's fields, quotes and all", table.concat(G.csvFields('Royal Cloak,"Ann, the bold","say ""hi""",28529'), "|") == 'Royal Cloak|Ann, the bold|say "hi"|28529')
+  local csv = 'Item,ItemId,From,Name,Class,Spec,Note,Plus,Date\n' ..
+    '"Royal Cloak of Arathi Kings",28529,Moroes,Ann,Priest,Holy,,0,2025-10-30\n' ..
+    'Signet of Unshakable Faith,28525,Moroes,ann,Priest,Holy,,0,2025-10-30\n' ..
+    'Moroes\' Lucky Pocket Watch,28528,Moroes,Zed,Rogue,Combat,,0,2025-10-30\n'
+  local data = G.decode(csv)
+  check("softres.it's CSV: each player once, with their items and class", data and #data.softreserves == 2 and #data.softreserves[1].items == 2
+    and data.softreserves[2].name == "Zed" and data.softreserves[2].class == "Rogue")
+  local sc = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  local sum = G.importInto(sc, csv)
+  check("and it comes into a session like an export", sum and sum.players == 2 and list(sc, "Ann-Dreamscythe") == "28525,28529" and sc.res["Zed-Dreamscythe"].c == "ROGUE")
+  check("importing it again changes nothing", G.importInto(sc, csv).added == 0 and list(sc, "Ann-Dreamscythe") == "28525,28529")
+  local pairs2 = G.decode("Ann,28525\n28529;Bob\nnonsense\nCara\t28528")
+  check("lines of just a name and an item number", pairs2 and #pairs2.softreserves == 3 and pairs2.softreserves[2].name == "Bob" and pairs2.softreserves[3].items[1].id == 28528)
+  check("a spreadsheet without names and items says why", select(2, G.decode("a,b,c\n1,2,3")):find("column for the player's name", 1, true) ~= nil)
+  -- the link
+  check("a softres.it export brings its page's link", s3.url == "https://softres.it/raid/x1")
+  check("only a softres.it link is kept", not S.setLink(s3, "https://evil.example/x") and s3.url == "https://softres.it/raid/x1"
+    and S.setLink(s3, "", 1760000009) and s3.url == nil)
+  local copy = U.copy(s3) copy.sx = nil copy.url = "javascript:alert(1)"
+  check("a copy carrying some other link drops it, and is still taken", S.valid(copy) and copy.url == nil)
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

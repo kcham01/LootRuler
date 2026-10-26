@@ -327,6 +327,18 @@ end
 ---------------------------------------------------------------------- loot given out
 S.WON_KINDS = { SR = true, MS = true, OS = true, HR = true, BID = true }
 
+--- the session's softres.it page (posted in raid chat for players to reserve there); nil or "" takes it off
+S.LINK_MAX = 100
+function S.okLink(url) return type(url) == "string" and #url <= S.LINK_MAX and url:match("^https://softres%.it/[%w%-/]+$") ~= nil end
+function S.setLink(s, url, now)
+  url = url and U.trim(url) or ""
+  if url ~= "" and not S.okLink(url) then return false end
+  if (s.url or "") == url then return false end
+  s.url = url ~= "" and url or nil
+  bump(s, now)
+  return true
+end
+
 --- records that a player was given an item (kind: how they won it, roll: what they rolled, if they did).
 --- dropKey: the drop it was; when not given, the first drop of that item nobody has won yet.
 function S.award(s, id, player, kind, roll, now, dropKey, de, boosted, xn)
@@ -545,6 +557,7 @@ function S.valid(t)
     end
   end
   if t.de ~= nil and type(t.de) ~= "string" then return false end
+  if t.url ~= nil and not S.okLink(t.url) then t.url = nil end      -- (a link that isn't softres.it's is dropped)
   if t.next ~= nil and type(t.next) ~= "string" then return false end
   if t.go ~= nil and type(t.go) ~= "boolean" then return false end
   if t.was ~= nil then

@@ -51,15 +51,24 @@ end
 
 local function importSheet(s)
   local text = ""
+  local link = s.url or ""
   UI.openSheet("Bring in reserves from softres.it", function(f, h)
-    f:text("On softres.it, open the raid and click |cffffd100Gargul Export|r, copy what it shows, and paste it here (Ctrl+V).")
+    f:text("On softres.it, open the raid and click |cffffd100Gargul Export|r, copy what it shows, and paste it here (Ctrl+V). A spreadsheet works too: softres.it's CSV, or any with a column for the player's name and one for the item's number.")
     f:note("The sheet's reserves are added to this session's. Import again whenever the sheet changes: the reserves from the sheet are updated to match it, and reserves made in LootRuler stay. Items that don't drop in " .. LR.raidOf(s).name .. " are skipped, and so are reserves past the limit.")
-    local e = K.get(f.owner, "edit", f.parent)
-    f:place(e, 22, 6, f.width - 12)
-    e:SetText(text)
-    e:SetScript("OnTextChanged", function(self) text = self:GetText() end)
+    local e = K.get(f.owner, "memo", f.parent)
+    f:place(e, 90, 0)
+    K.setEditMemo(e, f.width, 90, text, function(t) text = t end)
+    f:gap(6)
+    f:text("The raid's softres.it link (optional)", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+    local le = K.get(f.owner, "edit", f.parent)
+    f:place(le, 22, 6, f.width - 12)
+    le:SetText(link)
+    le:SetScript("OnTextChanged", function(self) link = self:GetText() end)
+    f:note("To post in raid chat (Session tab), for players who'd rather reserve there. A Gargul Export from softres.it fills it in.")
     f:gap(10)
     f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = "Import", click = function()
+      if U.trim(link) ~= (s.url or "") and not LR.setLink(s, link) then UI.toast("That isn't a softres.it link (https://softres.it/...).") return end
+      if U.trim(text) == "" and U.trim(link) ~= "" then h.close() return end
       local sum, err = LR.Gargul.importInto(s, text)
       if not sum then UI.toast(err) return end
       h.close()
@@ -248,6 +257,12 @@ local function manage(f, s)
       end },
     }, "left")
     p:note("Posts: \"" .. LR.Whisper.howTo() .. "\"")
+    if s.url then
+      p:buttons({ { label = "Post the softres.it link", disabled = LR.groupChannel() == nil, click = function()
+        if LR.postLink(s) then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+      end } }, "left")
+      p:note(s.url)
+    end
     p:buttons({
       { label = "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()
