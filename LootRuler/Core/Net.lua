@@ -696,6 +696,38 @@ function LR.versionOf(name)
   return name and versions[U.full(name):lower()] or nil
 end
 
+--- everyone in the group and their LootRuler, the ones to do something about first:
+--- { { name, class, version (nil: not heard from), state = "older" / "none" / "newer" / "same" (as mine) } }
+function LR.versionList()
+  local out = {}
+  for _, m in ipairs(LR.roster()) do
+    local v = LR.versionOf(m.name)
+    local c = v and U.compareVersions(v, LR.VERSION)
+    out[#out + 1] = { name = m.name, class = m.class, version = v, state = not v and "none" or c < 0 and "older" or c > 0 and "newer" or "same" }
+  end
+  local order = { older = 1, none = 2, newer = 3, same = 4 }
+  table.sort(out, function(a, b)
+    if a.state ~= b.state then return order[a.state] < order[b.state] end
+    return a.name < b.name
+  end)
+  return out
+end
+
+--- whispers everyone in the group with an older LootRuler that there's a newer one (once each). Returns how many.
+local toldOld = {}
+function LR.tellOutdated()
+  local n = 0
+  for _, x in ipairs(LR.versionList()) do
+    local key = U.full(x.name):lower()
+    if x.state == "older" and toldOld[key] ~= x.version then
+      toldOld[key] = x.version
+      n = n + 1
+      LR.say(("%s You have LootRuler %s, and %s is out. Yours still works with it, but update when you can."):format(LR.TAG, x.version, LR.VERSION), "WHISPER", x.name)
+    end
+  end
+  return n
+end
+
 --- tells the group (or one player) we have the addon; not more than once every few seconds
 local lastHello = {}
 function LR.hello(target)

@@ -137,6 +137,7 @@ function UI.settingsView(f)
   f:panel("About", function(p)
     p:kv({ { "Version", LR.VERSION } })
     p:gap(4)
+    p:buttons({ { label = "Who has LootRuler", click = function() UI.versionSheet() end } }, "left")
     p:note("/lr opens this window. /lr help lists the rest.")
     p:note("Bugs and ideas: github.com/kcham01/LootRuler")
   end)
@@ -249,8 +250,52 @@ UI.COMMANDS = {
   { "/lr master", "bring back the loot master window" },
   { "/lr de [name]", "who disenchants (the leader)" },
   { "/lr test", "a pretend roll window" },
+  { "/lr versions", "who in the group has LootRuler, and which version" },
   { "/lr minimap", "hide or show the minimap button" },
 }
+--- who in the group has LootRuler, and which version; asking everyone again, and telling those with an older one
+local versionSheet
+local VERSION_TEXT = { older = "|cffff8040%s (older)|r", newer = "|cff40c0ff%s (newer)|r", same = "|cff1eff00%s|r" }
+function UI.versionSheet()
+  UI.show()
+  UI.openSheet("Who has LootRuler", function(f, h)
+    versionSheet = h
+    local list = LR.versionList()
+    if #list == 0 then
+      f:note(("You're not in a group. You have LootRuler %s."):format(LR.VERSION))
+    else
+      local have, older = 0, 0
+      for _, x in ipairs(list) do
+        if x.version then have = have + 1 end
+        if x.state == "older" then older = older + 1 end
+      end
+      f:note(("%d of %d in the group have LootRuler. You have %s."):format(have, #list, LR.VERSION), K.GOLD)
+      if have < #list then f:note("Without it, players still reserve by whispering \"!lr [item]\" and roll with /roll.") end
+      local rows = {}
+      for _, x in ipairs(list) do
+        rows[#rows + 1] = { U.classText(U.short(x.name), x.class), x.version and VERSION_TEXT[x.state]:format(x.version) or "|cff9d9d9dno LootRuler|r" }
+      end
+      f:kv(rows)
+      f:gap(6)
+      f:note("Someone who just joined, or whose addon hasn't said anything yet, shows as having none until you ask again.")
+      f:buttons({
+        { label = "Ask again", disabled = LR.groupChannel() == nil, click = function()
+          LR.query()
+          UI.toast("Asked everyone. Answers come in over a few seconds.")
+        end },
+        { label = "Tell those with an older one", disabled = older == 0, click = function()
+          local n = LR.tellOutdated()
+          UI.toast(n > 0 and ("Whispered %s."):format(U.plural(n, "player")) or "They've been told already.")
+        end },
+      }, "left")
+    end
+    f:buttons({ { label = "Close", click = function() h.close() end } })
+  end, { onClose = function() versionSheet = nil end })
+end
+LR.onChange(function(what)
+  if (what == "versions" or what == "roster") and versionSheet then versionSheet.redraw(true) end
+end)
+
 function UI.help()
   LR.print("commands:")
   for _, c in ipairs(UI.COMMANDS) do print(("  |cffffd100%s|r  %s"):format(c[1], c[2])) end
