@@ -19,6 +19,7 @@
 --   Core/GroupLoot.lua a player's own rules for the game's Need / Greed windows
 --   Core/Notes.lua    the loot master's notes on items ("Warrior > Rogue"), in and out as text
 --                     UI/Lineup.lua raid setup (Core/Lineup.lua reads the list and works out the moves)
+--                     UI/Welcome.lua the tour, what's new, and settings profiles
 --                     UI/Timers.lua bars for the items I hold to roll out or trade, with the trade time left
 local ADDON, LR = ...
 LR.NAME = ADDON

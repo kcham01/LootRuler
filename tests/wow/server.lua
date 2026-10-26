@@ -51,6 +51,8 @@ function Server:client(o, savedVariables)
   p.LR = L.load(self.root, G)
   M.fire("ADDON_LOADED", "LootRuler")
   M.fire("PLAYER_LOGIN")
+  -- (players in tests have seen the welcome tour, unless the test is about it: o.newPlayer)
+  if p.LR.db and not o.newPlayer and p.LR.db.ui.toured == false then p.LR.db.ui.toured = true end
   return p
 end
 

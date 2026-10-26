@@ -95,26 +95,38 @@ LR.DEFAULTS = {
   testTab = false,         -- the Test tab: pretend rolls and messages, only on my screen (UI/Test.lua)
   rollShortcut = "ctrlalt", -- clicking an item with these keys held rolls it out (UI/Shortcuts.lua)
 }
+--- settings checked like anything else saved: every option there with the right type, and rules that make sense
+function LR.checkSettings(set)
+  set = type(set) == "table" and set or {}
+  for k, v in pairs(LR.DEFAULTS) do
+    if set[k] == nil or type(set[k]) ~= type(v) then set[k] = type(v) == "table" and U.copy(v) or v end
+  end
+  set.autoLootRules = U.filter(set.autoLootRules, function(r)
+    return type(r) == "table" and type(r.what) == "string" and type(r.to) == "string"
+  end)
+  for id, action in pairs(set.autoRollRules) do
+    if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then set.autoRollRules[id] = nil end
+  end
+  set.rollKinds = LR.Roll.checkKinds(set.rollKinds) or {}
+  if set.rollScale < 0.5 or set.rollScale > 2 then set.rollScale = 1 end
+  set.groupLootRules = LR.GroupLoot.check(set.groupLootRules)
+  return set
+end
+
 function LR.loadDB()
+  local fresh = LootRulerDB == nil
   LootRulerDB = LootRulerDB or {}
   db = LootRulerDB
   db.sessions = db.sessions or {}     -- id -> session (ours as leader, or the latest copy from its leader)
   db.mine = db.mine or {}             -- id -> { i = my picks, dirty = not yet confirmed by the leader }
   db.ui = db.ui or {}
-  db.settings = db.settings or {}
-  for k, v in pairs(LR.DEFAULTS) do
-    if db.settings[k] == nil or type(db.settings[k]) ~= type(v) then db.settings[k] = type(v) == "table" and U.copy(v) or v end
+  if fresh then db.ui.toured = false end            -- (a new player: the welcome tour, the first time they open it)
+  db.settings = LR.checkSettings(db.settings)
+  -- settings saved under a name (UI/Welcome.lua): checked the same way
+  db.profiles = type(db.profiles) == "table" and db.profiles or {}
+  for name, set in pairs(db.profiles) do
+    if type(name) ~= "string" or #name > 24 or type(set) ~= "table" then db.profiles[name] = nil else db.profiles[name] = LR.checkSettings(set) end
   end
-  -- rules are checked like anything else saved: what doesn't make sense goes
-  db.settings.autoLootRules = U.filter(db.settings.autoLootRules, function(r)
-    return type(r) == "table" and type(r.what) == "string" and type(r.to) == "string"
-  end)
-  for id, action in pairs(db.settings.autoRollRules) do
-    if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
-  end
-  db.settings.rollKinds = LR.Roll.checkKinds(db.settings.rollKinds) or {}
-  if db.settings.rollScale < 0.5 or db.settings.rollScale > 2 then db.settings.rollScale = 1 end
-  db.settings.groupLootRules = LR.GroupLoot.check(db.settings.groupLootRules)
   db.notes = LR.Notes.check(db.notes)        -- my item notes (Core/Notes.lua)
   db.wish = LR.Prio.checkWish(db.wish)       -- thatsmybis wishlists I brought in (Core/Prio.lua)
   -- guild books: checked like a message from another player
