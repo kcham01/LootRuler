@@ -145,10 +145,12 @@ function UI.masterTick()
     local left = math.max(0, roll.ends - GetTime())
     master.bar.fill:SetWidth(math.max(1, full * math.min(1, left / roll.secs)))
     master.bar.fill:SetVertexColor(1, left <= 5 and 0.35 or 1, 0)
-    master.secs:SetText(math.ceil(left) .. " s left")
+    local whole = math.ceil(left)
+    if master.shownSecs ~= whole then master.shownSecs = whole master.secs:SetText(whole .. " s left") end
   else
     master.bar.fill:SetWidth(full)
     master.bar.fill:SetVertexColor(0.45, 0.45, 0.45)
+    master.shownSecs = nil
     master.secs:SetText(roll.state == "awarded" and "Given out" or noRoll(roll) and "No roll" or "Closed")
   end
 end

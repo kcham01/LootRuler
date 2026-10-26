@@ -57,6 +57,7 @@ LR.DEFAULTS = {
   rollWindow = true,       -- roll windows pop up
   rollOnlyMine = false,    -- ...only for items I may roll on
   reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
+  rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
   tradeAnnounce = true,
   tradeWarn = true,

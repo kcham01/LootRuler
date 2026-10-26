@@ -415,6 +415,12 @@ run("rolling out loot", function()
   for _, f in ipairs(LR.UI.rollFrames()) do if f:IsShown() then M.click(f.dice) end end
   srv:tick(1)
   check("the loot master sees the rolls", #M.findText("Ann", true, G.LootRulerMasterFrame) > 0 and #M.findText("didn't reserve it", true, G.LootRulerMasterFrame) > 0)
+  local list = mine.list:IsShown() and mine.list:GetText() or ""
+  check("Ann's window lists the rolls that count, best first", list:find("1. ", 1, true) and list:find("Ann", 1, true) and list:find("88", 1, true)
+    and list:find("41", 1, true) and list:find("Ann", 1, true) < list:find("41", 1, true), list)
+  check("but not a roll from someone who didn't reserve it", not list:find("99", 1, true), list)
+  check("the window grows to fit it", mine:GetHeight() > 100, mine:GetHeight())
+  shot("roll-list", ann, { "LootRulerRollFrame1" })
   srv:tick(3)
   check("everyone who reserved it rolled: it closes", roll.state == "closed")
   check("Ann is picked to get it", #M.findText("Give to Ann", true, G.LootRulerMasterFrame) > 0)
@@ -434,6 +440,10 @@ run("rolling out loot", function()
   local shown = 0
   for _, f in ipairs(bob.LR.UI.rollFrames()) do if f:IsShown() then shown = shown + 1 end end
   check("Bob sees the finished roll and the new one", shown == 2)
+  local f1, f2 = bob.G.LootRulerRollFrame1, bob.G.LootRulerRollFrame2
+  local _, _, _, _, y1 = f1:GetPoint(1)
+  local _, _, _, _, y2 = f2:GetPoint(1)
+  check("stacked windows don't overlap", math.abs(y2 - y1) >= f1:GetHeight(), ("%s %s %s"):format(y1, y2, f1:GetHeight()))
   shot("roll-windows", bob, { "LootRulerRollFrame1", "LootRulerRollFrame2" })
   LR.Rolls.cancel()
   srv:closeLoot(lead)
