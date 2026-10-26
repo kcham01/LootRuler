@@ -140,6 +140,14 @@ check("the pretend players bid by number", bids > 1 and shown("(raid): #") ~= ni
 check("it ends, and what had bids is sold (mine to me)", batch.state == "closed" and s.won[#s.won].k == "BID"
   and (function() for _, w in ipairs(s.won) do if w.r == 60000 and LR.U.samePlayer(w.p, LR.U.me()) then return true end end end)())
 
+section("a bag check")
+local bc = LR.Bags.ask({ 28528, 22861 })
+srv:tick(4)
+local answers = 0
+for _ in pairs(bc.answers) do answers = answers + 1 end
+check("the pretend players answer a bag check", answers == #P.players + 1 and shown("answered the bag check") ~= nil)
+check("everyone in the report has counts", (function() for _, r in ipairs(LR.Bags.report(bc)) do if not r.counts then return false end end return true end)())
+
 section("the guild book is a copy")
 local points = LR.Book.points(realBook, "Jaina")
 LR.Guild.edit(function(book, t) return LR.Book.setPoints(book, "Jaina", 50, t) end)

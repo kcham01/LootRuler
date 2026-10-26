@@ -39,6 +39,7 @@ local function chatHas(p, text)
 end
 local function same(a, b) return table.concat(a, ",") == table.concat(b, ",") end
 local U = lead.LR.U
+local function has(list, x) for _, v in ipairs(list or {}) do if v == x then return true end end return false end
 
 -- Karazhan items used below
 local WATCH, BROOCH, TRINKET_DRAGONSPINE, HANDWRAPS, SIGNET, ROYAL = 28528, 28530, 28830, 28507, 28525, 28529
@@ -586,6 +587,33 @@ srv:tick(1)
 check("saying where to reserve", srv.chat[before + 1] and srv.chat[before + 1].text:find("Reserve on softres.it: https://softres.it/raid/abc123", 1, true) ~= nil)
 lead.LR.endSession(ls)
 srv:tick(2)
+
+section("bag checks")
+local FLASK, KEY = 22861, 24490
+srv:giveItem(ann, FLASK, 3)
+bob.bank = { [FLASK] = 2 }
+bob.LR.db.settings.answerBagChecks = true
+lead.LR.db.settings.answerBagChecks = true
+local Bg = lead.LR.Bags
+check("only someone running loot asks", not bob.LR.Bags.ask({ FLASK }))
+local bc = Bg.ask({ FLASK, KEY, FLASK })
+srv:tick(1)
+check("each item once", bc and #bc.ids == 2)
+check("Ann's addon answers with her bags", bc.answers[full(ann)] and bc.answers[full(ann)][FLASK] == 3 and bc.answers[full(ann)][KEY] == 0)
+check("Bob's counts his bank too", bc.answers[full(bob)] and bc.answers[full(bob)][FLASK] == 2)
+local function rowOf(name) for _, r in ipairs(Bg.report(bc)) do if r.name == name then return r end end end
+check("Pug has no LootRuler: he can't be asked", rowOf(full(pug)) and rowOf(full(pug)).why == "none")
+check("who has none of each", (function() local m = Bg.missing(bc) return has(m[KEY], full(ann)) and has(m[KEY], full(bob)) and not has(m[FLASK], full(ann)) end)())
+local before = #srv.chat
+check("one raid line for each item someone lacks", Bg.postMissing(bc) == 2)
+srv:tick(3)
+check("naming who", raidSaid("Missing ") and raidSaid("Lead") ~= nil)
+-- someone who switched answering off isn't asked again and again: after a moment they're listed as not answering
+bob.LR.db.settings.answerBagChecks = false
+bc = Bg.ask({ KEY })
+srv:tick(Bg.WAIT + 1)
+check("switched off: no answer, and the report says so", rowOf(full(bob)).why == "silent" and not bc.answers[full(bob)])
+bob.LR.db.settings.answerBagChecks = true
 
 section("raid setup")
 -- the leader starts on their own, with a list of who's coming pasted in

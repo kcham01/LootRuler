@@ -347,7 +347,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **The practice raid's raid chat echoes my own lines** (`Practice.show`): in a raid the game shows me my own raid lines and
   LootRuler reads them, so clicked or typed bids count; out of a group the game sends nothing, so the practice raid hands them
   to `Rolls.onChat` / `Whisper.handle` itself. `/lr say <text>` (`Practice.say`) types a practice raid chat line.
-- **Planned with the owner (in this order, one pull request each):** bag checks; a gear
+- **Bag checks** (`Core/Bags.lua`, `UI/Bags.lua`; `Bags.ask`, `answered`, `report`, `missing`, `postMissing`, `count`; messages `K` (asked,
+  to the group) and `J` (the answer, by whisper); setting `answerBagChecks`, on; Loot tab "Bag check", `/lr bags`): up to `Bags.MAX`
+  items, counted in bags and bank (`C_Item.GetItemCount(id, true)`; the test server has `p.bank`). Only from someone who may run loot,
+  each check answered once. The report lists players without LootRuler (`why = "none"`) and, after `Bags.WAIT` seconds, those who
+  didn't answer (`"silent"`). The practice raid's pretend players answer.
+- **Planned with the owner (in this order, one pull request each):** a gear
   overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
