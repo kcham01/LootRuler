@@ -24,7 +24,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
 | `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
-| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `gen_loot.py`, `art.mjs` |
+| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
 
 ## Working rules
@@ -104,7 +104,13 @@ lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
 lua5.1 tools/coverage.lua                                   # functions no test reaches: build/coverage.txt
+lua5.1 tools/bench.lua                                      # a 40-player raid, measured: build/bench.txt (about a minute)
 ```
+
+`tools/bench.lua` plays a raid night for 40 players (30 with LootRuler) in the stand-in and writes, moment by moment, the
+Lua instructions run in LootRuler's code (sampled; within about 2% between runs), CPU time, garbage, addon messages
+by kind and size, how long until every raider has a change, and the busiest functions. Not part of CI. What the last
+run found, and ideas: `docs/benchmark.md`.
 
 `tools/coverage.lua` runs the tests with a line hook and lists every function no test runs (`build/coverage.lines` has
 every line that ran). Not part of CI; run it after a feature lands and add tests for anything new it lists. Only
@@ -383,8 +389,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   re-import counts what the sheet gives them as new again.
 - **The owner's plan from the Gargul comparison is done:** the practice raid, pot rules, GDKP bookkeeping, bidding ahead, several
   auctions at once, bag checks, the gear overview, branding, loot council, fairness history and swap requests.
-- **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
-  copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
+- **Clearing reserves of players not in the group** is in (#88). Every planned feature is done.
+- **Next:** the benchmark has run (`tools/bench.lua`); its findings and a list of ideas are in `docs/benchmark.md`. The owner
+  asked for no changes to the addon after it until they say which to do. After that: a pass on how screens look (text that
+  runs into buttons or past its box), also when the owner says. The speed ideas include the two planned before: addon
+  messages by priority (rolls and bids first, session copies last) and a roster kept between roster changes. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
