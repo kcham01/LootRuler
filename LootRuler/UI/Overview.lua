@@ -353,7 +353,8 @@ local function byItem(f, s, leader)
       end
     end)
   end
-  local list = S.byItem(s)
+  local list = {}
+  for id, who in pairs(S.byItem(s)) do list[id] = who end      -- (a copy: items are taken off it below)
   local total = 0
   for _ in pairs(list) do total = total + 1 end
   f:panel("Soft reserves", function(p)

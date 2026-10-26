@@ -301,10 +301,26 @@ function S.setLocked(s, locked, now)
   return true
 end
 
---- every reserved item: id -> { { name, count } ... } (names sorted)
-function S.byItem(s)
-  local out = {}
+--- every reserved item: id -> { { name, count } ... } (names sorted). Kept from one call to the next until the reserves
+--- change, so looking up one item at a time (S.byItem(s)[id]) is cheap: don't change what it returns.
+local byItemKept = setmetatable({}, { __mode = "k" })     -- session -> { res, lists, counts, n, out }
+--- whether what was kept still matches: every change to a player's reserves puts a new list in s.res, or changes its length
+local function stillSame(k, s)
+  if k.res ~= s.res then return false end
+  local n = 0
   for player, r in pairs(s.res) do
+    n = n + 1
+    if k.lists[player] ~= r.i or k.counts[player] ~= #r.i then return false end
+  end
+  return n == k.n
+end
+function S.byItem(s)
+  local k = byItemKept[s]
+  if k and stillSame(k, s) then return k.out end
+  local out = {}
+  k = { res = s.res, lists = {}, counts = {}, n = 0, out = out }
+  for player, r in pairs(s.res) do
+    k.lists[player], k.counts[player], k.n = r.i, #r.i, k.n + 1
     local n = {}
     for _, id in ipairs(r.i) do n[id] = (n[id] or 0) + 1 end
     for id, c in pairs(n) do
@@ -313,6 +329,7 @@ function S.byItem(s)
     end
   end
   for _, list in pairs(out) do table.sort(list, function(a, b) return a[1] < b[1] end) end
+  byItemKept[s] = k
   return out
 end
 

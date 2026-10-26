@@ -95,6 +95,31 @@ S.setLocked(s, false)
 -- views
 local by = S.byItem(s)
 check("by item", by[28762] and #by[28762] == 2)
+-- kept between calls until the reserves change
+do
+  local k = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  S.set(k, "Ann-Dreamscythe", "PRIEST", { 28528 }, false, 1)
+  local first = S.byItem(k)
+  check("asking again without a change gives what was kept", S.byItem(k) == first)
+  S.add(k, "Bob-Dreamscythe", "MAGE", 28528, false, 2)
+  local second = S.byItem(k)
+  check("a new reserve is seen", second ~= first and #second[28528] == 2)
+  S.remove(k, "Ann-Dreamscythe", 28528, false, 3)
+  check("so is one taken back", #S.byItem(k)[28528] == 1 and S.byItem(k)[28528][1][1] == "Bob-Dreamscythe")
+  S.set(k, "Bob-Dreamscythe", "MAGE", { 28528, 28525 }, false, 4)
+  table.remove(k.res["Bob-Dreamscythe"].i)                 -- (cut in place, as fewer extra reserves do)
+  check("and a list cut short in place", S.byItem(k)[28525] == nil and #S.byItem(k)[28528] == 1)
+  S.setHR(k, 28528, "", "", 5)
+  check("a hard reserve taking reserves away", S.byItem(k)[28528] == nil)
+  k.res["Cara-Dreamscythe"] = { c = "DRUID", i = { 28530 } }   -- (a raider's own copy, kept in step by the leader's answer)
+  check("a player's list put in straight", S.byItem(k)[28530] and S.byItem(k)[28530][1][1] == "Cara-Dreamscythe")
+  k.res["Cara-Dreamscythe"] = nil
+  check("and taken out", S.byItem(k)[28530] == nil)
+  local other = U.copy(k)
+  check("another session (a new copy) has its own", S.byItem(other) ~= S.byItem(k))
+  k.res = { ["Dan-Dreamscythe"] = { c = "ROGUE", i = { 28530 } } }
+  check("a session given all new reserves", S.byItem(k)[28530][1][1] == "Dan-Dreamscythe")
+end
 check("players", #S.players(s) == 2 and S.players(s)[1].name == A)
 check("valid copy", S.valid(U.copy(s)))
 local bad = U.copy(s) bad.sr = 99
