@@ -360,6 +360,7 @@ function LR.startSession(raidKey, sr, dupes, guild, name, any)
   local s = S.new(U.me(), raidKey, sr, dupes, now, name, any)
   s.guild = guild and true or false
   s.go = true                  -- (only the group can reserve, until the leader says otherwise)
+  s.br = S.okBrand(LR.db.ui.brand)   -- (the branding I used last)
   db.sessions[s.id] = s
   db.current = s.id
   LR.preload(raidKey)
@@ -454,6 +455,14 @@ function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOn
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGroupOnly(s, on) if LR.isLeader(s) and S.setGroupOnly(s, on, U.now()) then leaderChanged(s) end end
 --- the session's softres.it page: set it (the leader; false when it isn't a softres.it link), and post it in raid chat
+--- the organiser's branding (Core/Session.lua): kept for their next session too
+function LR.setBrand(s, br)
+  if not LR.isLeader(s) then return false end
+  br = S.okBrand(br)
+  LR.db.ui.brand = br and U.copy(br) or nil
+  if S.setBrand(s, br, U.now()) then leaderChanged(s) end
+  return true
+end
 function LR.setLink(s, url)
   if not LR.isLeader(s) then return false end
   local t = U.trim(url or "")
@@ -674,8 +683,8 @@ function handlers.T(msg, channel, sender)
     -- a new session from someone in our group is the one to show (last week's can go to the back)
     if LR.inGroup(t.leader) then db.current = t.id end
     if not t.ended then
-      LR.print(("%s opened soft reserves for %s: %s each%s. Type |cffffd100/lr|r to reserve."):format(
-        U.short(t.leader), LR.raidOf(t).name, U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))
+      LR.print(("%s opened soft reserves for %s%s: %s each%s. Type |cffffd100/lr|r to reserve."):format(
+        U.short(t.leader), LR.raidOf(t).name, (t.br and t.br.n) and (" (" .. t.br.n .. ")") or "", U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))
     end
   end
   LR.changed("session")

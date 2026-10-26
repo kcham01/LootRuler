@@ -180,6 +180,15 @@ check("matched names must be names", not S.valid(ns))
 ns.nm = "Ghost"
 check("and a list of them", not S.valid(ns))
 ns.nm = nil
+-- the organiser's branding: cleaned, and dropped (not the session) when it's wrong
+local br = S.okBrand({ n = "|cffff0000<Kings>|r GDKP", m = "Sign up on our Discord\n" .. ("x"):rep(200), i = 3 })
+check("branding is cleaned: no colours or new lines, and not too long", br and br.n == "<Kings> GDKP" and #br.m == S.BRAND_MSG
+  and not br.m:find("\n", 1, true) and br.i == 3 and S.brandIcon(br) ~= nil)
+check("nothing in it is nothing", S.okBrand({ n = "  ", m = "" }) == nil and S.okBrand("x") == nil)
+check("an icon this version doesn't have shows as the raid's own", S.brandIcon({ i = 99 }) == nil and S.okBrand({ i = 99 }).i == 99 and S.okBrand({ i = 0.5 }) == nil)
+check("setting it bumps the session; the same again doesn't", S.setBrand(ns, { n = "Kings" }, 600) and not S.setBrand(ns, { n = "Kings" }, 601) and ns.br.n == "Kings")
+ns.br = { n = 5, m = { "x" }, i = "lots" }
+check("a copy with nonsense branding keeps the session, without the branding", S.valid(ns) and ns.br == nil)
 ns.hx = { 28528, 28530 }
 check("what the last import hard reserved is fine", S.valid(ns))
 ns.hx = { 28528, "x" }

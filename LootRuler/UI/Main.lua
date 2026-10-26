@@ -158,7 +158,7 @@ local function drawTop(s)
     return
   end
   local raid = LR.raidOf(s)
-  top.icon:SetTexture(LR.raidIcon(s.raid))
+  top.icon:SetTexture(LR.Session.brandIcon(s.br) or LR.raidIcon(s.raid))
   top.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
   top.name:SetText(s.practice and ("Practice: " .. raid.name) or raid.name)
   -- GDKP, or priority lists only: there are no reserves, so the box shows the pot (or nothing)
@@ -175,7 +175,7 @@ local function drawTop(s)
     top.count:Hide()
     return
   end
-  local bits = { (LR.isLeader(s) and "Your session" or ("By " .. U.short(s.leader))), U.plural(s.sr, "reserve") .. " each" }
+  local bits = { (s.br and s.br.n) or (LR.isLeader(s) and "Your session" or ("By " .. U.short(s.leader))), U.plural(s.sr, "reserve") .. " each" }
   local hr = #U.keys(s.hr)
   if hr > 0 then bits[#bits + 1] = hr .. " hard reserved" end
   if s.locked then bits[#bits + 1] = "|cffff5a4alocked|r" end

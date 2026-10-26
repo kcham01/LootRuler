@@ -6,6 +6,7 @@ local U, K, S = LR.U, LR.K, LR.Session
 local UI = LR.UI
 
 UI.draft = { raid = "Karazhan", sr = 2, dupes = true }
+local brand                   -- the branding being typed (Your raid's name), for the session it's for
 
 local function stepper(p, label, value, minV, maxV, onChange)
   p:chips({
@@ -196,6 +197,40 @@ local function manage(f, s)
       p:buttons({ { label = "Give extra reserves", click = function() UI.extraSheet(s) end } }, "left")
     end)
   end
+
+  -- the organiser's branding: a name, a message and an icon raiders see (Core/Session.lua)
+  f:panel("Your raid's name", function(p)
+    p:note("Name your raid and add a short message (where to sign up, your rules). Raiders with LootRuler see it in their window, and the raid hears it when you post the reserves. It's kept for your next session.")
+    brand = brand and brand.sid == s.id and brand or { sid = s.id, n = s.br and s.br.n or "", m = s.br and s.br.m or "", i = s.br and s.br.i }
+    local function box(label, key, max, width)
+      p:text(label, { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      local e = K.get(p.owner, "edit", p.parent)
+      p:place(e, 22, 6, width)
+      e:SetMaxLetters(max)
+      e:SetText(brand[key] or "")
+      e:SetScript("OnTextChanged", function(self, user) if user then brand[key] = self:GetText() end end)
+    end
+    box("Name", "n", S.BRAND_NAME, 240)
+    box("Message", "m", S.BRAND_MSG, p.width - 12)
+    local icons = { { plain = true, label = "Icon:" } }
+    for i, x in ipairs(S.BRAND_ICONS) do
+      icons[#icons + 1] = { label = x[1], on = brand.i == i, click = function() brand.i = brand.i ~= i and i or nil UI.render() end }
+    end
+    p:chips(icons, { gap = 2 })
+    if s.br then
+      local b = K.get(p.owner, "item", p.parent)
+      K.setItem(b, p.width, S.brandIcon(s.br) or LR.raidIcon(s.raid), s.br.n or raid.name, s.br.m or "", "")
+      p:place(b, 36)
+      p:gap(2)
+    end
+    p:buttons({
+      { label = "Save", click = function()
+        LR.setBrand(s, { n = brand.n, m = brand.m, i = brand.i })
+        UI.toast(s.br and "Saved: raiders see it now." or "Nothing to save.")
+      end },
+      s.br and { label = "Clear", click = function() LR.setBrand(s, nil) brand = nil end } or nil,
+    }, "left")
+  end)
 
   f:panel("Hand over", function(p)
     if s.next then
