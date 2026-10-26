@@ -90,3 +90,56 @@ events:SetScript("OnEvent", function()
   local s = Pot.mine()
   if s and G.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) then LR.leaderChanged(s) end
 end)
+
+---------------------------------------------------------------------- payouts by mail
+-- At a mailbox, LootRuler fills in the Send Mail tab for the next player the organiser owes gold (their name, a
+-- subject, the gold). The organiser checks it and presses the game's Send: an addon can't send mail with gold on
+-- its own. When a mail with gold goes to someone in the split, that gold counts as handed over.
+local filled                  -- { sid, p, copper }: the payout filled in last
+local sending                 -- { sid, p, copper }: the mail the game is sending now
+
+--- who the organiser still owes gold, the most first: { { name, gold } } (whole gold; what's under 1g is left)
+function Pot.toMail(s)
+  local out = {}
+  for name, row in pairs(G.split(s).rows) do
+    if not U.samePlayer(name, s.leader) and row.owed >= 1 then out[#out + 1] = { name, math.floor(row.owed) } end
+  end
+  table.sort(out, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
+  return out
+end
+
+--- whether the game's Send Mail tab is open
+function Pot.mailOpen() return SendMailFrame ~= nil and SendMailFrame:IsShown() end
+
+--- fills in the Send Mail tab for a payout; true, or false and why not
+function Pot.fillMail(s, name, gold)
+  if not Pot.mailOpen() then return false, "Open a mailbox, and its Send Mail tab, first." end
+  SendMailNameEditBox:SetText(U.short(name))
+  SendMailSubjectEditBox:SetText(("GDKP payout: %s"):format(LR.raidOf(s).name))
+  MoneyInputFrame_SetCopper(SendMailMoney, math.floor(gold) * 10000)
+  filled = { sid = s.id, p = name, copper = math.floor(gold) * 10000 }
+  return true
+end
+
+-- what the game sends: noted as it goes, counted when it's gone
+hooksecurefunc("SendMail", function(name)
+  local x = filled
+  filled, sending = nil, nil
+  -- only the payout LootRuler filled in, to the same player; with what's in the mail (the organiser may have changed it)
+  if not x or type(name) ~= "string" or not U.samePlayer(U.full(U.trim(name)), x.p) then return end
+  local copper = GetSendMailMoney and GetSendMailMoney() or 0
+  if copper <= 0 then return end
+  sending = { sid = x.sid, p = x.p, copper = copper }
+end)
+local mail = CreateFrame("Frame")
+mail:RegisterEvent("MAIL_SEND_SUCCESS")
+mail:RegisterEvent("MAIL_FAILED")
+mail:SetScript("OnEvent", function(_, event)
+  local x = sending
+  sending = nil
+  if event ~= "MAIL_SEND_SUCCESS" or not x then return end
+  local s = LR.session(x.sid)
+  if s and LR.gdkpPaid(s, x.p, -x.copper / 10000) then
+    LR.print(("mailed %s %s: it counts as paid."):format(U.short(x.p), G.gold(x.copper / 10000)))
+  end
+end)
