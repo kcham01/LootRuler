@@ -808,6 +808,7 @@ end
 M.CLASS_ID = { warrior = 1, paladin = 2, hunter = 3, rogue = 4, priest = 5, shaman = 7, mage = 8, warlock = 9, druid = 11 }
 function M.env(player)
   player = player or {}
+  M.player = player                -- (a test can give them gear: M.player.links = { [slot] = link })
   local G = {}
   -- the Lua the client has
   for _, k in ipairs({ "assert", "error", "ipairs", "next", "pairs", "pcall", "print", "rawequal", "rawget", "rawset", "select",

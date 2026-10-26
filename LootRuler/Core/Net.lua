@@ -60,6 +60,7 @@ LR.DEFAULTS = {
   rollCloseAfter = false,  -- my roll window closes once I've rolled
   rollScale = 1,           -- how big roll windows are (UI.ROLL_SIZES)
   reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
+  shareGear = true,        -- when an item is rolled out, the loot master's addon is told what I wear in its slot
   rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
   tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom

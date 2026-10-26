@@ -18,11 +18,14 @@ const rgba = (c, a = 1) => c ? `rgba(${Math.round(c[0] * 255)},${Math.round(c[1]
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 function richText(t, base) {
-  // |cffRRGGBB ... |r colour codes and |T...|t inline textures
+  // |cffRRGGBB ... |r colour codes, |T...|t inline textures and |H...|h links
   let out = '', i = 0, open = 0;
   while (i < t.length) {
     if (t.startsWith('|c', i) && /^[0-9a-fA-F]{8}$/.test(t.slice(i + 2, i + 10))) { out += `<span style="color:#${t.slice(i + 4, i + 10)}">`; open++; i += 10; continue; }
     if (t.startsWith('|r', i)) { if (open) { out += '</span>'; open--; } i += 2; continue; }
+    // |Hitem:...|h[Name]|h hyperlinks: the game shows just the name
+    if (t.startsWith('|H', i)) { const end = t.indexOf('|h', i); if (end > 0) { i = end + 2; continue; } }
+    if (t.startsWith('|h', i)) { i += 2; continue; }
     if (t.startsWith('|T', i)) {
       const end = t.indexOf('|t', i);
       const parts = t.slice(i + 2, end).split(':');

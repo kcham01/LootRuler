@@ -790,6 +790,51 @@ lead.LR.db.settings.awardGuild = false
 srv:closeLoot(lead)
 srv:tick(1)
 
+section("what everyone wears there now")
+local RING = 28510                              -- Spectral Band of Innervation: a ring
+local OLD = "|cff0070dd|Hitem:12345::::::::70:::::|h[Old Ring]|h|r"
+local OLD2 = "|cff0070dd|Hitem:12346::::::::70:::::|h[Other Ring]|h|r"
+ann.M.player.links = { [11] = OLD, [12] = OLD2 }
+srv:openLoot(lead, { { RING, 4 } })
+srv:tick(0.5)
+local gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
+srv:tick(1)
+check("Ann's addon tells the loot master which rings she wears", gr.gear and gr.gear["ann-dreamscythe"] and gr.gear["ann-dreamscythe"][1] == OLD
+  and gr.gear["ann-dreamscythe"][2] == OLD2)
+check("Bob wears none: nothing", not gr.gear["bob-faerlina"])
+check("her own window shows them", frameFor(ann, RING) and frameFor(ann, RING).note:GetText():find("You have:", 1, true) ~= nil)
+srv:willRoll(ann, 30)
+ann.M.click(frameFor(ann, RING).dice)
+srv:tick(0.5)
+local shown = false
+for _, x in ipairs(lead.M.findText("Ann", true, lead.G.LootRulerMasterFrame)) do
+  local row = x.frame
+  if row.gear and row.gear:IsShown() and row.gear.links and row.gear.links[1] == OLD then shown = true end
+end
+check("and the loot master's window shows it beside her roll", shown)
+-- what doesn't count: someone outside the group, or another roll
+local stranger = srv:player({ name = "Stranger", class = "MAGE" })
+srv:addonMessage(stranger, "LootRuler", lead.LR.Net.encode({ t = "W", k = gr.k, e = { OLD } }), "WHISPER", full(lead))
+srv:addonMessage(bob, "LootRuler", lead.LR.Net.encode({ t = "W", k = "another", e = { OLD } }), "WHISPER", full(lead))
+srv:addonMessage(bob, "LootRuler", lead.LR.Net.encode({ t = "W", k = gr.k, e = { "not a link", OLD } }), "WHISPER", full(lead))
+srv:tick(0.5)
+check("from outside the group, or for another roll: ignored; and only links are kept",
+  not gr.gear["stranger-dreamscythe"] and #gr.gear["bob-faerlina"] == 1)
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+ann.LR.db.settings.shareGear = false
+gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
+srv:tick(1)
+check("switched off: not told, though her own window still shows it", not (gr.gear and gr.gear["ann-dreamscythe"]) and frameFor(ann, RING).note:GetText():find("You have:", 1, true) ~= nil)
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+srv:closeLoot(lead)
+ann.LR.db.settings.shareGear = true
+ann.M.player.links = nil
+srv:tick(1)
+
 section("roll window options")
 local bobWindows = bob.LR.db.settings.rollWindow
 bob.LR.db.settings.rollWindow = true
