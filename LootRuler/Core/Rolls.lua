@@ -458,6 +458,17 @@ function Rolls.award(player, kind, n, de)
   local held = not slot and s and roll.drop and S.drop(s, roll.drop)
   if not note and held and held.h and U.samePlayer(held.h, U.me()) and not U.samePlayer(player, U.me()) then
     note = ("Open a trade with %s: LootRuler puts %s in it for you."):format(U.short(player), U.plain(roll.link))
+    -- open the trade myself when they're close; when they're too far, they're asked to come and trade
+    if LR.db.settings.autoTrade then
+      local ok, why = LR.Drops.openTrade(player)
+      if ok then note = ("A trade with %s is opening: LootRuler puts %s in it."):format(U.short(player), U.plain(roll.link))
+      elseif why == "far" then
+        note = ("%s is too far away to trade: they've been whispered to come and trade you."):format(U.short(player))
+        LR.say(("%s I have %s for you. Come close and open a trade with me when you can."):format(LR.TAG, roll.link), "WHISPER", player)
+      elseif why == "combat" then
+        note = ("In combat: open a trade with %s when it's over, and LootRuler puts %s in it."):format(U.short(player), U.plain(roll.link))
+      end
+    end
   end
   Rolls.ended(roll.k, "awarded", player, n, kind)
   if kind == "BID" then say(("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n)))

@@ -249,6 +249,12 @@ function Server:install(p)
     local name, tex, n, q = slotInfo(it)
     return name, tex, n, q, true, it.enchant, it.id
   end
+  -- opening a trade with someone close enough (Server.farAway: who's too far)
+  G.CheckInteractDistance = function(unit) local q = unitPlayer(unit) return q ~= nil and q.online and not (srv.farAway and srv.farAway[q]) end
+  G.InitiateTrade = function(unit)
+    local q = unitPlayer(unit)
+    if q and q ~= p and not (srv.farAway and srv.farAway[q]) then srv:deliver(function() srv:openTrade(p, q) end) end
+  end
   G.GetPlayerTradeMoney = function() return p.trading and p.tradeMoney or 0 end
   G.GetTargetTradeMoney = function() return p.trading and p.trading.tradeMoney or 0 end
   G.UnitIsConnected = function(unit) local q = unitPlayer(unit) return q and q.online or false end

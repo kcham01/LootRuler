@@ -112,7 +112,7 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 </p>
 
 - **Roll now or at the end.** The loot master can roll an item out as soon as it drops, or give it to themselves, keep going, and roll it out from the Loot tab later. The game lets you trade raid loot for 2 hours after you loot it, so the list shows how long is left.
-- **Trade help.** When the winner of an item the loot master is holding opens a trade (either of them can open it), LootRuler puts their item in the trade window. When the trade goes through, the list shows they have it. A "To trade" list shows the loot master what they still have to hand over. You can turn this off.
+- **Trade help.** Giving out an item the loot master is holding opens a trade with the winner when they're close (too far away, they're whispered to come and trade). When the trade opens (either of them can open it), LootRuler puts their item in the trade window. When the trade goes through, the list shows they have it. A "To trade" list shows the loot master what they still have to hand over. You can turn this off.
 - **Any loot method.** With master loot the loot master's addon writes down each corpse's loot (opening a corpse again doesn't list it twice). With group loot the leader's addon writes down the epics people loot.
 - **Mistakes:** the leader can right-click an item to take it off the list, or take an award off.
 - **Loot rules** for the master looter (Settings tab, off until you turn them on): "green items to the disenchanter", "recipes and patterns to me", "this item to Ann". They're applied when you open a corpse; anything someone reserved is always rolled for instead.
