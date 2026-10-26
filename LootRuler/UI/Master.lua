@@ -530,3 +530,64 @@ function UI.rollCommand(text)
   if not roll then LR.print(why) return end
   UI.masterDraw()
 end
+
+---------------------------------------------------------------------- becoming the master looter
+-- When I become the master looter, LootRuler asks once what to do (Settings: mlPrompt): open the loot master window,
+-- and tell the raid how loot works. Or it tells the raid by itself (Settings: mlAnnounce).
+local wasML = nil              -- (nil until the game has settled after logging in: no question for a reload)
+
+--- the raid line: who runs loot, and how to roll (and reserve, while reserves are open)
+function UI.masterLooterLine()
+  local s = Rolls.session()
+  local line = ("%s is the master looter. Items are rolled out in raid chat: /roll for main spec, /roll 99 for off spec."):format(U.short(U.me()))
+  if s and not s.gdkp and not s.locked then line = line .. " Reserved items: only those who reserved them roll."
+  elseif s and s.gdkp then line = ("%s is the master looter. Items are auctioned: type your bid in raid chat."):format(U.short(U.me())) end
+  return line
+end
+function LR.announceMasterLooter()
+  local ch = LR.groupChannel()
+  if not ch then return false end
+  for _, l in ipairs(U.chatLines(LR.TAG .. " " .. UI.masterLooterLine())) do LR.say(l, ch) end
+  return true
+end
+
+function UI.masterLooterPrompt()
+  UI.show()
+  UI.openSheet("You're the master looter", function(f, h)
+    f:text("LootRuler can run the loot: roll windows for everyone, reserves, trades and the raid's loot list.")
+    f:note("The raid hears: \"" .. UI.masterLooterLine() .. "\"")
+    f:gap(6)
+    f:buttons({
+      { label = "Tell the raid", disabled = LR.groupChannel() == nil, click = function()
+        if LR.announceMasterLooter() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+      end },
+      { label = "Open the loot master window", click = function() h.close() UI.showMaster() end },
+    }, "left")
+    f:gap(4)
+    local set = LR.db.settings
+    f:chips({ { label = (set.mlPrompt and "[  ] " or "[x] ") .. "Don't ask again", on = not set.mlPrompt, click = function() set.mlPrompt = not set.mlPrompt h.redraw(true) end,
+      tip = "Settings tab, Running loot, to ask again." } })
+    f:buttons({ { label = "Not now", click = function() h.close() end } })
+  end)
+end
+
+local function checkMasterLooter()
+  if not LR.db then return end
+  local now = IsInGroup() and LR.isMasterLooter() or false
+  local before = wasML
+  wasML = now
+  if before == nil or before or not now then return end
+  if LR.db.settings.mlAnnounce then LR.announceMasterLooter() end
+  if LR.db.settings.mlPrompt and not InCombatLockdown() then UI.masterLooterPrompt() end
+end
+local mlEvents = CreateFrame("Frame")
+mlEvents:RegisterEvent("PARTY_LOOT_METHOD_CHANGED")
+mlEvents:RegisterEvent("GROUP_ROSTER_UPDATE")
+mlEvents:RegisterEvent("PLAYER_LOGIN")
+mlEvents:SetScript("OnEvent", function(_, event)
+  if event == "PLAYER_LOGIN" then
+    C_Timer.After(5, function() wasML = IsInGroup() and LR.isMasterLooter() or false end)
+    return
+  end
+  if wasML ~= nil then checkMasterLooter() end
+end)

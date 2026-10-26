@@ -835,6 +835,34 @@ ann.LR.db.settings.shareGear = true
 ann.M.player.links = nil
 srv:tick(1)
 
+section("becoming the master looter")
+local function sheetTitle(p) local sh = p.LR.UI.topSheet() return sh and sh.title:GetText() end
+check("Ann was asked when she was master looter, earlier", sheetTitle(ann) == "You're the master looter")
+ann.LR.UI.closeAll()
+lead.LR.UI.closeAll()
+srv:setMasterLooter(nil)
+srv:tick(1)
+srv:setMasterLooter(lead)
+srv:tick(1)
+check("the loot master is asked what to do", sheetTitle(lead) == "You're the master looter")
+check("raiders aren't", sheetTitle(ann) ~= "You're the master looter")
+local mlBefore = #srv.chat
+clickText(lead, "Tell the raid", lead.LR.UI.topSheet())
+srv:tick(1)
+check("one click tells the raid who runs loot and how to roll", srv.chat[mlBefore + 1] and srv.chat[mlBefore + 1].text:find("Lead is the master looter. Items are rolled out in raid chat", 1, true) ~= nil)
+clickText(lead, "Don't ask again", lead.LR.UI.topSheet())
+check("it can stop asking", lead.LR.db.settings.mlPrompt == false)
+lead.LR.UI.closeAll()
+lead.LR.db.settings.mlAnnounce = true
+srv:setMasterLooter(nil)
+srv:tick(1)
+mlBefore = #srv.chat
+srv:setMasterLooter(lead)
+srv:tick(1)
+check("or tell the raid by itself, without asking", sheetTitle(lead) == nil and srv.chat[mlBefore + 1] and srv.chat[mlBefore + 1].text:find("is the master looter", 1, true) ~= nil)
+lead.LR.db.settings.mlAnnounce, lead.LR.db.settings.mlPrompt = false, true
+lead.LR.UI.win:Hide()
+
 section("roll window options")
 local bobWindows = bob.LR.db.settings.rollWindow
 bob.LR.db.settings.rollWindow = true
