@@ -54,6 +54,23 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add an item rule", click = function() UI.addRollRule() end } }, "left")
   end)
 
+  f:panel("Need and Greed (group loot)", function(p)
+    p:note("Your own rules for the game's Need / Greed windows, when the group isn't on master loot. LootRuler rolls what the first matching rule says, and tells you.")
+    toggle(p, "groupLoot", "Roll Need / Greed by my rules", "Off: you roll every item yourself.")
+    toggle(p, "groupLootConfirm", "Don't ask \"this item will bind to you\" for my rules", "When a rule needs or greeds an item that binds when picked up, the game's question is answered yes. Only for rolls your rules make.")
+    local G = LR.GroupLoot
+    for i, rule in ipairs(set.groupLootRules) do
+      local b = K.get(p.owner, "item", p.parent)
+      local id = tonumber(rule.what:match("^item:(%d+)$"))
+      K.setItem(b, p.width, id and LR.itemIcon(id) or "Interface\\Buttons\\UI-GroupLoot-Dice-Up", LR.AutoLoot.whatText(rule.what),
+        G.actText(rule.act), "", { text = "x", tip = "Remove this rule", click = function() G.remove(i) UI.render() end })
+      p:place(b, 36)
+      p:gap(2)
+    end
+    if #set.groupLootRules == 0 then p:note("No rules yet.") end
+    p:buttons({ { label = "Add a Need / Greed rule", click = function() UI.addGroupRule() end } }, "left")
+  end)
+
   f:panel("Reserves where you see items", function(p)
     toggle(p, "highlight", "Glow on my items in loot windows", "The game's loot window and need/greed windows glow on an item you reserved (or that's hard reserved for you).")
     toggle(p, "tooltipInfo", "Reserves in item tooltips", "Every item tooltip says who reserved it and who it went to, while soft reserves are open.")
@@ -340,6 +357,38 @@ function UI.addRollKind()
         h.close()
         UI.render()
       end } })
+  end)
+end
+
+--- a sheet to make a Need / Greed rule: which items, then what to roll
+function UI.addGroupRule()
+  local what, act, linked = nil, nil, ""
+  UI.openSheet("Add a Need / Greed rule", function(f, h)
+    f:text("Which items?", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local chips = {}
+    for _, w in ipairs(LR.AutoLoot.WHAT) do
+      chips[#chips + 1] = { label = w[2], on = what == w[1], click = function() what = w[1] h.redraw(true) end }
+    end
+    f:chips(chips)
+    f:note("Or one item: shift-click it into the box.")
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetText(linked)
+    K.takeLinks(e)
+    e:SetScript("OnTextChanged", function(self, user)
+      if not user then return end
+      linked = self:GetText()
+      local id = LR.idFrom(linked)
+      if id then what = "item:" .. id h.redraw(true) end
+    end)
+    f:gap(6)
+    f:text("Roll", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local acts = {}
+    for _, a in ipairs(LR.GroupLoot.ACTS) do acts[#acts + 1] = { label = a[2], on = act == a[1], click = function() act = a[1] h.redraw(true) end } end
+    f:chips(acts)
+    if what and act then f:note(("%s: %s."):format(LR.AutoLoot.whatText(what), LR.GroupLoot.actText(act)), K.GREEN) end
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Add the rule", disabled = not (what and act), click = function() LR.GroupLoot.add(what, act) h.close() UI.render() end } })
   end)
 end
 

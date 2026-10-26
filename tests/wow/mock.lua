@@ -982,6 +982,27 @@ function M.env(player)
   G.GroupLootFrame1.IconFrame:SetPoint("TOPLEFT", 18, -18)
   G.GroupLootFrame_OnShow = function(self) end
   G.GetLootRollItemLink = function(rollID) return M.lootRolls and M.lootRolls[rollID] end
+  -- the game's Need / Greed windows: M.groupRoll(rollID, link, quality, opts) starts one; rolls and confirms are kept
+  M.lootRollInfo, M.lootRolled, M.lootConfirmed, M.popupsHidden = {}, {}, {}, {}
+  G.GetLootRollItemInfo = function(rollID)
+    local r = M.lootRollInfo[rollID]
+    if not r then return nil end
+    return 133000, r.name, 1, r.quality, r.bop, r.need ~= false, r.greed ~= false, r.de == true, nil, nil, nil, nil
+  end
+  G.RollOnLoot = function(rollID, kind)
+    if not M.lootRollInfo[rollID] then error("RollOnLoot on a roll that isn't on") end
+    M.lootRolled[rollID] = kind
+    if M.lootRollInfo[rollID].bop and kind ~= 0 then M.fire(kind == 3 and "CONFIRM_DISENCHANT_ROLL" or "CONFIRM_LOOT_ROLL", rollID, kind) end
+  end
+  G.ConfirmLootRoll = function(rollID, kind) M.lootConfirmed[rollID] = kind end
+  G.StaticPopup_Hide = function(which, data) table.insert(M.popupsHidden, { which, data }) end
+  function M.groupRoll(rollID, link, quality, opts)
+    opts = opts or {}
+    M.lootRolls = M.lootRolls or {}
+    M.lootRolls[rollID] = link
+    M.lootRollInfo[rollID] = { name = link:match("%[(.-)%]"), quality = quality, bop = opts.bop, need = opts.need, greed = opts.greed, de = opts.de }
+    M.fire("START_LOOT_ROLL", rollID, 60)
+  end
   M.tooltipCalls = {}
   G.TooltipDataProcessor = { AllTypes = "ALL", AddTooltipPostCall = function(kind, fn) table.insert(M.tooltipCalls, fn) end }
   G.GetTradeTargetItemLink = function() return nil end
