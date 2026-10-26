@@ -193,6 +193,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **The Test tab** (`UI/Test.lua`, setting `testTab`, off to start with): pretend rolls (`UI.testRoll(opts)`, `UI.testGargul`,
   made-up players in `UI.PRETEND`), the trade warning, the reminder line and a softres.it name check, all only on this
   screen. A pretend roll (`copy.test`) rolls locally in `Rolls.roll`, never with the game's /roll.
+- **Roll windows for Gargul's rolls** (`Rolls.followGargul`, `Rolls.gargulEnded`, setting `gargulWindows`, on to start with):
+  Gargul's start line makes a roll copy (`copy.gargul`, mode SR from this session's reserves, else OPEN) shown like
+  LootRuler's, unless the player's own Gargul is loaded (it shows its own; they still get the strip). Its buttons
+  just /roll (assumed main spec 1-100, off spec 99: Gargul's defaults, which its loot master can change). "Stop your
+  rolls!" closes it, "[item] was awarded to X" gives the winner.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

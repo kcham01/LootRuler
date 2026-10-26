@@ -425,7 +425,7 @@ end
 -- "[item] was awarded to Ann. Congrats!" ends it. Each start pattern captures { seconds, link } in the order named.
 local LINK = "(|c%x+|Hitem:.-|h|r)"
 G.ROLL_LINES = { { "You have (%d+) seconds to roll on " .. LINK, "secs", "link" } }
-G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to .+%. Congrats!" }
+G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to ([^%s%.]+).-Congrats!" }
 
 --- a raid chat line: the item, its link and the seconds when it's Gargul starting a roll, else nil
 function G.rollFromChat(text)
@@ -439,12 +439,12 @@ function G.rollFromChat(text)
     end
   end
 end
---- a raid chat line that ends Gargul's roll: true, and the item when the line names one
+--- a raid chat line that ends Gargul's roll: true, the item when the line names one, and who it went to
 function G.rollEndFromChat(text)
   text = tostring(text or "")
   for _, pattern in ipairs(G.END_LINES) do
-    local s, e, link = text:find(pattern)
-    if s then return true, link and tonumber(link:match("item:(%d+)")) end
+    local s, e, link, winner = text:find(pattern)
+    if s then return true, link and tonumber(link:match("item:(%d+)")), winner end
   end
   return false
 end

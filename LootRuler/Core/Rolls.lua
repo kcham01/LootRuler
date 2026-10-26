@@ -589,6 +589,38 @@ function Rolls.follow(msg, sender)
   LR.changed("rolls")
 end
 
+---------------------------------------------------------------------- Gargul's rolls (read from raid chat)
+--- Gargul started rolling an item out (its line in raid chat, Core/Gargul.lua): a roll window like ours, unless my
+--- own Gargul is loaded (it shows its own) or that's switched off (Settings: gargulWindows). Its dice and coin just
+--- /roll, which Gargul counts; who gets it is Gargul's call. The reserves are this session's (the leader sends the
+--- same to Gargul). test: a pretend one (the Test tab), always shown, rolled here. Returns the copy.
+function Rolls.followGargul(id, link, secs, sender, test)
+  local s = session()
+  local plan = s and R.plan(s, id, LR.roster()) or { mode = "OPEN" }
+  if plan.mode ~= "SR" then plan = { mode = "OPEN", away = plan.away } end
+  local k = "gargul:" .. id .. ":" .. now()
+  local copy = R.new(k, id, plan)
+  copy.by, copy.link, copy.gargul, copy.test = sender, link or LR.itemLink(id), true, test
+  copy.secs = math.max(1, math.min(120, secs or 60))
+  copy.ends = now() + copy.secs
+  copy.state = "open"
+  local own = type(_G.Gargul) == "table"
+  if not test and (own or not LR.db.settings.gargulWindows) then copy.hidden = true end
+  Rolls.seen[k] = copy
+  table.insert(Rolls.order, k)
+  Rolls.lastGargul = copy
+  if not copy.hidden and LR.UI and LR.UI.rollWindow then LR.UI.rollWindow(copy) end
+  LR.changed("rolls")
+  return copy
+end
+--- Gargul's roll is over: closed, or given to someone (winner); id: the item, when the line says
+function Rolls.gargulEnded(id, winner)
+  local copy = Rolls.lastGargul
+  if not copy or (id and copy.id ~= id) then return end
+  if winner then Rolls.ended(copy.k, "awarded", U.full(winner))
+  elseif copy.state == "open" then Rolls.ended(copy.k, "closed") end
+end
+
 --- a roll is over (from the loot master, or ourselves)
 function Rolls.ended(k, how, winner, n, kind)
   local copy = Rolls.seen[k]

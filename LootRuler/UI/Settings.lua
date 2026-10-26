@@ -22,6 +22,7 @@ function UI.settingsView(f)
   f:panel("Roll windows", function(p)
     p:note("When loot is rolled out with LootRuler, a roll window pops up: dice for main spec, coin for off spec, x to pass. On a reserved item only the players who reserved it can roll.")
     toggle(p, "rollWindow", "Show roll windows", "Off: roll by typing /roll like everyone without the addon.", function() UI.rollWindows() end)
+    toggle(p, "gargulWindows", "Roll windows for Gargul's rolls", "When Gargul rolls an item out (read from raid chat), a roll window like LootRuler's pops up, with the reserves. Not if you have Gargul yourself: it shows its own.", function() UI.rollWindows() end)
     toggle(p, "rollOnlyMine", "Only for items I can roll on", "Leaves out items other players reserved, and ties you're not in.", function() UI.rollWindows() end)
     p:buttons({
       { label = "Try the roll window", click = function() UI.testRoll() end },

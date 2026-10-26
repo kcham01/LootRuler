@@ -1112,6 +1112,10 @@ run("the Test tab", function()
   clickText("Gargul roll")
   srv:tick(0.5)
   check("a pretend Gargul roll shows the strip", strip:IsShown() and M.plain(strip.names:GetText()):find("Thrall", 1, true))
+  local gf
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy and x.copy.gargul then gf = x end end
+  check("and a roll window, as raiders without Gargul get", gf ~= nil and gf.dice:IsEnabled() and M.plain(gf.status:GetText()):find("You reserved this", 1, true))
+  shot("test-gargul", lead, { "LootRulerReserveStrip", gf and gf:GetName() or "LootRulerRollFrame1" })
   srv:tick(25)
   check("and it goes too", not strip:IsShown())
   local n = #M.notices

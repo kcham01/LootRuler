@@ -30,13 +30,13 @@ function UI.testView(f, s)
       end },
     }, "left")
     p:buttons({
-      { label = "Gargul roll", click = function() UI.testGargul(math.max(1, test.reservers), test.secs) end },
+      { label = "Gargul roll", click = function() UI.testGargul(test.reservers, test.secs, test.mine) end },
       { label = "Put windows back", click = function()
         LR.db.ui.rollPoint, LR.db.ui.masterPoint = nil, nil
         UI.resetPositions()
       end },
     }, "left")
-    p:note("A Gargul roll shows only the strip: Gargul draws its own roll window.")
+    p:note("A Gargul roll shows the window raiders without Gargul get when Gargul rolls an item out (read from raid chat).")
   end)
 
   f:panel("Pretend messages", function(p)
