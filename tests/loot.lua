@@ -764,6 +764,32 @@ check("only whoever runs loot can give items out", not okRaider)
 srv:closeLoot(lead)
 srv:tick(1)
 
+section("who got what, in guild chat too")
+lead.guild = "Kings"
+srv:openLoot(lead, { { HANDS, 4 } })
+srv:tick(0.5)
+local guildBefore = 0
+for _, c in ipairs(srv.chat) do if c.channel == "GUILD" then guildBefore = guildBefore + 1 end end
+Rolls.give(HANDS, full(bob), "MS", { link = srv:link(HANDS), slot = 1 })
+srv:tick(1)
+local function guildLines() local n = 0 for _, c in ipairs(srv.chat) do if c.channel == "GUILD" then n = n + 1 end end return n end
+check("off to start with: nothing in guild chat", guildLines() == guildBefore)
+Rolls.undo()
+srv:tick(1)
+Rolls.dismiss()
+lead.LR.db.settings.awardGuild = true
+Rolls.give(HANDS, full(bob), "MS", { link = srv:link(HANDS), slot = 1 })
+srv:tick(10)                              -- (chat is sent a little at a time)
+check("on: the guild hears who got what, with the raid", chat("Karazhan: ", "GUILD") ~= nil and chat("goes to Bob-Faerlina (main spec, given out without a roll).", "GUILD") ~= nil)
+Rolls.undo()
+srv:tick(10)
+check("and when it's taken back", chat("Undone:", "GUILD") ~= nil)
+Rolls.dismiss()
+lead.guild = nil
+lead.LR.db.settings.awardGuild = false
+srv:closeLoot(lead)
+srv:tick(1)
+
 section("the loot master's own roll types")
 lead.LR.db.settings.rollKinds = { { n = "Transmog", hi = 98 } }
 srv:openLoot(lead, { { TALISMAN, 4 } })

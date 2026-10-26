@@ -258,6 +258,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   commas, semicolons or tabs): the header's name and item id columns (and class), or lines of a name and an item number,
   become the same data as an export, so re-importing and name matching work the same. `s.url` (`S.okLink`: https://softres.it/
   only; `S.valid` drops any other), set from an export's `metadata.id` or typed in the import sheet; `LR.postLink`.
+- **Who got what, in guild chat** (setting `awardGuild`, off; `toGuild` in `Core/Rolls.lua`): the award line (and an undo) also goes
+  to GUILD, prefixed with the raid's name. Chat goes through ChatThrottleLib, so tests wait a few seconds for it.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
