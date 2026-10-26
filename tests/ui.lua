@@ -1362,6 +1362,23 @@ run("becoming the master looter", function()
   LR.UI.closeAll()
 end)
 
+run("loot given out without LootRuler", function()
+  local rs = LR.current() or LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  srv:openLoot(lead, { { 28530, 4 } })
+  srv:tick(0.5)
+  local idx
+  for i = 1, 40 do local n = G.GetMasterLootCandidate(1, i) if n and n:find("Ann", 1, true) then idx = i end end
+  G.GiveMasterLoot(1, idx)
+  srv:tick(1)
+  check("given with the game's loot menu: record it?", visible("Record it?") and visible("Main spec") and visible("Leave it"))
+  shot("record-it")
+  clickText("Leave it")
+  srv:closeLoot(lead)
+  srv:tick(1)
+  LR.UI.closeAll()
+end)
+
 run("roll window options", function()
   LR.UI.go("settings")
   srv:tick(6)

@@ -837,7 +837,13 @@ srv:tick(1)
 
 section("becoming the master looter")
 local function sheetTitle(p) local sh = p.LR.UI.topSheet() return sh and sh.title:GetText() end
-check("Ann was asked when she was master looter, earlier", sheetTitle(ann) == "You're the master looter")
+local asked, wrongly = false, false
+for _, e in ipairs(ann.LR.UI.openSheets()) do
+  if e.s.title:GetText() == "You're the master looter" then asked = true end
+  if e.s.title:GetText() == "Record it?" then wrongly = true end
+end
+check("Ann was asked when she was master looter, earlier", asked)
+check("and not asked to record the item she gave out through LootRuler", not wrongly)
 ann.LR.UI.closeAll()
 lead.LR.UI.closeAll()
 srv:setMasterLooter(nil)
@@ -862,6 +868,34 @@ srv:tick(1)
 check("or tell the raid by itself, without asking", sheetTitle(lead) == nil and srv.chat[mlBefore + 1] and srv.chat[mlBefore + 1].text:find("is the master looter", 1, true) ~= nil)
 lead.LR.db.settings.mlAnnounce, lead.LR.db.settings.mlPrompt = false, true
 lead.LR.UI.win:Hide()
+
+section("loot given out without LootRuler")
+lead.LR.UI.closeAll()
+srv:openLoot(lead, { { 30010, 4 }, { 30011, 4 } })
+srv:tick(0.5)
+-- the loot master uses the game's own loot menu
+local function candidateIndex(slot, p) for i = 1, 40 do local n = lead.G.GetMasterLootCandidate(slot, i) if n and n:find(p.name, 1, true) then return i end end end
+lead.G.GiveMasterLoot(1, candidateIndex(1, bob))
+srv:tick(1)
+local function sheetTitle2(p) local sh = p.LR.UI.topSheet() return sh and sh.title:GetText() end
+check("the loot master is asked whether to record it", sheetTitle2(lead) == "Record it?")
+check("with how they got it", #lead.M.findText("Off spec", true, lead.LR.UI.topSheet()) > 0 and #lead.M.findText("Leave it", true, lead.LR.UI.topSheet()) > 0)
+clickText(lead, "Off spec", lead.LR.UI.topSheet())
+srv:tick(1)
+local recorded
+for _, w in ipairs(s.won) do if w.i == 30010 and w.p == full(bob) and w.k == "OS" then recorded = true end end
+check("recorded as off spec, and the raid is told", recorded and chat("goes to Bob-Faerlina (off spec, given out without a roll).") ~= nil)
+Rolls.dismiss()
+lead.G.GiveMasterLoot(2, candidateIndex(2, ann))
+srv:tick(1)
+clickText(lead, "Leave it", lead.LR.UI.topSheet())
+local left = true
+for _, w in ipairs(s.won) do if w.i == 30011 then left = false end end
+check("or left off the list", left and sheetTitle2(lead) ~= "Record it?")
+srv:closeLoot(lead)
+lead.LR.UI.closeAll()
+lead.LR.UI.win:Hide()
+srv:tick(1)
 
 section("roll window options")
 local bobWindows = bob.LR.db.settings.rollWindow

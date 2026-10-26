@@ -178,6 +178,12 @@ local seq = 0
 local ticking = 0
 
 local function changed() LR.changed("roll") end
+Rolls.handedOut = {}           -- "item:name" -> when I gave it out through LootRuler (so its loot line isn't a surprise)
+--- whether I gave this item to this player through LootRuler in the last minute
+function Rolls.justGave(id, player)
+  local t = Rolls.handedOut[id .. ":" .. R.key(player)]
+  return t ~= nil and now() - t < 60
+end
 
 --- the roll I'm running (or ran last), or nil
 function Rolls.mine() return Rolls.current end
@@ -454,6 +460,7 @@ function Rolls.award(player, kind, n, de)
   roll.state = "awarded"
   roll.winner = player
   roll.winKind = kind
+  Rolls.handedOut[roll.id .. ":" .. R.key(player)] = now()
   roll.undoNote = nil
   roll.de = de
   local s = session()

@@ -172,6 +172,11 @@ function Drops.lootMessage(line)
   end
   if pick then
     save(s, { { k = pick.k, i = pick.i, h = who, ht = U.now() } })
+    -- the master looter gave it out with the game's own menu, not through LootRuler: offer to record it
+    if inWindow[pick.k] and not S.dropWin(s, pick.k) and not Rolls.justGave(pick.i, who) and LR.isMasterLooter() and not U.samePlayer(who, U.me())
+      and LR.db.settings.remindUnrecorded and LR.UI and LR.UI.unrecordedPrompt then
+      LR.UI.unrecordedPrompt(s, pick, who)
+    end
     return
   end
   -- not seen dropping (group loot, or picked up before LootRuler was watching): raid loot only

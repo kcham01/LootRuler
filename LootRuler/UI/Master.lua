@@ -591,3 +591,29 @@ mlEvents:SetScript("OnEvent", function(_, event)
   end
   if wasML ~= nil then checkMasterLooter() end
 end)
+
+---------------------------------------------------------------------- loot given out without LootRuler
+-- The master looter gave an item with the game's own loot menu: it's on the raid's loot list as theirs, but not as
+-- given out. One question puts it on the list of loot given out (announced like any other award), or leaves it.
+function UI.unrecordedPrompt(s, d, who)
+  local link = LR.itemLink(d.i)
+  LR.print(("%s went to %s outside LootRuler."):format(link, U.short(who)))
+  UI.show()
+  UI.openSheet("Record it?", function(f, h)
+    f:text(("You gave %s to %s with the game's loot menu, so it isn't on the list of loot given out yet."):format(link, U.classText(U.short(who), LR.classOf(who))))
+    f:note("Record it and the raid is told, like any item you give out. How did they get it?")
+    local kinds = { { "MS", "Main spec" }, { "OS", "Off spec" } }
+    if S.claims(s, who, d.i) > 0 then table.insert(kinds, 1, { "SR", "Their reserve" }) end
+    kinds[#kinds + 1] = { "DE", "To disenchant" }
+    local list = {}
+    for _, k in ipairs(kinds) do
+      list[#list + 1] = { label = k[2], click = function()
+        h.close()
+        local ok, why = Rolls.give(d.i, who, k[1], { link = link, drop = d.k })
+        UI.toast(ok and ("Recorded: %s to %s."):format(U.plain(link), U.short(who)) or why)
+      end }
+    end
+    f:buttons(list, "left")
+    f:buttons({ { label = "Leave it", click = function() h.close() end } })
+  end)
+end
