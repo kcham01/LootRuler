@@ -49,8 +49,6 @@ local function build()
   win.body = CreateFrame("Frame", nil, win)
   win.body:SetPoint("TOPLEFT", 16, -58)
   win.body:SetSize(W - 32, 10)
-  -- (the timer bar only: the rest is drawn when something changes)
-  win:SetScript("OnUpdate", function() UI.batchTick() end)
   win:Hide()
 end
 
@@ -77,6 +75,7 @@ function UI.batchTick()
     win.bar.fill:SetVertexColor(0.45, 0.45, 0.45)
     win.shownSecs = nil
     win.secs:SetText(copy.state == "cancelled" and "Called off" or "Over")
+    win:SetScript("OnUpdate", nil)
   end
 end
 
@@ -103,6 +102,8 @@ function UI.batchDraw()
   if win.hiddenFor == copy.k then return end
   if win.k ~= copy.k then win.k, win.hiddenFor = copy.k, nil end
   win.copy = copy
+  -- (the timer bar only, every frame while the auction is on, then once more: the rest is drawn when something changes)
+  win:SetScript("OnUpdate", UI.batchTick)
   K.release("batch")
   win:ClearAllPoints()
   local pt = LR.db.ui.batchPoint
