@@ -448,7 +448,10 @@ function UI.gdkpPanel(f, s)
         { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), click = function() UI.potRulesSheet(s) end },
         { label = "Gold in or out", click = function() UI.goldInOutSheet(s) end },
       }, "left")
-      p:buttons({ { label = "Ledger", click = function() UI.ledgerSheet(s) end } }, "left")
+      p:buttons({
+        { label = "Ledger", click = function() UI.ledgerSheet(s) end },
+        { label = "Auction several at once", click = function() UI.batchSheet() end },
+      }, "left")
       p:buttons({
         { label = ("Sales (%d)"):format(#G.sales(s)), click = function() UI.salesSheet(s) end },
         { label = "Starting bids in and out", click = function() UI.pricesSheet(s) end },

@@ -336,7 +336,18 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   one back; `clearQueue` forgets them. By whisper: `!lr bid 300 [item]` / `!lr max 800 [item]` (an item on now is an ordinary bid).
   Messages' `fl` is now bits (`LR.hasFeature(name, bit)`: `FEATURE_LEAD` 1, `FEATURE_AHEAD` 2); a raider's window only offers it
   when the loot master's addon has bit 2. The practice raid's pretend players bid ahead by whisper.
-- **Planned with the owner (in this order, one pull request each):** several auctions at once (bids typed with the item's number work without the addon); bag checks; a gear
+- **Several auctions at once** (`Core/Batch.lua`, `UI/Batch.lua`; `Batch.start`, `parse`, `bidText`, `onBid`, `setMax`, `myMax`, `extend`,
+  `cancel`, `close`, `candidates`, `follow`; messages `Z` (the batch) and `Y` (a max on item n); `UI.batchSheet`, `UI.batchDraw`,
+  `/lr batch`; setting `batchSeconds`): up to `Batch.MAX` items, each an ordinary `BID` roll object (`item.batch` = the batch's key),
+  ending together; a late bid on any extends the whole batch. Bids by number in raid chat ("#2 300", "300 on 2", strict "bid #2 300";
+  `Rolls.onChat` hands them to `Batch.onChat` first) or whispered (`!lr bid #2 300`, `!lr max #2 800`). At the end each sold item is put
+  in `Rolls.current` for a moment and given through `Rolls.award`, so it's recorded, announced, handed out and undoable like any sale;
+  failed handouts are watched per loot slot (`Rolls.handouts`). No single roll starts while a batch is on, and none while a queue
+  is. Older versions ignore `Z` and bid by chat. The practice raid's pretend players bid by number.
+- **The practice raid's raid chat echoes my own lines** (`Practice.show`): in a raid the game shows me my own raid lines and
+  LootRuler reads them, so clicked or typed bids count; out of a group the game sends nothing, so the practice raid hands them
+  to `Rolls.onChat` / `Whisper.handle` itself. `/lr say <text>` (`Practice.say`) types a practice raid chat line.
+- **Planned with the owner (in this order, one pull request each):** bag checks; a gear
   overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has

@@ -38,6 +38,7 @@ Core\Export.lua
 Core\AutoLoot.lua
 Core\AutoRoll.lua
 Core\GroupLoot.lua
+Core\Batch.lua
 Core\Practice.lua
 UI\Kit.lua
 UI\Main.lua
@@ -52,6 +53,7 @@ UI\Timers.lua
 UI\Lineup.lua
 UI\Guild.lua
 UI\Gdkp.lua
+UI\Batch.lua
 UI\Settings.lua
 UI\Welcome.lua
 UI\Test.lua

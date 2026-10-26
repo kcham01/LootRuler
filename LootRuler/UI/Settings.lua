@@ -469,6 +469,8 @@ UI.COMMANDS = {
   { "/lr test", "a pretend roll window" },
   { "/lr raid", "raid setup: paste who's coming, invite them, sort groups" },
   { "/lr held", "post the items you hold to roll out or trade, with the time left" },
+  { "/lr batch", "auction several items at once (GDKP), or bring back the auction window" },
+  { "/lr say <text>", "in a practice raid: say something in its raid chat (a bid, or \"!lr ...\")" },
   { "/lr tour", "a quick tour of LootRuler" },
   { "/lr whatsnew", "what's new in this version" },
   { "/lr versions", "who in the group has LootRuler, and which version" },

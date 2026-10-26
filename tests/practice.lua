@@ -126,6 +126,20 @@ srv:tick(1)
 Rolls.dismiss()
 Rolls.clearQueue()
 
+section("several auctions at once")
+local three = P.drop(3)
+local B = LR.Batch
+local batch = B.start(B.candidates(), 30)
+srv:tick(0.5)
+check("the items I hold go up together", batch and #batch.items >= 3 and batch.state == "open")
+check("my own raid line counts as it would in a raid (/lr say)", P.say("#1 60000") and batch.items[1].top and batch.items[1].top.p == LR.U.me())
+for _ = 1, 40 do if batch.state ~= "open" then break end srv:tick(5) end
+local bids = 0
+for _, item in ipairs(batch.items) do bids = bids + #item.entries end
+check("the pretend players bid by number", bids > 1 and shown("(raid): #") ~= nil, bids)
+check("it ends, and what had bids is sold (mine to me)", batch.state == "closed" and s.won[#s.won].k == "BID"
+  and (function() for _, w in ipairs(s.won) do if w.r == 60000 and LR.U.samePlayer(w.p, LR.U.me()) then return true end end end)())
+
 section("the guild book is a copy")
 local points = LR.Book.points(realBook, "Jaina")
 LR.Guild.edit(function(book, t) return LR.Book.setPoints(book, "Jaina", 50, t) end)
@@ -145,6 +159,7 @@ check("its reserves aren't handed to Gargul", select(2, LR.Gargul.send(s)) == "A
 
 section("ending")
 LR.endSession(s)
+check("/lr say is only for a practice raid", not P.say("300"))
 srv:tick(1)
 check("ending its session ends it: no session, no pretend players", not P.on and LR.db.sessions[s.id] == nil and #LR.roster() == 1 and not LR.inGroup("Jaina"))
 check("not kept under past raids", #(LR.db.history or {}) == historyBefore)
