@@ -302,6 +302,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Wishlist alerts** (`UI.reservedAlert`): an open roll whose `copy.wish` names me alerts like a reserve ("It's on your wishlist (3): ...").
 - **Group loot wins** (`recordGroupWin` in `Core/Drops.lua`, setting `recordGroupWins`, off): the leader, with no master looter, records an
   epic someone receives as an award (SR when they had a reserve claim on it, else MS) on the drop it was.
+- **Posting what I hold** (`Drops.postHolding`, the trade timers' Post button, `/lr held`): one chat line (split by `U.chatLines`)
+  of `Drops.holding()` with each item's time left and who it's for.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

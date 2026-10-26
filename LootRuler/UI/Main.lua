@@ -592,6 +592,8 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.showMaster()
   elseif msg == "raid" or msg == "lineup" then
     UI.lineupSheet()
+  elseif msg == "held" or msg == "trades" then
+    if not LR.Drops.postHolding() then LR.print("you're not holding anything to roll out or trade (or you're not in a group).") end
   elseif msg == "tour" or msg == "welcome" then
     UI.tour(1)
   elseif msg == "whatsnew" or msg == "news" then

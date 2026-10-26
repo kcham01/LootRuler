@@ -1145,6 +1145,18 @@ check("a won item says who it's for", byId[OWED] and byId[OWED].name:GetText():f
   byId[OWED] and byId[OWED].name:GetText())
 check("with the time left", byId[OWED].time:GetText():match("^%dm$") ~= nil, byId[OWED].time:GetText())
 check("raiders don't get it", not ann.G.LootRulerTimers or not ann.G.LootRulerTimers:IsShown())
+local postBefore = #srv.chat
+lead.M.click(tw.post)
+srv:tick(10)
+local posted
+for i = postBefore + 1, #srv.chat do if srv.chat[i].text:find("Still to roll out or trade, with the time left:", 1, true) then posted = srv.chat[i].text end end
+check("Post: the list in raid chat, with the time left and who it's for", posted and posted:find("(for Bob-Faerlina)", 1, true) ~= nil and posted:find("%dm") ~= nil, posted)
+postBefore = #srv.chat
+lead.G.SlashCmdList.LOOTRULER("held")
+srv:tick(10)
+local again = false
+for i = postBefore + 1, #srv.chat do if srv.chat[i].text:find("Still to roll out or trade", 1, true) then again = true end end
+check("/lr held does the same", again, lead.M.chat[#lead.M.chat])
 -- clicking one not rolled out yet rolls it out
 lead.M.click(byId[HELD])
 srv:tick(0.5)

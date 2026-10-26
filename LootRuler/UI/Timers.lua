@@ -117,6 +117,18 @@ local function build()
     for _, x in ipairs(Drops.holding()) do dismissed[x.d.k] = true end
     win:Hide()
   end)
+  -- the list, in raid chat
+  win.post = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
+  win.post:SetSize(48, 18)
+  win.post:SetPoint("RIGHT", win.close, "LEFT", -2, 0)
+  win.post:SetText("Post")
+  win.post:SetScript("OnClick", function()
+    if Drops.postHolding() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+  end)
+  K.tooltipOn(win.post, function(tt)
+    tt:SetText("Post the list", 1, 1, 1)
+    tt:AddLine("One line in raid chat: each item still to roll out or trade, with the time left.", 1, 0.82, 0, true)
+  end)
   win.more = K.fs(win, "GameFontDisableSmall")
   win:Hide()
 end
