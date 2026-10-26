@@ -589,6 +589,8 @@ SlashCmdList.LOOTRULER = function(msg)
     end
   elseif msg == "master" then
     UI.showMaster()
+  elseif msg == "raid" or msg == "lineup" then
+    UI.lineupSheet()
   elseif msg == "versions" or msg == "version" then
     UI.versionSheet()
   elseif msg == "test" then

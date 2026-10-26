@@ -11,7 +11,7 @@ end
 local LR = {}
 local env = setmetatable({ bit = require("bit"), GetRealmName = function() return "Dreamscythe" end,
   GetNormalizedRealmName = function() return "Dreamscythe" end, RAID_CLASS_COLORS = {} }, { __index = _G })
-for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua" }) do
+for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Lineup.lua" }) do
   local chunk = assert(loadfile("LootRuler/" .. f))
   setfenv(chunk, env)
   chunk("LootRuler", LR)
@@ -225,6 +225,63 @@ hs.was = { 5 }
 check("who led it must be names", not S.valid(hs))
 hs.was, hs.next = nil, 7
 check("and who it's handed to", not S.valid(hs))
+
+-- raid setup: who's coming, pasted from anywhere
+do
+  local Ln = LR.Lineup
+  local function names(list) local o = {} for _, e in ipairs(list) do o[#o + 1] = e.name .. (e.group and (":" .. e.group) or "") end return table.concat(o, " ") end
+  check("one name per line", names(Ln.parse("Ann\nbob\n\nCara-Faerlina\n")) == "Ann Bob Cara-Faerlina", names(Ln.parse("Ann\nbob\n\nCara-Faerlina\n")))
+  check("or with commas", names(Ln.parse("Ann, Bob,Cara ; Dan")) == "Ann Bob Cara Dan")
+  check("numbered, with class and spec", names(Ln.parse("1. Ann (Holy Priest)\n2) Bob - Fury Warrior\nPriest - Cara\n@Dan tank")) == "Ann Bob Cara Dan",
+    names(Ln.parse("1. Ann (Holy Priest)\n2) Bob - Fury Warrior\nPriest - Cara\n@Dan tank")))
+  check("a spreadsheet's columns", names(Ln.parse("Ann\tPriest\tHealer\nBob\tWarrior\tTank")) == "Ann Bob")
+  check("letters beyond A-Z", names(Ln.parse("øyvind\nGhøst")) == "Øyvind Ghøst")
+  check("each name once", names(Ln.parse("Ann\nANN\nann")) == "Ann")
+  check("groups", names(Ln.parse("Group 1\nAnn\nBob\nGroup 2: Cara, Dan\nG3:\nEve")) == "Ann:1 Bob:1 Cara:2 Dan:2 Eve:3",
+    names(Ln.parse("Group 1\nAnn\nBob\nGroup 2: Cara, Dan\nG3:\nEve")))
+  check("nothing that isn't a name", #Ln.parse("Tanks:\nHealers\n123\n--\n") == 0, names(Ln.parse("Tanks:\nHealers\n123\n--\n")))
+  local many = {}
+  for i = 1, 50 do many[i] = "Name" .. string.char(96 + (i % 26) + 1) .. string.char(96 + math.floor(i / 26) + 1) end
+  check("40 at most", #Ln.parse(table.concat(many, "\n")) == 40)
+  -- against who's in the group
+  local roster = { { name = "Ann-Dreamscythe", group = 1, index = 1 }, { name = "Bob-Faerlina", group = 1, index = 2 },
+    { name = "Zed-Dreamscythe", group = 2, index = 3 } }
+  local c = Ln.compare(Ln.parse("Ann\nBob\nCara"), roster)
+  check("who's here (a name without a realm finds someone from another realm)", #c.here == 2 and c.here[2][2].name == "Bob-Faerlina")
+  check("who's missing", #c.missing == 1 and c.missing[1].name == "Cara")
+  check("who's here but not on the list", #c.extra == 1 and c.extra[1].name == "Zed-Dreamscythe")
+  -- sorting into groups: 10 players in groups 1 and 2, the list wants them swapped round
+  local r2, text = {}, { "Group 1" }
+  for i = 1, 10 do r2[i] = { name = "P" .. string.char(96 + i) .. "-Dreamscythe", group = i <= 5 and 1 or 2, index = i } end
+  for i = 6, 10 do text[#text + 1] = "P" .. string.char(96 + i) end
+  text[#text + 1] = "Group 2"
+  for i = 1, 5 do text[#text + 1] = "P" .. string.char(96 + i) end
+  local plan = Ln.parse(table.concat(text, "\n"))
+  local moves = 0
+  while true do
+    local m = Ln.nextMove(plan, r2)
+    if not m or moves > 40 then break end
+    Ln.apply(r2, m)
+    moves = moves + 1
+  end
+  local right = true
+  for i = 1, 10 do if r2[i].group ~= (i <= 5 and 2 or 1) then right = false end end
+  check("full groups are sorted by swapping", right and moves == 5, moves)
+  -- a group with room: just moved; players not on the list stay put
+  local r3 = { { name = "Ann-Dreamscythe", group = 1, index = 1 }, { name = "Bob-Dreamscythe", group = 1, index = 2 } }
+  local m3 = Ln.nextMove(Ln.parse("Group 4: Bob"), r3)
+  check("someone wanted in a group with room is moved there", m3 and m3.index == 2 and m3.group == 4 and not m3.with)
+  Ln.apply(r3, m3)
+  check("and then it's sorted", Ln.nextMove(Ln.parse("Group 4: Bob"), r3) == nil and r3[1].group == 1)
+  -- more than five wanted in one group: the sixth is left where they are, and it still ends
+  local r4, t4 = {}, { "Group 1" }
+  for i = 1, 7 do r4[i] = { name = "Q" .. string.char(96 + i) .. "-Dreamscythe", group = i <= 5 and 2 or 3, index = i } t4[#t4 + 1] = "Q" .. string.char(96 + i) end
+  local plan4, n4 = Ln.parse(table.concat(t4, "\n")), 0
+  while Ln.nextMove(plan4, r4) and n4 < 50 do Ln.apply(r4, Ln.nextMove(plan4, r4)) n4 = n4 + 1 end
+  local in1 = 0
+  for _, m in ipairs(r4) do if m.group == 1 then in1 = in1 + 1 end end
+  check("a group can't take more than five; it still ends", n4 < 50 and in1 == 5, n4)
+end
 
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))

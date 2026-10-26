@@ -226,6 +226,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Who has LootRuler** (`LR.versionList`, `LR.tellOutdated`, `UI.versionSheet`, `/lr versions`): everyone in the group with the
   version we last heard (older first, then none). "Ask again" is `LR.query()`: every version answers `Q` with `V`, so no new
   message was needed. Whispers to older versions go once per player and version.
+- **Raid setup** (`Core/Lineup.lua`: `parse`, `compare`, `nextMove`, no game calls; `UI/Lineup.lua`: `LR.inviteMissing`,
+  `LR.postMissing`, `LR.sortGroups`, `UI.lineupSheet`, `/lr raid`): the first name-like word of each line or comma-separated
+  part is the name (class, spec and role words skipped); "Group N" lines set groups. Invites only go out
+  (`C_PartyInfo.InviteUnit`); a party that would pass five becomes a raid first (`ConvertToRaid`) and the rest are invited on
+  the next roster change. Sorting makes one move (`SetRaidSubgroup` / `SwapRaidSubgroup`) every half second, each putting one
+  player where the list wants them for good, and stops if the game didn't make a move (combat). The list is kept in
+  `db.ui.lineup`. The test server now has invites (`Server:acceptInvite`), raid groups and `srv.inCombat`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

@@ -250,6 +250,7 @@ UI.COMMANDS = {
   { "/lr master", "bring back the loot master window" },
   { "/lr de [name]", "who disenchants (the leader)" },
   { "/lr test", "a pretend roll window" },
+  { "/lr raid", "raid setup: paste who's coming, invite them, sort groups" },
   { "/lr versions", "who in the group has LootRuler, and which version" },
   { "/lr minimap", "hide or show the minimap button" },
 }
