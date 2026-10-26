@@ -139,6 +139,8 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-window-reserves.png" alt="Reserved items marked in the game's loot window" width="40%">
 </p>
 
+**Need and Greed:** your own rules for the game's Need / Greed windows when the group isn't on master loot (Settings tab, off to start with): "greed on green items", "pass on blue items", "need on this item". LootRuler rolls what the first matching rule says and tells you; a roll the game won't allow is left to you. Switch on "Don't ask 'this item will bind to you'" and the game's question is answered yes, only for rolls your rules make.
+
 **Auto-roll:** your own rules for roll windows (Settings tab). "Always pass on this item", "always roll main spec on that one", and "pass on anything my class can't use". Shift-click a roll window's dice, coin or x to make it a rule. LootRuler rolls or passes for you and says so.
 
 ## GDKP

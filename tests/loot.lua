@@ -520,6 +520,37 @@ srv:lootTo(dan, 22829)
 srv:tick(1)
 check("an epic someone loots goes on the list", dropOf(DRAPE) and dropOf(DRAPE).h == full(bob) and stateOf(DRAPE) == "looted" and dropOf(DRAPE).b == "Shade of Aran")
 check("a grey doesn't", dropOf(22829) == nil)
+-- Ann's own Need / Greed rules (off until she turns them on)
+local GL = ann.LR.GroupLoot
+local GREEN, BLUE, BOUND = 1001, 1002, 1003
+local function gl(id, name, q) return ("|cff1eff00|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(id, name) end
+ann.LR.db.settings.groupLootRules = {}
+GL.add("q2", "greed")
+GL.add("item:" .. BLUE, "need")
+GL.add("q3", "pass")
+check("a rule for one item goes before the others", ann.LR.db.settings.groupLootRules[1].what == "item:" .. BLUE)
+ann.M.groupRoll(1, gl(GREEN, "Green Thing"), 2)
+check("switched off, nothing is rolled", ann.M.lootRolled[1] == nil)
+ann.LR.db.settings.groupLoot = true
+ann.M.groupRoll(2, gl(GREEN, "Green Thing"), 2)
+check("on: a green item is greeded", ann.M.lootRolled[2] == 2 and ann.M.chat[#ann.M.chat]:find("Greed on", 1, true) ~= nil, ann.M.chat[#ann.M.chat])
+ann.M.groupRoll(3, gl(BLUE, "Blue Thing"), 3)
+check("the item with its own rule is needed", ann.M.lootRolled[3] == 1)
+ann.M.groupRoll(4, gl(1004, "Other Blue"), 3)
+check("other blues are passed", ann.M.lootRolled[4] == 0)
+ann.M.groupRoll(5, gl(1005, "Purple"), 4)
+check("an item no rule is about is left alone", ann.M.lootRolled[5] == nil)
+ann.M.groupRoll(6, gl(BLUE, "Blue Thing"), 3, { need = false })
+check("a need the game won't allow isn't made: she's told to roll herself", ann.M.lootRolled[6] == nil and ann.M.chat[#ann.M.chat]:find("roll yourself", 1, true) ~= nil)
+-- an item that binds when picked up: the game asks first
+ann.M.groupRoll(7, gl(GREEN, "Green Thing"), 2, { bop = true })
+check("binds when picked up: the game's question is left to her", ann.M.lootRolled[7] == 2 and ann.M.lootConfirmed[7] == nil)
+ann.LR.db.settings.groupLootConfirm = true
+ann.M.groupRoll(8, gl(GREEN, "Green Thing"), 2, { bop = true })
+check("with that switched on, it's answered yes for her rule's roll", ann.M.lootConfirmed[8] == 2 and #ann.M.popupsHidden > 0)
+ann.M.fire("CONFIRM_LOOT_ROLL", 5, 1)
+check("never for a roll she made herself", ann.M.lootConfirmed[5] == nil)
+ann.LR.db.settings.groupLoot, ann.LR.db.settings.groupLootConfirm = false, false
 
 section("loot rules (master looter)")
 srv:setMasterLooter(lead)

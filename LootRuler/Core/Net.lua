@@ -74,6 +74,9 @@ LR.DEFAULTS = {
   autoLootRules = {},      -- { { what, to } }, first match wins
   autoRollRules = {},      -- item id -> "pass" / "MS" / "OS": what my roll windows do on their own
   autoPassUnusable = false, -- pass on items my class can't use
+  groupLoot = false,       -- the game's Need / Greed windows are rolled by my rules (Core/GroupLoot.lua)
+  groupLootRules = {},     -- { { what, act } }, first match wins
+  groupLootConfirm = false, -- ...and the game's "this item will bind to you" is answered yes for those rolls
   highlight = true,        -- the game's loot windows glow on items I reserved (UI/Highlight.lua)
   tooltipInfo = true,      -- item tooltips say who reserved the item
   lootTags = true,         -- the game's loot window marks reserved items with who reserved them (UI/Highlight.lua)
@@ -101,6 +104,7 @@ function LR.loadDB()
     if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
   end
   db.settings.rollKinds = LR.Roll.checkKinds(db.settings.rollKinds) or {}
+  db.settings.groupLootRules = LR.GroupLoot.check(db.settings.groupLootRules)
   db.notes = LR.Notes.check(db.notes)        -- my item notes (Core/Notes.lua)
   db.wish = LR.Prio.checkWish(db.wish)       -- thatsmybis wishlists I brought in (Core/Prio.lua)
   -- guild books: checked like a message from another player

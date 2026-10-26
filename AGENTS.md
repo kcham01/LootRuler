@@ -70,7 +70,9 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 - **Never run received text as code** (`loadstring` and friends are banned).
 - **Never use a bag item unless the trade window is open** (`C_Container.UseContainerItem` equips it otherwise).
 - **Don't touch protected functions** or anything that needs a hardware click; don't auto-accept trades,
-  invites or anything else on the player's behalf.
+  invites or anything else on the player's behalf. The one exception, asked for by the owner: a player's own
+  Need / Greed rules may answer the game's "this item will bind to you" for the rolls those rules made, only when
+  the player has switched that on (`groupLootConfirm`, off to start with).
 - **Saved data is checked when loaded**, like messages are.
 
 ## Versions
@@ -244,6 +246,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   download's type-2 entries, kept by whoever runs loot. A roll carries the wishlisters in the group (`roll.wish`, sent as
   `wl`, checked on arrival), named as the game names them; anyone given the item this session is left out. Shown in the
   raid line ("Wishlisted: ..."), the roll window (with the note), the corpse loot post and tooltips. Older versions ignore `wl`.
+- **Need and Greed rules** (`Core/GroupLoot.lua`, settings `groupLoot`, `groupLootRules`, `groupLootConfirm`, all off or empty):
+  on `START_LOOT_ROLL` the first rule matching the item (`AutoLoot.matches`: an item, a quality or a kind) is rolled with
+  `RollOnLoot` if `GetLootRollItemInfo` allows it, else the player is told. `CONFIRM_LOOT_ROLL` / `CONFIRM_DISENCHANT_ROLL` are
+  answered (`ConfirmLootRoll`) only for a roll a rule made, with that switched on. The mock has `M.groupRoll`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
