@@ -46,7 +46,7 @@ function UI.testView(f, s)
         local line = ("14 minutes left to trade %s to %s."):format(LR.itemLink(UI.pretendItem()), UI.PRETEND[2][1])
         LR.print("(pretend) " .. line)
         if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
-        PlaySound(SOUNDKIT.RAID_WARNING or 8959, "Master")
+        LR.sound(SOUNDKIT.RAID_WARNING or 8959)
       end },
       { label = "The reminder", disabled = not s, click = function()
         local names = LR.Whisper.notReserved(s)

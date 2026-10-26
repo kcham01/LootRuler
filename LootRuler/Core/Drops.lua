@@ -251,7 +251,7 @@ local function checkTradeTime()
     for _, line in ipairs(Drops.tradeWarnings()) do
       LR.print(line)
       if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
-      PlaySound(SOUNDKIT.RAID_WARNING or 8959, "Master")
+      LR.sound(SOUNDKIT.RAID_WARNING or 8959)
     end
   end
   C_Timer.After(30, checkTradeTime)

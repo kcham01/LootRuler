@@ -304,6 +304,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   epic someone receives as an award (SR when they had a reserve claim on it, else MS) on the drop it was.
 - **Posting what I hold** (`Drops.postHolding`, the trade timers' Post button, `/lr held`): one chat line (split by `U.chatLines`)
   of `Drops.holding()` with each item's time left and who it's for.
+- **Sounds** (`LR.sound(id, ui)`, settings `sounds`, on, and `soundChannel`, `LR.SOUND_CHANNELS`): every sound goes through it; a window's
+  own open and close sounds stay on the effects channel. Use it for any new sound. The mock keeps `M.sounds` ({ id, channel }).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

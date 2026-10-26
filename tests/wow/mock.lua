@@ -857,7 +857,8 @@ function M.env(player)
   G.SlashCmdList = {}
   G.UISpecialFrames = {}
   G.SOUNDKIT = { IG_MAINMENU_OPEN = 850, IG_MAINMENU_CLOSE = 851, IG_CHARACTER_INFO_TAB = 841, U_CHAT_SCROLL_BUTTON = 1115, IG_MAINMENU_OPTION_CHECKBOX_ON = 856, IG_MAINMENU_OPTION_CHECKBOX_OFF = 857 }
-  G.PlaySound = function() end
+  M.sounds = {}
+  G.PlaySound = function(id, channel) table.insert(M.sounds, { id = id, channel = channel }) end
   G.hooksecurefunc = function(t, name, fn)
     if type(t) == "string" then t, name, fn = G, t, name end
     local old = t[name]

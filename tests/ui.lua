@@ -1401,6 +1401,18 @@ run("roll window options", function()
   LR.UI.go("settings")
   srv:tick(6)
   check("told when I'm outbid, to start with", visible("[x] Tell me when I'm outbid"))
+  check("sounds: on, and on the main channel, to start with", visible("[x] LootRuler's sounds") and visible("Play them on:") and LR.db.settings.soundChannel == "Master")
+  clickText("Effects")
+  check("the channel can be changed", LR.db.settings.soundChannel == "SFX")
+  do
+    local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+    local sf = scrollers(G.LootRulerFrame, {})[1]
+    local at = M.findText("Play them on:", true, G.LootRulerFrame)[1]
+    if sf and at then sf:SetVerticalScroll(math.min(sf:GetVerticalScrollRange(), math.max(0, sf:GetVerticalScroll() + sf:GetTop() - at.fs:GetTop() - 150))) end
+    shot("sounds")
+    if sf then sf:SetVerticalScroll(0) end
+  end
+  clickText("Main")
   check("and when my item is up, wishlisted ones too", visible("have on your thatsmybis wishlist is rolled out"))
   check("new options, off to start with", visible("[  ] Not for items my class can't use") and visible("[  ] Close the window once I've rolled") and visible("Size:"))
   clickText("Bigger")

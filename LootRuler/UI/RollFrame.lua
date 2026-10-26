@@ -616,7 +616,7 @@ end
 function UI.rollWindow(copy)
   local fresh = not copy.shownOnce
   copy.shownOnce = true
-  if fresh and wanted(copy) then PlaySound(SOUNDKIT.RAID_WARNING or 8959, "Master") end
+  if fresh and wanted(copy) then LR.sound(SOUNDKIT.RAID_WARNING or 8959) end
   if fresh then UI.reservedAlert(copy) end
   UI.rollWindows()
 end
@@ -639,7 +639,7 @@ function UI.reservedAlert(copy)
   copy.alerted = true
   LR.print(line)
   if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
-  C_Timer.After(0.8, function() PlaySound(SOUNDKIT.READY_CHECK or 8960, "Master") end)   -- (after the raid warning's sound)
+  C_Timer.After(0.8, function() LR.sound(SOUNDKIT.READY_CHECK or 8960) end)   -- (after the raid warning's sound)
   if FlashClientIcon then FlashClientIcon() end
 end
 --- someone bid more than me: a line, the middle of the screen and a sound (Settings: outbidAlert)
@@ -651,7 +651,7 @@ function UI.outbidAlert(copy, top)
   UI.sound(SOUNDKIT.ALARM_CLOCK_WARNING_3 or 12889)
 end
 --- a LootRuler sound (all of them go through here)
-function UI.sound(id) PlaySound(id, "Master") end
+function UI.sound(id) LR.sound(id) end
 function UI.rollEnded(copy) UI.rollWindows() end
 function UI.rollFrames() return frames end
 

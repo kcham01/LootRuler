@@ -50,6 +50,14 @@ function LR.onChange(fn) listeners[#listeners + 1] = fn end
 
 function LR.print(msg) print("|cffffd100LootRuler|r: " .. msg) end
 
+--- every LootRuler sound goes through here: none when they're switched off (Settings: sounds), on the channel picked
+--- (soundChannel); a window's own click sound (ui) stays on the game's effects channel
+LR.SOUND_CHANNELS = { { "Master", "Main" }, { "SFX", "Effects" }, { "Dialog", "Dialog" }, { "Ambience", "Ambience" } }
+function LR.sound(id, ui)
+  if not db or not db.settings.sounds or not id then return end
+  PlaySound(id, ui and "SFX" or db.settings.soundChannel)
+end
+
 ---------------------------------------------------------------------- saved state
 -- every option, and what it is until changed (the Settings tab, UI/Settings.lua)
 LR.DEFAULTS = {
@@ -62,6 +70,8 @@ LR.DEFAULTS = {
   reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
   shareGear = true,
   inspectGear = true,      -- running loot: the game's inspect shows what raiders without LootRuler wear (Core/Rolls.lua)        -- when an item is rolled out, the loot master's addon is told what I wear in its slot
+  sounds = true,           -- LootRuler's sounds (LR.sound)
+  soundChannel = "Master", -- ...on this channel (LR.SOUND_CHANNELS)
   rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
   tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom
@@ -114,6 +124,9 @@ function LR.checkSettings(set)
   end
   set.rollKinds = LR.Roll.checkKinds(set.rollKinds) or {}
   if set.rollScale < 0.5 or set.rollScale > 2 then set.rollScale = 1 end
+  local okChannel = false
+  for _, c in ipairs(LR.SOUND_CHANNELS) do if c[1] == set.soundChannel then okChannel = true end end
+  if not okChannel then set.soundChannel = "Master" end
   set.groupLootRules = LR.GroupLoot.check(set.groupLootRules)
   return set
 end
