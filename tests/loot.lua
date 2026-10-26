@@ -812,6 +812,13 @@ for _, x in ipairs(lead.M.findText("Ann", true, lead.G.LootRulerMasterFrame)) do
   if row.gear and row.gear:IsShown() and row.gear.links and row.gear.links[1] == OLD then shown = true end
 end
 check("and the loot master's window shows it beside her roll", shown)
+-- Pug has no LootRuler: the loot master looks with the game's inspect when he rolls
+pug.links = { [11] = OLD2 }
+local inspectsBefore = srv.inspects or 0
+srv:roll(pug, 1, 100, 12)
+srv:tick(4)
+check("someone without LootRuler: the loot master's addon looks at what he wears", gr.gear["pug-dreamscythe"] and gr.gear["pug-dreamscythe"][1] == OLD2)
+check("only him: Ann's addon told it already", (srv.inspects or 0) == inspectsBefore + 1)
 -- what doesn't count: someone outside the group, or another roll
 local stranger = srv:player({ name = "Stranger", class = "MAGE" })
 srv:addonMessage(stranger, "LootRuler", lead.LR.Net.encode({ t = "W", k = gr.k, e = { OLD } }), "WHISPER", full(lead))
@@ -826,10 +833,36 @@ Rolls.dismiss()
 ann.LR.db.settings.shareGear = false
 gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
 srv:tick(1)
+srv:roll(pug, 1, 100, 13)
+srv:tick(4)
+check("switched off for Ann: Pug is still looked at (he has no addon)", gr.gear["pug-dreamscythe"] ~= nil)
 check("switched off: not told, though her own window still shows it", not (gr.gear and gr.gear["ann-dreamscythe"]) and frameFor(ann, RING).note:GetText():find("You have:", 1, true) ~= nil)
 Rolls.cancel()
 srv:tick(0.5)
 Rolls.dismiss()
+-- too far away, or in combat: not looked at (yet)
+srv.farAway = { [pug] = true }
+gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
+srv:tick(1)
+srv:roll(pug, 1, 100, 14)
+srv:tick(4)
+check("too far away to inspect: nothing", not (gr.gear and gr.gear["pug-dreamscythe"]))
+srv.farAway = nil
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+lead.LR.db.settings.inspectGear = false
+gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
+srv:tick(1)
+inspectsBefore = srv.inspects or 0
+srv:roll(pug, 1, 100, 15)
+srv:tick(4)
+check("the loot master can switch looking off", (srv.inspects or 0) == inspectsBefore and not (gr.gear and gr.gear["pug-dreamscythe"]))
+lead.LR.db.settings.inspectGear = true
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+pug.links = nil
 srv:closeLoot(lead)
 ann.LR.db.settings.shareGear = true
 ann.M.player.links = nil

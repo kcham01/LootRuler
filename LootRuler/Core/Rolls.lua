@@ -698,6 +698,61 @@ function Rolls.sendGear(copy)
   if copy.by and not U.samePlayer(copy.by, U.me()) then Net.send({ t = "W", k = copy.k, e = links }, "WHISPER", copy.by) end
 end
 
+-- Raiders without LootRuler (or an older one) don't say what they wear: the loot master's addon looks, with the game's
+-- inspect, one player at a time, when they're close enough and not in combat, and never while the loot master's own
+-- inspect window is open (Settings: inspectGear). It waits a moment first, for addons that do say.
+local inspectQueue, inspecting = {}, nil
+Rolls.INSPECT_WAIT = 2
+local function nextInspect()
+  if inspecting or #inspectQueue == 0 then return end
+  if InCombatLockdown() or (InspectFrame and InspectFrame:IsShown()) then C_Timer.After(2, nextInspect) return end
+  local job = table.remove(inspectQueue, 1)
+  local roll = Rolls.current
+  local unit = LR.unitOf(job.p)
+  if roll ~= job.roll or roll.state == "cancelled" or (roll.gear and roll.gear[R.key(job.p)]) or not unit or unit == "player"
+    or not CanInspect(unit) or not CheckInteractDistance(unit, 1) then
+    nextInspect()
+    return
+  end
+  inspecting = { job = job, unit = unit, guid = UnitGUID(unit) }
+  NotifyInspect(unit)
+  C_Timer.After(3, function()          -- (no answer: on to the next)
+    if inspecting and inspecting.job == job then inspecting = nil ClearInspectPlayer() nextInspect() end
+  end)
+end
+--- a roller I'd like to know the gear of (the roll I'm running)
+function Rolls.wantGear(roll, player)
+  if not LR.db.settings.inspectGear or roll ~= Rolls.current or roll.mode == "BID" or #LR.wornIn(roll.id) == 0 then return end
+  local k = R.key(player)
+  roll.looked = roll.looked or {}
+  if roll.looked[k] or (roll.gear and roll.gear[k]) or U.samePlayer(player, U.me()) then return end
+  roll.looked[k] = true
+  C_Timer.After(Rolls.INSPECT_WAIT, function()
+    if roll.gear and roll.gear[k] then return end
+    inspectQueue[#inspectQueue + 1] = { roll = roll, p = player }
+    nextInspect()
+  end)
+end
+--- the game has what they wear
+function Rolls.inspectReady(guid)
+  local x = inspecting
+  if not x or guid ~= x.guid then return end
+  inspecting = nil
+  local roll = x.job.roll
+  local links = {}
+  for _, slot in ipairs(LR.wornIn(roll.id)) do
+    local l = GetInventoryItemLink(x.unit, slot)
+    if l then links[#links + 1] = l end
+  end
+  ClearInspectPlayer()
+  if #links > 0 and Rolls.current == roll then
+    roll.gear = roll.gear or {}
+    roll.gear[R.key(x.job.p)] = links
+    changed()
+  end
+  C_Timer.After(1, nextInspect)
+end
+
 -- what a roller wears there, at the loot master's (from their addon)
 Net.handlers.W = function(msg, channel, sender)
   local roll = Rolls.current
@@ -805,6 +860,7 @@ function Rolls.onRoll(line)
   if roll and (roll.state == "open" or (roll.state == "closed" and roll.closedAt and t - roll.closedAt <= LATE)) and roll.mode ~= "HR" and roll.mode ~= "BID" then
     if LR.inGroup(name) or not IsInGroup() then
       R.add(roll, name, n, lo, hi, roll.state ~= "open")
+      Rolls.wantGear(roll, U.full(name))
       changed()
     end
   end
@@ -1012,8 +1068,10 @@ events:RegisterEvent("LOOT_OPENED")
 events:RegisterEvent("LOOT_CLOSED")
 events:RegisterEvent("LOOT_SLOT_CLEARED")
 events:RegisterEvent("UI_ERROR_MESSAGE")
+events:RegisterEvent("INSPECT_READY")
 events:SetScript("OnEvent", function(_, event, ...)
   if event == "UI_ERROR_MESSAGE" then Rolls.handoutError(select(2, ...)) return end
+  if event == "INSPECT_READY" then Rolls.inspectReady(...) return end
   if event == "LOOT_SLOT_CLEARED" and Rolls.handout and Rolls.handout.slot == ... then Rolls.handout = nil end
   if event == "CHAT_MSG_SYSTEM" then
     local ok, err = pcall(Rolls.onRoll, ...)

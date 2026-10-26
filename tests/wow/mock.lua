@@ -983,6 +983,9 @@ function M.env(player)
   G.GroupLootFrame1.IconFrame:SetPoint("TOPLEFT", 18, -18)
   G.GroupLootFrame_OnShow = function(self) end
   G.GetLootRollItemLink = function(rollID) return M.lootRolls and M.lootRolls[rollID] end
+  -- the game's inspect window (loaded once someone has inspected): hidden
+  G.InspectFrame = M.CreateFrame("Frame", "InspectFrame", M.UIParent)
+  G.InspectFrame:Hide()
   -- the game's error lines (GlobalStrings), in English
   G.ERR_LOOT_MASTER_INV_FULL = "That player's inventory is full"
   G.ERR_LOOT_MASTER_UNIQUE_ITEM = "The player has too many of that item already"
