@@ -480,7 +480,22 @@ function UI.rollWindow(copy)
   local fresh = not copy.shownOnce
   copy.shownOnce = true
   if fresh and wanted(copy) then PlaySound(SOUNDKIT.RAID_WARNING or 8959, "Master") end
+  if fresh then UI.reservedAlert(copy) end
   UI.rollWindows()
+end
+
+--- an item I reserved (or share the top of its priority list for) is being rolled out: I'm told in chat and in the
+--- middle of the screen, with its own sound, and the game's icon flashes if I'm in another window. Once a roll.
+--- Settings: reservedAlert.
+function UI.reservedAlert(copy)
+  if copy.alerted or copy.state ~= "open" or not LR.db.settings.reservedAlert then return end
+  if (copy.mode ~= "SR" and copy.mode ~= "PR") or not R.inList(copy.who, me()) then return end
+  copy.alerted = true
+  local line = (copy.mode == "PR" and "You're on the priority list for %s: roll for it now!" or "You reserved %s: roll for it now!"):format(copy.link)
+  LR.print(line)
+  if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
+  C_Timer.After(0.8, function() PlaySound(SOUNDKIT.READY_CHECK or 8960, "Master") end)   -- (after the raid warning's sound)
+  if FlashClientIcon then FlashClientIcon() end
 end
 function UI.rollEnded(copy) UI.rollWindows() end
 function UI.rollFrames() return frames end
