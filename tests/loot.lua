@@ -493,7 +493,7 @@ srv:tick(1)
 check("an enchant for a player: what, on which item, and what they paid",
   chat("Enchanted Ann's " .. srv:link(28477) .. " (Enchant Bracer - Superior Healing) for 5g.", "RAID") ~= nil)
 check("the enchanted item stays theirs", (function() for _, it in pairs(ann.bags) do if it == bracers then return true end end end)())
-check("Ann's side says it the other way round", chat("Lead enchanted my " .. srv:link(28477) .. " (Enchant Bracer - Superior Healing) for 5g.", "RAID") ~= nil)
+check("Ann's side says it the other way round", chat("Lead put Enchant Bracer - Superior Healing on my " .. srv:link(28477) .. " for 5g.", "RAID") ~= nil)
 -- someone not running loot enchants: not in raid chat, but a note in their own chat
 local dagger = srv:giveItem(bob, 28524, 1)
 local before = #srv.chat

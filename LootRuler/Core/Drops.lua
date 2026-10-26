@@ -395,7 +395,7 @@ function Drops.tradeLine(partner, gave, gaveMoney, got, gotMoney, enchant)
     if enchant.byMe then
       return ("Enchanted %s's %s (%s)%s%s."):format(who, enchant.item, enchant.what, r and (" for " .. r) or "", g and ("; gave " .. g) or "")
     end
-    return ("%s enchanted my %s (%s)%s%s."):format(who, enchant.item, enchant.what, g and (" for " .. g) or "", r and ("; got " .. r) or "")
+    return ("%s put %s on my %s%s%s."):format(who, enchant.what, enchant.item, g and (" for " .. g) or "", r and ("; got " .. r) or "")
   end
   if not g and not r then return nil end
   if g and r then return ("Traded %s to %s for %s."):format(g, who, r) end
