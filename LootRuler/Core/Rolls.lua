@@ -10,6 +10,9 @@
 --   X  loot master -> group    a roll is over: { k, e = "closed" / "cancelled" / "awarded", p = winner, n, kd }
 --   N  raider -> loot master   "I pass" on roll k
 --   M  raider -> loot master   a max bid on auction k: { k, g } (kept by the loot master; nobody else sees it)
+--   B  raider -> loot master   a bid ahead on an item coming up in the queue: { id, g } (0 takes it back); when its
+--                              auction starts it's their max bid there. Sent only to loot masters whose addon says it
+--                              takes them (fl, Core/Net.lua); answered by whisper, so any version can read it.
 -- An auction (GDKP, mode "BID") works the same way, with bids typed in raid chat instead of /rolls: R also
 -- carries mn (the lowest first bid), inc (the least raise) and tb (the highest bid so far: { p, n }).
 -- The leader of the soft reserves records who won what (so a reserve that has won its item is used up),
@@ -18,7 +21,7 @@ local _, LR = ...
 local U, S, R = LR.U, LR.Session, LR.Roll
 local Net = LR.Net
 
-local Rolls = { seen = {}, order = {}, queue = {} }
+local Rolls = { seen = {}, order = {}, queue = {}, ahead = {}, myAhead = {} }
 LR.Rolls = Rolls
 
 Rolls.SECONDS = { 10, 15, 20, 30, 45, 60 }
@@ -303,6 +306,7 @@ function Rolls.start(id, opts)
   say(howTo(roll, roll.link, roll.secs), true)
   Rolls.follow(wire(roll), U.me())           -- the loot master gets a roll window too: they may want it
   startTicking(roll)
+  if roll.mode == "BID" then Rolls.applyAhead(roll) end
   changed()
   return roll
 end
@@ -681,6 +685,8 @@ function Rolls.follow(msg, sender)
       copy.wish = #wish > 0 and wish or nil
     end
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
+    -- I bid ahead on it: that's my max bid now (the loot master's addon has it too)
+    if bid and Rolls.myAhead[msg.id] then copy.myMax = Rolls.myAhead[msg.id] Rolls.myAhead[msg.id] = nil end
     copy.state = "open"
     Rolls.seen[msg.k] = copy
     table.insert(Rolls.order, msg.k)
@@ -926,6 +932,78 @@ function Rolls.setMax(player, g)
   return true
 end
 
+---------------------------------------------------------------------- auctions: bids ahead on what's coming up
+--- whether an item is in the queue
+local function queued(id)
+  for _, it in ipairs(Rolls.queue) do if it.id == id then return true end end
+  return false
+end
+
+--- a player's bid ahead on an item coming up (the loot master's addon): the most they'll pay, bid for them when its
+--- auction starts. 0 takes it back. Returns true (and the gold), or false and why.
+function Rolls.setAhead(player, id, g)
+  local s = session()
+  g = math.floor(tonumber(g) or -1)
+  if not (s and s.gdkp and s.gk) then return false, "Nothing is being auctioned." end
+  if type(id) ~= "number" or not queued(id) then return false, "That item isn't coming up: bid when it's auctioned." end
+  local k = R.key(player)
+  if g == 0 then
+    if not (Rolls.ahead[id] and Rolls.ahead[id][k]) then return false, "You haven't bid ahead on it." end
+    Rolls.ahead[id][k] = nil
+    if not next(Rolls.ahead[id]) then Rolls.ahead[id] = nil end
+    changed()
+    return true, 0
+  end
+  local min = LR.Gdkp.minFor(s, id)
+  if g < min then return false, ("Bids on %s start at %s."):format(U.plain(LR.itemLink(id)), LR.Gdkp.gold(min)) end
+  if g > R.MAX_BID then return false, "That's more gold than there is." end
+  Rolls.ahead[id] = Rolls.ahead[id] or {}
+  local n = 0
+  for _ in pairs(Rolls.ahead[id]) do n = n + 1 end
+  if not Rolls.ahead[id][k] and n >= 40 then return false, "Too many bids ahead on that item." end
+  Rolls.ahead[id][k] = { p = U.full(player), g = g, at = (Rolls.ahead[id][k] and Rolls.ahead[id][k].at) or now() }
+  changed()
+  return true, g
+end
+
+--- how many have bid ahead on an item coming up (the loot master's queue shows it)
+function Rolls.aheadCount(id)
+  local n = 0
+  for _ in pairs(Rolls.ahead[id] or {}) do n = n + 1 end
+  return n
+end
+
+--- an auction starts: everyone's bids ahead on its item become their max bids, and bid for them
+function Rolls.applyAhead(roll)
+  local list = Rolls.ahead[roll.id]
+  Rolls.ahead[roll.id] = nil
+  if not list then return end
+  roll.maxes = roll.maxes or {}
+  for k, x in pairs(list) do
+    if x.g >= (roll.min or 0) then roll.maxes[k] = { p = x.p, g = x.g, at = x.at } end
+  end
+  autoBids(roll)
+end
+
+--- I bid ahead on an item coming up in an auction's queue (my window): to the loot master's addon, or my own.
+--- copy: the auction on now (whose loot master it goes to)
+function Rolls.bidAhead(copy, id, g)
+  g = math.floor(tonumber(g) or -1)
+  if not copy or copy.mode ~= "BID" then return false, "Nothing is being auctioned right now." end
+  if g < 0 then return false, "That's not an amount of gold." end
+  if U.samePlayer(copy.by, U.me()) then
+    local ok, why = Rolls.setAhead(U.me(), id, g)
+    if not ok then return false, why end
+  elseif LR.hasFeature(copy.by, LR.FEATURE_AHEAD) then
+    Net.send({ t = "B", id = id, g = g }, "WHISPER", copy.by)
+  else
+    return false, "The loot master's LootRuler is too old to take bids ahead. Bid when it comes up."
+  end
+  Rolls.myAhead[id] = g > 0 and g or nil
+  LR.changed("rolls")
+  return true
+end
+
 --- my max bid on an auction (my window, /lr max): to the loot master's addon, or my own
 function Rolls.myMax(copy, g)
   g = math.floor(tonumber(g) or 0)
@@ -1051,7 +1129,7 @@ function Rolls.queueNext()
   changed()
 end
 
-function Rolls.clearQueue() Rolls.queue = {} changed() end
+function Rolls.clearQueue() Rolls.queue = {} Rolls.ahead = {} changed() end
 
 ---------------------------------------------------------------------- messages
 local function fromLooter(sender) return LR.canRunLoot(sender) end
@@ -1091,6 +1169,16 @@ Net.handlers.M = function(msg, channel, sender)
   local ok, why = Rolls.setMax(sender, msg.g)
   -- (said by whisper, so it reaches them whatever version they have)
   LR.say(LR.TAG .. " " .. (ok and ("Your max bid of %s on %s is in."):format(LR.Gdkp.gold(msg.g), U.plain(roll.link)) or why), "WHISPER", sender)
+end
+
+Net.handlers.B = function(msg, channel, sender)
+  if channel ~= "WHISPER" or type(msg.id) ~= "number" or type(msg.g) ~= "number" then return end
+  if not (LR.inGroup(sender) or not IsInGroup()) then return end
+  local ok, why = Rolls.setAhead(sender, msg.id, msg.g)
+  local link = U.plain(LR.itemLink(msg.id))
+  local text = not ok and why or (why == 0 and ("Your bid ahead on %s is taken back."):format(link))
+    or ("Your bid ahead of up to %s on %s is in: when it comes up, LootRuler bids for you, as little as it takes."):format(LR.Gdkp.gold(msg.g), link)
+  LR.say(LR.TAG .. " " .. text, "WHISPER", sender)
 end
 
 Net.handlers.N = function(msg, channel, sender)

@@ -330,7 +330,10 @@ function UI.masterDraw()
   end
   -- what's waiting its turn
   if #Rolls.queue > 0 then
-    f:note(("%s in the queue after this one."):format(U.plural(#Rolls.queue, "more item")), K.GOLD)
+    local ahead = 0
+    for id in pairs(Rolls.ahead) do ahead = ahead + Rolls.aheadCount(id) end
+    f:note(("%s in the queue after this one.%s"):format(U.plural(#Rolls.queue, "more item"),
+      ahead > 0 and (" %s placed ahead."):format(U.plural(ahead, "bid")) or ""), K.GOLD)
     f:buttons({ { label = "Stop the queue", click = function() Rolls.clearQueue() UI.masterDraw() end } }, "left")
   end
   master.body:SetHeight(math.max(1, f.y))

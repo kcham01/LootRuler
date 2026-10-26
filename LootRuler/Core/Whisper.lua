@@ -117,6 +117,24 @@ function W.handle(text, sender)
     return
   end
 
+  -- GDKP: a bid ahead on an item coming up ("!lr bid 300 [item]", "!lr max 800 [item]": the most they'll pay, 0 takes it back)
+  local linkId = tonumber(args:match("|Hitem:(%d+)"))
+  if linkId and s.gdkp then
+    local plain = U.trim((lower:gsub("|c%x+|hitem:.-|h.-|h|r", "")))
+    local cur = LR.Rolls.current
+    local onNow = cur and cur.mode == "BID" and cur.state == "open" and cur.id == linkId
+    local amount = plain:match("^bid%s+(.+)$") or plain:match("^max%s+(.+)$")
+    if amount and not onNow then
+      local g = amount:match("^0+%s*g?$") and 0 or LR.Roll.parseBid(amount)
+      if not g then W.reply(player, "A bid ahead is an amount of gold and the item: \"!lr bid 300 [item]\".") return end
+      local ok, why = LR.Rolls.setAhead(player, linkId, g)
+      local link = LR.itemLink(linkId)
+      W.reply(player, not ok and why or (why == 0 and ("Your bid ahead on %s is taken back."):format(link))
+        or ("Your bid ahead of up to %s on %s is in: when it comes up, LootRuler bids for you, as little as it takes."):format(LR.Gdkp.gold(g), link))
+      return
+    end
+    if amount then lower = plain end            -- (the item on now: an ordinary bid or max bid on it)
+  end
   -- GDKP: a bid by whisper, and what they owe or are owed
   local bidArg = lower:match("^bid%s+(.+)$")
   if bidArg and s.gdkp then
