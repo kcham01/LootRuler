@@ -367,7 +367,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `roll.votes` (voter key -> { v, p }) on the loot master's addon only. The master window shows votes per row, "Their choice" (`selectedPlayer`
   picks it once closed) and "the council picks"; a council member's window stays up after the rolls until it's given out (`copy.council`).
   Votes never go to raid chat. Pretend council members vote in the practice raid.
-- **Planned with the owner (in this order, one pull request each):** fairness history across raids; reserve swap requests after the lock.
+- **Fairness history** (`History.fairness(since, current)`, `History.kindsText`, `History.KIND_ORDER`; `UI/Fair.lua` `UI.fairSheet`, beside
+  "Past raids" on the Loot tab, `/lr fair`): per player, their awards across past raids and the session on now (not a practice one), by kind
+  (DE for `de`), gold spent, raids attended, last win. Attendance is `s.att` (`S.saw`, `S.cleanAtt`, `S.MAX_ATT`): the leader's session notes
+  everyone in the group when it starts and on each roster change; past raids keep it (and a GDKP's `gk.seen` counts too). Older versions
+  ignore `att`.
+- **Planned with the owner (in this order, one pull request each):** reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.

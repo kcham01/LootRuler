@@ -41,6 +41,7 @@ function H.archive(s, now)
     id = s.id, rev = s.rev, leader = s.leader, raid = s.raid, raidName = s.raidName, sr = s.sr, any = s.any,
     created = s.created, updated = now, ended = now, archived = true, hr = {}, res = {},
     won = won, drops = drops, gdkp = s.gdkp or nil, gk = s.gk and U.copy(s.gk) or nil, plusOne = s.plusOne or nil,
+    att = s.att and U.copy(s.att) or nil,
   }
   local h = list()
   table.insert(h, 1, e)
@@ -56,6 +57,66 @@ function H.remove(id)
   LR.changed("history")
 end
 function H.all() return list() end
+
+---------------------------------------------------------------------- fairness: who got what, over time
+--- every player's loot across past raids (and the session on now), since a time (0: all of it):
+--- { { p, items = { { i, k, at, raid, de, g } }, kinds = { MS, OS, SR, HR, BID, DE }, gold, raids, last } }, most items first.
+--- raids: how many of those raids they came to (in the group while it ran, or won something in it)
+function H.fairness(since, current)
+  since = since or 0
+  local rows, order = {}, {}
+  local function row(p)
+    local k = LR.Roll.key(p)
+    if not rows[k] then
+      rows[k] = { p = U.full(p), items = {}, kinds = {}, gold = 0, raids = 0, last = 0, seenIn = {} }
+      order[#order + 1] = rows[k]
+    end
+    return rows[k]
+  end
+  local entries = {}
+  for _, e in ipairs(list()) do entries[#entries + 1] = e end
+  if current and not current.archived and not current.practice then entries[#entries + 1] = current end
+  for _, e in ipairs(entries) do
+    local when = e.ended or e.updated or e.created or 0
+    if when >= since then
+      local raid = LR.raidOf(e).name
+      local function came(p) local r = row(p) if not r.seenIn[e.id] then r.seenIn[e.id] = true r.raids = r.raids + 1 end return r end
+      for _, n in ipairs(e.att or {}) do came(n) end
+      for n in pairs(e.gk and e.gk.seen or {}) do came(n) end
+      for _, w in ipairs(e.won or {}) do
+        local r = came(w.p)
+        local kind = w.de and "DE" or w.k
+        r.kinds[kind] = (r.kinds[kind] or 0) + 1
+        if w.k == "BID" then r.gold = r.gold + (tonumber(w.r) or 0) end
+        table.insert(r.items, { i = w.i, k = kind, at = w.at or when, raid = raid, g = w.k == "BID" and tonumber(w.r) or nil })
+        r.last = math.max(r.last, w.at or when)
+      end
+    end
+  end
+  for _, r in ipairs(order) do
+    r.seenIn = nil
+    table.sort(r.items, function(a, b) return a.at > b.at end)
+  end
+  table.sort(order, function(a, b)
+    if #a.items ~= #b.items then return #a.items > #b.items end
+    if a.raids ~= b.raids then return a.raids > b.raids end
+    return a.p < b.p
+  end)
+  return order
+end
+
+--- "3 MS, 1 OS, 1 SR" (the kinds a player won, in a set order)
+H.KIND_ORDER = { { "SR", "SR" }, { "HR", "HR" }, { "MS", "MS" }, { "OS", "OS" }, { "BID", "bought" }, { "DE", "to disenchant" } }
+function H.kindsText(kinds)
+  local parts = {}
+  for _, x in ipairs(H.KIND_ORDER) do if (kinds[x[1]] or 0) > 0 then parts[#parts + 1] = kinds[x[1]] .. " " .. x[2] end end
+  for k, n in pairs(kinds) do
+    local known = false
+    for _, x in ipairs(H.KIND_ORDER) do if x[1] == k then known = true end end
+    if not known then parts[#parts + 1] = n .. " " .. k end          -- (a kind a newer version knows)
+  end
+  return table.concat(parts, ", ")
+end
 
 --- whether a saved entry has the right shape (checked when loaded, like a session from someone else)
 function H.valid(e)

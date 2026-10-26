@@ -273,7 +273,10 @@ local function pastRaids(f)
   local n = #LR.History.all()
   if n > 0 then
     f:gap(4)
-    f:buttons({ { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end } }, "left")
+    f:buttons({
+      { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end },
+      { label = "Who got what, over time", click = function() UI.fairSheet() end },
+    }, "left")
   end
 end
 

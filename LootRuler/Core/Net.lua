@@ -363,11 +363,21 @@ function LR.startSession(raidKey, sr, dupes, guild, name, any)
   s.br = S.okBrand(LR.db.ui.brand)   -- (the branding I used last)
   db.sessions[s.id] = s
   db.current = s.id
+  S.saw(s, U.map(LR.roster(), function(m) return m.name end), now)       -- (who came: Core/History.lua's fairness)
   LR.preload(raidKey)
   LR.publish(s, true)
   LR.changed("session")
   return s
 end
+
+-- who came: the leader's session notes everyone who's in the group while it runs (the fairness history)
+LR.onChange(function(what)
+  if what ~= "roster" or not db then return end
+  local s = LR.current()
+  if s and LR.isLeader(s) and not s.archived and (IsInGroup() or LR.Practice.on) then
+    if S.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) then LR.leaderChanged(s) end
+  end
+end)
 
 --- a change the leader made: save, tell everyone, redraw
 local function leaderChanged(s)

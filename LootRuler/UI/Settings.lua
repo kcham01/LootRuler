@@ -473,6 +473,7 @@ UI.COMMANDS = {
   { "/lr batch", "auction several items at once (GDKP), or bring back the auction window" },
   { "/lr bags", "a bag check: ask the group how many of some items they carry" },
   { "/lr gear", "what everyone in the group wears, with their item level" },
+  { "/lr fair", "who got what over your past raids, and how many raids they came to" },
   { "/lr say <text>", "in a practice raid: say something in its raid chat (a bid, or \"!lr ...\")" },
   { "/lr tour", "a quick tour of LootRuler" },
   { "/lr whatsnew", "what's new in this version" },

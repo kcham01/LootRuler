@@ -59,6 +59,7 @@ UI\Gdkp.lua
 UI\Batch.lua
 UI\Bags.lua
 UI\Gear.lua
+UI\Fair.lua
 UI\Settings.lua
 UI\Welcome.lua
 UI\Test.lua
