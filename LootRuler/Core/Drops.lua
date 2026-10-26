@@ -237,6 +237,23 @@ local function checkTradeTime()
 end
 C_Timer.After(30, checkTradeTime)
 
+--- items in my bags that are still to be rolled out or traded, with trade time left, the soonest to run out first:
+--- { { d = the drop, state = "held" / "toTrade", left = seconds, to = the winner (toTrade) } }
+function Drops.holding()
+  local out = {}
+  local s = Rolls.session()
+  if not s then return out end
+  for _, d in ipairs(s.drops or {}) do
+    local left = d.h and U.samePlayer(d.h, U.me()) and Drops.tradeLeft(d)
+    if left and left > 0 then
+      local state, w = S.dropState(s, d)
+      if state == "held" or state == "toTrade" then out[#out + 1] = { d = d, state = state, left = left, to = w and w.p } end
+    end
+  end
+  table.sort(out, function(a, b) if a.left ~= b.left then return a.left < b.left end return a.d.k < b.d.k end)
+  return out
+end
+
 --- drops I'm holding that someone else won: { { drop, winner } }, the ones for a player when one is given
 function Drops.toDeliver(player)
   local out = {}
