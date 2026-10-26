@@ -95,6 +95,52 @@ function G.setPrice(s, id, gold, now)
   return true
 end
 
+--- a sale's price changed (a mistake, or a discount): index is its place in s.won
+function G.setSalePrice(s, index, gold, now)
+  local w = s.won and s.won[index]
+  gold = num(gold, 0, G.MAX_GOLD)
+  if not w or w.k ~= "BID" or not gold or tonumber(w.r) == math.floor(gold) then return false end
+  w.r = math.floor(gold)
+  S.bump(s, now)
+  return true
+end
+
+--- starting bids from text, one item a line: its number or link, then the gold ("28525: 500", "28525,500g").
+--- Returns item id -> gold, and how many lines weren't understood.
+function G.parsePrices(text)
+  local out, bad = {}, 0
+  for line in tostring(text or ""):gmatch("[^\r\n]+") do
+    if line:find("%S") then
+      local id, g = line:match("item:(%d+)[^|]*|h[^|]*|h|r%s*[:,;=%-]?%s*([%d%.,]+)%s*[gG]?%s*$")
+      if not id then id, g = line:match("^%s*(%d+)%s*[:,;=%-]%s*([%d%.,]+)%s*[gG]?%s*$") end
+      g = g and tonumber((g:gsub(",", "")))
+      if id and tonumber(id) > 0 and g and g >= 0 and g <= G.MAX_GOLD then out[tonumber(id)] = math.floor(g) else bad = bad + 1 end
+    end
+  end
+  return out, bad
+end
+
+--- the starting bids as text, one a line, by item number
+function G.pricesText(s)
+  local ids = {}
+  for id in pairs(s.gk and s.gk.prices or {}) do ids[#ids + 1] = id end
+  table.sort(ids)
+  local lines = {}
+  for _, id in ipairs(ids) do lines[#lines + 1] = id .. ": " .. s.gk.prices[id] end
+  return table.concat(lines, "\n")
+end
+
+--- several starting bids at once (from G.parsePrices); returns how many changed
+function G.setPrices(s, prices, now)
+  if not s.gk then return 0 end
+  local n = 0
+  for id, g in pairs(prices) do
+    if s.gk.prices[id] ~= g then s.gk.prices[id] = g n = n + 1 end
+  end
+  if n > 0 then S.bump(s, now) end
+  return n
+end
+
 --- everyone in the group now counts for a share (the leader calls this as the group changes)
 function G.saw(s, names, now)
   if not s.gdkp then return false end

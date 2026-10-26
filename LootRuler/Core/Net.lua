@@ -391,6 +391,8 @@ LR.gdkpPrice = gdkp(function(s, id, gold) return LR.Gdkp.setPrice(s, id, gold, U
 LR.gdkpBonus = gdkp(function(s, player, gold) return LR.Gdkp.setBonus(s, player, gold, U.now()) end)
 LR.gdkpOut = gdkp(function(s, player, out) return LR.Gdkp.setOut(s, player, out, U.now()) end)
 LR.gdkpPaid = gdkp(function(s, player, gold) return LR.Gdkp.paid(s, player, gold, U.now()) end)
+LR.gdkpSalePrice = gdkp(function(s, index, gold) return LR.Gdkp.setSalePrice(s, index, gold, U.now()) end)
+LR.gdkpPrices = gdkp(function(s, prices) return LR.Gdkp.setPrices(s, prices, U.now()) > 0 end)
 function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOne(s, player, delta, U.now()) then leaderChanged(s) return true end return false end
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGroupOnly(s, on) if LR.isLeader(s) and S.setGroupOnly(s, on, U.now()) then leaderChanged(s) end end

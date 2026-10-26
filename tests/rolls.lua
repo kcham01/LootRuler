@@ -414,6 +414,17 @@ check("GDKP on: reserves stop counting, nobody can reserve", Gd.set(gs, true, 50
 check("its settings", Gd.option(gs, "cut", 20, 504) and Gd.option(gs, "cut", 10, 504) and Gd.option(gs, "inc", 25, 505) and gs.gk.inc == 25 and not Gd.option(gs, "cut", 150, 506)
   and not Gd.option(gs, "nonsense", 5, 506))
 check("an item can start higher", Gd.setPrice(gs, 32386, 1000, 507) and Gd.minFor(gs, 32386) == 1000 and Gd.minFor(gs, 28525) == 100)
+do
+  local prices, bad = Gd.parsePrices("28525: 500\n28530,1,250g\n|cffa335ee|Hitem:28830::::::::70:::::|h[Dragonspine Trophy]|h|r 2000\nwhat\n28531: lots")
+  check("starting bids from text: numbers or links, with commas and a g", prices[28525] == 500 and prices[28530] == 1250 and prices[28830] == 2000 and bad == 2)
+  local ps = S.new("Lead-Dreamscythe", "Karazhan", 2, false, 500)
+  Gd.set(ps, true, 501)
+  check("brought in: how many changed", Gd.setPrices(ps, prices, 502) == 3 and Gd.setPrices(ps, prices, 503) == 0 and Gd.minFor(ps, 28530) == 1250)
+  check("and written out by item number", Gd.pricesText(ps) == "28525: 500\n28530: 1250\n28830: 2000")
+  S.award(ps, 28525, ANN, "BID", 700, 504)
+  check("a sale's price can change", Gd.setSalePrice(ps, 1, 650, 505) and Gd.pot(ps) == 650 and not Gd.setSalePrice(ps, 1, 650, 506))
+  check("but not to nonsense, nor on something that wasn't sold", not Gd.setSalePrice(ps, 1, -5, 507) and not Gd.setSalePrice(ps, 2, 5, 507))
+end
 check("everyone in the group gets a share", Gd.saw(gs, { "Lead-Dreamscythe", ANN, BOB, DAN }, 508) and not Gd.saw(gs, { ANN }, 509))
 S.award(gs, 28525, ANN, "BID", 1000, 510)
 S.award(gs, 28530, BOB, "BID", 600, 511)

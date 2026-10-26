@@ -938,6 +938,43 @@ run("GDKP", function()
   srv:tick(1)
   check("the leader can make bids start with \"bid\"", s7.gk.strict == true)
   shot("gdkp-panel")
+  -- the sales: change a price, or take one back
+  clickText("Sales (2)")
+  check("every sale listed", visible("Sales") and visible("Ann for 300g") and visible("Bob-Faerlina for 1,500g"))
+  M.click(rowFor("Bob-Faerlina for 1,500g").act)
+  local box
+  local function walk(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
+  walk(LR.UI.topSheet())
+  box:SetText("1400") box._scripts.OnTextChanged(box, true)
+  clickText("Save")
+  srv:tick(1)
+  check("a price changed: the pot with it", LR.Gdkp.pot(s7) == 1700 and visible("Bob-Faerlina for 1,400g"))
+  shot("gdkp-sales")
+  LR.gdkpSalePrice(s7, (function() for i, w in ipairs(s7.won) do if w.k == "BID" and w.r == 1400 then return i end end end)(), 1500)
+  LR.UI.closeAll()
+  -- starting bids in and out
+  LR.UI.go("session")
+  clickText("Starting bids in and out")
+  local memo
+  local function walk2(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() and c._multi then memo = c end walk2(c) end end
+  walk2(LR.UI.topSheet())
+  memo:SetText("28525: 800\n28530: 1000") memo._scripts.OnTextChanged(memo, true)
+  clickText("Bring them in")
+  srv:tick(1)
+  local outBox
+  local function walk3(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() and c._multi and not outBox then outBox = c end walk3(c) end end
+  walk3(LR.UI.topSheet())
+  check("starting bids brought in, and copied out", LR.Gdkp.minFor(s7, 28525) == 800 and outBox and outBox:GetText():find("28525: 800", 1, true) ~= nil)
+  shot("gdkp-prices")
+  LR.UI.closeAll()
+  -- payouts by mail: at a mailbox, filled in for you to send
+  M.openMail()
+  LR.UI.go("session")
+  clickText("Payouts")
+  check("at the mailbox: a payout to mail", visible("Mail Lead") == false and (visible("Mail ") and visible("still to mail")))
+  shot("gdkp-mail")
+  LR.UI.closeAll()
+  G.SendMailFrame:Hide()
   LR.endSession(s7)
   srv:tick(1)
   LR.UI.go("reserve")

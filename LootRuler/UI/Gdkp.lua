@@ -108,7 +108,74 @@ function UI.payoutSheet(s)
       { label = "Whisper everyone", disabled = not IsInGroup(), click = function() UI.toast(("Whispered %s their payout."):format(U.plural(LR.Pot.whisperAll(s), "player"))) end },
     }, "left")
     f:note("Addons can't put gold in a trade: open a trade with each player and LootRuler says what to give or take. Gold that changes hands is counted.")
+    -- by mail: LootRuler fills in the Send Mail tab, the organiser presses Send
+    local queue = LR.Pot.toMail(s)
+    if #queue > 0 then
+      f:gap(6)
+      f:buttons({ { label = ("Mail %s %s"):format(U.short(queue[1][1]), G.gold(queue[1][2])), disabled = not LR.Pot.mailOpen(), click = function()
+        local ok, why = LR.Pot.fillMail(s, queue[1][1], queue[1][2])
+        UI.toast(ok and "It's filled in: check it and press Send. It counts as paid once it's sent." or why)
+      end } }, "left")
+      f:note(LR.Pot.mailOpen() and ("%s still to mail. Each click fills in the next one."):format(U.plural(#queue, "payout"))
+        or "Or by mail: at a mailbox, open the Send Mail tab and LootRuler fills in each payout for you to send.")
+    end
   end, { full = true })
+end
+
+--- everything sold: change a price, or take a sale back
+function UI.salesSheet(s)
+  UI.openSheet("Sales", function(f, h)
+    local any = false
+    for i, w in ipairs(s.won or {}) do
+      if w.k == "BID" then
+        any = true
+        local b = K.get(f.owner, "item", f.parent)
+        K.setItem(b, f.width, LR.itemIcon(w.i), LR.coloredName(w.i), ("%s for %s"):format(U.short(w.p), G.gold(tonumber(w.r) or 0)), "",
+          { text = "Price", width = 50, tip = "Change the price", click = function()
+            goldSheet("Price of " .. LR.itemName(w.i), "What " .. U.short(w.p) .. " pays for it. The pot and the split change with it.", tonumber(w.r), function(g)
+              LR.gdkpSalePrice(s, i, g)
+              h.redraw(true)
+            end)
+          end })
+        b:SetScript("OnClick", function()
+          UI.confirm("Take the sale back", ("%s to %s for %s comes off the list, and out of the pot."):format(LR.itemName(w.i), U.short(w.p), G.gold(tonumber(w.r) or 0)),
+            "Take it back", function() LR.unaward(s, i) h.redraw(true) end)
+        end)
+        f:place(b, 36)
+        f:gap(2)
+      end
+    end
+    if not any then f:note("Nothing sold yet.") else f:note("Click a sale to take it back (a mistake): it comes out of the pot.") end
+  end, { full = true })
+end
+
+--- the starting bids as text: copy them out, or paste a list in ("28525: 500", one item a line)
+function UI.pricesSheet(s)
+  local pasted = ""
+  UI.openSheet("Starting bids in and out", function(f, h)
+    f:text("Copy out", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local out = K.get(f.owner, "memo", f.parent)
+    f:place(out, 90, 0)
+    K.setMemo(out, f.width, 90, G.pricesText(s))
+    out.edit:ClearFocus()
+    f:gap(8)
+    f:text("Bring in", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    f:note("One item a line: its number or link, then where bids start (\"28525: 500\"). An item that has a starting bid already gets the new one.")
+    local into = K.get(f.owner, "memo", f.parent)
+    f:place(into, 90, 0)
+    K.setEditMemo(into, f.width, 90, pasted, function(t) pasted = t end)
+    f:gap(6)
+    f:buttons({ { label = "Close", click = function() h.close() end },
+      { label = "Bring them in", click = function()
+        local prices, bad = G.parsePrices(pasted)
+        local n = 0
+        for _ in pairs(prices) do n = n + 1 end
+        LR.gdkpPrices(s, prices)
+        UI.toast(("%s brought in.%s"):format(U.plural(n, "starting bid"), bad > 0 and (" %s not understood."):format(U.plural(bad, "line")) or ""))
+        pasted = ""
+        h.redraw(true)
+      end } })
+  end)
 end
 
 --- who tanks and who heals (for their cuts): each player, and a choice
@@ -186,6 +253,10 @@ function UI.gdkpPanel(f, s)
       p:buttons({
         { label = "Payouts", click = function() UI.payoutSheet(s) end },
         { label = "Tanks and healers", click = function() UI.rolesSheet(s) end },
+      }, "left")
+      p:buttons({
+        { label = ("Sales (%d)"):format(#G.sales(s)), click = function() UI.salesSheet(s) end },
+        { label = "Starting bids in and out", click = function() UI.pricesSheet(s) end },
       }, "left")
       p:buttons({
         { label = "A starting bid for an item", click = function()

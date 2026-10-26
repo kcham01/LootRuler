@@ -982,6 +982,22 @@ function M.env(player)
   G.GroupLootFrame1.IconFrame:SetPoint("TOPLEFT", 18, -18)
   G.GroupLootFrame_OnShow = function(self) end
   G.GetLootRollItemLink = function(rollID) return M.lootRolls and M.lootRolls[rollID] end
+  -- the mailbox's Send Mail tab (M.openMail()); SendMail succeeds, and M.mailed keeps what was sent
+  G.SendMailFrame = M.CreateFrame("Frame", "SendMailFrame", M.UIParent)
+  G.SendMailFrame:Hide()
+  G.SendMailNameEditBox = M.CreateFrame("EditBox", "SendMailNameEditBox", G.SendMailFrame)
+  G.SendMailSubjectEditBox = M.CreateFrame("EditBox", "SendMailSubjectEditBox", G.SendMailFrame)
+  G.SendMailMoney = M.CreateFrame("Frame", "SendMailMoney", G.SendMailFrame)
+  G.MoneyInputFrame_SetCopper = function(frame, copper) frame._copper = copper end
+  G.GetSendMailMoney = function() return G.SendMailMoney._copper or 0 end
+  M.mailed = {}
+  G.SendMail = function(name, subject, body)
+    if not G.SendMailFrame:IsShown() then error("SendMail with no mailbox open") end
+    table.insert(M.mailed, { name = name, subject = subject, copper = G.GetSendMailMoney() })
+    -- (the game says it's gone a moment later)
+    G.C_Timer.After(0.1, function() G.SendMailMoney._copper = 0 M.fire("MAIL_SEND_SUCCESS") end)
+  end
+  function M.openMail() G.SendMailFrame:Show() M.fire("MAIL_SHOW") end
   -- the game's Need / Greed windows: M.groupRoll(rollID, link, quality, opts) starts one; rolls and confirms are kept
   M.lootRollInfo, M.lootRolled, M.lootConfirmed, M.popupsHidden = {}, {}, {}, {}
   G.GetLootRollItemInfo = function(rollID)

@@ -263,6 +263,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Roll window options** (settings `rollHideUnusable`, `rollCloseAfter`, off; `rollScale`, `UI.ROLL_SIZES`): `wanted` leaves out open
   rolls on known items the class can't use; `UI.afterMyRoll` closes the window 1.5 seconds after a click roll; frames get
   `SetScale`. The stand-in doesn't draw scale, so pictures show windows at their normal size.
+- **GDKP extras** (`Gdkp.setSalePrice`, `Gdkp.parsePrices`, `Gdkp.pricesText`, `Gdkp.setPrices`; `LR.gdkpSalePrice`, `LR.gdkpPrices`;
+  `UI.salesSheet`, `UI.pricesSheet`; `Pot.toMail`, `Pot.fillMail`): payouts by mail fill in the game's Send Mail tab (the
+  client restricts `SendMail`, so the organiser presses Send); a post-hook on `SendMail` matches it to the payout filled in,
+  and `MAIL_SEND_SUCCESS` counts the gold in the mail as paid. Not done: several auctions at once (the loot master has one
+  roll at a time, `Rolls.current`; it needs its own design).
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
