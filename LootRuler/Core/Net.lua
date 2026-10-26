@@ -64,6 +64,8 @@ LR.DEFAULTS = {
   tradeWarn = true,        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)
   announceLoot = true,     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)
   autoTrade = true,        -- giving out an item that's in my bags opens a trade with the winner (Core/Drops.lua)
+  exportTemplate = "{date};{player};{item};{how}",   -- my own export layout: a line for each item (Core/Export.lua)
+  exportHeader = "",       -- ...and its first line
   rollSeconds = 20,        -- how long everyone has to roll
   rollKinds = {},          -- my own roll types for rolls open to everyone: { { n = "Transmog", hi = 98 } } (Core/Roll.lua)
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper

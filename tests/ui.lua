@@ -965,6 +965,30 @@ run("past raids", function()
   LR.UI.closeAll()
   G.SlashCmdList.LOOTRULER("history")
   check("/lr history opens them", LR.UI.tab == "loot" and visible("Past raids"))
+  -- several raids at once, in your own layout
+  clickText("Export several raids")
+  clickText("Everything")
+  local total = 0
+  for _, e in ipairs(LR.History.all()) do total = total + #(e.won or {}) end
+  check("every past raid's loot, oldest first", visible(("%s from %s, oldest first."):format(LR.U.plural(total, "item"), LR.U.plural(n, "raid"))), total)
+  clickText("Your own")
+  check("your own layout: the fields it can fill in", visible("{date}") and visible("{raid}") and visible("Each line"))
+  local edits = {}
+  local function walk(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() then edits[#edits + 1] = c end walk(c) end end
+  walk(LR.UI.topSheet())
+  local line, head
+  for _, e in ipairs(edits) do if e._multi then else if not line then line = e else head = e end end end
+  line:SetText("{raid}: {player} got {item} ({how})") line._scripts.OnTextChanged(line, true)
+  head:SetText("Loot from our raids") head._scripts.OnTextChanged(head, true)
+  clickText("Show it")
+  local memo
+  edits = {}
+  walk(LR.UI.topSheet())
+  for _, e in ipairs(edits) do if e._multi then memo = e end end
+  local text = memo and memo:GetText() or ""
+  check("written your way, for every raid", text:find("^Loot from our raids\n") ~= nil and text:find("Karazhan: ", 1, true) ~= nil and text:find(" got ", 1, true) ~= nil, text)
+  check("and kept for next time", LR.db.settings.exportTemplate == "{raid}: {player} got {item} ({how})")
+  shot("export-raids")
   LR.UI.closeAll()
   LR.UI.go("reserve")
 end)

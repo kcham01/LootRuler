@@ -184,6 +184,27 @@ check("thatsmybis: its columns, the name without the realm, and Magtheridon's he
 local dft = LR.Export.text(s5, "dfteu")
 check("DFT: date;[item];player, without disenchanted items", select(2, dft:gsub("\n", "\n")) == 1 and dft:find(";%[28525%];Ann%-Dreamscythe") ~= nil, dft)
 
+-- your own layout
+local own = LR.Export.text(s5, "own", { header = "When;Who;What;How;Raid", template = "{date};{name};{item} ({id});{how} {roll};{raid} by {leader} {nope}" })
+local ol = {}
+for l in own:gmatch("[^\n]+") do ol[#ol + 1] = l end
+check("your own layout: your first line, then a line each from the template", #ol == 4 and ol[1] == "When;Who;What;How;Raid", own)
+check("with every field filled in, and anything else left as it is", ol[2]:find(";Ann;Royal Cloak of Arathi Kings %(28525%);MS 77;Karazhan by Lead {nope}$") ~= nil
+  or ol[2]:find(";Ann;.- %(28525%);MS 77;Karazhan by Lead {nope}$") ~= nil, ol[2])
+check("no first line when there isn't one", not LR.Export.text(s5, "own", { template = "{player}" }):find("When", 1, true)
+  and select(2, LR.Export.text(s5, "own", { template = "{player}" }):gsub("\n", "")) == 2)
+-- several raids, between two dates
+local s6 = S.new("Bob-Faerlina", "GruulsLair", 2, true, 1760100000)
+S.award(s6, 28830, CARA, "MS", 90, 1760100500)
+local s7 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1750000000)
+S.award(s7, 28525, "Eve-Dreamscythe", "MS", 50, 1750000100)
+local many = LR.Export.entriesOf({ s6, s5, s7 }, 1755000000, nil)
+check("several raids: only between the dates, oldest first", #many == 4 and many[1].w.p == ANN and many[4].w.p == CARA)
+local manyText = LR.Export.write(many, "own", { template = "{raid};{player}" })
+check("each line says which raid", manyText:find("Karazhan;Ann", 1, true) and manyText:find("Gruul's Lair;Cara", 1, true) and not manyText:find("Eve", 1, true), manyText)
+check("thatsmybis ids stay apart for each raid", LR.Export.write(many, "tmb"):find(",%s*" .. s6.id .. ":1") ~= nil or LR.Export.write(many, "tmb"):find(s6.id .. ":1", 1, true) ~= nil)
+check("up to a date too", #LR.Export.entriesOf({ s6, s5, s7 }, nil, 1760000150) == 3)
+
 print("== the guild book")
 local B = LR.Book
 local book = B.new("Night Watch")
