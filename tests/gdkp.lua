@@ -447,6 +447,7 @@ srv:tick(1)
 check("a max from her window goes to the loot master's addon, which answers", whisperTo(ann, "A max bid on #1 has to be at least the lowest bid now") ~= nil)
 local endsWas = batch.ends
 check("+10 sec gives everyone more time", Bt.extend(10) and batch.ends >= endsWas + 10)
+check("the auction window's bar runs while it's on", ann.G.LootRulerBatchFrame._scripts.OnUpdate ~= nil)
 srv:tick(1)
 check("and the raid hears it", chat("10 more seconds to bid in the auction.", "RAID") ~= nil)
 ann.LR.Batch.bid(acopy, 1, 325)
@@ -466,6 +467,9 @@ check("each handed out through master loot", (function()
 end)())
 check("the raid hears each sale, and what didn't sell", chat("to Pug for 400g.", "RAID") and chat("to Bob-Faerlina for 575g.", "RAID") and chat("Nobody bid on #3 ", "RAID"))
 check("raiders' windows say so", ann.LR.Batch.seen[batch.k].state == "closed" and ann.LR.Batch.seen[batch.k].items[2].top.p == full(bob))
+srv:tick(0.2)
+check("and their bars stop: nothing runs every frame", ann.G.LootRulerBatchFrame:IsShown() and ann.G.LootRulerBatchFrame._scripts.OnUpdate == nil
+  and lead.G.LootRulerBatchFrame._scripts.OnUpdate == nil)
 check("the pot has both", G.pot(s) == potBatch + 975)
 srv:closeLoot(lead)
 for i = #s.won, wonBefore + 1, -1 do lead.LR.unaward(s, i) end

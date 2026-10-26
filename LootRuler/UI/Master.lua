@@ -152,7 +152,6 @@ local function build()
   master.body = CreateFrame("Frame", nil, master)
   master.body:SetPoint("TOPLEFT", 16, -104)
   master.body:SetSize(MW - 32, 10)
-  master:SetScript("OnUpdate", function() UI.masterTick() end)
   master:Hide()
   tinsert(UISpecialFrames, "LootRulerMasterFrame")
 end
@@ -172,6 +171,7 @@ function UI.masterTick()
     master.bar.fill:SetVertexColor(0.45, 0.45, 0.45)
     master.shownSecs = nil
     master.secs:SetText(roll.state == "awarded" and "Given out" or noRoll(roll) and "No roll" or "Closed")
+    master:SetScript("OnUpdate", nil)                 -- (over: nothing to count down, until the next redraw)
   end
 end
 
@@ -237,6 +237,7 @@ function UI.masterDraw()
   end
   K.release("master")
   if not roll then master:Hide() return end
+  master:SetScript("OnUpdate", UI.masterTick)        -- (the bar: every frame while the roll is open, then once more)
   -- where it goes: where the loot master put it, else beside the loot panel, else near the middle
   master:ClearAllPoints()
   local pt = LR.db.ui.masterPoint

@@ -138,8 +138,11 @@ check("main spec first, best first", good[1].p == full(pug) and good[2].p == ful
 check("a roll of the wrong range doesn't count", bad[1] and bad[1].p == full(dan) and bad[1].why == "range")
 check("raiders see the same highest roll", status(dan, SIGNET):find("Highest: Pug 85 (MS)", 1, true) ~= nil, status(dan, SIGNET))
 check("the loot master's window lists the rolls", found(lead, "Pug", lead.G.LootRulerMasterFrame))
+check("its timer bar runs while the roll is open", lead.G.LootRulerMasterFrame._scripts.OnUpdate ~= nil)
 srv:tick(22)
 check("the roll closes when the time's up", roll.state == "closed")
+check("and then the bar stops: nothing runs every frame", lead.G.LootRulerMasterFrame._scripts.OnUpdate == nil
+  and lead.G.LootRulerMasterFrame:IsShown())
 check("five seconds' warning was given", chat("5 seconds left to roll") ~= nil)
 check("and the result", chat("Pug wins with 85 (MS)") ~= nil)
 check("raiders' windows say who won", status(ann, SIGNET):find("Pug wins with 85", 1, true) ~= nil, status(ann, SIGNET))
