@@ -1420,6 +1420,7 @@ run("more loot rules", function()
   LR.UI.go("settings")
   srv:tick(6)
   check("picking up the gold is its own switch, off to start with", visible("[  ] Pick up the gold"))
+  check("counting group loot wins is off to start with", visible("[  ] Count group loot wins as given out") and not LR.db.settings.recordGroupWins)
   check("telling the guild who got what is off to start with", visible("[  ] Tell my guild who got what") and not LR.db.settings.awardGuild)
   do
     local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end

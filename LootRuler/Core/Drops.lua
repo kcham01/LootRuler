@@ -153,6 +153,17 @@ function Drops.forSlot(slot) return Drops.slotKeys[slot] end
 
 ---------------------------------------------------------------------- loot messages
 --- "Bob receives loot: [Item]": the drop now belongs to Bob; an item we hadn't seen drop goes on the list
+--- group loot (no master looter): an item someone won with the game's Need / Greed counts as given out (Settings:
+--- recordGroupWins, off to start with; epic and better). Their reserve, when they had one on it, else main spec.
+local function recordGroupWin(s, key, id, who, q)
+  if not LR.db.settings.recordGroupWins or not LR.isLeader(s) or LR.masterLooter() or (q or 0) < 4 or S.dropWin(s, key) then return end
+  local kind = S.claims(s, who, id) > 0 and "SR" or "MS"
+  if S.award(s, id, who, kind, nil, U.now(), key) then
+    LR.leaderChanged(s)
+    LR.print(("%s won %s with the game's group loot: it's on the list of loot given out (%s)."):format(U.short(who), LR.itemLink(id), kind == "SR" and "their reserve" or "main spec"))
+  end
+end
+
 function Drops.lootMessage(line)
   local who, link = Drops.parseLoot(line)
   local id = idOf(link)
@@ -172,6 +183,7 @@ function Drops.lootMessage(line)
   end
   if pick then
     save(s, { { k = pick.k, i = pick.i, h = who, ht = U.now() } })
+    recordGroupWin(s, pick.k, pick.i, who, qualityOf(link, id))
     -- the master looter gave it out with the game's own menu, not through LootRuler: offer to record it
     if inWindow[pick.k] and not S.dropWin(s, pick.k) and not Rolls.justGave(pick.i, who) and LR.isMasterLooter() and not U.samePlayer(who, U.me())
       and LR.db.settings.remindUnrecorded and LR.UI and LR.UI.unrecordedPrompt then
@@ -183,7 +195,9 @@ function Drops.lootMessage(line)
   local q = qualityOf(link, id)
   if q < 3 or not (LR.raidHas(s.raid, id) or q >= 4) then return end
   local ml = LR.masterLooter()
-  save(s, { { k = newKey(id), i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now() } })
+  local key = newKey(id)
+  save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now() } })
+  recordGroupWin(s, key, id, who, q)
 end
 
 -- drops from the loot master, at the leader
