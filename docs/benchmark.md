@@ -1,9 +1,51 @@
 # Benchmark notes
 
-Measured on 26 October 2026, on `main` after #88 (every planned feature in). Nothing in the addon was changed because
-of these notes: they're findings and ideas for the owner to choose from.
+First measured on 26 October 2026, on `main` after #88 (every planned feature in). The owner then asked for the speed
+work: what was done, and the numbers before and after, are in the next section. The findings after it are as first found.
 
 Run it with `lua5.1 tools/bench.lua` (about a minute; `--quick` for a small raid). It writes `build/bench.txt`.
+
+## After the speed fixes (#90 to #96)
+
+The first run's findings are below as they were found. Seven fixes came from them, one pull request each:
+
+| Pull request | Finding | What it does |
+| --- | --- | --- |
+| Index (#90) | 3, 4 | "Who reserved this item?" is kept until someone's reserves change (`S.byItem`) |
+| Roster (#91) | 5 | The group is read once and kept until the game says it changed, with a lookup by name |
+| Quiet (#92) | 1, 2 | Joins don't send the session; a newcomer's question is answered to them only; the guild's copy goes at most every 5 seconds while in a group; who's in a GDKP pot goes out within 10 seconds |
+| Queue (#93) | 2 | While a copy of the session is going out, newer ones wait and only the newest goes |
+| Standings (#94) | 6 | Each roll's rank and +1s are worked out once before sorting |
+| Bars (#95) | 9 | Finished timer bars stop repainting every frame |
+| Bids (#96) | 7 | Several auctions at once: only the newest batch update goes out when sending is backed up |
+
+Tried and dropped: keeping folded names and the realm name (no measurable difference once the group was kept).
+Not done: sending session copies at a lower priority than rolls (raiders' addons put long messages back together by
+sender and channel, so parts of two long messages at different priorities could take turns and both be lost), and
+leaving tiny messages unpacked (finding 8; older versions unpack everything they get).
+
+The same night, before and after (40 players; work in Lua instructions, "longest" is the longest single event on
+the leader's addon, garbage is the leader's):
+
+| Moment | Leader's work | Leader's longest | Leader's garbage | Each raider's work | Leader's messages | Everyone has it |
+| --- | --- | --- | --- | --- | --- | --- |
+| Forming the raid (39 joins) | 19.1M → 17.1M | 12.8 → 20.7 ms* | 104 → 98 MB | 2.3M → 0.5M | 108 (16 KB) → 73 (11 KB) | |
+| Opening reserves | 0.5M → 0.5M | 5.9 → 5.6 ms | 1 → 1 MB | 0.8M → 0.1M | 30 (6 KB) → 6 (1 KB) | **5.8 s → 0.1 s** |
+| Reserving (78 reserves) | 24.7M → 13.9M | 10.9 → 8.0 ms | 208 → 78 MB | 0.3M → 0.3M | 66 → 66 | 0.3 s → 0.3 s |
+| Lock and post | 1.0M → 0.8M | 11.1 → 4.0 ms | 3 → 1 MB | 0.2M → 0.2M | 8 → 8 | 0.5 s → 0.5 s |
+| A boss dies (1 roll) | 7.8M → 3.3M | 11.9 → 6.4 ms | 48 → 14 MB | 1.3M → 0.8M | 19 → 19 | |
+| Rolling out 4 more | 31.3M → 11.1M | **36.5 → 11.7 ms** | 160 → 43 MB | 5.8M → 2.7M | 50 → 50 | |
+| The leader's screens | 1.5M → 0.6M | 10.9 → 4.3 ms | 14 → 6 MB | | 0 | |
+| A GDKP auction (25 bids) | 4.0M → 2.3M | 6.4 → 6.7 ms | 12 → 4 MB | 1.3M → 0.9M | 23 → 23 | |
+| Five auctions at once (40 bids) | 6.9M → 5.6M | 8.5 → 5.5 ms | 14 → 11 MB | 3.6M → 2.9M | 99 (18 KB) → 83 (15 KB) | |
+
+\* "Longest" is CPU time on the computer running the stand-in. Between runs with no change to that part, it moved
+between 12 and 21 ms for this moment; the work count (which doesn't move by more than about 2%) went down.
+
+What's left: about two thirds of all the work in the night is unpacking messages (LibDeflate 55%, LibSerialize 11%),
+mostly copies of the whole session sent after each award, and batch updates during auctions. The next step would be
+sending only what changed (the first idea under "Sending less" below). It's a new kind of message, so it needs care
+for older versions; not started, waiting for the owner.
 
 ## What was measured
 
