@@ -221,7 +221,27 @@ function Server:install(p)
   G.UnitClass = function(unit) local q = unitPlayer(unit) if q then return CLASS_NAME[q.class], q.class, 1 end end
   G.UnitExists = function(unit) if unit == "target" then return p.target ~= nil end return unitPlayer(unit) ~= nil end
   G.UnitIsDead = function(unit) return unit == "target" and p.target ~= nil and p.target.dead == true end
-  G.UnitGUID = function(unit) if unit == "target" and p.target then return p.target.guid end end
+  G.UnitGUID = function(unit)
+    if unit == "target" and p.target then return p.target.guid end
+    local q = unitPlayer(unit)
+    if q then return "Player-" .. q.name .. "-" .. q.realm end
+  end
+  -- what someone wears: a client's own (M.player.links), or a player's links (q.links). Others' only once inspected
+  local function worn(q) return q.links or (q.M and q.M.player and q.M.player.links) or {} end
+  G.GetInventoryItemLink = function(unit, slot)
+    local q = unitPlayer(unit)
+    if q == p then return worn(p)[slot] end
+    if q and p.inspected == q then return worn(q)[slot] end
+  end
+  G.GetInventoryItemID = function(unit, slot) local l = G.GetInventoryItemLink(unit, slot) return l and tonumber(l:match("item:(%d+)")) end
+  G.CanInspect = function(unit) local q = unitPlayer(unit) return q ~= nil and q ~= p and q.online end
+  G.NotifyInspect = function(unit)
+    local q = unitPlayer(unit)
+    srv.inspects = (srv.inspects or 0) + 1
+    if not q or (srv.farAway and srv.farAway[q]) then return end
+    srv:deliver(function() p.inspected = q p.M.fire("INSPECT_READY", "Player-" .. q.name .. "-" .. q.realm) end)
+  end
+  G.ClearInspectPlayer = function() p.inspected = nil end
   -- bags: the backpack only, 16 slots; { id, link, locked }
   p.bags = p.bags or {}
   local function bagItem(bag, slot) return bag == 0 and p.bags[slot] or nil end

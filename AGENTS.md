@@ -288,6 +288,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   the game's red error (`UI_ERROR_MESSAGE`, matched against GlobalStrings read by name) or the item still being in the slot
   `Rolls.HANDOUT_WAIT` seconds later takes the award back. `LOOT_SLOT_CLEARED` for that slot means it went. The test server
   refuses handouts with `srv.bagsFull[player]` or `srv.lostHandout`.
+- **Gear of raiders without LootRuler** (`Rolls.wantGear`, `Rolls.inspectReady`, setting `inspectGear`, on): each roller with no gear
+  after `Rolls.INSPECT_WAIT` seconds is queued; one `NotifyInspect` at a time (in range, `CanInspect`, not in combat, not while the
+  game's `InspectFrame` is open), read on `INSPECT_READY` into `roll.gear`, then `ClearInspectPlayer`. The test server has inspect
+  (`srv.inspects` counts them; `q.links` is a player's gear).
 - **Changing an award** (`S.editAward`, `LR.editAward`, `UI.editAwardSheet`; click a given item on the Loot tab): the leader changes `w.p`
   and `w.k` (DE = `OS` with `de`), dropping `br` and `xn`; sales and hard reserves aren't changed here. Everything that reads
   `s.won` (reserves used, +1s, trade help) follows. One raid line says what changed.

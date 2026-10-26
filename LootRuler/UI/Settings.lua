@@ -100,6 +100,7 @@ function UI.settingsView(f)
     end
     p:chips(keys, { gap = 2 })
     p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
+    toggle(p, "inspectGear", "See what raiders without LootRuler wear", "When they roll, LootRuler looks at what they wear in that slot with the game's inspect (when they're close, and not in combat), and shows it beside their roll.")
     toggle(p, "remindUnrecorded", "Ask to record loot given without LootRuler", "When you give an item out with the game's own loot menu, LootRuler asks whether to put it on the list of loot given out (and how they got it).")
     toggle(p, "mlPrompt", "Ask me when I become master looter", "LootRuler asks whether to open the loot master window and tell the raid how loot works.")
     toggle(p, "mlAnnounce", "Tell the raid when I become master looter", "One line in raid chat: who runs loot, and how to roll.")
