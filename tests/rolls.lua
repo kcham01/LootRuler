@@ -131,6 +131,22 @@ check("names from the loot message", ("Bob receives loot: [X]."):match(U.pattern
 check("the x2 kind", select(3, ("You receive loot: [X]x2."):match(U.pattern("You receive loot: %sx%d."))) == nil
   and select(2, ("You receive loot: [X]x2."):match(U.pattern("You receive loot: %sx%d."))) == "2")
 
+print("== changing an award (a mistake)")
+do
+  local es = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 600)
+  S.set(es, ANN, "PRIEST", { WATCH }, false, 601)
+  S.award(es, WATCH, ANN, "SR", 80, 602)
+  check("a reserve that won is used up", S.claims(es, ANN, WATCH) == 0)
+  check("changed to main spec: the reserve counts again, and it's a +1", S.editAward(es, 1, ANN, "MS", 603) and S.claims(es, ANN, WATCH) == 1 and S.plusOnes(es, ANN) == 1)
+  check("given to someone else", S.editAward(es, 1, BOB, "OS", 604) and es.won[1].p == BOB and es.won[1].k == "OS" and S.plusOnes(es, ANN) == 0)
+  check("to disenchant", S.editAward(es, 1, DAN, "DE", 605) and es.won[1].k == "OS" and es.won[1].de == true)
+  check("nothing changed: nothing to send", not S.editAward(es, 1, DAN, "DE", 606))
+  check("not to nonsense", not S.editAward(es, 1, DAN, "XX", 607) and not S.editAward(es, 9, DAN, "MS", 607))
+  S.award(es, 28525, BOB, "BID", 500, 608)
+  check("a sale isn't changed here (its price is, on the GDKP panel)", not S.editAward(es, 2, ANN, "MS", 609))
+  check("still a good session", S.valid(es))
+end
+
 print("== the +1 rule")
 roll = R.new("p1", 28525, { mode = "OPEN", po = { [ANN:lower()] = 1 } })
 R.add(roll, "Ann", 90, 1, 100)

@@ -288,6 +288,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   the game's red error (`UI_ERROR_MESSAGE`, matched against GlobalStrings read by name) or the item still being in the slot
   `Rolls.HANDOUT_WAIT` seconds later takes the award back. `LOOT_SLOT_CLEARED` for that slot means it went. The test server
   refuses handouts with `srv.bagsFull[player]` or `srv.lostHandout`.
+- **Changing an award** (`S.editAward`, `LR.editAward`, `UI.editAwardSheet`; click a given item on the Loot tab): the leader changes `w.p`
+  and `w.k` (DE = `OS` with `de`), dropping `br` and `xn`; sales and hard reserves aren't changed here. Everything that reads
+  `s.won` (reserves used, +1s, trade help) follows. One raid line says what changed.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
