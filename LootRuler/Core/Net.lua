@@ -84,6 +84,7 @@ LR.DEFAULTS = {
   exportTemplate = "{date};{player};{item};{how}",   -- my own export layout: a line for each item (Core/Export.lua)
   exportHeader = "",       -- ...and its first line
   rollSeconds = 20,        -- how long everyone has to roll
+  batchSeconds = 60,       -- how long several auctions at once last (Core/Batch.lua)
   rollKinds = {},          -- my own roll types for rolls open to everyone: { { n = "Transmog", hi = 98 } } (Core/Roll.lua)
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat

@@ -29,9 +29,34 @@ end
 local WHERE = { RAID = "raid", RAID_WARNING = "raid warning", PARTY = "party", GUILD = "guild", INSTANCE_CHAT = "raid" }
 
 --- a line LootRuler would have said: shown here instead (LR.say)
+local GROUP = { RAID = true, RAID_WARNING = true, PARTY = true, INSTANCE_CHAT = true }
+local echoing = false
 function P.show(text, channel, target)
   local where = channel == "WHISPER" and ("whisper to " .. U.short(target or "?")) or (WHERE[channel] or tostring(channel):lower())
   print(("|cff66bbffPractice|r |cff9d9d9d(%s)|r %s"):format(where, text))
+  -- in a raid the game shows me my own raid lines, and LootRuler reads them like anyone's: a bid I clicked or typed
+  -- counts, and so does an "!lr" line. Out of a group the game says nothing, so the practice raid does it.
+  if GROUP[channel] and not echoing then
+    echoing = true
+    local ok, err = pcall(function()
+      if LR.Whisper.isCommand(text) then
+        if LR.db.settings.raidCommands then LR.Whisper.handle(text, U.me()) end
+      else
+        LR.Rolls.onChat(text, U.me())
+      end
+    end)
+    echoing = false
+    if not ok then geterrorhandler()(err) end
+  end
+end
+
+--- a line I type for the practice raid's raid chat (/lr say): the game won't send raid chat out of a group
+function P.say(text)
+  text = U.trim(tostring(text or ""))
+  if not P.on then return false, "/lr say is for a practice raid: in a real one, type in raid chat." end
+  if text == "" then return false, "/lr say [what you'd type in raid chat], like \"/lr say 300\" to bid." end
+  LR.say(text, "RAID")
+  return true
 end
 --- what a pretend player says or does, as it would look in chat: "Jaina whispers: ...", "Jaina (raid): ..."
 local function heard(player, text, how)
@@ -99,6 +124,14 @@ function P.stop(why)
     local k = Rolls.order[i]
     local copy = Rolls.seen[k]
     if copy and copy.practice then Rolls.seen[k] = nil table.remove(Rolls.order, i) end
+  end
+  local batch = LR.Batch.current
+  if batch and batch.practice then
+    if batch.state == "open" then LR.Batch.cancel() end
+    LR.Batch.current = nil
+    LR.Batch.seen[batch.k] = nil
+    for i = #LR.Batch.order, 1, -1 do if LR.Batch.order[i] == batch.k then table.remove(LR.Batch.order, i) end end
+    LR.changed("batch")
   end
   if P.sid then
     LR.db.sessions[P.sid] = nil
@@ -326,6 +359,35 @@ local function answerAuction(roll)
   after(2 + math.random() * 2, step)
 end
 
+-- answers several auctions at once: a few bidders with limits of their own on each item, bidding by number in raid
+-- chat ("#2 300"), one item and one bidder at a time, a few seconds apart, until nobody will go higher or it ends
+local function answerBatch(batch)
+  local caps = {}                     -- item number -> { { x, cap } }
+  for _, item in ipairs(batch.items) do
+    caps[item.n] = {}
+    for i, x in ipairs(shuffled(P.players)) do
+      if i > 3 then break end
+      table.insert(caps[item.n], { x = x, cap = math.floor((item.min or 1) * (1.5 + math.random() * 3)) })
+    end
+  end
+  local function step()
+    if batch.state ~= "open" then return end
+    local can = {}
+    for _, item in ipairs(batch.items) do
+      local need = R.nextBid(item)
+      for _, b in ipairs(caps[item.n]) do
+        if b.cap >= need and not (item.top and U.samePlayer(item.top.p, b.x.name)) then can[#can + 1] = { item = item, b = b, need = need } end
+      end
+    end
+    if #can == 0 then return end
+    local c = pick(can)
+    local jump = math.random() < 0.3 and math.floor(c.need * 0.2) or (c.item.inc or 1) * math.random(0, 2)
+    P.raidSay(c.b.x, LR.Batch.bidText(c.item.n, math.min(c.b.cap, c.need + jump), batch.strict))
+    after(1 + math.random() * 2, step)
+  end
+  after(2 + math.random() * 2, step)
+end
+
 --- the pretend players answer a roll or auction that's just started
 function P.react()
   local roll = LR.Rolls.current
@@ -339,4 +401,11 @@ end
 
 LR.onChange(function(what)
   if P.on and (what == "roll" or what == "rolls") then P.react() end
+  -- several auctions at once (Core/Batch.lua)
+  local batch = P.on and what == "batch" and LR.Batch.current
+  if batch and batch.state == "open" and not reacted[batch.k] then
+    reacted[batch.k] = true
+    batch.practice = true
+    answerBatch(batch)
+  end
 end)

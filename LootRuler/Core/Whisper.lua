@@ -117,6 +117,32 @@ function W.handle(text, sender)
     return
   end
 
+  -- GDKP: several auctions at once: "!lr bid #2 300", "!lr max #2 800" (Core/Batch.lua)
+  local batch = LR.Batch.current
+  if s.gdkp and batch and batch.state == "open" then
+    local how, rest = lower:match("^(bid)%s+(.+)$")
+    if not how then how, rest = lower:match("^(max)%s+(.+)$") end
+    local n, g
+    if rest then n, g = LR.Batch.parse(rest, false, #batch.items) end
+    if how and not n then
+      W.reply(player, ("Say which item by its number, then the gold: \"!lr %s #2 300\"."):format(how))
+      return
+    end
+    if how == "bid" then
+      local e = LR.Batch.onBid(player, n, g)
+      local item = batch.items[n]
+      if e and e.kind then
+        local top = item.top
+        W.reply(player, (top and U.samePlayer(top.p, player)) and ("Your bid of %s on #%d %s is the highest."):format(LR.Gdkp.gold(g), n, item.link)
+          or ("Someone's max bid beat yours on #%d: the highest is %s."):format(n, LR.Gdkp.gold(top.n)))
+      end
+      return
+    elseif how == "max" then
+      local ok, why = LR.Batch.setMax(player, n, g)
+      W.reply(player, ok and ("Your max bid of %s on #%d is in: LootRuler bids for you, as little as it takes, up to that."):format(LR.Gdkp.gold(g), n) or why)
+      return
+    end
+  end
   -- GDKP: a bid ahead on an item coming up ("!lr bid 300 [item]", "!lr max 800 [item]": the most they'll pay, 0 takes it back)
   local linkId = tonumber(args:match("|Hitem:(%d+)"))
   if linkId and s.gdkp then

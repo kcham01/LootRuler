@@ -496,6 +496,8 @@ function UI.lootPanel()
       Rolls.enqueue(list)
       UI.masterDraw()
     end } }, "left")
+    -- a GDKP: all at once, ending together (Core/Batch.lua)
+    if auction then f:buttons({ { label = "Auction them together", click = function() UI.batchSheet() end } }, "left") end
   end
   if #Rolls.queue > 0 then f:note(("%s waiting their turn."):format(U.plural(#Rolls.queue, "item")), K.GOLD) end
   f:gap(4)

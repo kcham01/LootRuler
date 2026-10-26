@@ -565,6 +565,12 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.show("reserves")
   elseif msg == "loot" or msg == "drops" then
     UI.show("loot")
+  elseif msg:match("^say%s") or msg == "say" then
+    -- a practice raid's raid chat: what I'd type there (the game won't send it out of a group)
+    local ok, why = LR.Practice.say(raw:gsub("^%s*[Ss][Aa][Yy]%s*", ""))
+    if not ok then LR.print(why) end
+  elseif msg == "batch" or msg == "auction" then
+    if LR.Batch.current and LR.Batch.current.state == "open" or LR.Batch.open() then UI.showBatch() else UI.batchSheet() end
   elseif msg:match("^max") then
     local g = LR.Roll.parseBid(msg:match("^max%s*(.*)$") or "")
     if not g then LR.print("/lr max 800: bid for you, as little as it takes, up to 800g on the item being auctioned.") return end

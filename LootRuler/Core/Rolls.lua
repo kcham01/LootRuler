@@ -236,6 +236,7 @@ function Rolls.start(id, opts)
   if not LR.canRunLoot() then return nil, "Only the raid leader, an assistant or the master looter can roll out loot." end
   local cur = Rolls.current
   if cur and cur.state == "open" then return nil, "Finish the roll for " .. U.plain(cur.link) .. " first." end
+  if LR.Batch and LR.Batch.current and LR.Batch.current.state == "open" then return nil, "Finish the auction that's on first." end
   local s = session()
   local plan
   if opts.tie then
@@ -1074,6 +1075,7 @@ end
 --- a line in raid or party chat: a bid, when it's just an amount and an auction is open
 function Rolls.onChat(text, sender)
   if not sender or sender == "" then return end
+  if LR.Batch and LR.Batch.onChat(text, sender) then return end      -- (a bid with an item's number: Core/Batch.lua)
   local open = Rolls.current and Rolls.current.mode == "BID" and Rolls.current
   if not open then
     for _, k in ipairs(Rolls.order) do local c = Rolls.seen[k] if c and c.mode == "BID" and c.state == "open" then open = c break end end
@@ -1202,7 +1204,11 @@ events:RegisterEvent("INSPECT_READY")
 events:SetScript("OnEvent", function(_, event, ...)
   if event == "UI_ERROR_MESSAGE" then Rolls.handoutError(select(2, ...)) return end
   if event == "INSPECT_READY" then Rolls.inspectReady(...) return end
-  if event == "LOOT_SLOT_CLEARED" and Rolls.handout and Rolls.handout.slot == ... then Rolls.handout = nil end
+  if event == "LOOT_SLOT_CLEARED" then
+    local slot = ...
+    if Rolls.handout and Rolls.handout.slot == slot then Rolls.handout = nil end
+    Rolls.handouts[slot] = nil
+  end
   if event == "CHAT_MSG_SYSTEM" then
     local ok, err = pcall(Rolls.onRoll, ...)
     if not ok then geterrorhandler()(err) end
@@ -1240,11 +1246,13 @@ local HANDOUT_ERRORS = {
 Rolls.HANDOUT_WAIT = 2
 Rolls.handout = nil          -- { roll, slot, player }: an item the game is handing over now
 
+Rolls.handouts = {}             -- loot slot -> the handout being watched (several at once when a batch auction ends)
 function Rolls.watchHandout(roll, slot, player)
   local h = { roll = roll, slot = slot, player = player }
   Rolls.handout = h
+  Rolls.handouts[slot] = h
   C_Timer.After(Rolls.HANDOUT_WAIT, function()
-    if Rolls.handout == h and Rolls.lootOpen and LootSlotHasItem(slot) then Rolls.handoutFailed("the game didn't hand it over") end
+    if Rolls.handouts[slot] == h and Rolls.lootOpen and LootSlotHasItem(slot) then Rolls.handoutFailed("the game didn't hand it over", h) end
   end)
 end
 
@@ -1257,12 +1265,18 @@ function Rolls.handoutError(message)
   end
 end
 
-function Rolls.handoutFailed(why)
-  local h = Rolls.handout
-  Rolls.handout = nil
-  if not h or Rolls.current ~= h.roll or h.roll.state ~= "awarded" then return end
+function Rolls.handoutFailed(why, h)
+  h = h or Rolls.handout
+  if not h then return end
+  if Rolls.handout == h then Rolls.handout = nil end
+  if Rolls.handouts[h.slot] == h then Rolls.handouts[h.slot] = nil end
+  -- (an item of a batch auction isn't the roll on now: it's taken back all the same)
+  if (Rolls.current ~= h.roll and not h.roll.batch) or h.roll.state ~= "awarded" then return end
   local link = h.roll.link
+  local keep = Rolls.current
+  Rolls.current = h.roll
   Rolls.undo(why)
+  if keep ~= h.roll then Rolls.current = keep end
   LR.print(("couldn't give %s to %s: %s. Give it to someone else, or try again."):format(link, U.short(h.player), why))
   LR.toast(("%s couldn't go to %s: %s."):format(U.plain(link), U.short(h.player), why))
 end
