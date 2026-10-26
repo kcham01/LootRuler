@@ -198,6 +198,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   LootRuler's, unless the player's own Gargul is loaded (it shows its own; they still get the strip). Its buttons
   just /roll (assumed main spec 1-100, off spec 99: Gargul's defaults, which its loot master can change). "Stop your
   rolls!" closes it, "[item] was awarded to X" gives the winner.
+- **Posting a corpse's loot** (`Drops.announce`, setting `announceLoot`, on to start with): the first time the loot master
+  opens a corpse, each epic or better item, and anything reserved, gets one raid line with who reserved it.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
