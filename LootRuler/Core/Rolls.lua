@@ -643,7 +643,8 @@ function Rolls.followGargul(id, link, secs, sender, test)
   Rolls.seen[k] = copy
   table.insert(Rolls.order, k)
   Rolls.lastGargul = copy
-  if not copy.hidden and LR.UI and LR.UI.rollWindow then LR.UI.rollWindow(copy) end
+  if not copy.hidden and LR.UI and LR.UI.rollWindow then LR.UI.rollWindow(copy)
+  elseif LR.UI and LR.UI.reservedAlert then LR.UI.reservedAlert(copy) end      -- (no window: still told it's mine)
   LR.changed("rolls")
   return copy
 end

@@ -56,6 +56,7 @@ LR.DEFAULTS = {
   hideWhispers = true,     -- "!lr" messages (whispers and raid chat) and the answers don't show in my chat
   rollWindow = true,       -- roll windows pop up
   rollOnlyMine = false,    -- ...only for items I may roll on
+  reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
   tradeAnnounce = true,
   tradeWarn = true,

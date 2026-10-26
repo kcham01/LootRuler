@@ -940,6 +940,8 @@ function M.env(player)
   G.UnitGUID = function() return nil end
   G.UnitIsDead = function() return false end
   G.GetTradePlayerItemLink = function() return nil end
+  M.flashed = 0
+  G.FlashClientIcon = function() M.flashed = M.flashed + 1 end
   G.InitiateTrade = function() end
   G.CheckInteractDistance = function() return true end
   G.TRADE_ENCHANT_SLOT = 7                  -- (Blizzard_UIPanels_Game/Classic/TradeFrame.lua)

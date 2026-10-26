@@ -208,6 +208,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Opening a trade with the winner** (`Drops.openTrade`, `LR.unitOf`, setting `autoTrade`, on to start with): an award
   of an item in the loot master's bags opens a trade (`InitiateTrade`, after `CheckInteractDistance`), and trade help
   puts the item in; too far away, the winner is whispered; in combat, the loot master is told. Never accepts a trade.
+- **Telling a raider their item is up** (`UI.reservedAlert`, setting `reservedAlert`, on to start with): a roll (LootRuler's or
+  Gargul's) on an item they reserved or share the top of the priority list for: a chat line, the middle-of-the-screen
+  message, a ready-check sound and the game's icon flashing (`FlashClientIcon`). Once per roll.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
