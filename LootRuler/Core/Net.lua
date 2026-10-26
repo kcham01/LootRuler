@@ -434,7 +434,11 @@ LR.gdkpRole = gdkp(function(s, player, role) return LR.Gdkp.setRole(s, player, r
 LR.gdkpPrice = gdkp(function(s, id, gold) return LR.Gdkp.setPrice(s, id, gold, U.now()) end)
 LR.gdkpBonus = gdkp(function(s, player, gold) return LR.Gdkp.setBonus(s, player, gold, U.now()) end)
 LR.gdkpOut = gdkp(function(s, player, out) return LR.Gdkp.setOut(s, player, out, U.now()) end)
-LR.gdkpPaid = gdkp(function(s, player, gold) return LR.Gdkp.paid(s, player, gold, U.now()) end)
+LR.gdkpPaid = gdkp(function(s, player, gold, how) return LR.Gdkp.paid(s, player, gold, U.now(), how) end)
+LR.gdkpAddGold = gdkp(function(s, gold, what) return LR.Gdkp.addGold(s, gold, what, U.now()) end)
+LR.gdkpRemoveAdd = gdkp(function(s, index) return LR.Gdkp.removeAdd(s, index, U.now()) end)
+LR.gdkpFixed = gdkp(function(s, player, gold) return LR.Gdkp.setFixed(s, player, gold, U.now()) end)
+LR.gdkpFixedAll = gdkp(function(s, list) LR.Gdkp.setFixedAll(s, list, U.now()) return true end)
 LR.gdkpSalePrice = gdkp(function(s, index, gold) return LR.Gdkp.setSalePrice(s, index, gold, U.now()) end)
 LR.gdkpPrices = gdkp(function(s, prices) return LR.Gdkp.setPrices(s, prices, U.now()) > 0 end)
 -- the organiser's own pot rules

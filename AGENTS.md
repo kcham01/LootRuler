@@ -325,7 +325,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `ruleTo`, `ruleText`; `LR.gdkpAddRule` and friends; `UI.potRulesSheet`): the organiser's own cuts, paid after the cut, bonuses and
   role cuts, before the even split, scaled down to what's left. `split.rules`, `split.ruleTotals`, `row.ruleCut`, `row.ruleNames`;
   `!lr pot` and the raid summary name them. Older versions ignore `rules` (their own screen shows the split without them).
-- **Planned with the owner (in this order, one pull request each):** GDKP bookkeeping (gold added by hand, a ledger of gold trades, the payout sheet in and out); bidding ahead on
+- **GDKP bookkeeping** (`s.gk.adds`, `log`, `fixed`; `Gdkp.addGold`, `removeAdd`, `added`, `paid(..., how)`, `setFixed`, `setFixedAll`,
+  `ledger`, `payoutsText`; `UI.goldInOutSheet`, `UI.ledgerSheet`, `UI.payoutsOutSheet`, `UI.payoutsInSheet`): gold put in or taken out
+  by hand is in `Gdkp.pot`; every payment is logged with how ("trade", "mail", "hand"), at most `Gdkp.MAX_LOG`; a payout set by hand
+  is all that player gets (no share, bonus or cut) and the rest is split between the others (`split.sharers`), scaled to fit.
+  "Name,Gold" lines go out and come back in (`Prio.parseCounts`). Older versions ignore all three.
+- **Planned with the owner (in this order, one pull request each):** bidding ahead on
   queued items; several auctions at once (bids typed with the item's number work without the addon); bag checks; a gear
   overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
