@@ -650,6 +650,38 @@ do
   check("saved notes are checked", next(N.check({ ["x"] = "a", [5] = { }, [1.5] = "b", [7] = "ok" })) == 7)
 end
 
+print("== sorting a big roll")
+do
+  -- 300 rolls of every kind, with +1s: the order is the same as comparing everything each time (the old way)
+  local big = { entries = {}, po = {}, xk = { { n = "Transmog", hi = 50 } } }
+  local kinds = { "MS", "OS", "BR", "SR", "X1" }
+  local seed = 11
+  local function rnd(n) seed = (seed * 1103515245 + 12345) % 2147483648 return seed % n end
+  for i = 1, 300 do
+    local name = "Player" .. string.char(65 + rnd(26)) .. string.char(97 + rnd(26)) .. "-Dreamscythe"
+    if rnd(3) == 0 then big.po[R.key(name)] = rnd(3) end
+    local kind = rnd(10) == 0 and nil or kinds[rnd(#kinds) + 1]
+    big.entries[i] = { p = name, n = rnd(100) + 1, kind = kind, seq = i }
+  end
+  local function rankOf(kind) return select(3, R.kind(big, kind)) or 99 end
+  local want = {}
+  for _, e in ipairs(big.entries) do if e.kind then want[#want + 1] = e end end
+  table.sort(want, function(a, b)
+    local ra, rb = rankOf(a.kind), rankOf(b.kind)
+    if ra ~= rb then return ra < rb end
+    if ra == 2 then
+      local pa, pb = R.plusOnes(big, a.p), R.plusOnes(big, b.p)
+      if pa ~= pb then return pa < pb end
+    end
+    if a.n ~= b.n then return a.n > b.n end
+    return a.seq < b.seq
+  end)
+  local good, bad = R.standings(big)
+  local same = #good == #want
+  for i = 1, #want do if good[i] ~= want[i] then same = false end end
+  check("300 rolls of every kind, with +1s, come out in the same order", same and #good + #bad == 300)
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)
