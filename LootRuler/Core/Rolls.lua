@@ -92,7 +92,8 @@ local function say(text, warning)
 end
 Rolls.say = say
 
-local function howTo(roll, link, secs)
+local howTo
+local function howToRoll(roll, link, secs)
   local t = U.plural(secs, "second")
   if roll.mode == "SR" then
     return ("%s is soft reserved by %s: only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
@@ -129,6 +130,12 @@ local function howTo(roll, link, secs)
   return ("Roll for %s: /roll for main spec, /roll 99 for off spec%s. %s.%s%s"):format(link, extra, t, po, away)
 end
 
+-- what to roll, and my note on the item when I have one
+howTo = function(roll, link, secs)
+  local text = howToRoll(roll, link, secs)
+  return roll.note and (text .. (" Note: %s."):format(roll.note:gsub("%.$", ""))) or text
+end
+
 local function resultText(roll, link)
   if roll.mode == "BID" then
     local top = R.topBid(roll)
@@ -152,7 +159,7 @@ local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
-    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, pn = roll.mode == "PR" and roll.n or nil,
+    m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, nt = roll.note, pn = roll.mode == "PR" and roll.n or nil,
     mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil }
 end
 
@@ -239,6 +246,7 @@ function Rolls.start(id, opts)
   local roll = R.new(U.me() .. ":" .. U.now() .. ":" .. seq, id, plan)
   roll.boosted = plan.boosted            -- (a tie roll) who rolled boosted before: name -> points
   roll.by = U.me()
+  roll.note = LR.noteFor(id)
   roll.link = opts.link or LR.itemLink(id)
   roll.slot = opts.slot
   -- which of the raid's drops this is: the one asked for, the one in that loot slot, else the first not given out
@@ -612,6 +620,7 @@ function Rolls.follow(msg, sender)
       min = bid and math.max(0, math.min(R.MAX_BID, tonumber(msg.mn) or 0)) or nil, inc = bid and math.max(1, math.min(R.MAX_BID, tonumber(msg.inc) or 1)) or nil,
       strict = bid and msg.sb == true or nil })
     copy.by = sender
+    copy.note = LR.Notes.clean(msg.nt)
     copy.link = type(msg.l) == "string" and msg.l or LR.itemLink(msg.id)
     copy.state = "open"
     Rolls.seen[msg.k] = copy

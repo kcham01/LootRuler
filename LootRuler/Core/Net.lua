@@ -101,6 +101,7 @@ function LR.loadDB()
     if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
   end
   db.settings.rollKinds = LR.Roll.checkKinds(db.settings.rollKinds) or {}
+  db.notes = LR.Notes.check(db.notes)        -- my item notes (Core/Notes.lua)
   -- guild books: checked like a message from another player
   db.guilds = type(db.guilds) == "table" and db.guilds or {}
   for g, book in pairs(db.guilds) do
@@ -696,6 +697,15 @@ end
 function LR.versionOf(name)
   if U.samePlayer(name, U.me()) then return LR.VERSION end
   return name and versions[U.full(name):lower()] or nil
+end
+
+--- my note on an item (Core/Notes.lua), or nil
+function LR.noteFor(id) return db and db.notes and db.notes[id] or nil end
+--- sets or (with no text) takes off my note on an item
+function LR.setNote(id, text)
+  if type(id) ~= "number" then return end
+  db.notes[id] = LR.Notes.clean(text)
+  LR.changed("notes")
 end
 
 --- everyone in the group and their LootRuler, the ones to do something about first:

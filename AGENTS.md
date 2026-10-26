@@ -236,6 +236,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Exports of your own, and of several raids** (`E.FIELDS`, `E.fill`, `E.entriesOf`, `E.write`; settings `exportTemplate`,
   `exportHeader`; `UI.exportManySheet`): format "own" fills `{field}`s per item (unknown ones stay as typed); past raids and
   the session on now go out as one list between two times, oldest first, each entry carrying its session (`e.s`, `e.n`).
+- **Item notes** (`Core/Notes.lua`: `clean`, `check`, `parse`, `text`, no game calls; `db.notes`, `LR.noteFor`, `LR.setNote`;
+  `UI.noteSheet`, `UI.notesSheet`): the loot master's own, kept on their character. A roll carries its note (`roll.note`,
+  sent as `nt`, cleaned of links and colours on arrival); the raid line ends "Note: ...", roll windows show it under the
+  status, tooltips show the viewer's own notes. Older versions ignore `nt`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

@@ -9,7 +9,7 @@ end
 local LR = {}
 local env = setmetatable({ bit = require("bit"), GetRealmName = function() return "Dreamscythe" end,
   GetNormalizedRealmName = function() return "Dreamscythe" end, RAID_CLASS_COLORS = {} }, { __index = _G })
-for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua", "Core/Prio.lua", "Core/Gdkp.lua" }) do
+for _, f in ipairs({ "Data/Loot.lua", "Core/Util.lua", "Core/Loot.lua", "Core/Session.lua", "Core/Roll.lua", "Core/Export.lua", "Core/Book.lua", "Core/Prio.lua", "Core/Gdkp.lua", "Core/Notes.lua" }) do
   local chunk = assert(loadfile("LootRuler/" .. f))
   setfenv(chunk, env)
   chunk("LootRuler", LR)
@@ -523,6 +523,20 @@ do
   check("won on one: off spec, by its name", ws.won[1].k == "OS" and ws.won[1].xn == "Transmog" and S.valid(ws))
   ws.won[1].xn = { "x" }
   check("a name that isn't text is refused when loaded", not S.valid(ws))
+end
+
+print("== item notes")
+do
+  local N = LR.Notes
+  check("a note is made safe: no links or colours, one line, trimmed", N.clean("  |cffff0000Warrior|r >\nRogue  ") == "Warrior > Rogue"
+  and N.clean("|cffa335ee|Hitem:1|h[Thing]|h|r first") == "[Thing] first")
+  check("an empty one is none", N.clean("   ") == nil and N.clean(5) == nil)
+  check("and short", #N.clean(string.rep("a", 300)) == N.MAX_LEN)
+  local notes, bad = N.parse("28525: Warrior > Rogue\n28530,Tanks first\n|cffa335ee|Hitem:28830::::::::70:::::|h[Dragonspine Trophy]|h|r Hunters\nnonsense\n\n0: zero")
+  check("read from text: a number, or a link, then the note", notes[28525] == "Warrior > Rogue" and notes[28530] == "Tanks first" and notes[28830] == "Hunters")
+  check("lines that aren't notes are counted", bad == 2, bad)
+  check("and written out by item number", N.text(notes) == "28525: Warrior > Rogue\n28530: Tanks first\n28830: Hunters")
+  check("saved notes are checked", next(N.check({ ["x"] = "a", [5] = { }, [1.5] = "b", [7] = "ok" })) == 7)
 end
 
 print(("passed %d"):format(passed))
