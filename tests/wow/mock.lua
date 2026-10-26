@@ -983,6 +983,12 @@ function M.env(player)
   G.GroupLootFrame1.IconFrame:SetPoint("TOPLEFT", 18, -18)
   G.GroupLootFrame_OnShow = function(self) end
   G.GetLootRollItemLink = function(rollID) return M.lootRolls and M.lootRolls[rollID] end
+  -- the game's error lines (GlobalStrings), in English
+  G.ERR_LOOT_MASTER_INV_FULL = "That player's inventory is full"
+  G.ERR_LOOT_MASTER_UNIQUE_ITEM = "The player has too many of that item already"
+  G.ERR_ITEM_MAX_COUNT = "You can't carry any more of those items."
+  G.ERR_LOOT_PLAYER_NOT_FOUND = "Player not found"
+  G.ERR_LOOT_TOO_FAR = "You are too far away to loot that corpse."
   -- the mailbox's Send Mail tab (M.openMail()); SendMail succeeds, and M.mailed keeps what was sent
   G.SendMailFrame = M.CreateFrame("Frame", "SendMailFrame", M.UIParent)
   G.SendMailFrame:Hide()

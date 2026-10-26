@@ -430,6 +430,12 @@ function Server:install(p)
     local it = lootItem(slot)
     local q = srv:candidates()[i]
     if not it or not q or srv.masterLooter ~= p then error("GiveMasterLoot with nothing to give") end
+    -- the game can refuse: their bags are full (Server.bagsFull), or the item just doesn't go (Server.lostHandout)
+    if srv.bagsFull and srv.bagsFull[q] then
+      srv:deliver(function() p.M.fire("UI_ERROR_MESSAGE", 51, p.G.ERR_LOOT_MASTER_INV_FULL) end)
+      return
+    end
+    if srv.lostHandout then return end
     srv.given = srv.given or {}
     table.insert(srv.given, { id = it.id, to = q })
     it.taken = true
