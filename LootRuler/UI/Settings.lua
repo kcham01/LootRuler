@@ -124,6 +124,24 @@ function UI.settingsView(f)
     }, "left")
   end)
 
+  f:panel("thatsmybis wishlists", function(p)
+    local items, places = LR.Prio.count(LR.db.wish)
+    p:note("Bring in your guild's wishlists from thatsmybis.com (its Gargul download). When you roll an item out, raid chat and everyone's roll window say who in the group wishlisted it, and so do the loot posts and the item's tooltip. Someone who has been given the item is left out.")
+    if items > 0 then
+      p:note(("%s on wishlists (%s)."):format(U.plural(items, "item"), U.plural(places, "place")), K.GOLD)
+    end
+    p:buttons({
+      { label = "Bring in wishlists", click = function() UI.wishSheet() end },
+      { label = "Forget them", disabled = items == 0, click = function()
+        UI.confirm("Forget the wishlists", "The wishlists you brought in are taken off this character.", "Forget", function()
+          LR.db.wish = {}
+          LR.changed("notes")
+          UI.render()
+        end)
+      end },
+    }, "left")
+  end)
+
   f:panel("Loot rules (master looter)", function(p)
     toggle(p, "autoLoot", "Hand out loot by my rules", "When you open a corpse with master loot, items your rules match go straight to whoever the rule says. Anything someone reserved is always rolled for instead.")
     local s = LR.Rolls.session()
@@ -228,6 +246,39 @@ function UI.noteSheet(id)
     f:note("Short and plain: it goes in raid chat. Leave it empty to take the note off.")
     f:buttons({ { label = "Cancel", click = function() h.close() end },
       { label = "Save", disabled = not id, click = function() LR.setNote(id, note) h.close() UI.render() end } })
+  end)
+end
+
+--- thatsmybis's download, pasted in: its wishlists replace the ones brought in before
+function UI.wishSheet()
+  local pasted = ""
+  UI.show()
+  UI.openSheet("Bring in thatsmybis wishlists", function(f, h)
+    f:note("On thatsmybis.com, open your guild's Export page, pick the Gargul download, copy it and paste it here (Ctrl+V). It replaces the wishlists you brought in before.")
+    local m = K.get(f.owner, "memo", f.parent)
+    f:place(m, 140, 0)
+    K.setEditMemo(m, f.width, 140, pasted, function(t) pasted = t end)
+    f:gap(4)
+    f:buttons({ { label = "Read it", click = function() h.redraw(true) end } }, "left")
+    local lists, why
+    if U.trim(pasted) ~= "" then
+      local LibDeflate = LibStub and LibStub("LibDeflate", true)
+      lists, why = LR.Prio.wishlists(pasted, LibDeflate and function(raw) return LibDeflate:DecompressZlib(raw) end)
+      if lists then
+        local items, places = LR.Prio.count(lists)
+        f:note(("%s on wishlists, %s."):format(U.plural(items, "item"), U.plural(places, "place")), K.GOLD)
+      else
+        f:note(why, K.RED)
+      end
+    end
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Bring them in", disabled = not lists, click = function()
+        LR.db.wish = LR.Prio.checkWish(lists)
+        LR.changed("notes")
+        h.close()
+        UI.render()
+        UI.toast(("Wishlists for %s brought in."):format(U.plural((LR.Prio.count(LR.db.wish)), "item")))
+      end } })
   end)
 end
 

@@ -136,10 +136,12 @@ function Drops.announce(s, list)
       if left > 0 then who[#who + 1] = U.short(w[1]) .. (left > 1 and (" x" .. left) or "") end
     end
     local link = d.link or LR.itemLink(d.i)
+    local wish = LR.wishFor(d.i, true)
     local line
     if hr then line = ("%s (hard reserved%s)"):format(link, hr.f ~= "" and (" for " .. hr.f) or "")
     elseif #who > 0 then line = ("%s: reserved by %s"):format(link, table.concat(who, ", "))
-    elseif (d.q or 0) >= 4 then line = link end
+    elseif (d.q or 0) >= 4 or #wish > 0 then line = link end
+    if line and not hr and #wish > 0 then line = line .. (#who > 0 and "; " or ": ") .. "wishlisted by " .. LR.wishLine(wish) end
     if line then
       for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, ch) end
     end

@@ -1262,6 +1262,33 @@ run("item notes", function()
   for id in pairs(LR.db.notes) do LR.setNote(id, nil) end
 end)
 
+run("thatsmybis wishlists", function()
+  LR.UI.go("settings")
+  srv:tick(6)                -- (the last message goes)
+  clickText("Bring in wishlists")
+  local memo
+  local function walk(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() and c._multi then memo = c end walk(c) end end
+  walk(LR.UI.topSheet())
+  memo:SetText('{"wishlists":{"28525":["ann|1|2|0","bob-faerlina|2|2|0","zed|3|2|0"],"28530":["pug|1|2|0"]}}') memo._scripts.OnTextChanged(memo, true)
+  clickText("Read it")
+  check("what's in it, before bringing it in", visible("2 items on wishlists, 4 places."))
+  shot("wishlists")
+  clickText("Bring them in")
+  check("brought in", LR.db.wish[28525] and #LR.db.wish[28525] == 3 and visible("2 items on wishlists (4 places)."))
+  local copy = LR.UI.testRoll({ quiet = true })
+  copy.wish = LR.wishFor(28525, true)
+  LR.UI.rollWindows()
+  local fr
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy == copy then fr = x end end
+  check("a roll window says who in the group wishlisted it", fr and fr.note:GetText() == "Wishlist: Ann (1), Bob-Faerlina (2)", fr and fr.note:GetText())
+  shot("roll-wishlist", lead, { fr and fr:GetName() or "LootRulerRollFrame1" })
+  copy.closedByMe = true
+  LR.UI.rollWindows()
+  clickText("Forget them")
+  clickText("Forget")
+  check("and forgotten", next(LR.db.wish) == nil)
+end)
+
 run("raid setup", function()
   G.SlashCmdList.LOOTRULER("raid")
   srv:tick(0.3)

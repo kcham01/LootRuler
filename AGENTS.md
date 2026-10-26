@@ -240,6 +240,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `UI.noteSheet`, `UI.notesSheet`): the loot master's own, kept on their character. A roll carries its note (`roll.note`,
   sent as `nt`, cleaned of links and colours on arrival); the raid line ends "Note: ...", roll windows show it under the
   status, tooltips show the viewer's own notes. Older versions ignore `nt`.
+- **thatsmybis wishlists** (`Prio.wishlists`, `Prio.checkWish`, `db.wish`, `LR.wishFor`, `LR.wishLine`, `UI.wishSheet`): the
+  download's type-2 entries, kept by whoever runs loot. A roll carries the wishlisters in the group (`roll.wish`, sent as
+  `wl`, checked on arrival), named as the game names them; anyone given the item this session is left out. Shown in the
+  raid line ("Wishlisted: ..."), the roll window (with the note), the corpse loot post and tooltips. Older versions ignore `wl`.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

@@ -128,6 +128,8 @@ function UI.tooltipLines(s, id)
   local out = {}
   local note = id and LR.noteFor(id)
   if note then out[1] = { "LootRuler note: " .. note, 0.5, 0.8, 1 } end
+  local wish = id and LR.wishFor(id)
+  if wish and #wish > 0 then out[#out + 1] = { "LootRuler wishlist: " .. LR.wishLine(wish, 5), 0.5, 0.8, 1 } end
   if not s or not id then return out end
   local hr = s.hr[id]
   if hr then out[#out + 1] = { "LootRuler: hard reserved" .. (hr.f ~= "" and (" for " .. hr.f) or ""), 1, 0.35, 0.3 } end

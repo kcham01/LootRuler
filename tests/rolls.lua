@@ -525,6 +525,17 @@ do
   check("a name that isn't text is refused when loaded", not S.valid(ws))
 end
 
+print("== thatsmybis wishlists")
+do
+  local P = LR.Prio
+  local wl = P.wishlists('{"wishlists":{"28525":["cara|2|2|0","ann|1|1|0","bob|1|2|0","dan|3|2|0"],"28530":["dan|1|1|0"]}}')
+  check("a download's wishlists: type 2, in order, without its priorities", wl and #wl[28525] == 3 and wl[28525][1].p == "Bob" and wl[28525][2].p == "Cara" and not wl[28530])
+  check("nothing pasted, or not a download, says so", select(2, P.wishlists("")) ~= nil and select(2, P.wishlists("hello")) ~= nil)
+  check("one with no wishlists says so", select(2, P.wishlists('{"wishlists":{"28530":["dan|1|1|0"]}}')) == "That download has no wishlists in it.")
+  local saved = P.checkWish({ [28525] = { { p = "Ann", n = 1 }, { p = "bad name|x", n = 2 }, { p = "Bob", n = -1 }, "junk" }, x = {}, [5] = "no" })
+  check("saved wishlists are checked", #saved[28525] == 1 and saved[28525][1].p == "Ann" and not saved.x and not saved[5])
+end
+
 print("== item notes")
 do
   local N = LR.Notes

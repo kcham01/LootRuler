@@ -392,13 +392,17 @@ end
 
 --- the note, the list and the row go under the status line; the window grows to fit them
 local function underneath(f, copy)
-  f.note:SetText(copy.note and ("Note: " .. copy.note) or "")
-  f.note:SetShown(copy.note ~= nil)
+  local lines = {}
+  if copy.note then lines[#lines + 1] = "Note: " .. copy.note end
+  if copy.wish and copy.mode ~= "BID" then lines[#lines + 1] = "Wishlist: " .. LR.wishLine(copy.wish, 4) end
+  local noted = #lines > 0
+  f.note:SetText(table.concat(lines, "\n"))
+  f.note:SetShown(noted)
   f.list:ClearAllPoints()
-  f.list:SetPoint("TOPLEFT", copy.note and f.note or f.status, "BOTTOMLEFT", 0, -4)
+  f.list:SetPoint("TOPLEFT", noted and f.note or f.status, "BOTTOMLEFT", 0, -4)
   rollList(f, copy)
   local row = extraRow(f, copy)
-  local h = 72 + f.status:GetStringHeight() + (copy.note and (4 + f.note:GetStringHeight()) or 0)
+  local h = 72 + f.status:GetStringHeight() + (noted and (4 + f.note:GetStringHeight()) or 0)
     + (f.list:IsShown() and (4 + f.list:GetStringHeight()) or 0) + (row and 26 or 0) + 14
   f:SetHeight(math.max(H, h))
 end

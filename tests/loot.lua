@@ -744,16 +744,25 @@ srv:tick(1)
 
 section("item notes")
 lead.LR.setNote(TALISMAN, "Hunters > Rogues")
+-- and thatsmybis wishlists: Bob first, someone who isn't here, then Ann
+lead.LR.db.wish = { [TALISMAN] = { { p = "Bob", n = 1 }, { p = "Nobody", n = 2 }, { p = "Ann", n = 3 } } }
+local postedBefore = #srv.chat
 srv:openLoot(lead, { { TALISMAN, 4 } })
 srv:tick(0.5)
+local posted = false
+for i = postedBefore + 1, #srv.chat do if srv.chat[i].text:find("wishlisted by Bob-Faerlina (1), Ann (3)", 1, true) then posted = true end end
+check("the loot post says who in the group wishlisted it", posted)
 local nroll = Rolls.start(TALISMAN, { link = srv:link(TALISMAN), slot = 1 })
 srv:tick(0.5)
 check("rolling it out says the note in raid chat", chat("Note: Hunters > Rogues.", "RAID_WARNING") ~= nil)
 local fn = frameFor(ann, TALISMAN)
-check("and everyone's roll window shows it", fn and fn.note:IsShown() and fn.note:GetText() == "Note: Hunters > Rogues", fn and fn.note:GetText())
+check("and everyone's roll window shows it", fn and fn.note:IsShown() and fn.note:GetText():find("^Note: Hunters > Rogues\n") ~= nil, fn and fn.note:GetText())
 check("raiders don't keep it as their own note", ann.LR.noteFor(TALISMAN) == nil)
 local tips = lead.LR.UI.tooltipLines(s, TALISMAN)
 check("the loot master sees it in the item's tooltip", tips[1] and tips[1][1] == "LootRuler note: Hunters > Rogues")
+check("and the whole wishlist", tips[2] and tips[2][1] == "LootRuler wishlist: Bob (1), Nobody (2), Ann (3)", tips[2] and tips[2][1])
+check("raid chat says who in the group wishlisted it", chat("Note: Hunters > Rogues. Wishlisted: Bob-Faerlina (1), Ann (3).", "RAID_WARNING") ~= nil)
+check("so does the roll window", fn.note:GetText():find("Wishlist: Bob-Faerlina (1), Ann (3)", 1, true) ~= nil, fn.note:GetText())
 Rolls.cancel()
 srv:tick(0.5)
 Rolls.dismiss()
@@ -764,6 +773,11 @@ srv:tick(0.5)
 check("a note from a message is made safe first", ann.LR.Rolls.seen["fake:1"] and ann.LR.Rolls.seen["fake:1"].note == "Free [loot] for all",
   ann.LR.Rolls.seen["fake:1"] and ann.LR.Rolls.seen["fake:1"].note)
 srv:addonMessage(lead, "LootRuler", lead.LR.Net.encode({ t = "X", k = "fake:1", e = "cancelled" }), "RAID")
+-- once Bob has it, he's off what's said
+s.won[#s.won + 1] = { i = TALISMAN, p = "Bob-Faerlina", k = "MS", at = 1 }
+check("whoever has been given it is left out", lead.LR.wishLine(lead.LR.wishFor(TALISMAN, true)) == "Ann (3)")
+table.remove(s.won)
+lead.LR.db.wish = {}
 srv:closeLoot(lead)
 lead.LR.setNote(TALISMAN, "")
 srv:tick(1)
