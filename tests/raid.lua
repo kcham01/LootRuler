@@ -830,6 +830,23 @@ srv:tick(11)
 lead.LR.roster()
 check("and it's read again after a while anyway (once: 3 members)", reads == 3, reads)
 lead.G.GetRaidRosterInfo = realInfo
+-- the game doesn't say which addon frame hears an event first: each one that reads the group must see the change
+do
+  local handlers, fresh = 0, 0
+  for f in pairs(lead.M.events.GROUP_ROSTER_UPDATE or {}) do
+    handlers = handlers + 1
+    local extra = srv:player({ name = "Order" .. handlers, class = "MAGE" })
+    lead.LR.inGroup("Ann")                                -- (kept)
+    table.insert(srv.group.members, extra)
+    extra.inGroup = true
+    f._scripts.OnEvent(f, "GROUP_ROSTER_UPDATE")          -- this frame alone, first
+    if lead.LR.inGroup(extra.name) then fresh = fresh + 1 end
+    srv:leaveGroup(extra)
+  end
+  srv:tick(1)
+  check("every frame that hears a roster update sees the group as it is now, whichever hears it first", handlers >= 4 and fresh == handlers,
+    fresh .. " of " .. handlers)
+end
 
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))

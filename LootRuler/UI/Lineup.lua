@@ -59,6 +59,7 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("GROUP_ROSTER_UPDATE")
 events:SetScript("OnEvent", function()
+  LR.rosterChanged()                -- (the kept group is out of date: this may run before Core/Net.lua's handler)
   if #pending == 0 or not IsInGroup() or not UnitIsGroupLeader("player") then return end
   if not IsInRaid() then ConvertToRaid() return end
   local list = pending
