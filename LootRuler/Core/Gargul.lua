@@ -269,7 +269,7 @@ function G.rename(s, from, to, class, now)
   local own = U.copy(S.reservesOf(s, from))
   takeOff(own, sheet)                            -- (anything the leader added for the name by hand)
   local mine = U.copy(S.reservesOf(s, to))
-  local limit = S.limit(s, to)
+  local limit = S.limit(s, to) + ((s.xr and not s.xr[to] and s.xr[from]) or 0)   -- (their extra reserves come along)
   local function fits(id) return #mine < limit and (s.dupes or not U.indexOf(mine, id)) end
   for _, id in ipairs(own) do if fits(id) then mine[#mine + 1] = id end end
   local have, count, moved = {}, {}, {}
@@ -278,6 +278,11 @@ function G.rename(s, from, to, class, now)
     count[id] = (count[id] or 0) + 1
     if count[id] <= (have[id] or 0) then moved[#moved + 1] = id      -- (reserved by them too: counts once, follows the sheet)
     elseif fits(id) then mine[#mine + 1] = id moved[#moved + 1] = id end
+  end
+  -- (their extra reserves go first, so all their picks fit)
+  if s.xr and s.xr[from] then
+    s.xr[to] = s.xr[to] or s.xr[from]
+    s.xr[from] = nil
   end
   local oldClass = s.res[from] and s.res[from].c
   S.set(s, from, nil, {}, true, now)
@@ -290,10 +295,6 @@ function G.rename(s, from, to, class, now)
   s.nm = type(s.nm) == "table" and s.nm or {}
   for k, v in pairs(s.nm) do if v == from then s.nm[k] = to end end
   s.nm[from] = to
-  if s.xr and s.xr[from] then
-    s.xr[to] = s.xr[to] or s.xr[from]
-    s.xr[from] = nil
-  end
   S.bump(s, now)
   LR.leaderChanged(s)
   return true

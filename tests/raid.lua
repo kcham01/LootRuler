@@ -94,6 +94,37 @@ check("raiders see the hard reserve", cur(bob).hr[HANDWRAPS] and cur(bob).hr[HAN
 ok, why = bob.LR.reserve(cur(bob), HANDWRAPS)
 check("and can't reserve it", not ok and why == "HARD_RESERVED")
 
+section("posting the reserves to the raid")
+local W = lead.LR.Whisper
+local function said(text) for i = #srv.chat, 1, -1 do if srv.chat[i].channel == "RAID" and srv.chat[i].text:find(text, 1, true) then return true end end return false end
+check("the leader posts how to reserve", W.announce(s))
+srv:tick(3)
+check("one line says the rules and how to reserve without the addon", said("Soft reserves are open for Karazhan: 2 reserves each. Reserve in the LootRuler addon, or type \"!lr <item link>\" in raid chat."))
+check("and what's hard reserved", said("Hard reserved: |cffa335ee|Hitem:" .. HANDWRAPS))
+lead.LR.db.settings.raidCommands = false
+W.announce(s)
+srv:tick(3)
+check("with !lr in raid chat off, it says to whisper", said("or whisper me \"!lr <item link>\"."))
+check("and so does the short how-to", W.howTo() == "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon.")
+lead.LR.db.settings.raidCommands = true
+check("the short how-to otherwise says raid chat", W.howTo():find("Type !lr [linked item] in raid chat", 1, true) == 1)
+
+section("sharing with the guild")
+lead.LR.setGuild(s, false)
+srv:tick(2)
+lead.LR.setLocked(s, true)
+srv:tick(2)
+check("not shared with the guild: guild members outside the group stop hearing changes", cur(ann).locked and not cara.LR.session(s.id).locked)
+lead.LR.setLocked(s, false)
+lead.LR.setGuild(s, true)
+srv:tick(3)
+check("shared again: they catch up", cara.LR.session(s.id).guild and not cara.LR.session(s.id).locked)
+lead.LR.setLocked(s, true)
+srv:tick(2)
+check("and hear the next change", cara.LR.session(s.id).locked)
+lead.LR.setLocked(s, false)
+srv:tick(2)
+
 section("whispers from players without the addon")
 local r
 r = ask("!lr Dragonspine Trophy")
@@ -604,6 +635,36 @@ check("sorted into the list's groups, one move at a time", right and doneMoves a
 lead.LR.sortGroups(swap, function(m) doneMoves = m end)
 srv:tick(2)
 check("sorting again moves nobody", doneMoves == 0)
+
+section("saved data that's wrong")
+local LS = lead.LR.Session
+local nowT = lead.LR.U.now()
+local old = LS.new("Saved-Dreamscythe", "Karazhan", 2, true, nowT - 8 * 86400)
+old.won = { { p = "Ann-Dreamscythe", i = WATCH, k = "MS", at = nowT - 8 * 86400 } }
+old.updated = nowT - 8 * 86400
+local kept = LS.new("Saved-Dreamscythe", "Karazhan", 2, true, nowT)
+local saved = {
+  sessions = { junk = { raid = 5 }, [old.id] = old, [kept.id] = kept },
+  mine = { [kept.id] = { i = { WATCH, "x" } }, [old.id] = { i = { WATCH } }, gone = { i = {} } },
+  settings = { autoLootRules = { { what = "q2", to = "me" }, "junk", { what = 5 } }, autoRollRules = { [WATCH] = "pass", [SIGNET] = "eat", x = "pass" },
+    rollScale = 9, soundChannel = "Loud", raidWarning = "yes" },
+  profiles = { Healer = { rollScale = 1.5, raidWarning = 3 }, [5] = {}, ["A name far too long for a profile"] = {}, Bad = "x" },
+  ui = "nonsense",
+  current = "junk",
+}
+local sv = srv:client({ name = "Saved", class = "MAGE" }, saved)
+local sdb = sv.LR.db
+check("a session that isn't one is dropped", sdb.sessions.junk == nil and sdb.current == nil)
+check("one nobody touched for a week goes to past raids", sdb.sessions[old.id] == nil and sdb.history[1] and sdb.history[1].id == old.id
+  and #sdb.history[1].won == 1)
+check("a recent one stays", sdb.sessions[kept.id] ~= nil)
+check("saved picks must be items, and for a session that's kept", next(sdb.mine) == nil)
+check("loot rules that make no sense are dropped", #sdb.settings.autoLootRules == 1 and sdb.settings.autoLootRules[1].what == "q2")
+check("and roll rules", sdb.settings.autoRollRules[WATCH] == "pass" and sdb.settings.autoRollRules[SIGNET] == nil and sdb.settings.autoRollRules.x == nil)
+check("settings of the wrong kind go back to how they start", sdb.settings.rollScale == 1 and sdb.settings.soundChannel == "Master" and sdb.settings.raidWarning == true)
+check("profiles are checked the same way", sdb.profiles.Healer and sdb.profiles.Healer.rollScale == 1.5 and sdb.profiles.Healer.raidWarning == true
+  and sdb.profiles[5] == nil and sdb.profiles["A name far too long for a profile"] == nil and sdb.profiles.Bad == nil)
+check("the window's saved places start over", type(sdb.ui) == "table")
 
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))

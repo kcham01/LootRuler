@@ -297,6 +297,23 @@ Rolls.cancel()
 srv:tick(0.5)
 lead.LR.db.settings.raidWarning = true
 
+section("more time, and letting everyone roll")
+roll = Rolls.start(SIGNET, { secs = 5 })
+srv:tick(0.5)
+local endsAt = roll.ends
+check("+10 seconds gives the roll more time", Rolls.extend(10) and roll.ends >= endsAt + 10 and roll.secs == 15)
+srv:tick(1)
+check("the raid hears it", chat("10 more seconds to roll for", "RAID") ~= nil)
+check("raiders' windows still show it after the old time", (function() srv:tick(5) return frameFor(dan, SIGNET) and frameFor(dan, SIGNET):IsShown() end)())
+srv:tick(12)
+check("it ends at the new time", roll.state == "closed")
+check("a closed roll can't be given more time", not Rolls.extend(10))
+local opened = Rolls.again("OPEN")
+srv:tick(0.5)
+check("Roll it out again opens it to everyone", opened and opened.mode == "OPEN" and opened.state == "open" and Rolls.current == opened)
+Rolls.cancel()
+srv:tick(0.5)
+
 section("calling it off")
 roll = Rolls.start(ROYAL, { secs = 15 })
 srv:tick(0.5)
@@ -447,6 +464,25 @@ check("too far away: no trade, and they're whispered to come", okF and lead.trad
   and chat("I have " .. srv:link(RING) .. " for you. Come close and open a trade with me when you can.", "WHISPER") ~= nil, noteF)
 srv.farAway = nil
 Rolls.dismiss()
+Rolls.undo()
+srv:tick(1)
+srv.inCombat = { [lead] = true }
+local okC, noteC = Rolls.give(RING, full(dan), "MS", { drop = heldKey(RING) })
+srv:tick(1)
+check("in combat: no trade, and the loot master is told to open one after", okC and lead.trading == nil
+  and noteC:find("In combat: open a trade with Dan when it's over", 1, true), noteC)
+srv.inCombat = nil
+Rolls.dismiss()
+-- the item has gone from the loot master's bags (sold, or traded to someone else): they're told
+local ringSlot, ringItem
+for slot, it in pairs(lead.bags) do if it.id == RING then ringSlot, ringItem = slot, it end end
+lead.bags[ringSlot] = nil
+srv:openTrade(lead, dan)
+srv:tick(1)
+check("an item that isn't in my bags any more: I'm told, and nothing goes in", #lead.tradeItems == 0 and chatHasLead("for Dan isn't in your bags (or can't be traded any more)."))
+srv:cancelTrade(lead)
+srv:tick(1)
+lead.bags[ringSlot] = ringItem
 srv:openTrade(lead, dan)
 srv:tick(1)
 srv:completeTrade(lead)
@@ -617,6 +653,24 @@ check("then the loot master picks it up", lead.money == 1234567)
 check("and the turn carries on from where it was", gotItem(30005) and gotItem(30005).name == "Dan", gotItem(30005) and gotItem(30005).name)
 srv:closeLoot(lead)
 set.autoLoot, set.lootGold = false, false
+set.autoLootRules = {}
+-- a rule naming a player: they get it, unless the game can't give it to them
+lead.LR.AutoLoot.add("q2", "Ann")
+check("a rule can name a player", lead.LR.AutoLoot.toText(set.autoLootRules[1].to) == "Ann")
+set.autoLoot = true
+given = #srv.given
+srv:openLoot(lead, { { 30006, 2 } })
+srv:tick(2)
+check("they're given what it matches", gotItem(30006) == ann)
+srv:closeLoot(lead)
+srv.farAway = { [ann] = true }
+srv:openLoot(lead, { { 30007, 2 } })
+srv:tick(2)
+check("too far away to be given it: the loot master is told, and it stays", gotItem(30007) == nil and chatHasLead("couldn't give")
+  and chatHasLead("to Ann by the loot rules (not on the loot list: too far away?)."))
+srv.farAway = nil
+srv:closeLoot(lead)
+set.autoLoot = false
 set.autoLootRules = {}
 
 section("auto-roll (each raider's own rules)")
@@ -969,7 +1023,9 @@ Rolls.dismiss()
 srv.lostHandout = true
 Rolls.give(30021, full(dan), "OS", { link = srv:link(30021), slot = 2 })
 srv:tick(3)
-check("an item still in the corpse after a moment: taken back too", onList(30021) == nil and chat("couldn't go to Dan (the game didn't hand it over)") ~= nil)
+check("an item still in the corpse after a moment: taken back too", onList(30021) == nil, onList(30021))
+srv:tick(5)                      -- (raid chat is sent a little at a time)
+check("and the raid hears it", chat("couldn't go to Dan (the game didn't hand it over)") ~= nil)
 srv.lostHandout = nil
 Rolls.dismiss()
 srv:closeLoot(lead)

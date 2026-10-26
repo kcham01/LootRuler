@@ -45,16 +45,6 @@ function U.sameItems(a, b)
   return true
 end
 
---- a stable sort (equal items keep their order)
-function U.sort(list, less)
-  for i = 2, #list do
-    local x, j = list[i], i - 1
-    while j >= 1 and less(x, list[j]) do list[j + 1] = list[j] j = j - 1 end
-    list[j + 1] = x
-  end
-  return list
-end
-
 ---------------------------------------------------------------------- text
 function U.trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
 --- a Lua pattern that matches what a game string (GlobalStrings: "%s receives loot: %s.") makes, capturing

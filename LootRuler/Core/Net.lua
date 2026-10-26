@@ -133,11 +133,11 @@ end
 
 function LR.loadDB()
   local fresh = LootRulerDB == nil
-  LootRulerDB = LootRulerDB or {}
+  LootRulerDB = type(LootRulerDB) == "table" and LootRulerDB or {}
   db = LootRulerDB
-  db.sessions = db.sessions or {}     -- id -> session (ours as leader, or the latest copy from its leader)
-  db.mine = db.mine or {}             -- id -> { i = my picks, dirty = not yet confirmed by the leader }
-  db.ui = db.ui or {}
+  db.sessions = type(db.sessions) == "table" and db.sessions or {}  -- id -> session (ours as leader, or the latest copy from its leader)
+  db.mine = type(db.mine) == "table" and db.mine or {}              -- id -> { i = my picks, dirty = not yet confirmed by the leader }
+  db.ui = type(db.ui) == "table" and db.ui or {}
   if fresh then db.ui.toured = false end            -- (a new player: the welcome tour, the first time they open it)
   db.settings = LR.checkSettings(db.settings)
   -- settings saved under a name (UI/Welcome.lua): checked the same way
@@ -164,7 +164,11 @@ function LR.loadDB()
       db.sessions[id] = nil db.mine[id] = nil
     end
   end
-  for id in pairs(db.mine) do if not db.sessions[id] then db.mine[id] = nil end end
+  for id, m in pairs(db.mine) do
+    local ok = db.sessions[id] and type(m) == "table" and type(m.i) == "table" and #m.i <= S.MAX_SR + S.MAX_EXTRA
+    if ok then for _, item in ipairs(m.i) do if type(item) ~= "number" then ok = false end end end
+    if not ok then db.mine[id] = nil end
+  end
   if db.current and not db.sessions[db.current] then db.current = nil end
   LR.db = db
   return db
@@ -565,14 +569,6 @@ function LR.endSession(s)
   if not LR.isLeader(s) then return end
   LR.History.archive(s, U.now())                -- what it gave out is kept under Past raids (Core/History.lua)
   for _, ch in ipairs(publishTo(s)) do send({ t = "E", id = s.id }, ch) end
-  db.sessions[s.id] = nil
-  db.mine[s.id] = nil
-  if db.current == s.id then db.current = nil end
-  LR.changed("session")
-end
-
---- raiders forget a session (it stays with its leader)
-function LR.forget(s)
   db.sessions[s.id] = nil
   db.mine[s.id] = nil
   if db.current == s.id then db.current = nil end

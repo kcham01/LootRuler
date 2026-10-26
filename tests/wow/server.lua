@@ -234,6 +234,7 @@ function Server:install(p)
     if q and p.inspected == q then return worn(q)[slot] end
   end
   G.GetInventoryItemID = function(unit, slot) local l = G.GetInventoryItemLink(unit, slot) return l and tonumber(l:match("item:(%d+)")) end
+  G.InCombatLockdown = function() return srv.inCombat and srv.inCombat[p] or false end
   G.CanInspect = function(unit) local q = unitPlayer(unit) return q ~= nil and q ~= p and q.online end
   G.NotifyInspect = function(unit)
     local q = unitPlayer(unit)
@@ -582,6 +583,19 @@ function Server:completeTrade(a)
       p.M.fire("TRADE_ACCEPT_UPDATE", 1, 1)
       p.M.fire("TRADE_CLOSED")
       p.M.fire("UI_INFO_MESSAGE", 0, "Trade complete.")
+      p.G.TradeFrame:Hide()
+    end
+    p.trading, p.tradeItems, p.tradeMoney, p.tradeKeep = nil, {}, 0, nil
+  end
+end
+
+--- a closes the trade without accepting: everything stays where it was
+function Server:cancelTrade(a)
+  local b = a.trading
+  for _, p in ipairs({ a, b }) do
+    for _, it in ipairs(p.tradeItems or {}) do it.locked = nil end
+    if p.client then
+      p.M.fire("TRADE_CLOSED")
       p.G.TradeFrame:Hide()
     end
     p.trading, p.tradeItems, p.tradeMoney, p.tradeKeep = nil, {}, 0, nil
