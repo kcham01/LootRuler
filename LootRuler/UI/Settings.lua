@@ -2,7 +2,7 @@
 -- doesn't always use (plus ones, priority lists, GDKP, ...) get a switch here when they arrive, and stay out
 -- of everyone's way until a leader turns them on.
 local _, LR = ...
-local U, K = LR.U, LR.K
+local U, K, R = LR.U, LR.K, LR.Roll
 local UI = LR.UI
 
 --- a yes/no option: a chip, and what it does underneath
@@ -86,6 +86,23 @@ function UI.settingsView(f)
     toggle(p, "hideWhispers", "Hide !lr messages in my chat", "\"!lr\" whispers, \"!lr\" lines in raid chat and LootRuler's answers stay out of your chat while soft reserves are open.")
   end)
 
+  f:panel("Roll types", function(p)
+    p:note("Besides main spec (/roll) and off spec (/roll 99), items rolled out to everyone can have your own kinds of roll, each with its own number. They count after off spec, in this order. Everyone sees them in the roll window and in raid chat.")
+    for i, x in ipairs(set.rollKinds) do
+      local b = K.get(p.owner, "item", p.parent)
+      K.setItem(b, p.width, "Interface\\Buttons\\UI-GroupLoot-Dice-Up", x.n,
+        ("/roll %d. Counts after %s."):format(x.hi, i == 1 and "off spec" or set.rollKinds[i - 1].n), "",
+        { text = "x", tip = "Take it off", click = function() table.remove(set.rollKinds, i) UI.render() end })
+      p:place(b, 36)
+      p:gap(2)
+    end
+    local acts = {}
+    local transmog = R.addKind(set.rollKinds, "Transmog", 98)
+    if transmog then acts[#acts + 1] = { label = "Add Transmog (/roll 98)", click = function() set.rollKinds = transmog UI.render() end } end
+    if #set.rollKinds < R.MAX_EXTRA then acts[#acts + 1] = { label = "Add a roll type", click = function() UI.addRollKind() end } end
+    if #acts > 0 then p:buttons(acts, "left") end
+  end)
+
   f:panel("Loot rules (master looter)", function(p)
     toggle(p, "autoLoot", "Hand out loot by my rules", "When you open a corpse with master loot, items your rules match go straight to whoever the rule says. Anything someone reserved is always rolled for instead.")
     local s = LR.Rolls.session()
@@ -158,6 +175,35 @@ function UI.addLootRule()
     end
     f:buttons({ { label = "Cancel", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and to), click = function() LR.AutoLoot.add(what, to) h.close() UI.render() end } })
+  end)
+end
+
+--- a sheet to add one of my own roll types: a name and its /roll number
+function UI.addRollKind()
+  local name, num, why = "", "", nil
+  UI.openSheet("Add a roll type", function(f, h)
+    f:text("What it's for", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetText(name)
+    e:SetScript("OnTextChanged", function(self, user) if user then name = self:GetText() end end)
+    f:note("A short name, like Transmog, Alt or Pvp.")
+    f:gap(6)
+    f:text("Its roll: /roll ...", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+    local n = K.get(f.owner, "edit", f.parent)
+    f:place(n, 22, 6, 80)
+    n:SetText(num)
+    n:SetScript("OnTextChanged", function(self, user) if user then num = self:GetText() end end)
+    f:note("A number from 2 to 98 that no other kind uses.")
+    if why then f:note(why, K.RED) end
+    f:buttons({ { label = "Cancel", click = function() h.close() end },
+      { label = "Add it", click = function()
+        local list, no = R.addKind(LR.db.settings.rollKinds, name, num)
+        if not list then why = no h.redraw(true) return end
+        LR.db.settings.rollKinds = list
+        h.close()
+        UI.render()
+      end } })
   end)
 end
 

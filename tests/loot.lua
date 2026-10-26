@@ -711,6 +711,37 @@ check("only whoever runs loot can give items out", not okRaider)
 srv:closeLoot(lead)
 srv:tick(1)
 
+section("the loot master's own roll types")
+lead.LR.db.settings.rollKinds = { { n = "Transmog", hi = 98 } }
+srv:openLoot(lead, { { TALISMAN, 4 } })
+srv:tick(0.5)
+roll = Rolls.start(TALISMAN, { link = srv:link(TALISMAN), slot = 1 })
+srv:tick(0.5)
+check("raid chat says how to roll for it", chat("/roll 99 for off spec, /roll 98 for Transmog.", "RAID_WARNING") ~= nil)
+local ft = frameFor(ann, TALISMAN)
+check("Ann's window has a Transmog button", ft and ft.extras[1]:IsShown() and ft.extras[1]:IsEnabled() and ft.extras[1].text:GetText() == "Transmog (98)",
+  ft and ft.extras[1].text:GetText())
+srv:willRoll(ann, 70)
+ann.M.click(ft.extras[1])
+srv:roll(pug, 1, 98, 90)
+srv:tick(0.3)
+check("her button rolls 1-98, and it counts as Transmog", roll.rolled["ann-dreamscythe"] and roll.rolled["ann-dreamscythe"].kind == "X1"
+  and roll.rolled["ann-dreamscythe"].hi == 98)
+check("so does a /roll 98 typed by someone without the addon", roll.rolled["pug-dreamscythe"] and roll.rolled["pug-dreamscythe"].kind == "X1")
+check("and she can't roll again", not frameFor(ann, TALISMAN).extras[1]:IsEnabled())
+check("raiders see it by its name", status(ann, TALISMAN):find("Pug 90 (Transmog)", 1, true) ~= nil, status(ann, TALISMAN))
+srv:tick(22)
+check("the result says Transmog", chat("Pug wins with 90 (Transmog)") ~= nil)
+clickText(lead, "Give to Pug", lead.G.LootRulerMasterFrame)
+srv:tick(1)
+check("given: off spec on the list, by its name", wonBy(s, TALISMAN):find(full(pug) .. ":OS", 1, true) ~= nil and s.won[#s.won].xn == "Transmog")
+check("and the raid hears it", chat("goes to Pug (Transmog 90)") ~= nil)
+check("raiders' copies have its name", ann.LR.current().won[#ann.LR.current().won].xn == "Transmog")
+Rolls.dismiss()
+srv:closeLoot(lead)
+lead.LR.db.settings.rollKinds = {}
+srv:tick(1)
+
 section("the 2 hours to trade running out")
 local HELD, OWED = 28762, 28767
 srv:lootTo(lead, HELD)

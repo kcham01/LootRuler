@@ -59,11 +59,12 @@ LR.DEFAULTS = {
   reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
   rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
-  tradeAnnounce = true,
-  tradeWarn = true,
-  announceLoot = true,
-  autoTrade = true,        -- giving out an item that's in my bags opens a trade with the winner (Core/Drops.lua)     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)    -- when I'm running loot, the raid hears what I trade and to whom
+  tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom
+  tradeWarn = true,        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)
+  announceLoot = true,     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)
+  autoTrade = true,        -- giving out an item that's in my bags opens a trade with the winner (Core/Drops.lua)
   rollSeconds = 20,        -- how long everyone has to roll
+  rollKinds = {},          -- my own roll types for rolls open to everyone: { { n = "Transmog", hi = 98 } } (Core/Roll.lua)
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
   autoLoot = false,        -- the master looter's loot rules hand out what they match (Core/AutoLoot.lua)
@@ -96,6 +97,7 @@ function LR.loadDB()
   for id, action in pairs(db.settings.autoRollRules) do
     if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then db.settings.autoRollRules[id] = nil end
   end
+  db.settings.rollKinds = LR.Roll.checkKinds(db.settings.rollKinds) or {}
   -- guild books: checked like a message from another player
   db.guilds = type(db.guilds) == "table" and db.guilds or {}
   for g, book in pairs(db.guilds) do

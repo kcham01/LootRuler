@@ -459,6 +459,51 @@ do
   check("so Ghøst can't roll on Ghost's reserve", not R.canRoll(R.new("k2", BROOCH, { mode = "SR", who = { { "Ghost-Dreamscythe", 1 } } }), "Ghøst-Dreamscythe"))
 end
 
+print("== the loot master's own roll types")
+do
+  check("checked: names cleaned, bad tops and repeats dropped, four at most", (function()
+    local k = R.checkKinds({ { n = " Transmog|r ", hi = 98 }, { n = "Bad", hi = 99 }, { n = "Dup", hi = 98 }, { n = "", hi = 50 },
+      { n = "Alt", hi = 97 }, { n = "Half", hi = 50.5 }, "junk", { n = "Pvp", hi = 96 }, { n = "Fun", hi = 95 }, { n = "Fifth", hi = 94 } })
+    return #k == 4 and k[1].n == "Transmogr" and k[1].hi == 98 and k[2].n == "Alt" and k[4].n == "Fun"
+  end)())
+  check("nothing sensible: none", R.checkKinds({ { n = "x", hi = 100 } }) == nil and R.checkKinds("x") == nil)
+  local list, why = R.addKind({}, "Transmog", 98)
+  check("adding one", list and #list == 1 and list[1].n == "Transmog")
+  list = R.addKind(list, "Alt", 97)
+  check("and another", list and #list == 2)
+  check("a number that's taken is refused", select(2, R.addKind(list, "Pvp", 98)) == "/roll 98 is Transmog already.")
+  check("so is a name that's taken", select(2, R.addKind(list, "alt", 50)) == "There's one called Alt already.")
+  check("and 99 or 100", R.addKind(list, "Pvp", 99) == nil and R.addKind(list, "Pvp", 100) == nil and R.addKind(list, "Pvp", 1) == nil)
+  check("and no name", select(2, R.addKind(list, "  ", 50)) == "Give it a name.")
+  local roll = R.new("x", 28525, { mode = "OPEN", xk = list })
+  local o = R.options(roll, ANN)
+  check("a roll open to everyone offers them after off spec", o[1] == "MS" and o[2] == "OS" and o[3] == "X1" and o[4] == "X2")
+  check("/roll 98 counts as Transmog", R.add(roll, ANN, 97, 1, 98).kind == "X1" and R.label(roll, roll.entries[1]) == "Transmog")
+  check("/roll 97 as Alt", R.add(roll, BOB, 90, 1, 97).kind == "X2")
+  check("another number doesn't count", R.add(roll, DAN, 50, 1, 96).why == "range")
+  check("Transmog wins over Alt, whatever the numbers", R.result(roll).p == ANN)
+  R.add(roll, CARA, 2, 1, 99)
+  check("off spec wins over both", R.result(roll).p == CARA)
+  R.add(roll, "Eve-Dreamscythe", 1, 1, 100)
+  check("main spec over everything", R.result(roll).p == "Eve-Dreamscythe")
+  local plain = R.new("y", 28525, { mode = "OPEN" })
+  check("a roll without them: /roll 98 doesn't count", R.add(plain, ANN, 97, 1, 98).why == "range")
+  local sr = R.new("z", WATCH, { mode = "SR", who = { { ANN, 1 } }, xk = list })
+  check("a reserved item: only the reserve", #R.options(sr, ANN) == 1 and R.add(sr, ANN, 50, 1, 98).why == "range")
+  local tie = R.new("t", 28525, { mode = "TIE", who = { ANN, BOB }, tie = "X1", xk = list })
+  check("a tie on Transmog is rolled again as Transmog", R.add(tie, ANN, 40, 1, 98).kind == "X1" and R.add(tie, BOB, 30, 1, 100).why == "range")
+  local tied = R.new("u", 28525, { mode = "OPEN", xk = list })
+  R.add(tied, ANN, 60, 1, 98) R.add(tied, BOB, 60, 1, 98)
+  local _, who = R.result(tied)
+  check("two equal Transmog rolls tie", who and #who == 2)
+  -- recorded as off spec, with its name, so older versions read it
+  local ws = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 100)
+  S.award(ws, 28525, ANN, "OS", 97, 200, nil, nil, nil, "Transmog")
+  check("won on one: off spec, by its name", ws.won[1].k == "OS" and ws.won[1].xn == "Transmog" and S.valid(ws))
+  ws.won[1].xn = { "x" }
+  check("a name that isn't text is refused when loaded", not S.valid(ws))
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

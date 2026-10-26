@@ -572,10 +572,45 @@ run("settings", function()
   shot("loot-rules", ann)
   sf:SetVerticalScroll(0)
   clickText("Hand out loot by my rules", nil, ann)
+  -- the loot master's own roll types
+  clickText("Add Transmog (/roll 98)", nil, ann)
+  local kinds = ann.LR.db.settings.rollKinds
+  check("Transmog in one click", #kinds == 1 and kinds[1].n == "Transmog" and kinds[1].hi == 98 and visible("/roll 98. Counts after off spec.", ann))
+  check("and only once", not visible("Add Transmog (/roll 98)", ann))
+  clickText("Add a roll type", nil, ann)
+  local boxes = {}
+  local function edits(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() then boxes[#boxes + 1] = c end edits(c) end end
+  edits(ann.LR.UI.topSheet())
+  boxes[1]:SetText("Alt") boxes[1]._scripts.OnTextChanged(boxes[1], true)
+  boxes[2]:SetText("98") boxes[2]._scripts.OnTextChanged(boxes[2], true)
+  clickText("Add it", nil, ann)
+  check("a number that's taken is refused, and says why", visible("/roll 98 is Transmog already.", ann) and #ann.LR.db.settings.rollKinds == 1)
+  boxes = {}
+  edits(ann.LR.UI.topSheet())
+  boxes[2]:SetText("97") boxes[2]._scripts.OnTextChanged(boxes[2], true)
+  clickText("Add it", nil, ann)
+  kinds = ann.LR.db.settings.rollKinds
+  check("a name and a number of my own", #kinds == 2 and kinds[2].n == "Alt" and kinds[2].hi == 97 and visible("/roll 97. Counts after Transmog.", ann))
+  local rt = ann.M.findText("/roll 98. Counts after off spec.", true, ann.G.LootRulerFrame)[1]
+  sf:SetVerticalScroll(math.min(sf:GetVerticalScrollRange(), math.max(0, sf:GetVerticalScroll() + (sf:GetTop() or 0) - (rt.fs:GetTop() or 0) - 150)))
+  shot("roll-types", ann)
+  sf:SetVerticalScroll(0)
   clickText("Try the roll window", nil, ann)
   local shown = false
-  for _, fr in ipairs(ann.LR.UI.rollFrames()) do if fr:IsShown() and fr.copy.test then shown = true end end
+  for _, fr in ipairs(ann.LR.UI.rollFrames()) do if fr:IsShown() and fr.copy.test then shown = fr end end
   check("the pretend roll window shows", shown)
+  check("with a button for each roll type", shown and shown.extras[1]:IsShown() and shown.extras[2]:IsShown() and shown.extras[2].text:GetText() == "Alt (97)")
+  shot("roll-types-window", ann, { shown and shown:GetName() or "LootRulerRollFrame1" })
+  ann.M.click(shown.extras[2])
+  local mineE = shown.copy.rolled[ann.LR.Roll.key(ann.LR.U.me())]
+  check("its button rolls 1-97, as Alt", mineE and mineE.kind == "X2" and mineE.hi == 97 and ann.LR.Roll.label(shown.copy, mineE) == "Alt")
+  check("the window lists it by name", shown.list:GetText():find("Alt", 1, true) ~= nil, shown.list:GetText())
+  ann.LR.UI.show("settings")
+  srv:tick(0.3)
+  ann.M.click(rowFor("Transmog", ann).act)
+  kinds = ann.LR.db.settings.rollKinds
+  check("a roll type can be taken off", #kinds == 1 and kinds[1].n == "Alt" and visible("/roll 97. Counts after off spec.", ann))
+  ann.LR.db.settings.rollKinds = {}
   local before = #ann.M.chat
   ann.G.SlashCmdList.LOOTRULER("help")
   check("/lr help lists the commands", #ann.M.chat > before + 5 and ann.M.chat[#ann.M.chat]:find("/lr minimap", 1, true))
