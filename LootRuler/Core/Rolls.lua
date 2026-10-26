@@ -740,16 +740,30 @@ local function nextInspect()
   local job = table.remove(inspectQueue, 1)
   local roll = Rolls.current
   local unit = LR.unitOf(job.p)
-  if roll ~= job.roll or roll.state == "cancelled" or (roll.gear and roll.gear[R.key(job.p)]) or not unit or unit == "player"
-    or not CanInspect(unit) or not CheckInteractDistance(unit, 1) then
+  -- (a roll's job is only worth doing while that roll is on; a job with its own read is always)
+  local stale = not job.read and (roll ~= job.roll or roll.state == "cancelled" or (roll.gear and roll.gear[R.key(job.p)]))
+  if stale or not unit or unit == "player" or not CanInspect(unit) or not CheckInteractDistance(unit, 1) then
+    if job.read and job.failed then job.failed(unit and "far" or "gone") end
     nextInspect()
     return
   end
   inspecting = { job = job, unit = unit, guid = UnitGUID(unit) }
   NotifyInspect(unit)
   C_Timer.After(3, function()          -- (no answer: on to the next)
-    if inspecting and inspecting.job == job then inspecting = nil ClearInspectPlayer() nextInspect() end
+    if inspecting and inspecting.job == job then
+      inspecting = nil
+      ClearInspectPlayer()
+      if job.failed then job.failed("silent") end
+      nextInspect()
+    end
   end)
+end
+--- someone to inspect for something else (the gear overview, Core/Overview.lua): read(unit) once the game has their gear,
+--- failed(why) when they can't be inspected now ("far", "gone")
+function Rolls.inspect(player, read, failed)
+  for _, j in ipairs(inspectQueue) do if j.read and U.samePlayer(j.p, player) then return end end
+  inspectQueue[#inspectQueue + 1] = { p = player, read = read, failed = failed }
+  nextInspect()
 end
 --- a roller I'd like to know the gear of (the roll I'm running)
 function Rolls.wantGear(roll, player)
@@ -769,6 +783,12 @@ function Rolls.inspectReady(guid)
   local x = inspecting
   if not x or guid ~= x.guid then return end
   inspecting = nil
+  if x.job.read then
+    x.job.read(x.unit)
+    ClearInspectPlayer()
+    C_Timer.After(1, nextInspect)
+    return
+  end
   local roll = x.job.roll
   local links = {}
   for _, slot in ipairs(LR.wornIn(roll.id)) do

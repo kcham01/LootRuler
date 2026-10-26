@@ -310,7 +310,12 @@ function UI.lootView(f, s)
       end } or nil,
     }, "left")
   end
-  if runner or leader then f:buttons({ { label = "Bag check", click = function() UI.bagCheckSheet() end } }, "left") end
+  if runner or leader then
+    f:buttons({
+      { label = "Bag check", click = function() UI.bagCheckSheet() end },
+      { label = "Raid gear", click = function() UI.gearSheet() end },
+    }, "left")
+  end
 
   -- what the loot master still has to hand over
   local deliver = Drops.toDeliver()

@@ -385,7 +385,8 @@ function Server:install(p)
   -- items: the test can say which ones the client has loaded (names from the data until then)
   G.C_Item = {
     GetItemInfo = function(id)
-      local it = srv.itemInfo and srv.itemInfo(id)
+      id = tonumber(id) or tonumber(tostring(id):match("item:(%d+)"))      -- (an item number, or a link, as the game takes)
+      local it = id and srv.itemInfo and srv.itemInfo(id)
       if not it then return nil end
       return it.name, it.link, it.quality, 115, 70, "Armor", "Plate", 1, "INVTYPE_HAND", 133000 + id % 100
     end,

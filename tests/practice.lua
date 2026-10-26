@@ -148,6 +148,13 @@ for _ in pairs(bc.answers) do answers = answers + 1 end
 check("the pretend players answer a bag check", answers == #P.players + 1 and shown("answered the bag check") ~= nil)
 check("everyone in the report has counts", (function() for _, r in ipairs(LR.Bags.report(bc)) do if not r.counts then return false end end return true end)())
 
+section("the gear overview")
+check("asking for everyone's gear", LR.Overview.ask())
+srv:tick(4)
+local withGear = 0
+for _, x in ipairs(P.players) do if LR.Overview.data[LR.Roll.key(x.name)] then withGear = withGear + 1 end end
+check("the pretend players send made-up gear from the loot lists", withGear == #P.players and shown("sent their gear") ~= nil)
+
 section("the guild book is a copy")
 local points = LR.Book.points(realBook, "Jaina")
 LR.Guild.edit(function(book, t) return LR.Book.setPoints(book, "Jaina", 50, t) end)

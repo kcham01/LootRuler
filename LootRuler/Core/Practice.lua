@@ -388,6 +388,37 @@ local function answerBatch(batch)
   after(2 + math.random() * 2, step)
 end
 
+-- items for each character slot, from the loot lists (made once, the first time a practice raid shows its gear)
+local bySlot
+local function itemsBySlot()
+  if bySlot then return bySlot end
+  bySlot = {}
+  for id in pairs(LR.ITEMS or {}) do
+    for _, slot in ipairs(LR.wornIn(id)) do
+      bySlot[slot] = bySlot[slot] or {}
+      table.insert(bySlot[slot], id)
+    end
+  end
+  for _, list in pairs(bySlot) do table.sort(list) end
+  return bySlot
+end
+
+--- the pretend players answer "what do you wear?" with made-up gear from the loot lists, a moment apart
+function P.answerGear()
+  local slots = itemsBySlot()
+  for i, x in ipairs(P.players) do
+    after(0.3 + 0.2 * i, function()
+      local e = {}
+      for _, slot in ipairs(LR.Overview.SLOTS) do
+        local list = slots[slot]
+        if list and #list > 0 and math.random() < 0.95 then e[slot] = LR.itemLink(pick(list)) end
+      end
+      heard(x, "their gear", "sent")
+      LR.Overview.got(x.name, (LR.Overview.clean(e)), "addon")
+    end)
+  end
+end
+
 --- the pretend players answer a bag check, a moment apart: mostly a few of each, now and then none
 function P.answerBags(check)
   for i, x in ipairs(P.players) do
