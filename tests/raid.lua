@@ -849,6 +849,22 @@ check("someone with LootRuler joins and asks what's open: only they're sent it, 
   count(sent, "T", "WHISPER") == 1 and count(sent, "T", "RAID") == 0 and count(sent, "T", "GUILD") == 0, #sent)
 check("and they have it", dorran.LR.session(fs.id) ~= nil and dorran.LR.current() and dorran.LR.current().id == fs.id)
 check("the leader's version is said to the raid, once in a while, not whispered to each newcomer", count(sent, "V", "WHISPER") == 0)
+sent = sendsOf(lead, function()
+  -- (a busy moment: the leader's sending is backed up, as in a full raid, so copies have to wait their turn)
+  local seed = 7
+  for _ = 1, 20 do
+    local pad = {}
+    for k = 1, 400 do seed = (seed * 1103515245 + 12345) % 2147483648 pad[k] = string.char(33 + seed % 90) end
+    lead.LR.Net.send({ t = "ZZ", pad = table.concat(pad) }, "RAID")      -- (a kind nobody knows: ignored)
+  end
+  for i = 1, 5 do
+    lead.LR.configure(fs, 1 + (i % 2), true)              -- (a change: the next copy is newer)
+    lead.LR.publish(fs, true)                             -- (sent at once, five times in a row)
+  end
+  srv:tick(30)
+end)
+check("five copies in a row: the one going out, then only the newest (to the raid)", count(sent, "T", "RAID") == 2, count(sent, "T", "RAID"))
+check("raiders end up with the newest", cur(ann).rev == fs.rev and cur(ann).sr == fs.sr)
 srv:leaveGroup(quiet)
 srv:leaveGroup(dorran)
 srv:logout(dorran)
