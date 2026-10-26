@@ -287,16 +287,20 @@ end
 --- the rolls that count, best first; the ones that don't after them
 function R.standings(roll)
   local good, bad = {}, {}
+  local ranks, plus = {}, {}        -- (worked out once for each roll, not in every comparison)
   for _, e in ipairs(roll.entries) do
-    if e.kind then good[#good + 1] = e else bad[#bad + 1] = e end
+    if e.kind then
+      good[#good + 1] = e
+      local r = rank(roll, e.kind)
+      ranks[e] = r
+      plus[e] = r == 2 and R.plusOnes(roll, e.p) or 0     -- main spec and boosted: fewer +1s first
+    else bad[#bad + 1] = e end
   end
   table.sort(good, function(a, b)
-    local ra, rb = rank(roll, a.kind), rank(roll, b.kind)
+    local ra, rb = ranks[a], ranks[b]
     if ra ~= rb then return ra < rb end
-    if ra == 2 then              -- main spec and boosted: fewer +1s first
-      local pa, pb = R.plusOnes(roll, a.p), R.plusOnes(roll, b.p)
-      if pa ~= pb then return pa < pb end
-    end
+    local pa, pb = plus[a], plus[b]
+    if pa ~= pb then return pa < pb end
     if a.n ~= b.n then return a.n > b.n end
     return a.seq < b.seq
   end)
