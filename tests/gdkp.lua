@@ -60,6 +60,10 @@ local function clickText(p, text, root)
   error("nothing to click: " .. text, 2)
 end
 local function say(p, text) srv:chatMessage(p, text, "RAID") end
+local function copyOf(p, id)
+  for i = #p.LR.Rolls.order, 1, -1 do local c = p.LR.Rolls.seen[p.LR.Rolls.order[i]] if c and c.id == id then return c end end
+end
+local function noticed(p, text) for _, n in ipairs(p.M.notices or {}) do if n:find(text, 1, true) then return true end end return false end
 local Rolls = lead.LR.Rolls
 local G = lead.LR.Gdkp
 
@@ -90,6 +94,8 @@ srv:tick(0.5)
 local roll = Rolls.mine()
 check("the first one is up", roll and roll.id == WATCH and roll.mode == "BID" and roll.state == "open" and #Rolls.queue == 3)
 check("the raid is told how to bid", chat("Auction: ", "RAID_WARNING") and chat("Bids start at 100g, each at least 25g more than the last. Type your bid in raid chat (just the number).", "RAID_WARNING"))
+check("raiders see what's coming up next", copyOf(ann, WATCH) and copyOf(ann, WATCH).upNext and copyOf(ann, WATCH).upNext[1] == SIGNET and copyOf(ann, WATCH).upNext.n == 3)
+check("in their window", frameFor(ann, WATCH).note:GetText():find("Next:", 1, true) ~= nil and frameFor(ann, WATCH).note:GetText():find("Brooch of Unquenchable Fury", 1, true) ~= nil, frameFor(ann, WATCH).note:GetText())
 local fa = frameFor(ann, WATCH)
 check("Ann's window bids the least that counts, or a jump", fa and fa.dice:IsEnabled() and fa.dice.label:GetText() == "100g" and fa.coin.label:GetText() == "200g")
 ann.M.click(fa.dice)
@@ -98,9 +104,13 @@ check("clicking types the bid in raid chat", chat("100", "RAID") and chat("100",
 check("and it counts", roll.top and roll.top.p == full(ann) and roll.top.n == 100)
 check("Ann's window says she's highest, and won't bid against her", fa.status:GetText():find("You have the highest bid: 100g", 1, true) and not fa.dice:IsEnabled())
 check("Bob's window has the next amounts", frameFor(bob, WATCH).dice.label:GetText() == "125g" and frameFor(bob, WATCH).status:GetText():find("Highest bid: Ann-Dreamscythe, 100g", 1, true))
+local noticesBefore = #ann.M.notices
 say(pug, "150")
 srv:tick(0.5)
 check("Pug types a bid without the addon", roll.top.p == full(pug) and roll.top.n == 150 and frameFor(ann, WATCH).copy.top.n == 150)
+check("Ann had the highest bid: she's told she's outbid, and by how much to win it back", #ann.M.notices == noticesBefore + 1
+  and ann.M.notices[#ann.M.notices]:find("Outbid on [Moroes' Lucky Pocket Watch]: Pug bid 150g. Bid 175g or more", 1, true) ~= nil, ann.M.notices[#ann.M.notices])
+check("nobody else is", not noticed(bob, "Outbid"))
 say(bob, "160")
 srv:tick(0.5)
 check("too little: it doesn't count, and Bob is told", roll.top.p == full(pug) and whisperTo(bob, "The lowest bid now is 175g.") ~= nil)
@@ -110,12 +120,15 @@ check("chat that isn't a bid is left alone", #roll.entries == 3)
 srv:whisper(dan, lead, "!lr bid 200")
 srv:tick(0.5)
 check("Dan bids by whisper", roll.top.p == full(dan) and roll.top.n == 200 and whisperTo(dan, "Your bid of 200g") ~= nil)
+srv:tick(roll.ends - lead.G.GetTime() - 9.5)
+check("a final call with 10 seconds left, with the highest bid", chat("Final call for ", "RAID_WARNING") and chat(": 200g by Dan. 10 seconds.", "RAID_WARNING"))
 srv:tick(roll.ends - lead.G.GetTime() - 2)
 say(pug, "1.2k")
 srv:tick(0.5)
 check("a bid at the last moment gives everyone a few seconds more", roll.state == "open" and roll.top.n == 1200 and roll.ends - lead.G.GetTime() > 6)
 srv:tick(12)
 check("sold to the highest bid", roll.state == "awarded" and roll.winner == full(pug) and chat("Sold: ", "RAID") and chat("to Pug for 1,200g.", "RAID"))
+check("with the pot so far", chat("to Pug for 1,200g. Pot: 1,200g so far.", "RAID") ~= nil)
 check("given through master loot", srv.given and srv.given[#srv.given].id == WATCH and srv.given[#srv.given].to == pug)
 check("and on the list of loot given out", s.won[#s.won].k == "BID" and s.won[#s.won].r == 1200 and s.won[#s.won].p == full(pug))
 check("raiders' windows say who bought it", frameFor(ann, WATCH).status:GetText():find("Sold to Pug for 1,200g", 1, true))

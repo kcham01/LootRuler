@@ -26,6 +26,7 @@ Rolls.DEFAULT_SECONDS = 20
 local LEEWAY = 1.5        -- rolls this soon after the time is up still count (chat lag)
 local LATE = 10           -- rolls up to this long after closing are listed as late; later ones are ignored
 local SNIPE = 8           -- a bid with less than this left gives everyone this long again
+local FINAL_CALL = 10     -- an auction's final call, this long before the end
 local NEXT = 3            -- seconds between one item of the queue and the next
 local KEEP = 60           -- a finished roll from someone else is forgotten after this long
 
@@ -170,7 +171,8 @@ local function wire(roll)
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
     m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, nt = roll.note, wl = roll.wish, pn = roll.mode == "PR" and roll.n or nil,
-    mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil }
+    mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil,
+    qn = Rolls.upNext() }
 end
 
 ---------------------------------------------------------------------- the loot master's roll
@@ -193,9 +195,16 @@ local function tick(roll, mine)
   if ticking ~= mine or Rolls.current ~= roll then return end
   if roll.state == "open" then
     local left = roll.ends - now()
+    -- an auction: a final call with 10 seconds left, saying the highest bid (Settings: finalCall)
+    if roll.mode == "BID" and not roll.finalCalled and roll.secs >= 20 and left <= FINAL_CALL + 0.05 and left > 5.05 and LR.db.settings.finalCall then
+      roll.finalCalled = true
+      local top = R.topBid(roll)
+      say(top and ("Final call for %s: %s by %s. %d seconds."):format(roll.link, LR.Gdkp.gold(top.n), U.short(top.p), FINAL_CALL)
+        or ("Final call for %s: no bids yet, from %s. %d seconds."):format(roll.link, LR.Gdkp.gold(roll.min), FINAL_CALL), true)
+    end
     if not roll.warned and roll.secs >= 10 and left <= 5.05 and left > 0 then
       roll.warned = true
-      say(("5 seconds left to roll for %s."):format(roll.link))
+      say((roll.mode == "BID" and "5 seconds left to bid on %s." or "5 seconds left to roll for %s."):format(roll.link))
     end
     if left <= -LEEWAY then close(roll) return end
     -- an SR or tie roll is over as soon as everyone who may roll has rolled or passed
@@ -508,7 +517,13 @@ function Rolls.award(player, kind, n, de)
   end
   Rolls.ended(roll.k, "awarded", player, n, kind)
   local line
-  if kind == "BID" then line = ("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n))
+  if kind == "BID" then
+    line = ("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n))
+    -- and the pot so far (the leader's list has the sale already; another loot master's copy gets it later)
+    if s and s.gk and LR.db.settings.potAfterSale then
+      local pot = LR.Gdkp.pot(s) + ((LR.isLeader(s) and 0) or (tonumber(n) or 0))
+      line = line .. (" Pot: %s so far."):format(LR.Gdkp.gold(pot))
+    end
   elseif de then line = ("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player))
   elseif roll.given then
     line = ("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
@@ -647,6 +662,13 @@ function Rolls.follow(msg, sender)
       strict = bid and msg.sb == true or nil })
     copy.by = sender
     copy.note = LR.Notes.clean(msg.nt)
+    -- what's coming up next (item ids), checked
+    if type(msg.qn) == "table" then
+      local up = {}
+      for i, id in ipairs(msg.qn) do if i <= 5 and type(id) == "number" and id > 0 and id % 1 == 0 then up[#up + 1] = id end end
+      up.n = math.max(#up, math.min(40, tonumber(msg.qn.n) or #up))
+      copy.upNext = #up > 0 and up or nil
+    end
     -- who has it on their wishlist: { { p, n } }, checked
     if type(msg.wl) == "table" then
       local wish = {}
@@ -668,7 +690,9 @@ function Rolls.follow(msg, sender)
   -- an auction: the highest bid so far (we may have missed some)
   if copy.mode == "BID" and type(msg.tb) == "table" and type(msg.tb[1]) == "string" and tonumber(msg.tb[2]) then
     local g = math.floor(tonumber(msg.tb[2]))
+    local before = copy.top
     if not copy.top or copy.top.n < g then R.bid(copy, msg.tb[1], g) end
+    Rolls.checkOutbid(copy, before)
   end
   copy.secs = math.min(120, math.max(1, msg.s))
   copy.ends = now() + math.min(120, math.max(0, msg.left))
@@ -952,12 +976,21 @@ function Rolls.onBid(sender, g)
   for _, k in ipairs(Rolls.order) do
     local copy = Rolls.seen[k]
     if copy and copy.state == "open" and copy.mode == "BID" then
+      local before = copy.top
       local e = R.bid(copy, sender, g)
+      Rolls.checkOutbid(copy, before)
       if e.kind and copy.ends and copy.ends - t < SNIPE then copy.ends = t + SNIPE end
     end
   end
   LR.changed("rolls")
   return entry
+end
+
+--- I had the highest bid, and now someone else has: told on screen, with a sound (Settings: outbidAlert)
+function Rolls.checkOutbid(copy, before)
+  local top = copy.top
+  if not before or not top or top == before or not U.samePlayer(before.p, U.me()) or U.samePlayer(top.p, U.me()) then return end
+  if LR.UI and LR.UI.outbidAlert then LR.UI.outbidAlert(copy, top) end
 end
 
 --- a line in raid or party chat: a bid, when it's just an amount and an auction is open
@@ -991,6 +1024,15 @@ function Rolls.enqueue(items)
   end
   if not Rolls.current then Rolls.queueNext() end
   changed()
+end
+
+--- what's coming up after the item on now (item ids, the next few), for everyone's window; nil when nothing is
+function Rolls.upNext()
+  if #Rolls.queue == 0 then return nil end
+  local out = {}
+  for i = 1, math.min(#Rolls.queue, 5) do out[i] = Rolls.queue[i].id end
+  out.n = #Rolls.queue
+  return out
 end
 
 --- starts the next item in the queue, when nothing is being rolled for

@@ -912,7 +912,9 @@ run("GDKP", function()
   check("the leader picks where bids start", s7.gk.min == 250)
   -- two sales, by bids typed in raid chat
   for _, x in ipairs({ { 28525, ann, "300" }, { 28530, bob, "1.5k" } }) do
+    if x[1] == 28525 then LR.Rolls.queue = { { id = 28528 }, { id = 28529 } } end      -- (two more to come: shown as next)
     LR.Rolls.start(x[1], {})
+    LR.Rolls.queue = {}
     srv:tick(0.5)
     srv:chatMessage(x[2], x[3], "RAID")
     srv:tick(0.5)
@@ -920,6 +922,7 @@ run("GDKP", function()
       local fr
       for _, f in ipairs(bob.LR.UI.rollFrames()) do if f:IsShown() and f.copy and f.copy.id == 28525 then fr = f end end
       check("an auction's roll window: the bids to click, and the highest", fr and fr.dice.label:GetText() == "310g" and fr.status:GetText():find("Highest bid: Ann-Dreamscythe, 300g", 1, true))
+      check("and what's up next", fr.note:GetText():find("Next:", 1, true) ~= nil)
       shot("auction-window", bob, { fr:GetName() })
       LR.UI.showMaster()
       shot("auction-master", lead, { "LootRulerMasterFrame" })
@@ -1397,6 +1400,7 @@ end)
 run("roll window options", function()
   LR.UI.go("settings")
   srv:tick(6)
+  check("told when I'm outbid, to start with", visible("[x] Tell me when I'm outbid"))
   check("new options, off to start with", visible("[  ] Not for items my class can't use") and visible("[  ] Close the window once I've rolled") and visible("Size:"))
   clickText("Bigger")
   check("bigger roll windows", LR.db.settings.rollScale == 1.3)
