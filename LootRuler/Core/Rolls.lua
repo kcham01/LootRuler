@@ -462,6 +462,9 @@ function Rolls.award(player, kind, n, de)
   Rolls.ended(roll.k, "awarded", player, n, kind)
   if kind == "BID" then say(("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n)))
   elseif de then say(("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player)))
+  elseif roll.given then
+    say(("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
+      kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec"))
   else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
   -- the next item in the queue, a moment later (the loot master's window shows this one until then; not if the
   -- award is undone meanwhile)
@@ -470,6 +473,26 @@ function Rolls.award(player, kind, n, de)
   end
   changed()
   return true, note
+end
+
+--- gives an item to a player without a roll (the loot master's choice): through master loot when it's in the open
+--- loot window, else marked for a trade, and recorded like a roll's award. kind: "MS", "OS", "SR" (their reserve)
+--- or "DE" (to the disenchanter). opts: { link, slot, drop }. Returns true and a note, or false and why not.
+function Rolls.give(id, player, kind, opts)
+  opts = opts or {}
+  if type(id) ~= "number" or not player then return false, "Pick who gets it." end
+  if not LR.canRunLoot() then return false, "Only the raid leader, an assistant or the master looter can give out loot." end
+  local cur = Rolls.current
+  if cur and cur.state == "open" then return false, "Finish the roll for " .. U.plain(cur.link) .. " first." end
+  local s = session()
+  local roll = R.new(U.me() .. ":" .. U.now() .. ":give", id, { mode = "OPEN" })
+  roll.by, roll.link, roll.slot, roll.state, roll.given = U.me(), opts.link or LR.itemLink(id), opts.slot, "closed", true
+  roll.drop = opts.drop or (opts.slot and LR.Drops.forSlot(opts.slot)) or nil
+  if not roll.drop and s then local d = S.openDrops(s, id)[1] roll.drop = d and d.k end
+  roll.secs, roll.started, roll.ends = 0, now(), now()
+  Rolls.current = roll
+  if kind == "DE" then return Rolls.award(player, nil, nil, true) end
+  return Rolls.award(player, kind == "SR" and "SR" or kind == "OS" and "OS" or "MS")
 end
 
 --- takes an award back from the list of loot given out (the leader's addon)

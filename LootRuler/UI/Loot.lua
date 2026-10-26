@@ -92,11 +92,19 @@ local function dropRow(f, s, d, runner, leader)
   if state == "given" or state == "looted" then b.icon:SetAlpha(0.75) end
   b:SetScript("OnEnter", function(self)
     UI.itemTooltip(self, s, d.i)
+    if runner and (state == "corpse" or state == "held") then GameTooltip:AddLine("Click to give it to someone without a roll.", 0.7, 0.7, 0.7) GameTooltip:Show() end
     if leader then GameTooltip:AddLine("Right-click to take it off the loot list.", 0.7, 0.7, 0.7) GameTooltip:Show() end
   end)
   b:SetScript("OnLeave", function() GameTooltip:Hide() end)
   b:SetScript("OnClick", function(_, button)
     if UI.modifiedClick(LR.itemLink(d.i)) then return end
+    -- an item still to give out: give it to someone without a roll (the loot master)
+    if button == "LeftButton" and runner and (state == "corpse" or state == "held") and not rolling(d.i) then
+      local slot
+      for sl, k in pairs(Drops.slotKeys) do if k == d.k and Rolls.lootOpen then slot = sl end end
+      UI.giveSheet({ id = d.i, link = slot and GetLootSlotLink(slot) or LR.itemLink(d.i), slot = slot, drop = d.k })
+      return
+    end
     if button == "RightButton" and leader then
       UI.confirm("Take it off the loot list", LR.itemName(d.i) .. " comes off the raid's loot list (it didn't really drop, or it's there twice).", "Take it off", function()
         LR.removeDrop(s, d.k)

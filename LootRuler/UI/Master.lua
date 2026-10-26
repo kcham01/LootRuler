@@ -326,6 +326,58 @@ function UI.showMaster()
   master:Raise()
 end
 
+---------------------------------------------------------------------- giving an item out without a roll
+--- a sheet to give an item to someone without rolling: who (the players who reserved it first), and how.
+--- it: { id, link, slot, drop }
+function UI.giveSheet(it)
+  local s = Rolls.session()
+  local pick, how = nil, "MS"
+  UI.show()
+  UI.openSheet("Give " .. U.plain(it.link or LR.itemLink(it.id)), function(f, h)
+    f:note("Pick who gets it and how, without a roll. It's given through master loot if it's in the open loot window, or marked for you to trade it.")
+    -- who: everyone in the group, the ones who reserved it first
+    local people = LR.roster()
+    if #people == 0 then people = { { name = U.me(), class = LR.myClass() } } end
+    local reserved = {}
+    for _, w in ipairs(s and S.byItem(s)[it.id] or {}) do if S.claims(s, w[1], it.id) > 0 then reserved[U.foldCase(w[1])] = true end end
+    table.sort(people, function(a, b)
+      local ra, rb = reserved[U.foldCase(a.name)] or false, reserved[U.foldCase(b.name)] or false
+      if ra ~= rb then return ra end
+      return a.name < b.name
+    end)
+    local chips = {}
+    for _, m in ipairs(people) do
+      local sr = reserved[U.foldCase(m.name)]
+      chips[#chips + 1] = { label = U.classText(U.short(m.name), m.class) .. (sr and " |cffffd100SR|r" or ""), on = pick and U.samePlayer(pick, m.name),
+        click = function() pick = m.name if sr then how = "SR" elseif how == "SR" then how = "MS" end h.redraw(true) end }
+    end
+    f:chips(chips)
+    local ways = { { plain = true, label = "How:" },
+      { label = "Main spec", on = how == "MS", click = function() how = "MS" h.redraw(true) end },
+      { label = "Off spec", on = how == "OS", click = function() how = "OS" h.redraw(true) end } }
+    if pick and reserved[U.foldCase(pick)] then ways[#ways + 1] = { label = "Their reserve", on = how == "SR", click = function() how = "SR" h.redraw(true) end } end
+    f:chips(ways)
+    if s and s.de then
+      f:note(("Or give it to %s to disenchant."):format(U.short(s.de)))
+    end
+    f:gap(4)
+    local list = { { label = "Cancel", click = function() h.close() end } }
+    if s and s.de then
+      list[#list + 1] = { label = "Disenchant", click = function()
+        h.close()
+        local ok, note = Rolls.give(it.id, s.de, "DE", it)
+        if not ok then UI.toast(note) else UI.masterDraw() if note then UI.masterNote(note) end end
+      end }
+    end
+    list[#list + 1] = { label = pick and ("Give to " .. U.short(pick)) or "Give", disabled = not pick, click = function()
+      h.close()
+      local ok, note = Rolls.give(it.id, pick, how, it)
+      if not ok then UI.toast(note) else UI.masterDraw() if note then UI.masterNote(note) end end
+    end }
+    f:buttons(list)
+  end)
+end
+
 ---------------------------------------------------------------------- the loot panel (beside the loot window)
 local function lootSub(s, it)
   if not s then return LR.itemKind(it.id) end
@@ -391,7 +443,10 @@ function UI.lootPanel()
     local b = K.get(f.owner, "item", f.parent)
     local hr = s and s.hr[it.id]
     K.setItem(b, f.width, LR.itemIcon(it.id), it.link and ("|cff" .. select(2, LR.linkParts(it.link, it.id)) .. select(1, LR.linkParts(it.link, it.id)) .. "|r") or LR.coloredName(it.id),
-      lootSub(s, it), hr and "|cffff5a4aHR|r" or "")
+      lootSub(s, it), hr and "|cffff5a4aHR|r" or "",
+      not busy and { text = "Give", width = 40, tip = "Give it to someone without a roll", click = function()
+        UI.giveSheet({ id = it.id, link = it.link, slot = it.slot, drop = LR.Drops.forSlot(it.slot) })
+      end } or nil)
     if busy then b:SetAlpha(0.5) end
     b:SetScript("OnClick", function()
       if UI.modifiedClick(it.link) then return end
