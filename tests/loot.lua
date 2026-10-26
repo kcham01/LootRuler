@@ -98,6 +98,15 @@ local panel = lead.G.LootRulerLootPanel
 check("the loot panel opens beside the loot window", panel and panel:IsShown() and select(2, panel:GetPoint()) == lead.G.LootFrame)
 check("it says who reserved what", found(lead, "SR: Ann x2, Bob-Faerlina", panel) and found(lead, "Hard reserved for Ann", panel))
 check("raiders don't get one", not ann.G.LootRulerLootPanel)
+local function raidLines(text) local n = 0 for _, m in ipairs(srv.chat) do if m.channel == "RAID" and m.text:find(text, 1, true) then n = n + 1 end end return n end
+check("the raid hears what's on the corpse, with who reserved it", raidLines("[LootRuler] " .. srv:link(WATCH) .. ": reserved by Ann x2, Bob-Faerlina") == 1)
+check("a hard reserve says who it's for", raidLines("[LootRuler] " .. srv:link(HANDWRAPS) .. " (hard reserved for Ann)") == 1)
+check("an epic nobody reserved is posted too", raidLines("[LootRuler] " .. srv:link(SIGNET)) >= 1)
+check("not the grey", raidLines(srv:link(22829)) == 0)
+srv:closeLoot(lead)
+srv:openLoot(lead, { { WATCH, 4 }, { SIGNET, 4 }, { HANDWRAPS, 4 }, { 22829, 0 }, { BROOCH, 4 } })
+srv:tick(0.5)
+check("opening the same corpse again posts nothing new", raidLines("reserved by Ann x2, Bob-Faerlina") == 1 and raidLines("(hard reserved for Ann)") == 1)
 
 section("an item nobody reserved")
 clickText(lead, "Signet of Unshakable Faith", panel)

@@ -113,10 +113,37 @@ function Drops.lootOpened()
       local from = boss or (LR.dropsFrom(s.raid, it.id)[1]) or ""
       local d = { k = newKey(it.id), i = it.id, b = from, at = U.now(), by = U.me(), src = src }
       new[#new + 1] = d
+      d.q = it.quality
+      d.link = it.link
       Drops.slotKeys[it.slot] = d.k
     end
   end
+  Drops.announce(s, new)
+  for _, d in ipairs(new) do d.q, d.link = nil, nil end     -- (only for the announcement: not kept)
   save(s, new)
+end
+
+--- the raid hears what's on a corpse the first time the loot master opens it: every epic (or better) item, and
+--- anything reserved, one line each, saying who reserved it or who it's hard reserved for. Settings: announceLoot.
+function Drops.announce(s, list)
+  local ch = LR.groupChannel()
+  if not ch or not LR.db.settings.announceLoot then return end
+  for _, d in ipairs(list) do
+    local hr = s.hr[d.i]
+    local who = {}
+    for _, w in ipairs(S.byItem(s)[d.i] or {}) do
+      local left = S.claims(s, w[1], d.i)
+      if left > 0 then who[#who + 1] = U.short(w[1]) .. (left > 1 and (" x" .. left) or "") end
+    end
+    local link = d.link or LR.itemLink(d.i)
+    local line
+    if hr then line = ("%s (hard reserved%s)"):format(link, hr.f ~= "" and (" for " .. hr.f) or "")
+    elseif #who > 0 then line = ("%s: reserved by %s"):format(link, table.concat(who, ", "))
+    elseif (d.q or 0) >= 4 then line = link end
+    if line then
+      for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, ch) end
+    end
+  end
 end
 
 --- the drop in a slot of the open loot window (nil when not known)
