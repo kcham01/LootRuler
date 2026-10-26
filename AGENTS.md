@@ -205,6 +205,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Giving an item without a roll** (`Rolls.give`, `UI.giveSheet`): the loot panel's Give, or clicking an item still to
   give out on the Loot tab. It's a closed roll (`roll.given`) awarded straight away through `Rolls.award`, so it's
   recorded, announced, undoable and traded like any other award. Kinds: MS, OS, SR (their reserve), or disenchant.
+- **Opening a trade with the winner** (`Drops.openTrade`, `LR.unitOf`, setting `autoTrade`, on to start with): an award
+  of an item in the loot master's bags opens a trade (`InitiateTrade`, after `CheckInteractDistance`), and trade help
+  puts the item in; too far away, the winner is whispered; in combat, the loot master is told. Never accepts a trade.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

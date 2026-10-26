@@ -302,6 +302,18 @@ end
 
 local ENCHANT_SLOT = TRADE_ENCHANT_SLOT or 7     -- the trade's "will not be traded" slot: an item to be enchanted
 
+--- opens a trade with someone in the group (an item they won is in my bags; trade help puts it in). Returns true, or
+--- false and why not: "busy" (a trade is open), "combat", "away" (not in the group) or "far" (too far to trade)
+function Drops.openTrade(player)
+  if tradeOpen() then return false, "busy" end
+  if InCombatLockdown() then return false, "combat" end
+  local unit = LR.unitOf(player)
+  if not unit or unit == "player" then return false, "away" end
+  if not CheckInteractDistance(unit, 2) then return false, "far" end
+  InitiateTrade(unit)
+  return true
+end
+
 --- what's in the trade on both sides, kept up to date until it goes through: the items ({ link, how many }),
 --- the gold, and an enchant (the game says which, once it's cast on the item in the "will not be traded" slot)
 function Drops.tradeItems()

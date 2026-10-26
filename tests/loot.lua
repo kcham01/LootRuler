@@ -384,6 +384,7 @@ srv:willRoll(ann, 70)
 ann.M.click(frameFor(ann, PAULDRONS).dice)
 srv:tick(22)
 local note
+lead.LR.db.settings.autoTrade = false            -- (here the winners open the trades; it's opened for them further down)
 ok, note = Rolls.award(full(ann))
 srv:tick(1)
 check("won by Ann: the loot master still has it to trade", stateOf(PAULDRONS) == "toTrade")
@@ -417,6 +418,32 @@ check("it doesn't matter who opens the trade", #lead.tradeItems == 1 and lead.tr
 srv:completeTrade(lead)
 srv:tick(1)
 check("Bob has his", stateOf(SHOULDERS) == "given" and dropOf(SHOULDERS).h == full(bob))
+lead.LR.db.settings.autoTrade = true
+-- giving out an item from the loot master's bags opens the trade for them
+local CHAIN, RING = 28763, 28764
+srv:lootTo(lead, CHAIN)
+srv:lootTo(lead, RING)
+srv:tick(1)
+local function heldKey(id) for i = #s.drops, 1, -1 do local d = s.drops[i] if d.i == id and d.h == full(lead) then return d.k end end end
+local okT, noteT = Rolls.give(CHAIN, full(ann), "MS", { drop = heldKey(CHAIN) })
+srv:tick(1)
+check("giving out an item in my bags opens a trade with the winner", okT and lead.trading == ann and noteT:find("A trade with Ann is opening", 1, true), noteT)
+check("and trade help puts it in", #lead.tradeItems == 1 and lead.tradeItems[1].id == CHAIN)
+srv:completeTrade(lead)
+srv:tick(1)
+check("Ann has it", (function() for _, it in pairs(ann.bags) do if it.id == CHAIN then return true end end end)())
+Rolls.dismiss()
+srv.farAway = { [dan] = true }
+local okF, noteF = Rolls.give(RING, full(dan), "MS", { drop = heldKey(RING) })
+srv:tick(1)
+check("too far away: no trade, and they're whispered to come", okF and lead.trading == nil and noteF:find("too far away", 1, true)
+  and chat("I have " .. srv:link(RING) .. " for you. Come close and open a trade with me when you can.", "WHISPER") ~= nil, noteF)
+srv.farAway = nil
+Rolls.dismiss()
+srv:openTrade(lead, dan)
+srv:tick(1)
+srv:completeTrade(lead)
+srv:tick(1)
 check("the raid is told what the loot master traded", chat("Traded |cffa335ee|Hitem:28647", "RAID") ~= nil and chat("to Bob-Faerlina.", "RAID") ~= nil)
 srv:lootTo(lead, 28670)
 srv:tick(1)

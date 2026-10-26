@@ -59,7 +59,8 @@ LR.DEFAULTS = {
   tradeHelp = true,        -- won items go into trades with their winners
   tradeAnnounce = true,
   tradeWarn = true,
-  announceLoot = true,     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)    -- when I'm running loot, the raid hears what I trade and to whom
+  announceLoot = true,
+  autoTrade = true,        -- giving out an item that's in my bags opens a trade with the winner (Core/Drops.lua)     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)    -- when I'm running loot, the raid hears what I trade and to whom
   rollSeconds = 20,        -- how long everyone has to roll
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
@@ -176,6 +177,18 @@ function LR.roster()
     end
   end
   return out
+end
+--- the unit ("raid3", "party1", "player") of someone in the group, for the game's functions that take one; nil if not
+function LR.unitOf(name)
+  if not name then return nil end
+  if U.samePlayer(name, U.me()) then return "player" end
+  local units = {}
+  if IsInRaid() then for i = 1, GetNumGroupMembers() do units[#units + 1] = "raid" .. i end
+  elseif IsInGroup() then for i = 1, GetNumGroupMembers() - 1 do units[#units + 1] = "party" .. i end end
+  for _, u in ipairs(units) do
+    local n, r = UnitName(u)
+    if n and U.samePlayer((r and r ~= "") and (n .. "-" .. r) or n, name) then return u end
+  end
 end
 function LR.inGroup(name)
   if not name or not IsInGroup() then return false end

@@ -825,6 +825,7 @@ function M.env(player)
   G.floor, G.ceil, G.abs, G.max, G.min, G.sqrt, G.random = math.floor, math.ceil, math.abs, math.max, math.min, math.sqrt, math.random
   G.tinsert, G.tremove, G.sort, G.tconcat = table.insert, table.remove, table.sort, table.concat
   G.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
+  G.table = setmetatable({ wipe = G.wipe }, { __index = table })          -- (the game's table library has wipe too)
   G.strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
   G.strsplit = function(sep, s, n)
     local out = {}
@@ -939,6 +940,8 @@ function M.env(player)
   G.UnitGUID = function() return nil end
   G.UnitIsDead = function() return false end
   G.GetTradePlayerItemLink = function() return nil end
+  G.InitiateTrade = function() end
+  G.CheckInteractDistance = function() return true end
   G.TRADE_ENCHANT_SLOT = 7                  -- (Blizzard_UIPanels_Game/Classic/TradeFrame.lua)
   -- the big message in the middle of the screen (Blizzard_FrameXMLUtil/Classic/RaidWarning.lua): recorded
   M.notices = {}
