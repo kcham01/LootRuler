@@ -298,10 +298,38 @@ local function makeFrame(i)
   f.status:SetWidth(W - 28)
   f.status:SetPoint("TOPLEFT", 14, -72)
   f.status:SetWordWrap(true)
+  -- everyone's rolls that count, best first (Settings: rollList)
+  f.list = K.fs(f, "GameFontHighlightSmall")
+  f.list:SetWidth(W - 28)
+  f.list:SetPoint("TOPLEFT", f.status, "BOTTOMLEFT", 0, -4)
+  f.list:SetJustifyH("LEFT")
 
   f:SetScript("OnUpdate", function(self) UI.rollTick(self) end)
   f:Hide()
   return f
+end
+
+--- the list of rolls under the status line: the best that count, with how they count; the window grows to fit
+local LIST_MAX = 5
+local function rollList(f, copy)
+  local good = (LR.db.settings.rollList and #copy.entries > 0) and R.standings(copy) or {}
+  if #good == 0 then
+    f.list:SetText("")
+    f.list:Hide()
+    f:SetHeight(H)
+    return
+  end
+  local lines = {}
+  for i = 1, math.min(LIST_MAX, #good) do
+    local e = good[i]
+    local class = (copy.classes and copy.classes[e.p]) or LR.classOf(e.p)
+    local num = copy.mode == "BID" and LR.Gdkp.gold(e.n) or tostring(e.n)
+    lines[#lines + 1] = ("%d. %s  %s  |cff9d9d9d%s|r"):format(i, U.classText(U.short(e.p), class), num, R.label(copy, e))
+  end
+  if #good > LIST_MAX then lines[#lines + 1] = ("|cff9d9d9d+%d more|r"):format(#good - LIST_MAX) end
+  f.list:SetText(table.concat(lines, "\n"))
+  f.list:Show()
+  f:SetHeight(math.max(H, 72 + f.status:GetStringHeight() + 4 + f.list:GetStringHeight() + 14))
 end
 
 local function fill(f, copy)
@@ -340,6 +368,7 @@ local function fill(f, copy)
     f.dice.tip = ("Types \"%s%d\" in raid chat: the least that beats the highest bid."):format(word, a1)
     f.coin.tip = ("Types \"%s%d\" in raid chat. Any other amount: type it yourself."):format(word, a2)
     f.status:SetText(UI.rollStatus(copy))
+    rollList(f, copy)
     return
   end
   f.dice.amount, f.coin.amount = nil, nil
@@ -390,6 +419,7 @@ local function fill(f, copy)
   end
   if copy.rolled[R.key(me())] then f.dice.tip = "You've rolled." f.coin.tip = "You've rolled." f.boost.tip = "You've rolled." end
   f.status:SetText(UI.rollStatus(copy))
+  rollList(f, copy)
 end
 
 --- the timer bar and the seconds left (every frame)
@@ -402,11 +432,12 @@ function UI.rollTick(f)
     local frac = copy.secs > 0 and math.min(1, left / copy.secs) or 0
     f.bar.fill:SetWidth(math.max(1, BAR * frac))
     f.bar.fill:SetVertexColor(1, left <= 5 and 0.35 or 1, 0)
-    f.secs:SetText(math.ceil(left) .. " sec")
+    local whole = math.ceil(left)
+    if f.shownSecs ~= whole then f.shownSecs = whole f.secs:SetText(whole .. " sec") end
   else
     f.bar.fill:SetWidth(BAR)
     f.bar.fill:SetVertexColor(0.45, 0.45, 0.45)
-    f.secs:SetText("")
+    if f.shownSecs then f.shownSecs = nil f.secs:SetText("") end
     if copy.endedAt and t - copy.endedAt > HIDE_AFTER and f:IsShown() then copy.closedByMe = true UI.rollWindows() end
   end
 end
@@ -448,14 +479,16 @@ function UI.rollWindows()
     if copy and wanted(copy) then show[#show + 1] = copy end
   end
   while #show > MAX do table.remove(show, 1) end
+  local y = 0
   for i = 1, math.max(#show, #frames) do
     local copy = show[i]
     if copy then
       frames[i] = frames[i] or makeFrame(i)
       local f = frames[i]
-      f:ClearAllPoints()
-      f:SetPoint("TOP", anchor, "TOP", 0, -(i - 1) * (H + 4))
       fill(f, copy)
+      f:ClearAllPoints()
+      f:SetPoint("TOP", anchor, "TOP", 0, -y)              -- (each below the one before, however tall it's grown)
+      y = y + f:GetHeight() + 4
       f:Show()
       UI.rollTick(f)
     elseif frames[i] then
