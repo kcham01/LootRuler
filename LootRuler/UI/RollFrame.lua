@@ -459,6 +459,7 @@ function UI.rollWindows()
       frames[i]:Hide()
     end
   end
+  if UI.reserveStrip then UI.reserveStrip() end      -- (the strip goes with its window)
 end
 
 --- roll windows (and the loot master window) back where they start
