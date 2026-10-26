@@ -310,23 +310,29 @@ local function send(msg, channel, target)
 end
 Net.send = send
 
---- sends a copy of a session. While one is still going out on a channel (a long one goes in parts, a few a second),
---- newer copies of that session wait, and only the newest goes next: an out-of-date copy is never sent. Everything
---- goes at the same priority: raiders' addons put a long message back together by sender and channel, so the parts
---- of two long messages mustn't take turns.
-local sessionOut, sessionNext = {}, {}         -- "id|channel|target" -> when the one going out started; -> the next one
-local SESSION_OUT_MAX = 30                     -- (seconds: a copy that never says it's done stops holding the others)
-local function sendSession(s, channel, target)
+--- sends the newest state of something (a session, a batch of auctions): name says which, build()
+--- makes the message when it goes. While one is still going out on a channel (a long one goes in parts, a few a
+--- second), newer ones wait, and only the newest goes next: an out-of-date one is never sent. Everything goes at
+--- the same priority: raiders' addons put a long message back together by sender and channel, so the parts of two
+--- long messages mustn't take turns.
+local newestOut, newestNext = {}, {}           -- key -> when the one going out started; -> what makes the next one
+local NEWEST_OUT_MAX = 30                      -- (seconds: one that never says it's done stops holding the others)
+local function sendNewest(name, build, channel, target)
   if not channel or LR.Practice.on then return end
-  local key = s.id .. "|" .. channel .. "|" .. (target or "")
-  if sessionOut[key] and GetTime() - sessionOut[key] < SESSION_OUT_MAX then sessionNext[key] = s return end
-  sessionOut[key], sessionNext[key] = GetTime(), nil
-  Net:SendCommMessage(LR.PREFIX, encode({ t = "T", s = s }), channel, target, "NORMAL", function(_, sent, total)
+  local key = name .. "|" .. channel .. "|" .. (target or "")
+  if newestOut[key] and GetTime() - newestOut[key] < NEWEST_OUT_MAX then newestNext[key] = build return end
+  newestOut[key], newestNext[key] = GetTime(), nil
+  Net:SendCommMessage(LR.PREFIX, encode(build()), channel, target, "NORMAL", function(_, sent, total)
     if sent < total then return end
-    sessionOut[key] = nil
-    local nxt = sessionNext[key]
-    if nxt then sessionNext[key] = nil sendSession(nxt, channel, target) end
+    newestOut[key] = nil
+    local nxt = newestNext[key]
+    if nxt then newestNext[key] = nil sendNewest(name, nxt, channel, target) end
   end)
+end
+Net.sendNewest = sendNewest
+--- a copy of a session
+local function sendSession(s, channel, target)
+  sendNewest("T:" .. s.id, function() return { t = "T", s = s } end, channel, target)
 end
 Net.sendSession = sendSession
 

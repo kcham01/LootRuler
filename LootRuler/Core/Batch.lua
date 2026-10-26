@@ -52,10 +52,6 @@ end
 function B.bidText(n, g, strict) return ("%s#%d %d"):format(strict and "bid " or "", n, math.floor(g)) end
 
 ---------------------------------------------------------------------- the loot master's batch
-local function sendGroup(msg)
-  local ch = LR.groupChannel()
-  if ch then Net.send(msg, ch) end
-end
 
 local function wire(batch)
   local it = {}
@@ -72,9 +68,9 @@ local function publish(batch, soon)
   local mine = sendSeq
   local function go()
     if mine ~= sendSeq then return end
-    local msg = wire(batch)
-    sendGroup(msg)
-    B.follow(msg, U.me())
+    B.follow(wire(batch), U.me())
+    -- (the newest only: one still waiting to go is made again when it goes, with the time left as it is then)
+    Net.sendNewest("Z:" .. batch.k, function() return wire(batch) end, LR.groupChannel())
   end
   if soon then C_Timer.After(0.3, go) else go() end
 end
