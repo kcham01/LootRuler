@@ -393,10 +393,16 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **The owner's plan from the Gargul comparison is done:** the practice raid, pot rules, GDKP bookkeeping, bidding ahead, several
   auctions at once, bag checks, the gear overview, branding, loot council, fairness history and swap requests.
 - **Clearing reserves of players not in the group** is in (#88). Every planned feature is done.
-- **Next:** the benchmark has run (`tools/bench.lua`); its findings and a list of ideas are in `docs/benchmark.md`. The owner
-  asked for no changes to the addon after it until they say which to do. After that: a pass on how screens look (text that
-  runs into buttons or past its box), also when the owner says. The speed ideas include the two planned before: addon
-  messages by priority (rolls and bids first, session copies last) and a roster kept between roster changes. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
+- **Speed work** (asked for by the owner after the benchmark; `docs/benchmark.md`, "After the speed fixes"): `S.byItem` kept
+  between changes (#90); the group kept between roster changes (#91: `LR.rosterChanged`, see "Speed rules"); joins don't send
+  the session, a newcomer's `Q` is answered by whisper, the guild's copy at most every `GUILD_EVERY` seconds in a group, pot
+  membership published slowly (`LR.publish(s, now, slow)`) (#92); `Net.sendNewest` / `Net.sendSession`: only the newest copy of
+  something goes out while one is still going (#93, #96 for batches); `R.standings` works out ranks first (#94); finished
+  master / batch bars switch their `OnUpdate` off (#95). Not done: lower priority for session copies (long messages at two
+  priorities could interleave and be lost), unpacked tiny messages (older versions unpack everything).
+- **Next:** sending only what changed in a session instead of whole copies (unpacking them is now most of the work), if the
+  owner wants it: a new message kind, so older versions must still get full copies. Then a pass on how screens look (text
+  that runs into buttons or past its box), when the owner says. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
