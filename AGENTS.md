@@ -361,7 +361,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid's name"): shown in the window's header (icon and name),
   as a note on raiders' Reserve tab, after `Whisper.announce`'s line, in the "opened soft reserves" note and the batch window's title.
   `S.valid` keeps the session and only the right parts of `br` (a newer version's icon number shows as the raid's own).
-- **Planned with the owner (in this order, one pull request each):** loot council; fairness history across raids; reserve swap requests after the lock.
+- **Loot council** (`Core/Council.lua`; `s.lc` = names, `S.cleanCouncil`, `S.COUNCIL_MAX`; `Council.set`, `on`, `isMember`, `votable`, `vote`,
+  `myVote`, `counts`, `choice`; `LR.setCouncil`; messages `C` (a vote, to the loot master) and `L` (the counts, to council members, field `vc`:
+  `v` is every message's protocol); `!lr vote Name`; `UI.councilSheet`; Session tab "Loot council"): rolls go on as usual and say who wants it;
+  `roll.votes` (voter key -> { v, p }) on the loot master's addon only. The master window shows votes per row, "Their choice" (`selectedPlayer`
+  picks it once closed) and "the council picks"; a council member's window stays up after the rolls until it's given out (`copy.council`).
+  Votes never go to raid chat. Pretend council members vote in the practice raid.
+- **Planned with the owner (in this order, one pull request each):** fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session
   copies last) and a roster kept between roster changes instead of read each time. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.

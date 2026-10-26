@@ -39,6 +39,7 @@ Core\AutoLoot.lua
 Core\AutoRoll.lua
 Core\GroupLoot.lua
 Core\Batch.lua
+Core\Council.lua
 Core\Bags.lua
 Core\Overview.lua
 Core\Practice.lua

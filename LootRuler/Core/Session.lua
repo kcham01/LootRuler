@@ -339,6 +339,21 @@ function S.setLink(s, url, now)
   return true
 end
 
+---------------------------------------------------------------------- the loot council (Core/Council.lua)
+S.COUNCIL_MAX = 15
+--- the council, checked: a list of names (no two the same, S.COUNCIL_MAX at most), or nil
+function S.cleanCouncil(list)
+  if type(list) ~= "table" then return nil end
+  local out, seen = {}, {}
+  for _, n in ipairs(list) do
+    if type(n) == "string" and #n <= 60 and not n:find("|", 1, true) and not seen[n:lower()] and #out < S.COUNCIL_MAX then
+      seen[n:lower()] = true
+      out[#out + 1] = n
+    end
+  end
+  return #out > 0 and out or nil
+end
+
 ---------------------------------------------------------------------- the organiser's branding
 -- s.br = { n = the raid's name ("<Kings> GDKP"), m = a short message ("Sign up on our Discord: ..."), i = an icon (its
 -- place in S.BRAND_ICONS) }: raiders see it in their window and the raid hears it when reserves open. Older versions
@@ -613,6 +628,7 @@ function S.valid(t)
   if t.de ~= nil and type(t.de) ~= "string" then return false end
   if t.url ~= nil and not S.okLink(t.url) then t.url = nil end      -- (a link that isn't softres.it's is dropped)
   if t.br ~= nil then t.br = S.okBrand(t.br) end                    -- (branding: only what's right in it is kept)
+  if t.lc ~= nil then t.lc = S.cleanCouncil(t.lc) end               -- (the loot council: names only)
   if t.next ~= nil and type(t.next) ~= "string" then return false end
   if t.go ~= nil and type(t.go) ~= "boolean" then return false end
   if t.was ~= nil then

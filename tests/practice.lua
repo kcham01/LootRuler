@@ -105,6 +105,20 @@ Rolls.cancel()
 Rolls.dismiss()
 srv:tick(1)
 
+section("a loot council")
+LR.setCouncil(s, { P.players[1].name, P.players[2].name, P.players[3].name })
+srv:tick(1)
+local nobody2
+for _, id in ipairs(LR.raidOf(s).order) do if not S.byItem(s)[id] and not s.hr[id] and id ~= nobody then nobody2 = id break end end
+local lcr = Rolls.start(nobody2, {})
+srv:tick(25)
+local _, votedLC = LR.Council.counts(lcr)
+check("pretend council members vote on who gets it", votedLC >= 1 and shown(" votes for ") ~= nil, votedLC)
+Rolls.cancel()
+Rolls.dismiss()
+LR.setCouncil(s, nil)
+srv:tick(1)
+
 section("an auction")
 LR.setGdkp(s, true)
 srv:tick(1)

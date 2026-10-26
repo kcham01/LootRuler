@@ -455,6 +455,12 @@ function LR.adjustPlusOne(s, player, delta) if LR.isLeader(s) and S.adjustPlusOn
 function LR.setAny(s, any) if S.setAny(s, any, U.now()) then leaderChanged(s) end end
 function LR.setGroupOnly(s, on) if LR.isLeader(s) and S.setGroupOnly(s, on, U.now()) then leaderChanged(s) end end
 --- the session's softres.it page: set it (the leader; false when it isn't a softres.it link), and post it in raid chat
+--- the loot council (Core/Council.lua): names, or nil for none
+function LR.setCouncil(s, names)
+  if not LR.isLeader(s) then return false end
+  if LR.Council.set(s, names, U.now()) then leaderChanged(s) end
+  return true
+end
 --- the organiser's branding (Core/Session.lua): kept for their next session too
 function LR.setBrand(s, br)
   if not LR.isLeader(s) then return false end

@@ -318,6 +318,24 @@ local function answerRoll(roll)
   end
 end
 
+-- a loot council: the pretend players on it vote, once the rolls are in, for one of the best few
+local function councilVotes(roll, wait)
+  local s = P.session()
+  if not (s and LR.Council.on(s)) then return end
+  for _, x in ipairs(P.players) do
+    if LR.Council.isMember(s, x.name) then
+      after(wait + 1 + math.random() * 3, function()
+        if not LR.Council.votable(roll) then return end
+        local good = R.standings(roll)
+        if #good == 0 then return end
+        local e = good[math.random(1, math.min(3, #good))]
+        heard(x, "for " .. U.short(e.p), "votes")
+        LR.Council.vote(x.name, e.p)
+      end)
+    end
+  end
+end
+
 -- answers an auction: a few bidders, each with a limit of their own; one of them sets a max bid by whisper.
 -- They bid against each other, a few seconds apart, until nobody will go higher or it closes.
 local function answerAuction(roll)
@@ -439,7 +457,10 @@ function P.react()
   roll.practice = true
   local copy = LR.Rolls.seen[roll.k]
   if copy then copy.practice = true end
-  if roll.mode == "BID" then answerAuction(roll) else answerRoll(roll) end
+  if roll.mode == "BID" then answerAuction(roll) else
+    answerRoll(roll)
+    councilVotes(roll, math.max(2, math.min((roll.secs or 20) - 4, 10)))
+  end
 end
 
 LR.onChange(function(what)

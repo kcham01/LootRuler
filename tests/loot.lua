@@ -1434,6 +1434,53 @@ dan.LR.Gargul.endRoll()
 lead.LR.endSession(sn)
 srv:tick(2)
 
+section("a loot council")
+local function told(p, text) for i = #p.inbox, 1, -1 do if p.inbox[i].text:find(text, 1, true) then return true end end return false end
+local sc = lead.LR.startSession("Karazhan", 2, true, false)
+srv:tick(2)
+check("only the leader picks the council", not ann.LR.setCouncil(ann.LR.current(), { full(ann) }))
+lead.LR.setCouncil(sc, { full(ann), full(bob), full(pug) })
+srv:tick(2)
+check("raiders' copies know the council", ann.LR.current().lc and #ann.LR.current().lc == 3)
+local chatFrom = #srv.chat
+local cr = Rolls.start(BROOCH, { secs = 10 })
+srv:tick(0.5)
+check("the raid is told the council picks", chat("The loot council picks who gets it from those who roll.", "RAID_WARNING") ~= nil)
+srv:roll(dan, 1, 100, 40)
+srv:roll(pug, 1, 100, 90)
+srv:tick(1)
+check("Ann's window has a vote button", frameFor(ann, BROOCH) and frameFor(ann, BROOCH).extras[1]:IsShown()
+  and frameFor(ann, BROOCH).extras[1].text:GetText() == "Council: vote")
+ann.LR.Council.myVote(copyOf(ann, BROOCH), full(dan))
+bob.LR.Council.myVote(copyOf(bob, BROOCH), full(dan))
+srv:tick(1)
+local LC = lead.LR.Council
+check("the loot master's addon has the votes", LC.counts(cr)[full(dan)] == 2)
+srv:tick(3)                 -- (addon messages are sent a little at a time)
+check("the council hears the counts", copyOf(ann, BROOCH).votes and copyOf(ann, BROOCH).votes[full(dan)] == 2 and copyOf(ann, BROOCH).voted == 2)
+check("and Ann's button shows her vote", frameFor(ann, BROOCH).extras[1].text:GetText() == "Council: Dan")
+srv:whisper(pug, lead, "!lr vote pug")
+srv:tick(1)
+check("a council member without the addon votes by whisper (for themselves, even)", LC.counts(cr)[full(pug)] == 1 and told(pug, "Your vote for Pug is in."))
+dan.LR.Council.myVote(copyOf(dan, BROOCH), full(dan))
+srv:tick(1)
+check("someone not on the council can't vote", told(dan, "Only the loot council votes.") and LC.counts(cr)[full(dan)] == 2)
+check("nor vote for someone who didn't roll", not LC.vote(full(ann), "Bob"))
+srv:tick(12)
+check("it closes: the council's choice is picked in the loot master's window", cr.state == "closed"
+  and found(lead, "Loot council: 3 of 3 voted. Their choice: Dan (2 votes).", lead.G.LootRulerMasterFrame) and found(lead, "Award to Dan", lead.G.LootRulerMasterFrame))
+srv:tick(10)
+check("council members' windows stay up to vote; others go", frameFor(ann, BROOCH) ~= nil and frameFor(dan, BROOCH) == nil)
+local leaked = false
+for i = chatFrom + 1, #srv.chat do if srv.chat[i].text:lower():find("vote", 1, true) and srv.chat[i].channel ~= "WHISPER" then leaked = true end end
+check("the votes aren't said in raid chat", not leaked)
+Rolls.award(full(dan))
+srv:tick(1)
+check("once it's given out, no more votes", not LC.vote(full(ann), full(pug)))
+Rolls.dismiss()
+lead.LR.endSession(sc)
+srv:tick(10)
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
