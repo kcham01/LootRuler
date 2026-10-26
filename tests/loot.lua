@@ -175,6 +175,9 @@ local function noticed(p, text) for _, n in ipairs(p.M.notices) do if n:find(tex
 check("Ann is told her item is being rolled out, in the middle of the screen", noticed(ann, "You reserved [Moroes' Lucky Pocket Watch]: roll for it now!")
   and ann.M.flashed > 0)
 check("Dan, who didn't reserve it, isn't", not noticed(dan, "You reserved Moroes' Lucky Pocket Watch"))
+srv:tick(1)
+local function heard(p, id, channel) for _, x in ipairs(p.M.sounds) do if x.id == id and x.channel == channel then return true end end return false end
+check("with a sound, on the main channel", heard(ann, 8960, "Master"))
 srv:roll(dan, 1, 100, 99)
 srv:willRoll(ann, 40)
 ann.M.click(fa.dice)
@@ -987,6 +990,23 @@ srv:tick(10)
 check("says so too", chat("is Bob-Faerlina's for main spec.") ~= nil)
 lead.LR.unaward(s, ei)
 srv:tick(2)
+
+section("sounds")
+ann.LR.db.settings.soundChannel = "SFX"
+local heardBefore = #ann.M.sounds
+local sc = ann.LR.UI.testRoll({ mode = "SR", mine = true, quiet = true })
+srv:tick(1)
+check("sounds play on the channel picked", #ann.M.sounds > heardBefore and ann.M.sounds[#ann.M.sounds].channel == "SFX")
+sc.closedByMe = true
+ann.LR.db.settings.sounds = false
+heardBefore = #ann.M.sounds
+sc = ann.LR.UI.testRoll({ mode = "SR", mine = true, quiet = true })
+srv:tick(1)
+ann.LR.UI.win:Show() ann.LR.UI.win:Hide()
+check("switched off: no sound at all, the window's own neither", #ann.M.sounds == heardBefore)
+sc.closedByMe = true
+ann.LR.UI.rollWindows()
+ann.LR.db.settings.sounds, ann.LR.db.settings.soundChannel = true, "Master"
 
 section("roll window options")
 local bobWindows = bob.LR.db.settings.rollWindow

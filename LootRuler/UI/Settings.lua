@@ -46,6 +46,16 @@ function UI.settingsView(f)
     p:note("Drag a roll window to move them all.")
   end)
 
+  f:panel("Sounds", function(p)
+    toggle(p, "sounds", "LootRuler's sounds", "Off: LootRuler makes no sound (new roll windows, your item being up, being outbid, trade time running out).")
+    local chips = { { plain = true, label = "Play them on:" } }
+    for _, c in ipairs(LR.SOUND_CHANNELS) do
+      chips[#chips + 1] = { label = c[2], on = set.soundChannel == c[1], click = function() set.soundChannel = c[1] LR.sound(SOUNDKIT.RAID_WARNING or 8959) UI.render() end }
+    end
+    p:chips(chips, { gap = 2 })
+    p:note("The game's sound volume for that channel decides how loud they are.")
+  end)
+
   f:panel("Auto-roll", function(p)
     p:note("Your own rules for roll windows: LootRuler rolls or passes for you, and says so.")
     toggle(p, "autoPassUnusable", "Pass on items my class can't use", "Only for items everyone can roll on (not reserved ones).")

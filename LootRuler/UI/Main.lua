@@ -35,8 +35,8 @@ local function build()
   local pt = LR.db.ui.point
   if pt then win:SetPoint(pt[1], UIParent, pt[2], pt[3], pt[4]) else win:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
   win:Hide()
-  win:SetScript("OnShow", function() PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB) UI.render() end)
-  win:SetScript("OnHide", function() UI.closeAll() PlaySound(SOUNDKIT.IG_MAINMENU_CLOSE) end)
+  win:SetScript("OnShow", function() LR.sound(SOUNDKIT.IG_CHARACTER_INFO_TAB, true) UI.render() end)
+  win:SetScript("OnHide", function() UI.closeAll() LR.sound(SOUNDKIT.IG_MAINMENU_CLOSE, true) end)
   -- Escape closes the top panel first, then the window (see TBCrushCalc: a hidden "catcher" frame stands in
   -- for the window in the game's list of frames Escape closes while a panel is open)
   local catcher = CreateFrame("Frame", "LootRulerEscapeCatcher", UIParent)
