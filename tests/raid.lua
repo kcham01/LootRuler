@@ -792,6 +792,45 @@ check("profiles are checked the same way", sdb.profiles.Healer and sdb.profiles.
   and sdb.profiles[5] == nil and sdb.profiles["A name far too long for a profile"] == nil and sdb.profiles.Bad == nil)
 check("the window's saved places start over", type(sdb.ui) == "table")
 
+section("the group is read once and kept until it changes")
+srv:setGroup({ lead, ann, pug }, lead, true)
+srv:tick(2)
+local reads = 0
+local realInfo = lead.G.GetRaidRosterInfo
+lead.G.GetRaidRosterInfo = function(...) reads = reads + 1 return realInfo(...) end
+lead.LR.rosterChanged()
+for _ = 1, 50 do lead.LR.inGroup("Ann") lead.LR.inGroup("Nobody") lead.LR.roster() end
+check("asking 150 times reads the game's list once", reads == 3, reads)
+check("a name is found however it's written", lead.LR.inGroup("ann") and lead.LR.inGroup(full(ann)) and not lead.LR.inGroup("Nobody"))
+local copy = lead.LR.roster()
+table.sort(copy, function(a, b) return a.name > b.name end)
+copy[#copy + 1] = { name = "Extra-Dreamscythe" }
+check("the list handed out can be sorted and added to without changing the kept one", #lead.LR.roster() == 3 and not lead.LR.inGroup("Extra"))
+table.insert(srv.group.members, bob)
+bob.inGroup = true
+srv:rosterChanged()
+srv:tick(1)
+check("someone joins: they're in", lead.LR.inGroup("Bob-Faerlina") ~= false and #lead.LR.roster() == 4)
+srv:leaveGroup(pug)
+srv:tick(1)
+check("someone leaves: they're out", not lead.LR.inGroup("Pug"))
+srv:setAssist(ann, true)
+srv:tick(1)
+check("an assistant is seen as one", lead.LR.inGroup("Ann").assist == true)
+bob.online = false
+lead.M.fire("UNIT_CONNECTION", "raid3", false)
+check("someone goes offline (no roster update): it's seen", lead.LR.inGroup("Bob-Faerlina").online == false)
+bob.online = true
+lead.M.fire("UNIT_CONNECTION", "raid3", true)
+srv:setAssist(ann, false)
+srv:tick(1)
+lead.LR.roster()
+reads = 0
+srv:tick(11)
+lead.LR.roster()
+check("and it's read again after a while anyway (once: 3 members)", reads == 3, reads)
+lead.G.GetRaidRosterInfo = realInfo
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)
