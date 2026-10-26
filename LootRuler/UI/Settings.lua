@@ -92,6 +92,7 @@ function UI.settingsView(f)
     end
     p:chips(keys, { gap = 2 })
     p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
+    toggle(p, "awardGuild", "Tell my guild who got what", "Each item you give out (and any you take back) gets a line in guild chat too, with the raid's name: \"Karazhan: [item] goes to Ann (MS 85).\"")
     toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
     toggle(p, "remindOnJoin", "Tell people who join how to reserve", "While your soft reserves are open, anyone who joins the group and hasn't reserved hears how to, in one raid chat line a few seconds after they join.")
     toggle(p, "autoTrade", "Open a trade with the winner", "When you give out an item that's in your bags, a trade with the winner opens if they're close, and LootRuler puts the item in. Too far away: they're whispered to come and trade you.")

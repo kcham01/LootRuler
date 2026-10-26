@@ -92,6 +92,14 @@ local function say(text, warning)
 end
 Rolls.say = say
 
+--- who got what, in guild chat too (Settings: awardGuild), with the raid's name
+local function toGuild(text)
+  if not LR.db.settings.awardGuild or not IsInGuild() then return end
+  local s = session()
+  local raid = s and LR.raidOf(s).name
+  for _, line in ipairs(U.chatLines(LR.TAG .. " " .. (raid and (raid .. ": ") or "") .. text)) do LR.say(line, "GUILD") end
+end
+
 local howTo
 local function howToRoll(roll, link, secs)
   local t = U.plural(secs, "second")
@@ -492,12 +500,15 @@ function Rolls.award(player, kind, n, de)
     end
   end
   Rolls.ended(roll.k, "awarded", player, n, kind)
-  if kind == "BID" then say(("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n)))
-  elseif de then say(("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player)))
+  local line
+  if kind == "BID" then line = ("Sold: %s to %s for %s."):format(roll.link, U.short(player), LR.Gdkp.gold(n))
+  elseif de then line = ("%s goes to %s, to be disenchanted."):format(roll.link, U.short(player))
   elseif roll.given then
-    say(("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
-      kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec"))
-  else say(("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))) end
+    line = ("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
+      kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec")
+  else line = ("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")) end
+  say(line)
+  toGuild(line)
   -- the next item in the queue, a moment later (the loot master's window shows this one until then; not if the
   -- award is undone meanwhile)
   if #Rolls.queue > 0 then
@@ -568,6 +579,7 @@ function Rolls.undo()
   Rolls.ended(roll.k, "closed")
   say(("Undone: %s isn't %s's after all.%s"):format(roll.link, U.short(player),
     theyHaveIt and (" %s, please trade it to whoever gets it."):format(U.short(player)) or ""))
+  toGuild(("Undone: %s isn't %s's after all."):format(roll.link, U.short(player)))
   changed()
   return true, #notes > 0 and table.concat(notes, " ") or nil
 end

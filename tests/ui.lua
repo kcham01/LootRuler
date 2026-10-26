@@ -1313,6 +1313,15 @@ run("more loot rules", function()
   LR.UI.go("settings")
   srv:tick(6)
   check("picking up the gold is its own switch, off to start with", visible("[  ] Pick up the gold"))
+  check("telling the guild who got what is off to start with", visible("[  ] Tell my guild who got what") and not LR.db.settings.awardGuild)
+  do
+    local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+    local sf = scrollers(G.LootRulerFrame, {})[1]
+    local at = M.findText("Tell my guild who got what", true, G.LootRulerFrame)[1]
+    if sf and at then sf:SetVerticalScroll(math.min(sf:GetVerticalScrollRange(), math.max(0, sf:GetVerticalScroll() + sf:GetTop() - at.fs:GetTop() - 200))) end
+    shot("running-loot")
+    if sf then sf:SetVerticalScroll(0) end
+  end
   clickText("Add a rule")
   clickText("Anything below epic")
   clickText("Everyone in turn")

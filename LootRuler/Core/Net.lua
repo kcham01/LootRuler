@@ -70,6 +70,7 @@ LR.DEFAULTS = {
   rollKinds = {},          -- my own roll types for rolls open to everyone: { { n = "Transmog", hi = 98 } } (Core/Roll.lua)
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
+  awardGuild = false,      -- who got what goes in guild chat too (Core/Rolls.lua)
   autoLoot = false,        -- the master looter's loot rules hand out what they match (Core/AutoLoot.lua)
   autoLootRules = {},      -- { { what, to } }, first match wins
   lootGold = false,        -- the master looter picks up a corpse's gold (Core/AutoLoot.lua)
