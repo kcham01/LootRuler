@@ -398,13 +398,24 @@ function Server:install(p)
   G.LootSlotHasItem = function(slot) return lootItem(slot) ~= nil end
   G.GetLootSlotLink = function(slot)
     local it = lootItem(slot)
-    if not it then return nil end
+    if not it or it.money then return nil end
     local info = srv.itemInfo and srv.itemInfo(it.id)
     return info and info.link or ("|cffa335ee|Hitem:%d::::::::70:::::|h[item %d]|h|r"):format(it.id, it.id)
+  end
+  -- money in the corpse: a slot of its own, taken with LootSlot
+  G.GetLootSlotType = function(slot) local it = lootItem(slot) return not it and 0 or it.money and 2 or 1 end
+  G.LootSlot = function(slot)
+    local it = lootItem(slot)
+    if not it then return end
+    if not it.money then error("LootSlot on an item: master loot gives items out") end
+    it.taken = true
+    p.money = (p.money or 0) + it.money
+    srv:deliver(function() p.M.fire("LOOT_SLOT_CLEARED", slot) end)
   end
   G.GetLootSlotInfo = function(slot)
     local it = lootItem(slot)
     if not it then return nil end
+    if it.money then return 133784, ("%d Gold"):format(math.floor(it.money / 10000)), 0, nil, 0, false end
     local info = srv.itemInfo and srv.itemInfo(it.id)
     return 133000 + it.id % 1000, info and info.name or ("item " .. it.id), 1, nil, it.quality, false
   end
@@ -461,7 +472,7 @@ function Server:willRoll(p, ...) self.rolls = self.rolls or {} self.rolls[p] = s
 --- p (the master looter) opens a corpse with these items: { { id, quality }, ... }
 function Server:openLoot(p, items)
   p.loot = {}
-  for _, it in ipairs(items) do p.loot[#p.loot + 1] = { id = it[1], quality = it[2] or 4 } end
+  for _, it in ipairs(items) do p.loot[#p.loot + 1] = it[1] == "money" and { money = it[2] } or { id = it[1], quality = it[2] or 4 } end
   p.G.LootFrame:Show()
   p.M.fire("LOOT_OPENED", 0, false)
 end

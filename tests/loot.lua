@@ -578,6 +578,28 @@ check("the disenchanted green is on the list of loot given out", (function()
 srv:closeLoot(lead)
 set.autoLoot = false
 set.autoLootRules = {}
+-- leaving an item alone, a range of qualities, and everyone in turn
+lead.LR.AutoLoot.add("item:28570", "skip")
+lead.LR.AutoLoot.add("lt4", "rr")
+set.autoLoot = true
+given = #srv.given
+srv:openLoot(lead, { { 28570, 3 }, { 30001, 2 }, { 30002, 3 }, { 30003, 1 }, { 30004, 4 }, { "money", 1234567 } })
+srv:tick(3)
+check("an item a rule leaves alone stays, though a later rule would match it", gotItem(28570) == nil)
+check("anything below epic goes to everyone in turn, by name", gotItem(30001) == ann and gotItem(30002) == bob,
+  tostring(gotItem(30001) and gotItem(30001).name) .. " " .. tostring(gotItem(30002) and gotItem(30002).name))
+check("an epic isn't below epic", gotItem(30004) == nil)
+check("(a common item is under the master loot threshold: the game lets anyone take it)", gotItem(30003) == nil)
+check("the gold is left until that's switched on", (lead.money or 0) == 0)
+srv:closeLoot(lead)
+set.lootGold = true
+srv:openLoot(lead, { { 30005, 2 }, { "money", 1234567 } })
+srv:tick(3)
+check("then the loot master picks it up", lead.money == 1234567)
+check("and the turn carries on from where it was", gotItem(30005) and gotItem(30005).name == "Dan", gotItem(30005) and gotItem(30005).name)
+srv:closeLoot(lead)
+set.autoLoot, set.lootGold = false, false
+set.autoLootRules = {}
 
 section("auto-roll (each raider's own rules)")
 dan.LR.db.settings.autoPassUnusable = true
