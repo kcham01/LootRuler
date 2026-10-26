@@ -321,8 +321,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   one ends it. Pretend players act through the real entry points (`Whisper.handle`, `Rolls.onRoll` with `RANDOM_ROLL_RESULT`,
   `Rolls.onChat`, `Net.handlers.N`), answering each roll once (`Practice.react` on "roll" changes); reservers never pass;
   `Practice.tie` makes the next roll a tie. **Every new feature adds itself to the practice raid** (so it can be tried in the game).
-- **Planned with the owner (in this order, one pull request each):** GDKP pot rules of your own (named, percent or flat, for
-  chosen players); GDKP bookkeeping (gold added by hand, a ledger of gold trades, the payout sheet in and out); bidding ahead on
+- **Pot rules** (`s.gk.rules` = { { n, pct, g, to = names } }, at most `Gdkp.MAX_RULES`; `Gdkp.addRule`, `editRule`, `removeRule`,
+  `ruleTo`, `ruleText`; `LR.gdkpAddRule` and friends; `UI.potRulesSheet`): the organiser's own cuts, paid after the cut, bonuses and
+  role cuts, before the even split, scaled down to what's left. `split.rules`, `split.ruleTotals`, `row.ruleCut`, `row.ruleNames`;
+  `!lr pot` and the raid summary name them. Older versions ignore `rules` (their own screen shows the split without them).
+- **Planned with the owner (in this order, one pull request each):** GDKP bookkeeping (gold added by hand, a ledger of gold trades, the payout sheet in and out); bidding ahead on
   queued items; several auctions at once (bids typed with the item's number work without the addon); bag checks; a gear
   overview; organiser branding; loot council; fairness history across raids; reserve swap requests after the lock.
 - **Next:** the roadmap and the follow-ups are done. Then speed: addon messages by priority (rolls and bids first, session

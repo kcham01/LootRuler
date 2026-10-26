@@ -13,6 +13,8 @@
 --   rp       role -> the cut each player in it gets, as a percent of the pot ({ tank = 2, healer = 1 })
 --   role     "Name-Realm" -> "tank" / "healer": who's in which role (the leader picks)
 --   strict   bids must start with "bid" ("bid 150"), so someone saying "500" in raid chat doesn't bid
+--   rules    the organiser's own pot rules, in order: { { n = name, pct = percent of the pot, g = gold, to = { names } } };
+--            each player named gets pct of the pot and g gold (older versions don't know them and leave them alone)
 -- Addons can't put gold in a trade, so LootRuler says who owes what and counts what changes hands.
 local _, LR = ...
 local U, S = LR.U, LR.Session
@@ -74,6 +76,80 @@ function G.setRole(s, player, role, now)
   s.gk.role[player] = role
   S.bump(s, now)
   return true
+end
+
+---------------------------------------------------------------------- the organiser's own pot rules
+G.MAX_RULES, G.MAX_RULE_PCT, G.MAX_RULE_TO, G.MAX_RULE_NAME = 10, 50, 40, 24
+
+--- a rule's name, cleaned (no colours or links), or nil
+local function ruleName(text)
+  text = tostring(text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|", "")
+  text = U.trim(text):sub(1, G.MAX_RULE_NAME)
+  return text ~= "" and text or nil
+end
+
+--- adds a rule (nobody in it yet); returns its place, or nil
+function G.addRule(s, name, now)
+  if not s.gk then return nil end
+  s.gk.rules = s.gk.rules or {}
+  if #s.gk.rules >= G.MAX_RULES then return nil end
+  table.insert(s.gk.rules, { n = ruleName(name) or ("Rule " .. (#s.gk.rules + 1)), to = {} })
+  S.bump(s, now)
+  return #s.gk.rules
+end
+
+--- changes a rule: { n = name, pct = percent of the pot (0 to G.MAX_RULE_PCT), g = gold }; returns whether it changed
+function G.editRule(s, index, fields, now)
+  local r = s.gk and s.gk.rules and s.gk.rules[index]
+  if not r or type(fields) ~= "table" then return false end
+  local changed = false
+  if fields.n ~= nil then
+    local n = ruleName(fields.n)
+    if n and n ~= r.n then r.n = n changed = true end
+  end
+  if fields.pct ~= nil then
+    local pct = num(fields.pct, 0, G.MAX_RULE_PCT)
+    pct = pct and pct > 0 and pct or nil
+    if pct ~= r.pct and (pct or fields.pct == 0) then r.pct = pct changed = true end
+  end
+  if fields.g ~= nil then
+    local g = num(fields.g, 0, G.MAX_GOLD)
+    g = g and g > 0 and math.floor(g) or nil
+    if g ~= r.g and (g or fields.g == 0) then r.g = g changed = true end
+  end
+  if changed then S.bump(s, now) end
+  return changed
+end
+
+--- takes a rule away
+function G.removeRule(s, index, now)
+  if not (s.gk and s.gk.rules and s.gk.rules[index]) then return false end
+  table.remove(s.gk.rules, index)
+  if #s.gk.rules == 0 then s.gk.rules = nil end
+  S.bump(s, now)
+  return true
+end
+
+--- puts a player in a rule, or takes them out
+function G.ruleTo(s, index, player, on, now)
+  local r = s.gk and s.gk.rules and s.gk.rules[index]
+  if not r then return false end
+  player = U.full(player)
+  local i = U.indexOf(r.to, player)
+  if on and not i and #r.to < G.MAX_RULE_TO then table.insert(r.to, player)
+  elseif not on and i then table.remove(r.to, i)
+  else return false end
+  S.bump(s, now)
+  return true
+end
+
+--- a rule in words: "5% of the pot and 100g each"
+function G.ruleText(r)
+  local parts = {}
+  if r.pct then parts[#parts + 1] = r.pct .. "% of the pot" end
+  if r.g then parts[#parts + 1] = G.gold(r.g) end
+  if #parts == 0 then return "nothing yet" end
+  return table.concat(parts, " and ") .. " each"
 end
 
 --- whether a bid has to start with "bid"
@@ -210,8 +286,9 @@ function G.players(s)
   return out
 end
 
---- the split: { pot, cut (the organiser's), bonuses, share (each player's), players, rows = { name -> { spent,
---- bonus, gets (share + bonus), paid, owed } } }. owed > 0: the organiser gives them that much; < 0: they give
+--- the split: { pot, cut (the organiser's), bonuses, roles, rules (the organiser's own rules; ruleTotals: rule's place ->
+--- gold), share (each player's), players, rows = { name -> { spent, bonus, roleCut, ruleCut, ruleNames, gets (share and
+--- the rest), paid, owed } } }. owed > 0: the organiser gives them that much; < 0: they give
 --- the organiser that much. Shares are whole gold; what's left over by rounding stays with the organiser.
 function G.split(s)
   local pot = G.pot(s)
@@ -235,7 +312,28 @@ function G.split(s)
     roles = 0
     for name, g in pairs(rolePay) do rolePay[name] = math.floor(g * scale) roles = roles + rolePay[name] end
   end
-  local rest = pot - cut - bonuses - roles
+  -- the organiser's own rules: each player named gets the rule's percent of the pot and its gold, out of what's left
+  local rulePay, ruleNames, rules, ruleTotals = {}, {}, 0, {}
+  for i, r in ipairs(gk.rules or {}) do
+    for _, name in ipairs(r.to or {}) do
+      local g = math.floor(pot * (r.pct or 0) / 100) + (r.g or 0)
+      if g > 0 and not (gk.out and gk.out[name]) then
+        rulePay[name] = (rulePay[name] or 0) + g
+        ruleNames[name] = ruleNames[name] or {}
+        table.insert(ruleNames[name], r.n)
+        ruleTotals[i] = (ruleTotals[i] or 0) + g
+        rules = rules + g
+      end
+    end
+  end
+  local left = pot - cut - bonuses - roles
+  if rules > left then                        -- (never more than there is: each is cut down to fit)
+    local scale = rules > 0 and left / rules or 0
+    rules = 0
+    for name, g in pairs(rulePay) do rulePay[name] = math.floor(g * scale) rules = rules + rulePay[name] end
+    for i, g in pairs(ruleTotals) do ruleTotals[i] = math.floor(g * scale) end
+  end
+  local rest = pot - cut - bonuses - roles - rules
   local share = #players > 0 and math.floor(rest / #players) or 0
   local rows = {}
   local spent = {}
@@ -248,12 +346,14 @@ function G.split(s)
     local inSplit = not (gk.out and gk.out[p])
     local bonus = inSplit and (gk.bonus and gk.bonus[p]) or 0
     local roleCut = inSplit and rolePay[p] or 0
-    local gets = inSplit and (share + bonus + roleCut) or 0
+    local ruleCut = inSplit and rulePay[p] or 0
+    local gets = inSplit and (share + bonus + roleCut + ruleCut) or 0
     local paid = gk.paid and gk.paid[p] or 0
-    rows[p] = { spent = spent[p] or 0, bonus = bonus, role = gk.role and gk.role[p], roleCut = roleCut, gets = gets, paid = paid,
+    rows[p] = { spent = spent[p] or 0, bonus = bonus, role = gk.role and gk.role[p], roleCut = roleCut, ruleCut = ruleCut,
+      ruleNames = ruleCut > 0 and ruleNames[p] or nil, gets = gets, paid = paid,
       owed = gets - (spent[p] or 0) + paid, out = not inSplit }
   end
-  return { pot = pot, cut = cut, bonuses = bonuses, roles = roles, share = share, players = players, rows = rows }
+  return { pot = pot, cut = cut, bonuses = bonuses, roles = roles, rules = rules, ruleTotals = ruleTotals, share = share, players = players, rows = rows }
 end
 
 --- who still owes the organiser or is owed by them: { { name, owed } }, biggest first (not the organiser)
@@ -295,6 +395,15 @@ function G.valid(gk)
   end
   if gk.rp ~= nil and not map(gk.rp, "string", "number") then return false end
   if gk.role ~= nil and not map(gk.role, "string", "string") then return false end
+  if gk.rules ~= nil then
+    if type(gk.rules) ~= "table" or #gk.rules > G.MAX_RULES then return false end
+    for _, r in ipairs(gk.rules) do
+      if type(r) ~= "table" or type(r.n) ~= "string" or #r.n > 40 or type(r.to) ~= "table" or #r.to > G.MAX_RULE_TO then return false end
+      if r.pct ~= nil and (type(r.pct) ~= "number" or r.pct < 0 or r.pct > 100) then return false end
+      if r.g ~= nil and (type(r.g) ~= "number" or r.g < 0 or r.g > G.MAX_GOLD) then return false end
+      for _, name in ipairs(r.to) do if type(name) ~= "string" then return false end end
+    end
+  end
   return map(gk.bonus, "string", "number") and map(gk.seen, "string", "boolean") and map(gk.out, "string", "boolean")
     and map(gk.paid, "string", "number") and map(gk.prices, "number", "number")
 end

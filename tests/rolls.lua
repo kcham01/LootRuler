@@ -470,6 +470,40 @@ check("out of the pot, before the even split", rsp.cut == 100 and rsp.roles == 5
 check("taking someone out of a role", Gd.setRole(rs, DAN, nil, 708) and Gd.split(rs).rows[DAN].roleCut == 0 and Gd.valid(rs.gk) and S.valid(rs))
 rs.gk.role[ANN] = 5
 check("nonsense roles aren't valid", not Gd.valid(rs.gk))
+rs.gk.role[ANN] = "healer"
+-- the organiser's own pot rules
+local LEAD = "Lead-Dreamscythe"
+local ri = Gd.addRule(rs, "|cffff0000Raid leader|r", 709)
+check("a rule of my own, named (no colours)", ri == 1 and rs.gk.rules[1].n == "Raid leader" and #rs.gk.rules[1].to == 0)
+check("a percent of the pot, for the players picked", Gd.editRule(rs, ri, { pct = 5 }, 710) and Gd.ruleTo(rs, ri, LEAD, true, 711)
+  and not Gd.ruleTo(rs, ri, LEAD, true, 711) and Gd.ruleText(rs.gk.rules[1]) == "5% of the pot each")
+local rr = Gd.split(rs)
+-- 1,000g: 100g to the organiser, 20g healer cut, 50g raid leader rule, 830g split four ways
+check("paid out of the pot after the cuts, before the even split", rr.rules == 50 and rr.ruleTotals[1] == 50 and rr.share == 207
+  and rr.rows[LEAD].ruleCut == 50 and rr.rows[LEAD].gets == 257 and rr.rows[LEAD].ruleNames[1] == "Raid leader" and rr.rows[BOB].ruleCut == 0)
+local r2 = Gd.addRule(rs, "Pumper", 712)
+check("gold each, for several players", Gd.editRule(rs, r2, { g = 200 }, 713) and Gd.ruleTo(rs, r2, BOB, true, 714) and Gd.ruleTo(rs, r2, DAN, true, 715)
+  and Gd.split(rs).rules == 450 and Gd.split(rs).share == 107 and Gd.split(rs).rows[DAN].ruleCut == 200)
+Gd.editRule(rs, r2, { g = 500 }, 716)
+rr = Gd.split(rs)
+check("never more than is left: made smaller to fit", rr.rules <= 880 and rr.rules > 870 and rr.share >= 0 and rr.rows[BOB].ruleCut < 500
+  and rr.rows[LEAD].ruleCut < 50, rr.rules)
+check("nonsense isn't taken", not Gd.editRule(rs, r2, { pct = 99 }, 717) and not Gd.editRule(rs, r2, { g = -5 }, 717) and not Gd.editRule(rs, 9, { pct = 1 }, 717))
+check("someone left out gets nothing from a rule", Gd.setOut(rs, BOB, true, 718) and Gd.split(rs).rows[BOB].ruleCut == 0)
+Gd.setOut(rs, BOB, false, 719)
+check("a session with rules is valid", Gd.valid(rs.gk) and S.valid(rs))
+check("taking a rule away", Gd.removeRule(rs, r2, 720) and #rs.gk.rules == 1 and Gd.split(rs).rules == 50)
+check("no more than ten", (function()
+  for i = 2, 10 do Gd.addRule(rs, "R" .. i, 721) end
+  return #rs.gk.rules == 10 and Gd.addRule(rs, "Eleven", 722) == nil
+end)())
+rs.gk.rules[2].to = { 5 }
+check("rules with nonsense in them aren't valid", not Gd.valid(rs.gk))
+rs.gk.rules[2].to = {}
+rs.gk.rules[3].pct = "lots"
+check("nor a percent that isn't a number", not Gd.valid(rs.gk))
+rs.gk.rules = nil
+check("a session without rules (an older version's) is fine", Gd.valid(rs.gk) and Gd.split(rs).rules == 0)
 check("gold handed over counts", sp.rows[ANN].owed == 0 and sp.rows[DAN].owed == 0 and sp.rows[BOB].owed == -175)
 check("it's all a valid session", S.valid(gs) and Gd.valid(gs.gk))
 local owing = Gd.unsettled(gs)
