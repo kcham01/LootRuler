@@ -189,6 +189,12 @@ check("an icon this version doesn't have shows as the raid's own", S.brandIcon({
 check("setting it bumps the session; the same again doesn't", S.setBrand(ns, { n = "Kings" }, 600) and not S.setBrand(ns, { n = "Kings" }, 601) and ns.br.n == "Kings")
 ns.br = { n = 5, m = { "x" }, i = "lots" }
 check("a copy with nonsense branding keeps the session, without the branding", S.valid(ns) and ns.br == nil)
+-- who came (attendance)
+check("who came is noted once each", S.saw(ns, { "Ann", "Bob-Faerlina", "ann" }, 610) and #ns.att == 2 and not S.saw(ns, { "Ann" }, 611))
+ns.att = { "Ann-Dreamscythe", 5, "x|y" }
+check("a copy's attendance keeps names only", S.valid(ns) and #ns.att == 1 and ns.att[1] == "Ann-Dreamscythe")
+ns.att = "lots"
+check("and none when it isn't a list", S.valid(ns) and ns.att == nil)
 ns.hx = { 28528, 28530 }
 check("what the last import hard reserved is fine", S.valid(ns))
 ns.hx = { 28528, "x" }

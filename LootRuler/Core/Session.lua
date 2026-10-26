@@ -339,6 +339,31 @@ function S.setLink(s, url, now)
   return true
 end
 
+---------------------------------------------------------------------- who came (attendance, for the fairness history)
+-- s.att = { "Name-Realm", ... }: everyone who was in the group while the leader ran the session (S.MAX_ATT at most).
+-- Older versions don't know it and leave it alone.
+S.MAX_ATT = 80
+function S.saw(s, names, now)
+  s.att = s.att or {}
+  local have, added = {}, false
+  for _, n in ipairs(s.att) do have[n:lower()] = true end
+  for _, n in ipairs(names or {}) do
+    n = U.full(n)
+    if type(n) == "string" and not have[n:lower()] and #s.att < S.MAX_ATT then s.att[#s.att + 1] = n have[n:lower()] = true added = true end
+  end
+  if added then bump(s, now) end
+  return added
+end
+--- attendance checked: a list of names, or nil
+function S.cleanAtt(list)
+  if type(list) ~= "table" then return nil end
+  local out = {}
+  for _, n in ipairs(list) do
+    if type(n) == "string" and #n <= 60 and not n:find("|", 1, true) and #out < S.MAX_ATT then out[#out + 1] = n end
+  end
+  return #out > 0 and out or nil
+end
+
 ---------------------------------------------------------------------- the loot council (Core/Council.lua)
 S.COUNCIL_MAX = 15
 --- the council, checked: a list of names (no two the same, S.COUNCIL_MAX at most), or nil
@@ -629,6 +654,7 @@ function S.valid(t)
   if t.url ~= nil and not S.okLink(t.url) then t.url = nil end      -- (a link that isn't softres.it's is dropped)
   if t.br ~= nil then t.br = S.okBrand(t.br) end                    -- (branding: only what's right in it is kept)
   if t.lc ~= nil then t.lc = S.cleanCouncil(t.lc) end               -- (the loot council: names only)
+  if t.att ~= nil then t.att = S.cleanAtt(t.att) end                -- (who came: names only)
   if t.next ~= nil and type(t.next) ~= "string" then return false end
   if t.go ~= nil and type(t.go) ~= "boolean" then return false end
   if t.was ~= nil then

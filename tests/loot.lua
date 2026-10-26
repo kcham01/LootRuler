@@ -1481,6 +1481,19 @@ Rolls.dismiss()
 lead.LR.endSession(sc)
 srv:tick(10)
 
+section("who got what, over time")
+local Hs = lead.LR.History
+local rows = Hs.fairness(0)
+local function rowOf(p) for _, r in ipairs(rows) do if r.p == full(p) then return r end end end
+check("every past raid's loot, per player", rowOf(dan) and #rowOf(dan).items >= 1 and rowOf(ann) and #rowOf(ann).items >= 1)
+check("with how many raids they came to (in the group, or won something)", rowOf(dan).raids >= 2 and rowOf(pug).raids >= 2, rowOf(dan).raids)
+check("most items first", #rows[1].items >= #rows[#rows].items)
+check("past raids keep who came", Hs.all()[1].att and #Hs.all()[1].att >= 5)
+check("the kinds, in words", Hs.kindsText({ MS = 3, OS = 1, SR = 1, BID = 2, DE = 1 }) == "1 SR, 3 MS, 1 OS, 2 bought, 1 to disenchant"
+  and Hs.kindsText({ X9 = 2 }) == "2 X9")
+check("raiders have it too, from their own copies", #ann.LR.History.fairness(0) > 0)
+check("a time range leaves older raids out", #Hs.fairness(lead.LR.U.now() + 60) == 0)
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
