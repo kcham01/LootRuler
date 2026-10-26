@@ -664,9 +664,42 @@ function Rolls.follow(msg, sender)
   copy.ends = now() + math.min(120, math.max(0, msg.left))
   copy.state = "open"
   copy.seenAt = now()
+  if not copy.hidden and not copy.gearSent then Rolls.sendGear(copy) end
   if not copy.hidden and LR.UI and LR.UI.rollWindow then LR.UI.rollWindow(copy) end
   if not copy.hidden and LR.AutoRoll then LR.AutoRoll.consider(copy) end      -- my own rules (Core/AutoRoll.lua)
   LR.changed("rolls")
+end
+
+---------------------------------------------------------------------- what everyone has on now (gear comparison)
+--- what I wear where an item goes (links; none for an empty slot), for my window and for the loot master's: sent once
+--- per roll, by whisper (Settings: shareGear). Not for an auction (gold decides).
+function Rolls.sendGear(copy)
+  copy.gearSent = true
+  if copy.mode == "BID" or copy.test then return end
+  local links = {}
+  for _, slot in ipairs(LR.wornIn(copy.id)) do
+    local l = GetInventoryItemLink("player", slot)
+    if l then links[#links + 1] = l end
+  end
+  copy.mine = #links > 0 and links or nil
+  if #links == 0 or not LR.db.settings.shareGear then return end
+  local mine = Rolls.current
+  if mine and mine.k == copy.k then mine.gear = mine.gear or {} mine.gear[R.key(U.me())] = links return end
+  if copy.by and not U.samePlayer(copy.by, U.me()) then Net.send({ t = "W", k = copy.k, e = links }, "WHISPER", copy.by) end
+end
+
+-- what a roller wears there, at the loot master's (from their addon)
+Net.handlers.W = function(msg, channel, sender)
+  local roll = Rolls.current
+  if not roll or roll.k ~= msg.k or type(msg.e) ~= "table" or not LR.inGroup(sender) then return end
+  local links = {}
+  for i, l in ipairs(msg.e) do
+    if i > 2 then break end
+    if type(l) == "string" and #l <= 200 and l:find("|Hitem:%d+") then links[#links + 1] = l end
+  end
+  roll.gear = roll.gear or {}
+  roll.gear[R.key(sender)] = #links > 0 and links or nil
+  changed()
 end
 
 ---------------------------------------------------------------------- Gargul's rolls (read from raid chat)

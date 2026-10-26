@@ -416,7 +416,8 @@ run("rolling out loot", function()
   shot("give")
   LR.UI.closeAll()
   LR.UI.win:Hide()
-  -- roll out the cloak Ann and the leader reserved
+  -- roll out the cloak Ann and the leader reserved (Ann wears an old one)
+  ann.M.player.links = { [15] = "|cff0070dd|Hitem:28672::::::::70:::::|h[Drape of the Dark Reavers]|h|r" }
   local hit
   for _, x in ipairs(M.findText("Royal Cloak of Arathi Kings", true, panel)) do if x.clickable then hit = x.clickable end end
   M.click(hit)
@@ -444,6 +445,7 @@ run("rolling out loot", function()
   srv:tick(3)
   check("everyone who reserved it rolled: it closes", roll.state == "closed")
   check("Ann is picked to get it", #M.findText("Give to Ann", true, G.LootRulerMasterFrame) > 0)
+  check("and the loot master sees the cloak she wears now", roll.gear and roll.gear["ann-dreamscythe"] ~= nil)
   shot("loot-master", lead, { "LootStandIn", "LootRulerLootPanel", "LootRulerMasterFrame" })
   M.click(M.findText("Give to Ann", true, G.LootRulerMasterFrame)[1].clickable)
   srv:tick(1)

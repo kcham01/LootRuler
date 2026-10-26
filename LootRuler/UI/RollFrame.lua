@@ -397,6 +397,7 @@ local function underneath(f, copy)
   local lines = {}
   if copy.note then lines[#lines + 1] = "Note: " .. copy.note end
   if copy.wish and copy.mode ~= "BID" then lines[#lines + 1] = "Wishlist: " .. LR.wishLine(copy.wish, 4) end
+  if copy.mine then lines[#lines + 1] = "|cff9d9d9dYou have:|r " .. table.concat(copy.mine, " ") end
   local noted = #lines > 0
   f.note:SetText(table.concat(lines, "\n"))
   f.note:SetShown(noted)

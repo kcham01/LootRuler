@@ -120,6 +120,29 @@ end
 
 ---------------------------------------------------------------------- names, links, icons
 local QUALITY = { [0] = "9d9d9d", [1] = "ffffff", [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000" }
+-- where an item is worn: its inventory type (the loot lists' third field, or the game's INVTYPE_ name) -> the
+-- character's slots (a ring or a trinket has two; a one-hand weapon may go in either hand)
+local WORN = {
+  [1] = { 1 }, [2] = { 2 }, [3] = { 3 }, [4] = { 4 }, [5] = { 5 }, [20] = { 5 }, [6] = { 6 }, [7] = { 7 }, [8] = { 8 },
+  [9] = { 9 }, [10] = { 10 }, [11] = { 11, 12 }, [12] = { 13, 14 }, [13] = { 16, 17 }, [14] = { 17 }, [15] = { 18 },
+  [16] = { 15 }, [17] = { 16 }, [19] = { 19 }, [21] = { 16 }, [22] = { 17 }, [23] = { 17 }, [25] = { 18 }, [26] = { 18 }, [28] = { 18 },
+}
+local WORN_NAME = { INVTYPE_HEAD = 1, INVTYPE_NECK = 2, INVTYPE_SHOULDER = 3, INVTYPE_BODY = 4, INVTYPE_CHEST = 5, INVTYPE_ROBE = 20,
+  INVTYPE_WAIST = 6, INVTYPE_LEGS = 7, INVTYPE_FEET = 8, INVTYPE_WRIST = 9, INVTYPE_HAND = 10, INVTYPE_FINGER = 11,
+  INVTYPE_TRINKET = 12, INVTYPE_WEAPON = 13, INVTYPE_SHIELD = 14, INVTYPE_RANGED = 15, INVTYPE_CLOAK = 16, INVTYPE_2HWEAPON = 17,
+  INVTYPE_TABARD = 19, INVTYPE_WEAPONMAINHAND = 21, INVTYPE_WEAPONOFFHAND = 22, INVTYPE_HOLDABLE = 23, INVTYPE_THROWN = 25,
+  INVTYPE_RANGEDRIGHT = 26, INVTYPE_RELIC = 28 }
+--- the character slots an item goes in ({} for something you don't wear, like a token)
+function LR.wornIn(id)
+  local it = LR.ITEMS[id]
+  local kind = it and it[3]
+  if not kind and C_Item and C_Item.GetItemInfoInstant then
+    local _, _, _, loc = C_Item.GetItemInfoInstant(id)
+    kind = WORN_NAME[loc or ""]
+  end
+  return WORN[kind or 0] or {}
+end
+
 local SLOT_NAME = {
   [1] = "Head", [2] = "Neck", [3] = "Shoulder", [5] = "Chest", [6] = "Waist", [7] = "Legs", [8] = "Feet", [9] = "Wrist",
   [10] = "Hands", [11] = "Finger", [12] = "Trinket", [13] = "One-Hand", [14] = "Off Hand", [15] = "Ranged", [16] = "Back",

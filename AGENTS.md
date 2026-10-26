@@ -268,6 +268,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   client restricts `SendMail`, so the organiser presses Send); a post-hook on `SendMail` matches it to the payout filled in,
   and `MAIL_SEND_SUCCESS` counts the gold in the mail as paid. Not done: several auctions at once (the loot master has one
   roll at a time, `Rolls.current`; it needs its own design).
+- **Gear comparison** (`LR.wornIn`, `Rolls.sendGear`, message `W` = { k, e = links }, setting `shareGear`, on): a raider's addon
+  whispers the loot master the links in the item's slots (two for rings, trinkets, one-hands) once per roll; the loot master
+  keeps them as `roll.gear` (only from the group, for the roll on now, links only, two at most). Shown as an icon on the
+  loot master's row and "You have:" in the raider's window. Not for auctions. The mock gives gear with `M.player.links`;
+  the picture renderer now shows links as their names.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

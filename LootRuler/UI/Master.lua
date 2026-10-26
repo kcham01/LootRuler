@@ -34,9 +34,26 @@ K.define("rollrow", function()
   b.num:SetPoint("RIGHT", -6, 0)
   b.num:SetWidth(36)
   b.kind:SetPoint("RIGHT", b.num, "LEFT", -4, 0)
+  -- what they wear in that slot now (from their addon): its icon, and the item on hover
+  b.gear = CreateFrame("Button", nil, b)
+  b.gear:SetSize(16, 16)
+  b.gear:SetPoint("RIGHT", b.kind, "LEFT", -6, 0)
+  b.gear.icon = b.gear:CreateTexture(nil, "ARTWORK")
+  b.gear.icon:SetAllPoints()
+  b.gear.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+  b.gear:SetScript("OnEnter", function(self)
+    if not self.links then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetHyperlink(self.links[1])
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("What they wear there now." .. (self.links[2] and (" Also: " .. self.links[2]) or ""), 0.7, 0.7, 0.7, true)
+    GameTooltip:Show()
+  end)
+  b.gear:SetScript("OnLeave", function() GameTooltip:Hide() end)
   b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
   return b
 end, function(b)
+  b.gear.links = nil b.gear:Hide()
   b.rank:SetText("") b.name:SetText("") b.kind:SetText("") b.num:SetText("")
   b.num:SetTextColor(1, 1, 1) b.kind:SetTextColor(K.rgb(K.GOLD)) b.rank:SetTextColor(K.rgb(K.GOLD))
   b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.5)
@@ -178,7 +195,13 @@ local function rowFor(f, roll, e, rank, pick)
   local class = LR.classOf(e.p)
   b.rank:SetText(rank and tostring(rank) or "")
   b.name:SetText(U.classText(U.short(e.p), class))
-  b.name:SetWidth(f.width - 130)
+  b.name:SetWidth(f.width - 150)
+  local links = roll.gear and roll.gear[R.key(e.p)]
+  if links then
+    b.gear.links = links
+    b.gear.icon:SetTexture(LR.itemIcon(tonumber(links[1]:match("item:(%d+)")) or 0))
+    b.gear:Show()
+  end
   local num = roll.mode == "BID" and LR.Gdkp.gold(e.n) or tostring(e.n)
   if e.kind then
     b.kind:SetText(R.label(roll, e))
