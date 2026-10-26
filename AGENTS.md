@@ -276,6 +276,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Becoming the master looter** (`UI.masterLooterPrompt`, `LR.announceMasterLooter`, `UI.masterLooterLine`; settings `mlPrompt`, on,
   and `mlAnnounce`, off): on `PARTY_LOOT_METHOD_CHANGED` / `GROUP_ROSTER_UPDATE`, a change to being master looter asks (not in
   combat) or posts. Nothing happens for the first 5 seconds after logging in, so a reload doesn't ask again.
+- **Loot given out without LootRuler** (`UI.unrecordedPrompt`, setting `remindUnrecorded`, on; `Rolls.handedOut`, `Rolls.justGave`): in
+  `Drops.lootMessage`, a drop from my open master loot window that goes to someone else with no award (and that I didn't
+  give through LootRuler in the last minute: a raider's copy gets the leader's award later) asks to record it through
+  `Rolls.give` (SR / MS / OS / DE), or leave it.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

@@ -74,6 +74,7 @@ LR.DEFAULTS = {
   rollKinds = {},          -- my own roll types for rolls open to everyone: { { n = "Transmog", hi = 98 } } (Core/Roll.lua)
   raidCommands = true,     -- "!lr" works in raid and party chat, not just by whisper
   raidWarning = true,      -- rolls are announced as raid warnings (leader or assistant), not plain raid chat
+  remindUnrecorded = true, -- the master looter gives an item out without LootRuler: asked whether to record it (UI/Master.lua)
   mlPrompt = true,         -- becoming the master looter: asked whether to open the loot master window and tell the raid
   mlAnnounce = false,      -- ...or the raid is told by itself (UI/Master.lua)
   awardGuild = false,      -- who got what goes in guild chat too (Core/Rolls.lua)
