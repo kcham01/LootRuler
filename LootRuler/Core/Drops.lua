@@ -275,6 +275,22 @@ function Drops.holding()
   return out
 end
 
+--- what I'm holding, in raid chat: each item still to roll out or trade, with its time left (and who it's for).
+--- Returns how many, or nil when there's nothing or no group.
+function Drops.postHolding()
+  local list = Drops.holding()
+  local ch = LR.groupChannel()
+  if #list == 0 or not ch then return nil end
+  local parts = {}
+  for _, x in ipairs(list) do
+    local mins = math.max(1, math.floor(x.left / 60))
+    local time = mins >= 60 and ("%dh %02dm"):format(math.floor(mins / 60), mins % 60) or (mins .. "m")
+    parts[#parts + 1] = ("%s %s%s"):format(LR.itemLink(x.d.i), time, x.state == "toTrade" and (" (for " .. U.short(x.to) .. ")") or "")
+  end
+  for _, l in ipairs(U.chatLines(LR.TAG .. " Still to roll out or trade, with the time left: " .. table.concat(parts, ", ") .. ".")) do LR.say(l, ch) end
+  return #list
+end
+
 --- drops I'm holding that someone else won: { { drop, winner } }, the ones for a player when one is given
 function Drops.toDeliver(player)
   local out = {}

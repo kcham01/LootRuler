@@ -1525,6 +1525,7 @@ run("trade timers", function()
   table.sort(order, function(a, b) return a[2] > b[2] end)
   check("a bar for each, the soonest to run out first", tw:IsShown() and onTimers("To trade (3)") and onTimers("> Ann") and onTimers("12m")
     and #order == 3 and order[1][1] == 28745 and order[2][1] == 28767)
+  check("with a button to post the list", tw.post and tw.post:IsShown())
   shot("trade-timers", lead, { "LootRulerTimers" })
   local row
   for _, c in ipairs(tw._children) do if c:IsShown() and c.x and c.x.d.i == 28762 then row = c end end

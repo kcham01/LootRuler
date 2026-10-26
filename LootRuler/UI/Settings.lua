@@ -458,6 +458,7 @@ UI.COMMANDS = {
   { "/lr de [name]", "who disenchants (the leader)" },
   { "/lr test", "a pretend roll window" },
   { "/lr raid", "raid setup: paste who's coming, invite them, sort groups" },
+  { "/lr held", "post the items you hold to roll out or trade, with the time left" },
   { "/lr tour", "a quick tour of LootRuler" },
   { "/lr whatsnew", "what's new in this version" },
   { "/lr versions", "who in the group has LootRuler, and which version" },
