@@ -782,6 +782,55 @@ srv:tick(31)
 check("it can be turned off", #lead.M.notices == n0 + 4)
 lead.LR.db.settings.tradeWarn = true
 
+section("trade timers on screen")
+local tw = lead.G.LootRulerTimers
+local function timerRows()
+  local out = {}
+  for _, c in ipairs(tw._children) do if c:IsShown() and c.x then out[#out + 1] = c end end
+  table.sort(out, function(a, b) return select(5, a:GetPoint(1)) > select(5, b:GetPoint(1)) end)
+  return out
+end
+lead.LR.UI.tradeTimers()
+local tr = timerRows()
+local held0 = #lead.LR.Drops.holding()
+check("the loot master sees a bar for each item they hold", tw and tw:IsShown() and #tr == held0 and #tr >= 3, tw and #tr)
+check("the soonest to run out first", tr[1] and tr[1].x.left <= tr[2].x.left and tr[2].x.left <= tr[3].x.left)
+local byId = {}
+for _, r in ipairs(tr) do byId[r.x.d.i] = r end
+check("a won item says who it's for", byId[OWED] and byId[OWED].name:GetText():find("Bob", 1, true) ~= nil and byId[OWED].x.state == "toTrade",
+  byId[OWED] and byId[OWED].name:GetText())
+check("with the time left", byId[OWED].time:GetText():match("^%dm$") ~= nil, byId[OWED].time:GetText())
+check("raiders don't get it", not ann.G.LootRulerTimers or not ann.G.LootRulerTimers:IsShown())
+-- clicking one not rolled out yet rolls it out
+lead.M.click(byId[HELD])
+srv:tick(0.5)
+local tRoll = Rolls.mine()
+check("click: it's rolled out", tRoll and tRoll.id == HELD and tRoll.state == "open" and tRoll.drop == byId[HELD].x.d.k)
+Rolls.cancel()
+srv:tick(0.5)
+Rolls.dismiss()
+-- clicking a won one opens a trade with the winner
+lead.M.click(byId[OWED])
+srv:tick(0.5)
+check("click on a won one: a trade with the winner opens", lead.G.TradeFrame:IsShown() and lead.trading == bob)
+srv:tick(1)
+srv:completeTrade(lead)
+srv:tick(1)
+local stillThere = false
+for _, r in ipairs(timerRows()) do if r.x.d.i == OWED then stillThere = true end end
+check("once it's traded, its bar goes", #timerRows() == held0 - 1 and not stillThere, #timerRows())
+-- the x hides it until another item comes in
+lead.M.click(tw.close)
+lead.LR.UI.tradeTimers()
+check("the x hides it", not tw:IsShown())
+srv:lootTo(lead, 28750)
+srv:tick(1)
+check("until another item comes in", tw:IsShown() and #timerRows() == held0)
+lead.LR.db.settings.tradeTimers = false
+lead.LR.UI.tradeTimers()
+check("it can be turned off", not tw:IsShown())
+lead.LR.db.settings.tradeTimers = true
+
 section("ending the session")
 lead.LR.endSession(s)
 srv:tick(2)

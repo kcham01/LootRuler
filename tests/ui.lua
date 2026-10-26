@@ -1198,6 +1198,38 @@ run("the Test tab", function()
   LR.UI.go("reserve")
 end)
 
+run("trade timers", function()
+  local ts = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  for _, id in ipairs({ 28762, 28767, 28745 }) do srv:lootTo(lead, id) end
+  srv:tick(1)
+  local function drop(id) for _, d in ipairs(ts.drops or {}) do if d.i == id then return d end end end
+  check("the items in the loot master's bags are on the list", drop(28762) and drop(28767) and drop(28745))
+  LR.Rolls.give(28767, LR.U.full("Ann"), "MS", { link = srv:link(28767), drop = drop(28767).k })
+  srv:tick(1)
+  LR.Rolls.dismiss()
+  drop(28745).ht = LR.U.now() - (LR.Drops.TRADE_SECONDS - 12 * 60)
+  drop(28767).ht = LR.U.now() - (LR.Drops.TRADE_SECONDS - 25 * 60)
+  LR.UI.tradeTimers()
+  local tw = G.LootRulerTimers
+  local function onTimers(text) return #M.findText(text, true, tw) > 0 end
+  local order = {}
+  for _, c in ipairs(tw._children) do if c:IsShown() and c.x then order[#order + 1] = { c.x.d.i, select(5, c:GetPoint(1)) } end end
+  table.sort(order, function(a, b) return a[2] > b[2] end)
+  check("a bar for each, the soonest to run out first", tw:IsShown() and onTimers("To trade (3)") and onTimers("> Ann") and onTimers("12m")
+    and #order == 3 and order[1][1] == 28745 and order[2][1] == 28767)
+  shot("trade-timers", lead, { "LootRulerTimers" })
+  local row
+  for _, c in ipairs(tw._children) do if c:IsShown() and c.x and c.x.d.i == 28762 then row = c end end
+  M.click(row, "RightButton")
+  srv:tick(0.3)
+  check("right-click: give it without a roll", visible("Give [") or visible("Pick who gets it and how"))
+  LR.UI.closeAll()
+  LR.endSession(ts)
+  srv:tick(1)
+  check("it goes with the session", not tw:IsShown())
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)
