@@ -388,6 +388,18 @@ local function answerBatch(batch)
   after(2 + math.random() * 2, step)
 end
 
+--- the pretend players answer a bag check, a moment apart: mostly a few of each, now and then none
+function P.answerBags(check)
+  for i, x in ipairs(P.players) do
+    after(0.3 + 0.2 * i, function()
+      local c = {}
+      for _, id in ipairs(check.ids) do c[id] = math.random() < 0.2 and 0 or math.random(1, 5) end
+      heard(x, "the bag check", "answered")
+      LR.Bags.answered(check, x.name, c)
+    end)
+  end
+end
+
 --- the pretend players answer a roll or auction that's just started
 function P.react()
   local roll = LR.Rolls.current

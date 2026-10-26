@@ -569,6 +569,8 @@ SlashCmdList.LOOTRULER = function(msg)
     -- a practice raid's raid chat: what I'd type there (the game won't send it out of a group)
     local ok, why = LR.Practice.say(raw:gsub("^%s*[Ss][Aa][Yy]%s*", ""))
     if not ok then LR.print(why) end
+  elseif msg == "bags" or msg == "bagcheck" then
+    UI.bagCheckSheet()
   elseif msg == "batch" or msg == "auction" then
     if LR.Batch.current and LR.Batch.current.state == "open" or LR.Batch.open() then UI.showBatch() else UI.batchSheet() end
   elseif msg:match("^max") then

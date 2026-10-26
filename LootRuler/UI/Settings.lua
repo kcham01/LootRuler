@@ -27,6 +27,7 @@ function UI.settingsView(f)
     toggle(p, "gargulWindows", "Roll windows for Gargul's rolls", "When Gargul rolls an item out (read from raid chat), a roll window like LootRuler's pops up, with the reserves. Not if you have Gargul yourself: it shows its own.", function() UI.rollWindows() end)
     toggle(p, "rollOnlyMine", "Only for items I can roll on", "Leaves out items other players reserved, and ties you're not in.", function() UI.rollWindows() end)
     toggle(p, "outbidAlert", "Tell me when I'm outbid", "In an auction, when someone bids more than you: a message in the middle of your screen and a sound.")
+    toggle(p, "answerBagChecks", "Answer bag checks", "When whoever runs loot asks the group about some items (a flask, a key), LootRuler tells them how many you carry, in your bags and bank.")
     toggle(p, "shareGear", "Show the loot master what I wear", "When an item is rolled out, the loot master sees what you wear in its slot beside your roll, and so do you in your roll window.")
     toggle(p, "rollHideUnusable", "Not for items my class can't use", "Leaves out items everyone can roll on that your class can't use (a plate chest for a mage, say). You can still /roll.", function() UI.rollWindows() end)
     toggle(p, "rollCloseAfter", "Close the window once I've rolled", "It goes a moment after you roll, instead of staying to show who wins.", function() UI.rollWindows() end)
@@ -470,6 +471,7 @@ UI.COMMANDS = {
   { "/lr raid", "raid setup: paste who's coming, invite them, sort groups" },
   { "/lr held", "post the items you hold to roll out or trade, with the time left" },
   { "/lr batch", "auction several items at once (GDKP), or bring back the auction window" },
+  { "/lr bags", "a bag check: ask the group how many of some items they carry" },
   { "/lr say <text>", "in a practice raid: say something in its raid chat (a bid, or \"!lr ...\")" },
   { "/lr tour", "a quick tour of LootRuler" },
   { "/lr whatsnew", "what's new in this version" },

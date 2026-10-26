@@ -390,6 +390,14 @@ function Server:install(p)
       return it.name, it.link, it.quality, 115, 70, "Armor", "Plate", 1, "INVTYPE_HAND", 133000 + id % 100
     end,
     GetItemIconByID = function(id) return 133000 + id % 1000 end,
+    -- how many a player has: their bags (p.bags), and their bank too when asked (p.bank: id -> how many)
+    GetItemCount = function(item, includeBank)
+      local id = tonumber(item) or tonumber(tostring(item):match("item:(%d+)"))
+      local n = 0
+      for _, it in pairs(p.bags or {}) do if it.id == id then n = n + (it.count or 1) end end
+      if includeBank and p.bank then n = n + (p.bank[id] or 0) end
+      return n
+    end,
     RequestLoadItemDataByID = function(id) p.requested = (p.requested or 0) + 1 end,
   }
   G.IsModifiedClick = function() return false end

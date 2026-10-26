@@ -39,6 +39,7 @@ Core\AutoLoot.lua
 Core\AutoRoll.lua
 Core\GroupLoot.lua
 Core\Batch.lua
+Core\Bags.lua
 Core\Practice.lua
 UI\Kit.lua
 UI\Main.lua
@@ -54,6 +55,7 @@ UI\Lineup.lua
 UI\Guild.lua
 UI\Gdkp.lua
 UI\Batch.lua
+UI\Bags.lua
 UI\Settings.lua
 UI\Welcome.lua
 UI\Test.lua
