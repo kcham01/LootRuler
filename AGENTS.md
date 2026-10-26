@@ -280,6 +280,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Drops.lootMessage`, a drop from my open master loot window that goes to someone else with no award (and that I didn't
   give through LootRuler in the last minute: a raider's copy gets the leader's award later) asks to record it through
   `Rolls.give` (SR / MS / OS / DE), or leave it.
+- **Welcome, what's new, profiles** (`UI/Welcome.lua`): a fresh saved file sets `db.ui.toured = false`, and the first window open
+  shows `UI.tour` (the test server marks players as toured unless `newPlayer`). `UI.WHATS_NEW` (newest first): after an update
+  (`db.ui.seenVersion` differs) one chat line; add the next version's list there when bumping `LR.VERSION`. Profiles are
+  `db.profiles` (name -> settings, checked with `LR.checkSettings`, which `loadDB` now uses too); `LR.useProfile` copies one in.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

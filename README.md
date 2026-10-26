@@ -189,6 +189,8 @@ Guild members get a **Guild** tab: things that last between raids, kept by the o
 
 The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. `/lr test` shows a pretend roll window so you can drag it where you want it. The Settings tab can turn roll windows off, or show them only for items you can roll on.
 
+**Getting started:** the first time you open LootRuler, a five-page tour shows where everything is (`/lr tour` any time). After an update, one chat line says there's something new (`/lr whatsnew`). **Profiles** (Settings tab) save all your settings under a name, to switch between, say, "Running loot" and "Raiding".
+
 ## Install
 
 1. Download [LootRuler.zip](https://github.com/kcham01/LootRuler/raw/results/LootRuler.zip).

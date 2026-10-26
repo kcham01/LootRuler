@@ -202,10 +202,14 @@ function UI.settingsView(f)
     toggle(p, "testTab", "Show the Test tab", "A tab of pretend rolls and messages, to see how LootRuler looks before a raid. Everything on it happens only on your screen: nothing is said in chat or sent to anyone.")
   end)
 
+  UI.profilesPanel(f)
+
   f:panel("About", function(p)
     p:kv({ { "Version", LR.VERSION } })
     p:gap(4)
-    p:buttons({ { label = "Who has LootRuler", click = function() UI.versionSheet() end } }, "left")
+    p:buttons({ { label = "Who has LootRuler", click = function() UI.versionSheet() end },
+      { label = "What's new", click = function() UI.whatsNew() end },
+      { label = "The tour", click = function() UI.tour(1) end } }, "left")
     p:note("/lr opens this window. /lr help lists the rest.")
     p:note("Bugs and ideas: github.com/kcham01/LootRuler")
   end)
@@ -449,6 +453,8 @@ UI.COMMANDS = {
   { "/lr de [name]", "who disenchants (the leader)" },
   { "/lr test", "a pretend roll window" },
   { "/lr raid", "raid setup: paste who's coming, invite them, sort groups" },
+  { "/lr tour", "a quick tour of LootRuler" },
+  { "/lr whatsnew", "what's new in this version" },
   { "/lr versions", "who in the group has LootRuler, and which version" },
   { "/lr minimap", "hide or show the minimap button" },
 }

@@ -1516,6 +1516,65 @@ run("trade timers", function()
   check("it goes with the session", not tw:IsShown())
 end)
 
+run("a new player's first look", function()
+  local neo = srv:client({ name = "Neo", class = "WARRIOR", newPlayer = true })
+  srv:tick(7)
+  check("a new player isn't told what's new (there's the tour)", not neo.M.chat[#neo.M.chat] or not neo.M.chat[#neo.M.chat]:find("updated to", 1, true))
+  neo.G.SlashCmdList.LOOTRULER("")
+  srv:tick(0.3)
+  check("the first time the window opens: the tour", visible("Welcome to LootRuler", neo) and visible("1 of 5", neo))
+  shot("tour", neo)
+  for _ = 1, 4 do clickText("Next", nil, neo) end
+  check("five short pages", visible("Make it yours", neo) and visible("5 of 5", neo))
+  clickText("Done", nil, neo)
+  neo.LR.UI.win:Hide()
+  neo.G.SlashCmdList.LOOTRULER("")
+  srv:tick(0.3)
+  check("only the first time", not visible("Welcome to LootRuler", neo))
+  neo.LR.UI.win:Hide()
+  -- someone updating from an earlier version is told once what's new
+  local old = srv:client({ name = "Olde", class = "MAGE" }, { settings = { rollSeconds = 30 }, sessions = {}, ui = {} })
+  srv:tick(7)
+  check("someone who updated hears once what's new", old.M.chat[#old.M.chat]:find("updated to " .. old.LR.VERSION, 1, true) ~= nil and old.LR.db.settings.rollSeconds == 30)
+  old.G.SlashCmdList.LOOTRULER("whatsnew")
+  check("and /lr whatsnew lists it", visible("What's new", old) and visible("Roll types of your own", old))
+  shot("whats-new", old)
+  old.LR.UI.closeAll()
+  old.LR.UI.win:Hide()
+end)
+
+run("settings profiles", function()
+  LR.UI.go("settings")
+  srv:tick(6)
+  clickText("Save these settings as...")
+  local box
+  local function walk(fr) for _, c in ipairs(fr._children) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
+  walk(LR.UI.topSheet())
+  box:SetText("Raiding") box._scripts.OnTextChanged(box, true)
+  clickText("Save")
+  check("saved under a name", LR.db.profiles.Raiding and LR.db.profiles.Raiding.rollSeconds == LR.db.settings.rollSeconds and visible("In use"))
+  local was = LR.db.settings.rollSeconds
+  LR.db.settings.rollSeconds = 45
+  LR.saveProfile("Running loot")
+  LR.useProfile("Raiding")
+  check("switching puts those settings back", LR.db.settings.rollSeconds == was)
+  LR.useProfile("Running loot")
+  check("and the other way", LR.db.settings.rollSeconds == 45)
+  LR.UI.render()
+  srv:tick(0.3)
+  do
+    local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+    local sf = scrollers(G.LootRulerFrame, {})[1]
+    local at = M.findText("Save these settings as...", true, G.LootRulerFrame)[1]
+    if sf and at then sf:SetVerticalScroll(math.min(sf:GetVerticalScrollRange(), math.max(0, sf:GetVerticalScroll() + sf:GetTop() - at.fs:GetTop() - 300))) end
+    shot("profiles")
+    if sf then sf:SetVerticalScroll(0) end
+  end
+  LR.useProfile("Raiding")
+  LR.deleteProfile("Raiding") LR.deleteProfile("Running loot")
+  check("profiles can be deleted", next(LR.db.profiles) == nil)
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)

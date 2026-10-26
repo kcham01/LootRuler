@@ -52,6 +52,7 @@ UI\Lineup.lua
 UI\Guild.lua
 UI\Gdkp.lua
 UI\Settings.lua
+UI\Welcome.lua
 UI\Test.lua
 UI\Highlight.lua
 UI\Shortcuts.lua

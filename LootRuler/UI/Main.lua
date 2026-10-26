@@ -262,7 +262,7 @@ end
 
 function UI.toggle()
   UI.start()
-  if win:IsShown() then win:Hide() else win:Show() end
+  if win:IsShown() then win:Hide() else win:Show() if UI.firstLook then UI.firstLook() end end
 end
 function UI.show(tab)
   UI.start()
@@ -270,6 +270,7 @@ function UI.show(tab)
   win:Show()
   win:Raise()
   UI.render()
+  if UI.firstLook then UI.firstLook() end
 end
 
 ---------------------------------------------------------------------- sheets (pop-up panels)
@@ -591,6 +592,10 @@ SlashCmdList.LOOTRULER = function(msg)
     UI.showMaster()
   elseif msg == "raid" or msg == "lineup" then
     UI.lineupSheet()
+  elseif msg == "tour" or msg == "welcome" then
+    UI.tour(1)
+  elseif msg == "whatsnew" or msg == "news" then
+    UI.whatsNew()
   elseif msg == "versions" or msg == "version" then
     UI.versionSheet()
   elseif msg == "test" then
