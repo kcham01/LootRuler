@@ -273,6 +273,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   keeps them as `roll.gear` (only from the group, for the roll on now, links only, two at most). Shown as an icon on the
   loot master's row and "You have:" in the raider's window. Not for auctions. The mock gives gear with `M.player.links`;
   the picture renderer now shows links as their names.
+- **Becoming the master looter** (`UI.masterLooterPrompt`, `LR.announceMasterLooter`, `UI.masterLooterLine`; settings `mlPrompt`, on,
+  and `mlAnnounce`, off): on `PARTY_LOOT_METHOD_CHANGED` / `GROUP_ROSTER_UPDATE`, a change to being master looter asks (not in
+  combat) or posts. Nothing happens for the first 5 seconds after logging in, so a reload doesn't ask again.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

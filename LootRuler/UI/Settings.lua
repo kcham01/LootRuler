@@ -100,6 +100,8 @@ function UI.settingsView(f)
     end
     p:chips(keys, { gap = 2 })
     p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
+    toggle(p, "mlPrompt", "Ask me when I become master looter", "LootRuler asks whether to open the loot master window and tell the raid how loot works.")
+    toggle(p, "mlAnnounce", "Tell the raid when I become master looter", "One line in raid chat: who runs loot, and how to roll.")
     toggle(p, "awardGuild", "Tell my guild who got what", "Each item you give out (and any you take back) gets a line in guild chat too, with the raid's name: \"Karazhan: [item] goes to Ann (MS 85).\"")
     toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
     toggle(p, "remindOnJoin", "Tell people who join how to reserve", "While your soft reserves are open, anyone who joins the group and hasn't reserved hears how to, in one raid chat line a few seconds after they join.")
