@@ -340,7 +340,31 @@ srv:addonMessage(lead, "LootRuler", lead.LR.Net.encode({ t = "Z", stuff = { 1, 2
 srv:tick(1)
 check("a message only newer versions can handle is left alone", cur(ann).rev == rev)
 check("and a kind of message this version doesn't know is ignored", #ann.M.errors == 0)
+local vl = {}
+for _, x in ipairs(ann.LR.versionList()) do vl[x.name] = x end
+check("who has which version: the leader's is newer", vl[full(lead)] and vl[full(lead)].state == "newer" and vl[full(lead)].version == "9.9.9")
+check("a player without it has none", vl[full(pug)] and vl[full(pug)].state == "none")
+check("and mine is mine", vl[full(ann)] and vl[full(ann)].state == "same")
 lead.LR.VERSION = realVersion
+-- Ann's is older: the leader can see it, and tell her (once)
+local annReal = ann.LR.VERSION
+ann.LR.VERSION = "0.9.0"
+srv:tick(11)
+lead.LR.query()
+srv:tick(3)
+local list = lead.LR.versionList()
+check("asking again: everyone's addon answers, older ones first", list[1].name == full(ann) and list[1].state == "older" and list[1].version == "0.9.0", list[1].name)
+check("then those without it", list[2].state == "none" and list[#list].state == "same")
+local inboxBefore = #ann.inbox
+check("those with an older one are whispered", lead.LR.tellOutdated() == 1)
+srv:tick(1)
+local told2 = ann.inbox[#ann.inbox]
+check("that there's a newer one", #ann.inbox == inboxBefore + 1 and told2.text:find("You have LootRuler 0.9.0, and " .. realVersion .. " is out.", 1, true) ~= nil, told2 and told2.text)
+check("once", lead.LR.tellOutdated() == 0)
+ann.LR.VERSION = annReal
+srv:tick(11)
+ann.LR.hello()
+srv:tick(3)
 s.somethingNew, s.won = nil, nil
 s.rev = s.rev + 1
 lead.LR.leaderChanged(s)

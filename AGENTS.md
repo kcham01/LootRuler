@@ -223,6 +223,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   held and to-trade items, soonest first, with a bar of the 2 hours; click rolls out (held) or `Drops.openTrade` (won), right-click
   `UI.giveSheet`. Redrawn on session, loot and roll changes, and every 15 seconds while it's up (no `OnUpdate`). Its x hides
   it until a new item comes in. Saved position: `db.ui.timersPoint`.
+- **Who has LootRuler** (`LR.versionList`, `LR.tellOutdated`, `UI.versionSheet`, `/lr versions`): everyone in the group with the
+  version we last heard (older first, then none). "Ask again" is `LR.query()`: every version answers `Q` with `V`, so no new
+  message was needed. Whispers to older versions go once per player and version.
 - **Next:** the roadmap and the follow-ups are done. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

@@ -184,7 +184,7 @@ The loot master (or the raid leader, or an assistant) needs LootRuler; raiders d
 3. Restart the game (a new addon needs a full restart) and make sure it's ticked in the AddOns list.
 4. Type `/lr` or click the note on the minimap.
 
-Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
+Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper. `/lr versions` (or Settings, "Who has LootRuler") lists everyone in the group with their version, older ones first, can ask everyone again, and can whisper those with an older one that a newer one is out.
 
 | Command | Does |
 | --- | --- |

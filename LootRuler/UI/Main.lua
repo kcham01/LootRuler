@@ -589,6 +589,8 @@ SlashCmdList.LOOTRULER = function(msg)
     end
   elseif msg == "master" then
     UI.showMaster()
+  elseif msg == "versions" or msg == "version" then
+    UI.versionSheet()
   elseif msg == "test" then
     UI.testRoll()
   elseif msg:match("^roll") then
