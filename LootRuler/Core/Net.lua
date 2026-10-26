@@ -310,6 +310,26 @@ local function send(msg, channel, target)
 end
 Net.send = send
 
+--- sends a copy of a session. While one is still going out on a channel (a long one goes in parts, a few a second),
+--- newer copies of that session wait, and only the newest goes next: an out-of-date copy is never sent. Everything
+--- goes at the same priority: raiders' addons put a long message back together by sender and channel, so the parts
+--- of two long messages mustn't take turns.
+local sessionOut, sessionNext = {}, {}         -- "id|channel|target" -> when the one going out started; -> the next one
+local SESSION_OUT_MAX = 30                     -- (seconds: a copy that never says it's done stops holding the others)
+local function sendSession(s, channel, target)
+  if not channel or LR.Practice.on then return end
+  local key = s.id .. "|" .. channel .. "|" .. (target or "")
+  if sessionOut[key] and GetTime() - sessionOut[key] < SESSION_OUT_MAX then sessionNext[key] = s return end
+  sessionOut[key], sessionNext[key] = GetTime(), nil
+  Net:SendCommMessage(LR.PREFIX, encode({ t = "T", s = s }), channel, target, "NORMAL", function(_, sent, total)
+    if sent < total then return end
+    sessionOut[key] = nil
+    local nxt = sessionNext[key]
+    if nxt then sessionNext[key] = nil sendSession(nxt, channel, target) end
+  end)
+end
+Net.sendSession = sendSession
+
 --- says something in chat (raid, party, a whisper...). It goes through ChatThrottleLib, which spaces lines
 --- out when there are many (answering a whole raid's "!lr"s at once would otherwise get you muted for spam).
 function LR.say(text, channel, target)
@@ -347,7 +367,7 @@ local publishSeq, publishWaiting, guildSent, guildWaiting = {}, {}, {}, {}
 local SLOW_PUBLISH, GUILD_EVERY = 10, 5
 local function sendGuild(s)
   guildSent[s.id] = GetTime()
-  send({ t = "T", s = s }, "GUILD")
+  sendSession(s, "GUILD")
 end
 local function toGuild(s)
   if not IsInGroup() or not guildSent[s.id] or GetTime() - guildSent[s.id] >= GUILD_EVERY then sendGuild(s) return end
@@ -368,7 +388,7 @@ function LR.publish(s, now, slow)
     if publishSeq[s.id] ~= mine then return end
     publishWaiting[s.id] = nil
     for _, ch in ipairs(publishTo(s)) do
-      if ch == "GUILD" then toGuild(s) else send({ t = "T", s = s }, ch) end
+      if ch == "GUILD" then toGuild(s) else sendSession(s, ch) end
     end
   end
   if now then go() else C_Timer.After(slow and SLOW_PUBLISH or 0.5, go) end
@@ -787,7 +807,7 @@ function handlers.Q(msg, channel, sender)
       local key = s.id .. sender
       if not queryAnswered[key] or now - queryAnswered[key] > 5 then
         queryAnswered[key] = now
-        send({ t = "T", s = s }, "WHISPER", sender)
+        sendSession(s, "WHISPER", sender)
       end
     end
   end
