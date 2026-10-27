@@ -89,9 +89,28 @@ local function importSheet(s)
   end)
 end
 
+UI.importSheet = importSheet
+
+--- softres.it: importing (the first thing many raids do), and its link
+local function softresPanel(f, s)
+  f:panel("softres.it", function(p)
+    p:note(s.sx and "Import again whenever the sheet changes: its reserves are updated to match, and reserves made in LootRuler stay."
+      or "Reserves made on softres.it come in here, with the raid's link to post.")
+    local list = { { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end } }
+    if s.url then
+      list[2] = { label = "Post the softres.it link", disabled = LR.groupChannel() == nil, click = function()
+        if LR.postLink(s) then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+      end }
+    end
+    p:buttons(list, "left")
+    if s.url then p:note(s.url) end
+  end)
+end
+
 local function manage(f, s)
   local raid = LR.raidOf(s)
   if s.gdkp then UI.gdkpPanel(f, s) end          -- GDKP first: in a GDKP raid it's what matters
+  if not s.gdkp then softresPanel(f, s) end
   f:panel("Your session", function(p)
     p:kv({
       { "Raid", raid.name },
@@ -316,14 +335,8 @@ local function manage(f, s)
       end },
     }, "left")
     p:note("Posts: \"" .. LR.Whisper.howTo() .. "\"")
-    if s.url then
-      p:buttons({ { label = "Post the softres.it link", disabled = LR.groupChannel() == nil, click = function()
-        if LR.postLink(s) then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
-      end } }, "left")
-      p:note(s.url)
-    end
+    if s.gdkp then p:buttons({ { label = "Import from softres.it", click = function() importSheet(s) end } }, "left") end
     p:buttons({
-      { label = "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()
         local text = "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)"
         -- GDKP: ending it loses who owes what, so not while gold is still owed (unless they mean it)
@@ -421,7 +434,7 @@ local function newSession(f)
       p:note("You're not the group leader. That's fine if you're running loot, but make sure only one of you opens reserves.", K.GOLD)
     end
     p:note("Raiders reserve in LootRuler, or whisper you \"!lr <item link>\" if they don't have it. You reserve on the Reserve tab like everyone else; hard reserves come next.")
-    p:buttons({ { label = "Open reserves", click = function()
+    local function open(then_import)
       if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
       local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)
       if d.plusOne then LR.setPlusOne(s, true) end
@@ -430,7 +443,11 @@ local function newSession(f)
       if d.prio and UI.prioAvailable() then LR.setSessionPrio(s, d.prio) end
       UI.toast(("%s reserves are open."):format(LR.raidOf(s).name))
       UI.render()
-    end } })
+      if then_import then importSheet(s) end
+    end
+    local list = { { label = "Open reserves", click = function() open(false) end } }
+    if not d.gdkp then table.insert(list, 1, { label = "Open and import from softres.it", click = function() open(true) end }) end
+    p:buttons(list)
   end)
 end
 

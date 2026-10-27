@@ -15,6 +15,9 @@ From the owner's in-game screenshots.
   under it. ([#104](https://github.com/kcham01/LootRuler/pull/104))
 - On / off switches are tick boxes, the game's own, in place of "[x]" and "[ ]" in their words.
   ([#105](https://github.com/kcham01/LootRuler/pull/105))
+- The softres.it import is easier to reach: first on the Session tab (with the raid's link), on the Reserves tab's raid
+  leader box, and as "Open and import from softres.it" when opening reserves. It was at the bottom of the Session tab,
+  next to End session. ([#106](https://github.com/kcham01/LootRuler/pull/106))
 
 ### Faster (26 October 2026)
 
