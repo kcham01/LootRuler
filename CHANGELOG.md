@@ -66,6 +66,9 @@ numbers are in [docs/benchmark.md](docs/benchmark.md).
   ([#92](https://github.com/kcham01/LootRuler/pull/92))
 - Several auctions at once send fewer updates when bids come in fast. ([#96](https://github.com/kcham01/LootRuler/pull/96))
 - Finished timer bars stop redrawing every frame. ([#95](https://github.com/kcham01/LootRuler/pull/95))
+- The raid gets only what changed in the session, not the whole of it each time (when everyone's LootRuler is new enough):
+  raiders' addons do 25 to 60% less work while loot is rolled out, given out and sold, and the loot runner sends less.
+  ([#119](https://github.com/kcham01/LootRuler/pull/119))
 
 ### Added: reserves
 
