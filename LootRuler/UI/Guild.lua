@@ -114,7 +114,7 @@ local function boostPanel(f, book, editor)
   f:panel("Boosted rolls", function(p)
     p:note("Guild members get points for each raid they come to. In a session with boosted rolls on, a player with points can roll 1 to 100 plus their points on main spec (\"/roll 31 130\" with 30 points). If they win with it, their points are spent.")
     if editor then
-      p:chips({ { label = (book.boost.on and "[x] " or "[  ] ") .. "Boosted rolls for this guild", on = book.boost.on, click = function()
+      p:chips({ { tick = true, label = "Boosted rolls for this guild", on = book.boost.on, click = function()
         Guild.edit(function(b, now) return B.setBoost(b, not b.boost.on, b.boost.perRaid, now) end)
       end, tip = "Off: nobody's rolls are boosted, and the Session tab doesn't offer it." } }, { gap = 4 })
       local chips = { { plain = true, label = "Points for each raid:" } }
@@ -311,7 +311,7 @@ local function importSheet()
         f:note(kind, { 1, 0.35, 0.29 })
       end
     end
-    f:chips({ { label = (replaceAll and "[x] " or "[  ] ") .. "Clear lists that aren't in this", on = replaceAll, click = function() replaceAll = not replaceAll h.redraw(true) end,
+    f:chips({ { tick = true, label = "Clear lists that aren't in this", on = replaceAll, click = function() replaceAll = not replaceAll h.redraw(true) end,
       tip = "Off: only the items in what you paste change. On: every other item's list is cleared too." } })
     f:buttons({
       { label = "Cancel", click = function() h.close() end },

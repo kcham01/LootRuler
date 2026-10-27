@@ -243,7 +243,7 @@ function UI.extraSheet(s, preset)
     for _, m in ipairs(people) do
       local on = picked[U.full(m.name)]
       local x = S.extra(s, m.name)
-      chips[#chips + 1] = { label = (on and "[x] " or "[  ] ") .. U.classText(U.short(m.name), m.class or LR.classOf(m.name)) .. (x > 0 and ("  +" .. x) or ""), on = on,
+      chips[#chips + 1] = { tick = true, label = U.classText(U.short(m.name), m.class or LR.classOf(m.name)) .. (x > 0 and ("  +" .. x) or ""), on = on,
         click = function() picked[U.full(m.name)] = not on or nil h.redraw(true) end }
     end
     if #chips == 0 then f:note("Nobody in the group yet.") else f:chips(chips) end

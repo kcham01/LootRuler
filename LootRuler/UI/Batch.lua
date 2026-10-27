@@ -171,7 +171,7 @@ function UI.batchSheet()
     for i, it in ipairs(list) do
       local on = picked[i]
       if on then n = n + 1 end
-      f:chips({ { label = (on and "[x] " or "[  ] ") .. LR.itemName(it.id), on = on, width = f.width,
+      f:chips({ { tick = true, label = LR.itemName(it.id), on = on, width = f.width,
         click = function() picked[i] = not on h.redraw(true) end } }, { gap = 2 })
     end
     local secs = { { plain = true, label = "Time:" } }

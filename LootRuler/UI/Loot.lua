@@ -336,7 +336,7 @@ function UI.lootView(f, s)
         p:place(b, 36)
         p:gap(2)
       end
-      p:chips({ { label = (LR.db.settings.tradeHelp and "[x] " or "[  ] ") .. "Put won items in trades for me", on = LR.db.settings.tradeHelp,
+      p:chips({ { tick = true, label = "Put won items in trades for me", on = LR.db.settings.tradeHelp,
         click = function() LR.db.settings.tradeHelp = not LR.db.settings.tradeHelp UI.render() end } })
     end)
   end

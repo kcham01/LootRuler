@@ -108,7 +108,7 @@ local function manage(f, s)
       else go() end
     end)
     p:chips({
-      { label = (s.dupes and "[x] " or "[  ] ") .. "Same item more than once", on = s.dupes, click = function()
+      { tick = true, label = "Same item more than once", on = s.dupes, click = function()
         local doubled = 0
         for _, pl in ipairs(S.players(s)) do
           local seen = {}
@@ -119,24 +119,24 @@ local function manage(f, s)
           UI.confirm("One per item", ("%s put more than one reserve on the same item: the extra ones go."):format(U.plural(doubled, "player")), "Switch it off", go)
         else go() end
       end, tip = "Lets a player put more than one of their reserves on the same item (softres.it's \"x2\")." },
-      { label = (s.go and "[x] " or "[  ] ") .. "Only the group can reserve", on = s.go, click = function() LR.setGroupOnly(s, not s.go) end,
+      { tick = true, label = "Only the group can reserve", on = s.go, click = function() LR.setGroupOnly(s, not s.go) end,
         tip = "Players outside the group can't reserve for themselves (they're told to ask for an invite). You can still add reserves for anyone, and imports still come in. Switch it off to let guild members reserve before the raid forms." },
-      { label = (s.guild and "[x] " or "[  ] ") .. "Share with my guild", on = s.guild, click = function()
+      { tick = true, label = "Share with my guild", on = s.guild, click = function()
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         LR.setGuild(s, not s.guild)
       end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group can reserve\"." },
-      not LR.raidOf(s).custom and { label = (s.any and "[x] " or "[  ] ") .. "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
+      not LR.raidOf(s).custom and { tick = true, label = "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
         tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
-      { label = (s.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
+      { tick = true, label = "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserves tab (by player)." },
-      { label = (s.gdkp and "[x] " or "[  ] ") .. "GDKP auctions", on = s.gdkp, click = function()
+      { tick = true, label = "GDKP auctions", on = s.gdkp, click = function()
         if not s.gdkp and next(s.res) then
           UI.confirm("GDKP auctions", "Every item is auctioned for gold instead: reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Auction", function() LR.setGdkp(s, true) end)
         else LR.setGdkp(s, not s.gdkp) end
       end, tip = "Items are auctioned for gold: raiders bid by typing an amount in raid chat. The gold goes in a pot that's split between everyone at the end." },
-      UI.boostOn() and { label = (s.boost and "[x] " or "[  ] ") .. "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
+      UI.boostOn() and { tick = true, label = "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
         tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
-      { label = (s.locked and "[x] " or "[  ] ") .. "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
+      { tick = true, label = "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
         tip = "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
     })
   end)
@@ -258,7 +258,7 @@ local function manage(f, s)
       local chips = {}
       for _, m in ipairs(list) do
         local on = LR.Council.isMember(s, m.name)
-        chips[#chips + 1] = { label = (on and "[x] " or "[  ] ") .. U.short(m.name), on = on, click = function()
+        chips[#chips + 1] = { tick = true, label = U.short(m.name), on = on, click = function()
           local names = {}
           for _, n in ipairs(s.lc or {}) do if not U.samePlayer(n, m.name) then names[#names + 1] = n end end
           if not on then names[#names + 1] = m.name end
@@ -399,19 +399,19 @@ local function newSession(f)
     end
     stepper(p, "Reserves each", d.sr, S.MIN_SR, S.MAX_SR, function(v) d.sr = v UI.render() end)
     p:chips({
-      { label = (d.dupes and "[x] " or "[  ] ") .. "Same item more than once", on = d.dupes, click = function() d.dupes = not d.dupes UI.render() end,
+      { tick = true, label = "Same item more than once", on = d.dupes, click = function() d.dupes = not d.dupes UI.render() end,
         tip = "Lets a player put more than one of their reserves on the same item (softres.it's \"x2\")." },
-      { label = (d.guild and "[x] " or "[  ] ") .. "Share with my guild", on = d.guild, click = function()
+      { tick = true, label = "Share with my guild", on = d.guild, click = function()
         if not IsInGuild() then UI.toast("You're not in a guild.") return end
         d.guild = not d.guild UI.render()
       end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group can reserve\" on the Session tab once it's open." },
-      { label = (d.gdkp and "[x] " or "[  ] ") .. "GDKP auctions", on = d.gdkp, click = function() d.gdkp = not d.gdkp UI.render() end,
+      { tick = true, label = "GDKP auctions", on = d.gdkp, click = function() d.gdkp = not d.gdkp UI.render() end,
         tip = "Items are auctioned for gold instead of reserved and rolled for. The gold goes in a pot that's split between everyone at the end." },
-      { label = (d.plusOne and "[x] " or "[  ] ") .. "+1 rule", on = d.plusOne, click = function() d.plusOne = not d.plusOne UI.render() end,
+      { tick = true, label = "+1 rule", on = d.plusOne, click = function() d.plusOne = not d.plusOne UI.render() end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more." },
-      UI.boostOn() and { label = (d.boost and "[x] " or "[  ] ") .. "Boosted rolls", on = d.boost, click = function() d.boost = not d.boost UI.render() end,
+      UI.boostOn() and { tick = true, label = "Boosted rolls", on = d.boost, click = function() d.boost = not d.boost UI.render() end,
         tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
-      d.raid ~= LR.CUSTOM and { label = (d.any and "[x] " or "[  ] ") .. "Any item", on = d.any, click = function() d.any = not d.any UI.render() end,
+      d.raid ~= LR.CUSTOM and { tick = true, label = "Any item", on = d.any, click = function() d.any = not d.any UI.render() end,
         tip = "Lets people reserve any item, not just the raid's loot: for loot LootRuler's lists don't have yet." } or false,
     })
     if UI.prioAvailable() then

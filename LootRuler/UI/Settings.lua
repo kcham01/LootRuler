@@ -8,7 +8,7 @@ local UI = LR.UI
 --- a yes/no option: a chip, and what it does underneath
 local function toggle(p, key, label, what, after)
   local set = LR.db.settings
-  p:chips({ { label = (set[key] and "[x] " or "[  ] ") .. label, on = set[key], click = function()
+  p:chips({ { tick = true, label = label, on = set[key], click = function()
     set[key] = not set[key]
     if after then after(set[key]) end
     UI.render()
@@ -206,7 +206,7 @@ function UI.settingsView(f)
   end)
 
   f:panel("This window", function(p)
-    p:chips({ { label = (LR.db.ui.hideMinimap and "[  ] " or "[x] ") .. "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
+    p:chips({ { tick = true, label = "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
       if LR.minimap then LR.minimap:SetShown(not LR.db.ui.hideMinimap) end
       UI.render()
