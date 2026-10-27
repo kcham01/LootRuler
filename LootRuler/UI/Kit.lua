@@ -603,27 +603,38 @@ function Flow:chips(list, opts)
   return self
 end
 
---- red panel buttons in a row, right-aligned (or centered)
+--- red panel buttons in a row, right-aligned (or centered, or left). A row too wide for the space goes on over more
+--- lines, each aligned the same way, so no button runs past the edge (one wider than the space is cut to fit)
 function Flow:buttons(list, align)
-  local widths, total = {}, 0
-  local made = {}
+  local widths, made = {}, {}
   for i, c in ipairs(list) do
     local b = K.get(self.owner, "button", self.parent)
     b:SetText(c.label)
-    local w = c.width or max(80, b:GetFontString():GetStringWidth() + 28)
+    local w = min(self.width, c.width or max(80, b:GetFontString():GetStringWidth() + 28))
     b:SetWidth(w)
     widths[i] = w
-    total = total + w + (i > 1 and 6 or 0)
     if c.disabled then b:Disable() end
     b:SetScript("OnClick", c.click)
     made[i] = b
   end
-  local x = align == "center" and floor((self.width - total) / 2) or align == "left" and 0 or self.width - total
-  for i, b in ipairs(made) do
-    b:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + x, -self.y)
-    x = x + widths[i] + 6
+  -- lines: as many buttons as fit in each
+  local lines, line, used = {}, {}, 0
+  for i in ipairs(made) do
+    local need = widths[i] + (#line > 0 and 6 or 0)
+    if #line > 0 and used + need > self.width then lines[#lines + 1] = { line, used } line, used = {}, 0 need = widths[i] end
+    line[#line + 1] = i
+    used = used + need
   end
-  self.y = self.y + 24 + 6
+  if #line > 0 then lines[#lines + 1] = { line, used } end
+  for n, l in ipairs(lines) do
+    local total = l[2]
+    local x = align == "center" and floor((self.width - total) / 2) or align == "left" and 0 or self.width - total
+    for _, i in ipairs(l[1]) do
+      made[i]:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + x, -self.y)
+      x = x + widths[i] + 6
+    end
+    self.y = self.y + 24 + (n < #lines and 4 or 6)
+  end
   return made
 end
 

@@ -24,6 +24,8 @@ From the owner's in-game screenshots.
   LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
 - Saying trades nearby has its own switch (Settings, "Giving out and trading"). A trade goes to one place only: the group
   when you're in one, /s when you're not. ([#108](https://github.com/kcham01/LootRuler/pull/108))
+- A row of buttons too wide for its panel goes on over two lines instead of running past the edge (seen on the Test
+  tab). ([#113](https://github.com/kcham01/LootRuler/pull/113))
 - The Loot tab lists everything that drops that isn't grey, not just loot to roll for: trade goods like Nether Vortexes
   and Primal Nethers, cloth and the like are counted at the bottom ("Nether Vortex x3, looted by Ann (2), Bob (1)").
   They're never announced, held for rolling out or reserved. ([#112](https://github.com/kcham01/LootRuler/pull/112))

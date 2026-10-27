@@ -2232,6 +2232,45 @@ run("a raider forgets a session", function()
   LR.UI.go("reserve")
 end)
 
+run("no button runs past its panel", function()
+  -- every red button on every tab (and the Test tab's long rows) stays inside the frame it's laid out in
+  local s4 = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(1)
+  LR.db.settings.testTab = true
+  local bad = {}
+  local function walk(fr)
+    for _, c in ipairs(fr._children or {}) do
+      if c:IsVisible() then
+        if c._kind == "button" then
+          local r, pr = M.rect(c), M.rect(c:GetParent())
+          if r and pr and (r.r > pr.r + 1 or r.l < pr.l - 1) then bad[#bad + 1] = M.plain(c:GetText() or "?") end
+        end
+        walk(c)
+      end
+    end
+  end
+  for _, t in ipairs({ "reserve", "reserves", "loot", "session", "guild", "settings", "test" }) do
+    LR.UI.go(t)
+    srv:tick(0.3)
+    if t == "settings" then clickText("Open all") end
+    walk(G.LootRulerFrame)
+  end
+  check("every button fits", #bad == 0, table.concat(bad, ", "))
+  check("the Test tab's messages wrap onto two lines", (function()
+    local a, b
+    for _, x in ipairs(find("The 2 hours running out")) do if x.clickable then a = M.rect(x.clickable) end end
+    for _, x in ipairs(find("A trade out of a group")) do if x.clickable then b = M.rect(x.clickable) end end
+    return a and b and b.t < a.b
+  end)())
+  local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+  local sf = scrollers(G.LootRulerFrame, {})[1]
+  sf:SetVerticalScroll(sf:GetVerticalScrollRange())
+  shot("test-tab-buttons")
+  sf:SetVerticalScroll(0)
+  LR.endSession(s4)
+  srv:tick(1)
+end)
+
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)
