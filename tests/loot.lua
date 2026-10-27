@@ -1680,6 +1680,43 @@ do
   for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("reserves that lock by themselves")
+do
+  local srv7 = Server.new(".")
+  srv7.itemInfo = srv.itemInfo
+  local ml = srv7:client({ name = "Mel", class = "PALADIN" })
+  local zoe = srv7:client({ name = "Zoe", class = "PRIEST" })
+  srv7:setGroup({ ml, zoe }, ml, true)
+  srv7:tick(6)
+  local L = ml.LR.Lock
+  check("times typed in several ways", L.parseTime("20:00") == 72000 and L.parseTime("8:30pm") == 73800 and L.parseTime("8.30") == 30600
+    and L.parseTime("9pm") == 75600 and L.parseTime("12:15am") == 900 and not L.parseTime("25:00") and not L.parseTime("soon"))
+  local at = L.atTime(L.parseTime("20:00"))
+  check("a time of day is the next one to come", at > ml.LR.U.now() and at <= ml.LR.U.now() + 24 * 3600)
+  local ks = ml.LR.startSession("Karazhan", 2, true, false)
+  srv7:tick(2)
+  ml.LR.setAutoLock(ks, ml.LR.U.now() + 6 * 60)
+  srv7:tick(2)
+  check("raiders' copies know when", zoe.LR.current().al == ks.al)
+  local function lines(text) local n = 0 for _, m in ipairs(srv7.chat) do if m.channel == "RAID" and m.text:find(text, 1, true) then n = n + 1 end end return n end
+  srv7:tick(70)
+  check("5 minutes before, the raid is told, with how to reserve", lines("Soft reserves lock in 5 minutes.") == 1 and lines("!lr [linked item]") >= 1)
+  srv7:tick(180)
+  check("and at 2 minutes", lines("Soft reserves lock in 2 minutes.") == 1)
+  srv7:tick(60)
+  check("and at 1 minute", lines("Soft reserves lock in 1 minute.") == 1 and not ks.locked)
+  srv7:tick(65)
+  check("then they lock, and the raid is told", ks.locked and lines("Soft reserves are locked now.") == 1 and ks.al == nil)
+  check("raiders' copies are locked too", zoe.LR.current().locked == true)
+  check("each line once", lines("Soft reserves lock in 5 minutes.") == 1 and lines("Soft reserves are locked now.") == 1)
+  -- set closer than 5 minutes: only the warnings still to come
+  ml.LR.setLocked(ks, false)
+  ml.LR.setAutoLock(ks, ml.LR.U.now() + 90)
+  srv7:tick(100)
+  check("set for 90 seconds: just the 1 minute warning, then locked", lines("Soft reserves lock in 1 minute.") == 2 and lines("Soft reserves lock in 2 minutes.") == 1 and ks.locked)
+  for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 section("a master looter without LootRuler")
 do
   local srv5 = Server.new(".")
