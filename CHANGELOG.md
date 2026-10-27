@@ -36,13 +36,13 @@ From the owner's in-game screenshots.
 - Things made with professions no longer go on the Loot tab: the dust, essences and crystals from disenchanting, and what's
   prospected, gathered, skinned or fished, by the loot master or anyone else in the raid. The game says "Zoe receives loot"
   for those just as for a drop, so from those lines trade goods and gems only count when they're the raid's own or epic (a
-  Nether Vortex), and cloth is only counted from corpses the loot master opens. ([#121](https://github.com/kcham01/LootRuler/pull/121))
+  Nether Vortex). Cloth isn't listed at all, and gold never was. ([#121](https://github.com/kcham01/LootRuler/pull/121))
 - The loot list works when the master looter doesn't have LootRuler: the leader's LootRuler lists what they give out, from
   the game's own "receives loot" lines (so nothing is counted twice from Gargul's lines). ([#114](https://github.com/kcham01/LootRuler/pull/114))
 - A row of buttons too wide for its panel goes on over two lines instead of running past the edge (seen on the Test
   tab). ([#113](https://github.com/kcham01/LootRuler/pull/113))
 - The Loot tab lists everything that drops that isn't grey, not just loot to roll for: trade goods like Nether Vortexes
-  and Primal Nethers, cloth and the like are counted at the bottom ("Nether Vortex x3, looted by Ann (2), Bob (1)").
+  and Primal Nethers and the like are counted at the bottom ("Nether Vortex x3, looted by Ann (2), Bob (1)").
   They're never announced, held for rolling out or reserved. ([#112](https://github.com/kcham01/LootRuler/pull/112))
 - A session's loot list only takes loot from inside its raid: a session left open no longer collects another raid's loot.
   Going into a different raid, or into its raid on a new lockout, asks whether to start a new session there (it can be

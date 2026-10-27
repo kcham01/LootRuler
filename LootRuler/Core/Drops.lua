@@ -144,7 +144,7 @@ function Drops.professionMade(s, id, q)
 end
 
 ---------------------------------------------------------------------- corpses (master loot)
---- every item on the open corpse that isn't grey (vendor trash), whatever the loot threshold:
+--- every item on the open corpse that isn't grey (vendor trash) or cloth, whatever the loot threshold (gold isn't an item):
 --- { { slot, id, link, quality, n = how many } }
 function Drops.corpse()
   local out = {}
@@ -154,7 +154,7 @@ function Drops.corpse()
     if id then
       local _, _, n, _, quality = GetLootSlotInfo(slot)
       quality = quality or qualityOf(link, id)
-      if quality >= 1 then out[#out + 1] = { slot = slot, id = id, link = link, quality = quality, n = tonumber(n) or 1 } end
+      if quality >= 1 and not LR.isCloth(id) then out[#out + 1] = { slot = slot, id = id, link = link, quality = quality, n = tonumber(n) or 1 } end
     end
   end
   return out
@@ -268,7 +268,7 @@ function Drops.lootMessage(line)
   -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): anything that
   -- isn't grey (vendor trash) or made by a profession
   local q = qualityOf(link, id)
-  if q < 1 or Drops.professionMade(s, id, q) then return end
+  if q < 1 or LR.isCloth(id) or Drops.professionMade(s, id, q) then return end
   local ml = LR.masterLooter()
   local key = newKey(id)
   save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })

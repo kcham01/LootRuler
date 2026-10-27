@@ -161,14 +161,21 @@ function LR.wornIn(id)
   return WORN[kind or 0] or {}
 end
 
---- an item's class number from the game (7 trade goods, 9 recipe, 15 miscellaneous), or nil when it isn't known
+--- an item's class and subclass numbers from the loot lists or the game (classes: 3 gem, 7 trade goods, 9 recipe,
+--- 15 miscellaneous), or nil when it isn't known
 function LR.itemClass(id)
   local it = LR.ITEMS[id]
-  if it and it[4] then return it[4] end
+  if it and it[4] then return it[4], it[5] end
   if C_Item and C_Item.GetItemInfoInstant then return select(6, C_Item.GetItemInfoInstant(id)) end
 end
 
---- loot to count, not to roll for (Nether Vortexes, Primal Nethers, Marks, cloth): not in the session's raid's lists, not
+--- cloth (Netherweave, Runecloth and the like) drops from any humanoid: never put on the loot list
+function LR.isCloth(id)
+  local class, sub = LR.itemClass(id)
+  return class == 7 and sub == 5
+end
+
+--- loot to count, not to roll for (Nether Vortexes, Primal Nethers, Marks): not in the session's raid's lists, not
 --- worn, not a recipe, and below epic unless it's a trade good. The Loot tab lists these with how many dropped; they
 --- aren't held for rolling out or trading.
 function LR.minorLoot(s, id)

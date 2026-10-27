@@ -30,16 +30,6 @@ local WHAT_NAME = {}
 for _, w in ipairs(A.WHAT) do WHAT_NAME[w[1]] = w[2] end
 local CLASS_OF = { recipe = 9, gem = 3, trade = 7 }
 
---- an item's class (9 recipe, 3 gem, 7 trade goods, ...), from the loot lists or the game
-function LR.itemClass(id)
-  local it = LR.ITEMS[id]
-  if it then return it[4] end
-  if C_Item and C_Item.GetItemInfoInstant then
-    local _, _, _, _, _, classID = C_Item.GetItemInfoInstant(id)
-    return classID
-  end
-end
-
 --- what a rule is about, for people
 function A.whatText(what)
   local id = tonumber(tostring(what):match("^item:(%d+)$"))

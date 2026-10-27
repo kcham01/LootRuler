@@ -25,14 +25,14 @@ do
 end
 local QHEX = { [0] = "9d9d9d", [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000" }
 -- items that aren't in the loot lists: trade goods and the like (class 7: trade goods, 9: recipe)
-local EXTRA = { [30183] = { "Nether Vortex", 4, 7 }, [23572] = { "Primal Nether", 2, 7 }, [21877] = { "Netherweave Cloth", 1, 7 },
+local EXTRA = { [30183] = { "Nether Vortex", 4, 7 }, [23572] = { "Primal Nether", 2, 7 }, [21877] = { "Netherweave Cloth", 1, 7, 5 },
   [99902] = { "Pattern: Shiny Thing", 4, 9 }, [22445] = { "Arcane Dust", 1, 7 }, [22450] = { "Void Crystal", 4, 7 },
   [23436] = { "Living Ruby", 3, 3 }, [99903] = { "Mark of the Pretend", 2, 12 } }
 QHEX[1] = "ffffff"
 srv.itemInfo = function(id)
   local it = DATA.ITEMS[id]
   local x = EXTRA[id]
-  if x then return { name = x[1], quality = x[2], class = x[3], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[x[2]], id, x[1]) } end
+  if x then return { name = x[1], quality = x[2], class = x[3], subclass = x[4], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[x[2]], id, x[1]) } end
   if not it then return { name = "Grey thing", quality = 0, link = ("|cff9d9d9d|Hitem:%d::::::::70:::::|h[Grey thing]|h|r"):format(id) } end
   return { name = it[1], quality = it[2], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[it[2]] or "ffffff", id, it[1]) }
 end
@@ -1617,7 +1617,7 @@ do
   zoe.LR.reserve(zoe.LR.current(), 28570)
   srv4:tick(2)
   local before = #srv4.chat
-  srv4:openLoot(ml, { { 28570, 4 }, { 30183, 4, 2 }, { 23572, 2 }, { 21877, 1, 5 }, { 99901, 0 }, { 99902, 4 } })
+  srv4:openLoot(ml, { { 28570, 4 }, { 30183, 4, 2 }, { 23572, 2 }, { 21877, 1, 5 }, { 99901, 0 }, { 99902, 4 }, { "money", 123456 } })
   srv4:tick(2)
   local note = zoe.G.LootRulerPickedUp
   local noteText = note and zoe.M.plain(note.text:GetText() or "") or ""
@@ -1628,7 +1628,8 @@ do
   srv4:tick(11)
   check("it goes by itself", not note:IsShown())
   check("a corpse: everything but grey goes on the list, stacks with how many", #dropsOf(28570) == 1 and #dropsOf(30183) == 1
-    and dropsOf(30183)[1].n == 2 and #dropsOf(23572) == 1 and dropsOf(21877)[1].n == 5 and #dropsOf(99902) == 1 and #dropsOf(99901) == 0)
+    and dropsOf(30183)[1].n == 2 and #dropsOf(23572) == 1 and #dropsOf(99902) == 1 and #dropsOf(99901) == 0)
+  check("but not cloth, or gold", #dropsOf(21877) == 0 and #ks.drops == 4)
   local posted = {}
   for i = before + 1, #srv4.chat do posted[#posted + 1] = srv4.chat[i].text end
   posted = table.concat(posted, "\n")
@@ -1640,7 +1641,7 @@ do
   srv4:lootTo(zoe, 30183, 1)                 -- (another, from a corpse LootRuler didn't see)
   srv4:lootTo(zoe, 99903, 3)
   srv4:tick(2)
-  check("looting them says who has them", dropsOf(21877)[1].h == full(zoe) and dropsOf(30183)[1].h == full(ml))
+  check("looting them says who has them", dropsOf(30183)[1].h == full(ml) and #dropsOf(21877) == 0)
   check("one LootRuler didn't see dropping goes on too, with how many", #dropsOf(30183) == 2 and dropsOf(30183)[2].n == nil
     and dropsOf(30183)[2].h == full(zoe) and #dropsOf(99903) == 1 and dropsOf(99903)[1].n == 3)
   -- what someone disenchants, prospects, gathers or skins comes as the same loot line: it isn't the raid's loot
@@ -1649,7 +1650,7 @@ do
   srv4:lootTo(zoe, 22445, 3)                 -- Arcane Dust
   srv4:lootTo(zoe, 22450)                    -- Void Crystal (epic, but enchanting's)
   srv4:lootTo(ml, 23436)                     -- Living Ruby (prospected)
-  srv4:lootTo(zoe, 21877, 3)                 -- cloth can't be told from what someone else gathered either
+  srv4:lootTo(zoe, 21877, 3)                 -- cloth
   srv4:tick(2)
   check("loot lines for things professions make aren't put on the list", #ks.drops == before2 and #dropsOf(22445) == 0 and #dropsOf(22450) == 0
     and #dropsOf(23436) == 0)
@@ -1673,8 +1674,8 @@ do
   srv4:tick(0.5)
   local win = ml.G.LootRulerFrame
   check("the Loot tab counts them, one row each", found(ml, "Everything else that dropped", win) and found(ml, "Nether Vortex", win)
-    and found(ml, "x3", win) and found(ml, "Looted by Mel (2), Zoe", win) and found(ml, "x5", win) and found(ml, "Looted by Zoe (5)", win)
-    and found(ml, "x1", win) and not found(ml, "Arcane Dust", win))
+    and found(ml, "x3", win) and found(ml, "Looted by Mel (2), Zoe", win) and found(ml, "Looted by Zoe (3)", win)
+    and found(ml, "x1", win) and not found(ml, "Arcane Dust", win) and not found(ml, "Netherweave Cloth", win))
   check("and the loot to roll for is counted apart", found(ml, "2 items dropped, 0 given out, 2 still to roll for.", win))
   ml.LR.UI.win:Hide()
   for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
