@@ -227,6 +227,7 @@ events:SetScript("OnEvent", function(_, event)
       Guild.query()
     end)
   elseif event == "GUILD_ROSTER_UPDATE" then
+    if not LR.db then return end    -- (before the saved data has loaded)
     Guild.readRoster()
     local again = waiting
     waiting = {}

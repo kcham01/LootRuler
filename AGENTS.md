@@ -450,6 +450,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   of my own Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`), or while `IsFishingLoot()`,
   aren't read. The stand-in has `Server:cast(p, spellID)`, `M.fishing` and `srv.itemInfo`'s `subclass`.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed, owner's in-game test, #122) `Net.lua:195: attempt to index upvalue 'db'` at login: `UPDATE_INSTANCE_INFO` came
+    between `ADDON_LOADED` and `PLAYER_LOGIN` (where `LR.loadDB` runs), and `UI/Where.lua` read the session. Every event handler
+    that reads saved data returns while `LR.db` is nil. The stand-in fires `o.early` (event names) in that gap; `tests/raid.lua`
+    fires every event LootRuler listens for there. A new handler needs the same guard.
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,
     and the import box takes the focus when it opens. The stand-in works out frame levels from parents, so it can't show

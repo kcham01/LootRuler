@@ -1228,6 +1228,7 @@ events:RegisterEvent("LOOT_SLOT_CLEARED")
 events:RegisterEvent("UI_ERROR_MESSAGE")
 events:RegisterEvent("INSPECT_READY")
 events:SetScript("OnEvent", function(_, event, ...)
+  if not LR.db then return end      -- (before the saved data has loaded)
   if event == "UI_ERROR_MESSAGE" then Rolls.handoutError(select(2, ...)) return end
   if event == "INSPECT_READY" then Rolls.inspectReady(...) return end
   if event == "LOOT_SLOT_CLEARED" then
