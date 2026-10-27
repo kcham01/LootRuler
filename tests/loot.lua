@@ -1651,6 +1651,35 @@ do
   for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("one reserve win each")
+do
+  local srv6 = Server.new(".")
+  srv6.itemInfo = srv.itemInfo
+  srv6.where = Server.PLACES.Karazhan
+  local ml = srv6:client({ name = "Mel", class = "PALADIN" })
+  local zoe = srv6:client({ name = "Zoe", class = "PRIEST" })
+  srv6:setGroup({ ml, zoe }, ml, true)
+  srv6:setMasterLooter(ml)
+  srv6:tick(6)
+  local ks = ml.LR.startSession("Karazhan", 2, true, false)
+  ml.LR.setOneWin(ks, true)
+  srv6:tick(2)
+  zoe.LR.reserve(zoe.LR.current(), 28570)
+  zoe.LR.reserve(zoe.LR.current(), 28453)
+  srv6:tick(2)
+  check("raiders' copies know the rule", zoe.LR.current().ow == true)
+  ml.LR.Rolls.give(28570, full(zoe), "SR", { link = srv6:link(28570) })
+  srv6:tick(3)
+  local said
+  for _, m in ipairs(srv6.chat) do if m.text:find("Zoe has won a reserve, so their other reserves don't count now", 1, true) then said = m end end
+  check("the raid is told her other reserves don't count now", said ~= nil)
+  ml.LR.Rolls.dismiss()
+  local roll = ml.LR.Rolls.start(28453, { link = srv6:link(28453) })
+  check("so her other reserved item is rolled out to everyone", roll and roll.mode == "OPEN", roll and roll.mode)
+  ml.LR.Rolls.cancel()
+  for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 section("a master looter without LootRuler")
 do
   local srv5 = Server.new(".")

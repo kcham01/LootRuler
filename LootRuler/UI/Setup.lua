@@ -146,6 +146,8 @@ local function manage(f, s)
       end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group can reserve\"." },
       not LR.raidOf(s).custom and { tick = true, label = "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
         tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
+      { tick = true, label = "One reserve win each", on = s.ow, click = function() LR.setOneWin(s, not s.ow) end,
+        tip = "Once a player wins one of their reserves, their other reserves stop counting for the rest of the session, so loot goes further. The raid is told when it happens." },
       { tick = true, label = "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
         tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserves tab (by player)." },
       { tick = true, label = "GDKP auctions", on = s.gdkp, click = function()

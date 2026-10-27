@@ -24,6 +24,8 @@ From the owner's in-game screenshots.
   LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
 - Saying trades nearby has its own switch (Settings, "Giving out and trading"). A trade goes to one place only: the group
   when you're in one, /s when you're not. ([#108](https://github.com/kcham01/LootRuler/pull/108))
+- "One reserve win each" (Session tab): once a player wins one of their reserves, their other reserves stop counting, so
+  loot goes further. The raid is told when it happens. ([#116](https://github.com/kcham01/LootRuler/pull/116))
 - Raiders get a small note at the top of the screen when the loot master picks up loot: each item, and who reserved it
   ("Yours", or "SR: Ann, Bob"). It takes no clicks and goes by itself (Settings, "Reserves where you see items").
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
