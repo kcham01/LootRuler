@@ -169,13 +169,31 @@ function LR.itemClass(id)
   if C_Item and C_Item.GetItemInfoInstant then return select(6, C_Item.GetItemInfoInstant(id)) end
 end
 
---- cloth (Netherweave, Runecloth and the like) drops from any humanoid: never put on the loot list
-function LR.isCloth(id)
+--- what goes on a session's loot list besides gear, mounts and recipes (the owner's list): marks, raid gems, the Karazhan
+--- library's books and the like. Anything in the raid's own lists counts too (tier tokens, Magtheridon's Head).
+LR.LISTED_LOOT = {
+  [32897] = true,   -- Mark of the Illidari
+  [32428] = true,   -- Heart of Darkness
+  [32228] = true, [32231] = true, [32229] = true, [32249] = true, [32230] = true, [32227] = true,   -- Black Temple's epic gems
+  [30183] = true,   -- Nether Vortex
+  [29906] = true,   -- Vashj's Vial Remnant
+  [34846] = true,   -- Black Sack of Gems
+  [33933] = true, [33931] = true, [33932] = true, [33930] = true,   -- Amani Charms
+  [33865] = true,   -- Amani Hex Stick
+  [33993] = true,   -- Mojo
+  [21882] = true,   -- Soul Essence
+  [23865] = true, [23862] = true, [23864] = true, [23857] = true,   -- Wrath of the Titans, Redemption of the Fallen, Torment of
+                                                                    -- the Worgen, Legacy of the Mountain King
+}
+--- whether a dropped item goes on the session's loot list: gear, mounts, recipes (plans, schematics, formulas, patterns,
+--- designs), the raid's own loot and LR.LISTED_LOOT. Not cloth, trade goods, gems, potions, gold or anything else.
+function LR.listedLoot(s, id)
+  if LR.LISTED_LOOT[id] or LR.raidHas(s and s.raid, id) or #LR.wornIn(id) > 0 then return true end
   local class, sub = LR.itemClass(id)
-  return class == 7 and sub == 5
+  return class == 9 or (class == 15 and sub == 5)
 end
 
---- loot to count, not to roll for (Nether Vortexes, Primal Nethers, Marks): not in the session's raid's lists, not
+--- loot to count, not to roll for (Nether Vortexes, Marks, Amani Charms): not in the session's raid's lists, not
 --- worn, not a recipe, and below epic unless it's a trade good. The Loot tab lists these with how many dropped; they
 --- aren't held for rolling out or trading.
 function LR.minorLoot(s, id)

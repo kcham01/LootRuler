@@ -132,19 +132,8 @@ function Drops.fromProfession()
   return gatheredAt ~= nil and GetTime() - gatheredAt < Drops.PROFESSION_WAIT
 end
 
---- whether a loot line's item may be from someone's profession, not the raid: the game says "Zoe receives loot: [Arcane Dust]"
---- just as it does for a drop. Trade goods (dust, essences, shards, herbs, ore, leather, cloth, fish) and gems are, unless
---- they're the raid's own or epic (a Nether Vortex); enchanting's crystals are epic but are too.
-Drops.CRYSTALS = { [20725] = true, [22450] = true }      -- Nexus Crystal, Void Crystal
-function Drops.professionMade(s, id, q)
-  if LR.raidHas(s.raid, id) then return false end
-  local class = LR.itemClass(id)
-  if class ~= 7 and class ~= 3 then return false end
-  return q < 4 or Drops.CRYSTALS[id] == true
-end
-
 ---------------------------------------------------------------------- corpses (master loot)
---- every item on the open corpse that isn't grey (vendor trash) or cloth, whatever the loot threshold (gold isn't an item):
+--- every item on the open corpse that isn't grey (vendor trash), whatever the loot threshold (gold isn't an item):
 --- { { slot, id, link, quality, n = how many } }
 function Drops.corpse()
   local out = {}
@@ -154,7 +143,7 @@ function Drops.corpse()
     if id then
       local _, _, n, _, quality = GetLootSlotInfo(slot)
       quality = quality or qualityOf(link, id)
-      if quality >= 1 and not LR.isCloth(id) then out[#out + 1] = { slot = slot, id = id, link = link, quality = quality, n = tonumber(n) or 1 } end
+      if quality >= 1 then out[#out + 1] = { slot = slot, id = id, link = link, quality = quality, n = tonumber(n) or 1 } end
     end
   end
   return out
@@ -180,7 +169,9 @@ function Drops.lootOpened()
   local new = {}
   for _, it in ipairs(here) do
     local known = onCorpse[it.id]
-    if known and #known > 0 then
+    if not LR.listedLoot(s, it.id) then
+      -- (cloth, trade goods, potions and the like: not the raid's loot)
+    elseif known and #known > 0 then
       Drops.slotKeys[it.slot] = table.remove(known, 1)          -- seen it before: the corpse was opened again
     else
       local from = boss or (LR.dropsFrom(s.raid, it.id)[1]) or ""
@@ -265,10 +256,10 @@ function Drops.lootMessage(line)
     end
     return
   end
-  -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): anything that
-  -- isn't grey (vendor trash) or made by a profession
+  -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): the raid's loot,
+  -- not grey. (The game says "Zoe receives loot" for what someone disenchants or gathers too: those aren't listed.)
   local q = qualityOf(link, id)
-  if q < 1 or LR.isCloth(id) or Drops.professionMade(s, id, q) then return end
+  if q < 1 or not LR.listedLoot(s, id) then return end
   local ml = LR.masterLooter()
   local key = newKey(id)
   save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })

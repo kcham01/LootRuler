@@ -33,16 +33,16 @@ From the owner's in-game screenshots.
 - Raiders get a small note at the top of the screen when the loot master picks up loot: each item, and who reserved it
   ("Yours", or "SR: Ann, Bob"). It takes no clicks and goes by itself (Settings, "Reserves where you see items").
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
-- Things made with professions no longer go on the Loot tab: the dust, essences and crystals from disenchanting, and what's
-  prospected, gathered, skinned or fished, by the loot master or anyone else in the raid. The game says "Zoe receives loot"
-  for those just as for a drop, so from those lines trade goods and gems only count when they're the raid's own or epic (a
-  Nether Vortex). Cloth isn't listed at all, and gold never was. ([#121](https://github.com/kcham01/LootRuler/pull/121))
+- The Loot tab only lists the raid's loot: gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns,
+  designs), and a short list of other raid loot: Mark of the Illidari, Heart of Darkness, Black Temple's epic gems, Nether
+  Vortex, Vashj's Vial Remnant, Black Sack of Gems, the Amani Charms, Amani Hex Stick, Mojo, Soul Essence and Karazhan's
+  library books. Cloth, trade goods, other gems, potions and gold are left out, and so is what anyone gets from a
+  profession (disenchanting, gathering, skinning, fishing). ([#121](https://github.com/kcham01/LootRuler/pull/121))
 - The loot list works when the master looter doesn't have LootRuler: the leader's LootRuler lists what they give out, from
   the game's own "receives loot" lines (so nothing is counted twice from Gargul's lines). ([#114](https://github.com/kcham01/LootRuler/pull/114))
 - A row of buttons too wide for its panel goes on over two lines instead of running past the edge (seen on the Test
   tab). ([#113](https://github.com/kcham01/LootRuler/pull/113))
-- The Loot tab lists everything that drops that isn't grey, not just loot to roll for: trade goods like Nether Vortexes
-  and Primal Nethers and the like are counted at the bottom ("Nether Vortex x3, looted by Ann (2), Bob (1)").
+- The Loot tab lists more than loot to roll for: things like Nether Vortexes are counted at the bottom ("Nether Vortex x3, looted by Ann (2), Bob (1)").
   They're never announced, held for rolling out or reserved. ([#112](https://github.com/kcham01/LootRuler/pull/112))
 - A session's loot list only takes loot from inside its raid: a session left open no longer collects another raid's loot.
   Going into a different raid, or into its raid on a new lockout, asks whether to start a new session there (it can be
