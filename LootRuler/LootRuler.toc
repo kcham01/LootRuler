@@ -54,6 +54,7 @@ UI\RollFrame.lua
 UI\Master.lua
 UI\ReserveStrip.lua
 UI\Timers.lua
+UI\Say.lua
 UI\Lineup.lua
 UI\Guild.lua
 UI\Gdkp.lua
