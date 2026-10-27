@@ -603,6 +603,20 @@ run("settings", function()
     and visible("Put won items in trades for me", ann) and visible("Hide !lr messages in my chat", ann) and visible("!lr in raid chat", ann) and visible("Minimap button", ann))
   check("each says what it does", visible("Leaves out items other players reserved", ann))
   shot("settings", ann)
+  -- every section's title fits on its gold plate, long or short
+  local plates, short, longest = 0, 0, ""
+  local function walkPlates(fr)
+    for _, c in ipairs(fr._children or {}) do
+      if c.plate and c.plateL and c.title and c:IsVisible() and (c.title:GetText() or "") ~= "" then
+        plates = plates + 1
+        if c.plate:GetWidth() < c.title:GetStringWidth() + 8 then short = short + 1 end
+        if #c.title:GetText() > #longest then longest = c.title:GetText() end
+      end
+      walkPlates(c)
+    end
+  end
+  walkPlates(ann.G.LootRulerFrame)
+  check("every section's title fits on its plate", plates >= 10 and short == 0 and #longest >= 25, plates .. " " .. short .. " " .. longest)
   clickText("Only for items I can roll on", nil, ann)
   check("an option switches", ann.LR.db.settings.rollOnlyMine == true and visible("[x] Only for items I can roll on", ann))
   clickText("Only for items I can roll on", nil, ann)
