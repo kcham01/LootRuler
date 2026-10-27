@@ -249,8 +249,31 @@ K.define("edit", function()
       self:HighlightText()
     end
   end)
+  -- greyed words inside the box while it's empty ("Search Karazhan"): K.setHint, K.onText
+  e.hint = fs(e, "GameFontDisableSmall")
+  e.hint:SetPoint("LEFT", 2, 0)
+  e.hint:SetPoint("RIGHT", -4, 0)
+  e.hint:SetJustifyV("MIDDLE")
+  e.hint:SetWordWrap(false)
   return e
-end, function(e) e:SetScript("OnTextChanged", nil) e:SetScript("OnEnterPressed", nil) e:SetText("") e:SetMaxLetters(0) e:ClearFocus() e.keepCursor = nil linkBoxes[e] = nil end)
+end, function(e)
+  e:SetScript("OnTextChanged", nil) e:SetScript("OnEnterPressed", nil) e:SetText("") e:SetMaxLetters(0) e:ClearFocus()
+  e.keepCursor = nil linkBoxes[e] = nil
+  e.hint:SetText("") e.hint:Hide()
+end)
+
+--- the greyed words shown inside an empty text box (set its text first)
+function K.setHint(e, text)
+  e.hint:SetText(text or "")
+  e.hint:SetShown((text or "") ~= "" and e:GetText() == "")
+end
+--- what a text box does when its text changes; its hint goes while there's text
+function K.onText(e, fn)
+  e:SetScript("OnTextChanged", function(self, user)
+    self.hint:SetShown(self.hint:GetText() ~= "" and self:GetText() == "")
+    if fn then fn(self, user) end
+  end)
+end
 
 -- a box of many lines of text to copy (exports), scrolling when it's long
 K.define("memo", function()
