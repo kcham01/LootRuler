@@ -24,6 +24,9 @@ From the owner's in-game screenshots.
   LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
 - Saying trades nearby has its own switch (Settings, "Giving out and trading"). A trade goes to one place only: the group
   when you're in one, /s when you're not. ([#108](https://github.com/kcham01/LootRuler/pull/108))
+- Raiders get a small note at the top of the screen when the loot master picks up loot: each item, and who reserved it
+  ("Yours", or "SR: Ann, Bob"). It takes no clicks and goes by itself (Settings, "Reserves where you see items").
+  ([#115](https://github.com/kcham01/LootRuler/pull/115))
 - The loot list works when the master looter doesn't have LootRuler: the leader's LootRuler lists what they give out, from
   the game's own "receives loot" lines (so nothing is counted twice from Gargul's lines). ([#114](https://github.com/kcham01/LootRuler/pull/114))
 - A row of buttons too wide for its panel goes on over two lines instead of running past the edge (seen on the Test

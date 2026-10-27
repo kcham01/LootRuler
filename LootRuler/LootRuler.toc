@@ -53,6 +53,7 @@ UI\Setup.lua
 UI\RollFrame.lua
 UI\Master.lua
 UI\ReserveStrip.lua
+UI\PickedUp.lua
 UI\Timers.lua
 UI\Say.lua
 UI\Where.lua

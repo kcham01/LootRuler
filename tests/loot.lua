@@ -1610,9 +1610,19 @@ do
   local ks = ml.LR.startSession("Karazhan", 2, true, false)
   srv4:tick(2)
   local function dropsOf(id) local out = {} for _, d in ipairs(ks.drops or {}) do if d.i == id then out[#out + 1] = d end end return out end
+  zoe.LR.reserve(zoe.LR.current(), 28570)
+  srv4:tick(2)
   local before = #srv4.chat
   srv4:openLoot(ml, { { 28570, 4 }, { 30183, 4, 2 }, { 23572, 2 }, { 21877, 1, 5 }, { 99901, 0 }, { 99902, 4 } })
   srv4:tick(2)
+  local note = zoe.G.LootRulerPickedUp
+  local noteText = note and zoe.M.plain(note.text:GetText() or "") or ""
+  check("raiders get a small note of what was picked up", note and note:IsShown() and noteText:find("Shadow-Cloak of Dalaran  Yours", 1, true)
+    and noteText:find("Pattern: Shiny Thing", 1, true), noteText)
+  check("not the trade goods, and it takes no clicks", not noteText:find("Nether Vortex", 1, true) and not note:IsMouseEnabled())
+  check("the loot master, who picked it up, doesn't get it", not ml.G.LootRulerPickedUp or not ml.G.LootRulerPickedUp:IsShown())
+  srv4:tick(11)
+  check("it goes by itself", not note:IsShown())
   check("a corpse: everything but grey goes on the list, stacks with how many", #dropsOf(28570) == 1 and #dropsOf(30183) == 1
     and dropsOf(30183)[1].n == 2 and #dropsOf(23572) == 1 and dropsOf(21877)[1].n == 5 and #dropsOf(99902) == 1 and #dropsOf(99901) == 0)
   local posted = {}
@@ -1665,6 +1675,7 @@ do
   check("what Gus keeps is his to give out, and what Zoe got is hers", rl.LR.Session.dropState(ks, dropsOf(28453)[1]) == "held"
     and rl.LR.Session.dropState(ks, dropsOf(28570)[1]) == "looted")
   check("raiders see the list too", #(zoe.LR.current().drops or {}) == #ks.drops)
+  check("and what's picked up", zoe.G.LootRulerPickedUp and zoe.M.plain(zoe.G.LootRulerPickedUp.text:GetText()):find("Shadow-Cloak", 1, true))
   -- a master looter with LootRuler: theirs writes it down, so nothing is listed twice
   srv5:setMasterLooter(mel)
   srv5:tick(2)
