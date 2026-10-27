@@ -1641,6 +1641,41 @@ do
   for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("a master looter without LootRuler")
+do
+  local srv5 = Server.new(".")
+  srv5.itemInfo = srv.itemInfo
+  srv5.where = Server.PLACES.Karazhan
+  local rl = srv5:client({ name = "Rhea", class = "PALADIN" })
+  local zoe = srv5:client({ name = "Zoe", class = "PRIEST" })
+  local mel = srv5:client({ name = "Mel", class = "WARRIOR" })
+  local gus = srv5:player({ name = "Gus", class = "ROGUE" })            -- (no LootRuler)
+  srv5:setGroup({ rl, zoe, mel, gus }, rl, true)
+  srv5:setMasterLooter(gus)
+  srv5:tick(6)
+  local ks = rl.LR.startSession("Karazhan", 2, true, false)
+  srv5:tick(2)
+  local function dropsOf(id) local out = {} for _, d in ipairs(ks.drops or {}) do if d.i == id then out[#out + 1] = d end end return out end
+  srv5:lootTo(zoe, 28570)               -- Gus gives the cloak to Zoe
+  srv5:lootTo(gus, 28453)               -- and keeps a bracer, to give out later
+  srv5:lootTo(zoe, 30183, 2)
+  srv5:tick(2)
+  check("the leader's LootRuler lists what Gus gives out, from the game's loot messages", #dropsOf(28570) == 1 and dropsOf(28570)[1].h == full(zoe)
+    and #dropsOf(28453) == 1 and dropsOf(28453)[1].h == full(gus) and dropsOf(30183)[1].n == 2)
+  check("what Gus keeps is his to give out, and what Zoe got is hers", rl.LR.Session.dropState(ks, dropsOf(28453)[1]) == "held"
+    and rl.LR.Session.dropState(ks, dropsOf(28570)[1]) == "looted")
+  check("raiders see the list too", #(zoe.LR.current().drops or {}) == #ks.drops)
+  -- a master looter with LootRuler: theirs writes it down, so nothing is listed twice
+  srv5:setMasterLooter(mel)
+  srv5:tick(2)
+  local before = #ks.drops
+  srv5:openLoot(mel, { { 28477, 4 } }) srv5:tick(2)
+  srv5:lootTo(zoe, 28477)
+  srv5:tick(2)
+  check("with a master looter who has LootRuler, it's listed once", #ks.drops == before + 1 and #dropsOf(28477) == 1 and dropsOf(28477)[1].h == full(zoe))
+  for _, p in ipairs({ rl, zoe, mel }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 section("trades out of a group are said nearby")
 -- its own little world: the loot master on their own (the raid's over), trading with a raider
 local srv2 = Server.new(".")

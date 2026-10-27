@@ -3,7 +3,8 @@
 -- session ends.
 --
 -- Who writes it down:
---   master loot   the master looter's addon, when they open a corpse (and the loot messages say who got what)
+--   master loot   the master looter's addon, when they open a corpse (and the loot messages say who got what); when
+--                 the master looter has no LootRuler, the leader of the soft reserves' addon, from the loot messages
 --   other loot    the leader of the soft reserves' addon, from the loot messages ("Bob receives loot: [...]")
 -- The leader's addon keeps the list; anyone else who writes something down sends it to them:
 --   D  loot master -> group   drops, new or with a new holder: { sid, d = { { k, i, b, at, by, src, h, ht } } }
@@ -68,7 +69,10 @@ end
 local function writer()
   local s = Rolls.session()
   if not s or not IsInGroup() or not Drops.here(s) then return nil end
-  if LR.masterLooter() then return LR.isMasterLooter() and s or nil end
+  local ml = LR.masterLooter()
+  if ml and LR.isMasterLooter() then return s end
+  -- a master looter without LootRuler: the leader writes it down, from the game's own loot messages only
+  if ml and LR.versionOf(ml) then return nil end
   return LR.isLeader(s) and s or nil
 end
 Drops.writer = writer
