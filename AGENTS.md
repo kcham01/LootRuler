@@ -118,7 +118,8 @@ run found, and ideas: `docs/benchmark.md`.
 
 `tools/coverage.lua` runs the tests with a line hook and lists every function no test runs (`build/coverage.lines` has
 every line that ran). Not part of CI; run it after a feature lands and add tests for anything new it lists. Only
-`UI.masterNote` (a one-line print) isn't reached now.
+`UI.masterNote` (a one-line print) isn't reached now. **A function no test reaches gets a test, not deleted**: the Coverage
+pull request (#76) deleted `LR.forget` as unreached while two buttons still called it, and the owner's first in-game test hit it.
 
 CI (`.github/workflows/build.yml`) runs all of it on every pull request and on `main`. Pull requests get the
 pictures and the zip as a download on the run; `main` publishes them to the `results` branch, which the
@@ -126,7 +127,8 @@ README's download link points at. Pictures are published numbered and under thei
 (`results/shots/loot-master.png`): the README links the names, so adding a screen doesn't move its pictures.
 
 The mock is strict on purpose: a method the client doesn't have is an error, and `check_api.lua` checks the
-mock and the addon against Blizzard's own interface code. When the addon needs a new game function, add it to
+mock and the addon against Blizzard's own interface code, and every event the addon registers against the client's own
+list (registering one the client doesn't have is an error in the game; the mock's `M.MISSING_EVENTS` refuses the known ones). When the addon needs a new game function, add it to
 the mock (and to `tests/wow/server.lua` if it involves other players), never loosen the checks.
 
 ## Next up (hand-off note)
@@ -263,8 +265,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   raid line ("Wishlisted: ..."), the roll window (with the note), the corpse loot post and tooltips. Older versions ignore `wl`.
 - **Need and Greed rules** (`Core/GroupLoot.lua`, settings `groupLoot`, `groupLootRules`, `groupLootConfirm`, all off or empty):
   on `START_LOOT_ROLL` the first rule matching the item (`AutoLoot.matches`: an item, a quality or a kind) is rolled with
-  `RollOnLoot` if `GetLootRollItemInfo` allows it, else the player is told. `CONFIRM_LOOT_ROLL` / `CONFIRM_DISENCHANT_ROLL` are
-  answered (`ConfirmLootRoll`) only for a roll a rule made, with that switched on. The mock has `M.groupRoll`.
+  `RollOnLoot` if `GetLootRollItemInfo` allows it, else the player is told. `CONFIRM_LOOT_ROLL` is answered (`ConfirmLootRoll`)
+  only for a roll a rule made, with that switched on. TBC has no Disenchant roll: `GroupLoot.HAS_DE` (`C_EventUtils.IsEventValid`)
+  decides whether "Disenchant" is offered (`GroupLoot.choices()`) and `CONFIRM_DISENCHANT_ROLL` registered. The mock has `M.groupRoll`.
 - **More loot rules** (`Core/AutoLoot.lua`): kinds `q0`, `q1`, `lt3`, `lt4` (below rare / epic); `to = "rr"` (each in turn: the
   group by name, after `A.lastInTurn`) and `to = "skip"` (matched, nothing done, no later rule). Setting `lootGold` (off)
   takes money slots with `LootSlot` when the master looter opens a corpse. Need / Greed rules get the new kinds too.
@@ -406,6 +409,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   that runs into buttons or past its box), when the owner says. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed, owner's first in-game test) "Forget it" on someone else's session (and the x beside one) called `LR.forget`,
+    which #76 had deleted. And `CONFIRM_DISENCHANT_ROLL` was registered, which TBC doesn't have: an error at every login.
   - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.
   - (fixed, owner's test) Closing a roll window with its x left the strip of reservers on screen until the roll
     ended (seen with a pretend reserved roll on the Test tab). The strip now goes with the window, and with the

@@ -702,6 +702,16 @@ function LR.endSession(s)
   LR.changed("session")
 end
 
+--- raiders forget a session (it stays with its leader, and comes back if they send it again)
+function LR.forget(s)
+  if not s or LR.isLeader(s) then return false end
+  db.sessions[s.id] = nil
+  db.mine[s.id] = nil
+  if db.current == s.id then db.current = nil end
+  LR.changed("session")
+  return true
+end
+
 ---------------------------------------------------------------------- what I do with my own reserves
 --- reserve one more of an item in a session; returns true, or false and why
 function LR.reserve(s, id) return LR.changeMine(s, function(items) items[#items + 1] = id end, id) end
