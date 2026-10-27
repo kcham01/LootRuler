@@ -11,6 +11,8 @@ From the owner's in-game screenshots.
 
 - Section titles fit on their gold plate, however long ("Need and Greed (group loot)" ran off it).
   ([#103](https://github.com/kcham01/LootRuler/pull/103))
+- Every item search says what to type inside the box, as the Reserve tab's does ("Search Karazhan"), instead of in a line
+  under it. ([#104](https://github.com/kcham01/LootRuler/pull/104))
 
 ### Faster (26 October 2026)
 

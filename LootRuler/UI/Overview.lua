@@ -120,7 +120,8 @@ function UI.pickItem(s, title, done, filter, many)
     local e = K.get(f.owner, "edit", f.parent)
     f:place(e, 22, 6, f.width - 12)
     e:SetText(q)
-    e:SetScript("OnTextChanged", function(self, user)
+    K.setHint(e, UI.searchHint(s))
+    K.onText(e, function(self, user)
       if not user then return end
       q = self:GetText()
       h.redraw(true)
@@ -156,8 +157,6 @@ function UI.pickItem(s, title, done, filter, many)
       else f:note(("That item doesn't drop in %s. Allow any item (Session tab) to use it."):format(raid.name), K.GOLD) end
       return
     end
-    if many then f:note(s.any and "Search by name, or shift-click any item into the box." or "Search by name.")
-    else f:note(s.any and "Pick one, or shift-click any item into the box." or "Pick one, or search by name.") end
     local want = U.lower(q)
     local faction = UnitFactionGroup("player")
     for _, boss in ipairs(raid.bosses) do

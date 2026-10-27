@@ -100,20 +100,20 @@ function UI.swapSheet(s)
 end
 
 --- the search box (keeps its text and the cursor across redraws)
+--- the words inside a session's search box
+function UI.searchHint(s)
+  local raid = LR.raidOf(s)
+  if raid.custom then return "Shift-click any item into here, or type its name" end
+  return "Search " .. raid.name .. (s.any and ", or shift-click any item" or "")
+end
+
 local function searchBox(f, placeholder)
   local e = K.get(f.owner, "edit", f.parent)
   f:place(e, 22, 6, f.width - 12)
   e:SetText(UI.q or "")
-  local hint = K.get(f.owner, "label", f.parent)
-  hint.text:SetFontObject("GameFontDisableSmall")
-  hint.text:SetText(placeholder)
-  hint:SetPoint("LEFT", e, "LEFT", 4, 0)
-  hint:SetSize(f.width - 30, 14)
-  hint.text:SetJustifyV("MIDDLE")
-  hint:SetShown((UI.q or "") == "")
+  K.setHint(e, placeholder)
   local seq = 0
-  e:SetScript("OnTextChanged", function(self, user)
-    hint:SetShown(self:GetText() == "")
+  K.onText(e, function(self, user)
     if not user then return end
     UI.q = self:GetText()
     UI.searchFocus = true
@@ -290,8 +290,7 @@ function UI.reserveView(f, s)
       tip = "Only show items someone has reserved." },
   })
   local raid = LR.raidOf(s)
-  searchBox(f, raid.custom and "Shift-click any item into here, or type its name" or
-    ("Search " .. raid.name .. (s.any and ", or shift-click any item" or "")))
+  searchBox(f, UI.searchHint(s))
   -- an item linked (or its number typed) into the box: that item, whatever raid it's from
   local linked = LR.idFrom(UI.q)
   if linked then
