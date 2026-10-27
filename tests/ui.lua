@@ -663,6 +663,7 @@ run("settings", function()
   check("every option is on the Settings tab", visible("Show roll windows", ann) and visible("Seconds to roll:", ann)
     and visible("Put won items in trades for me", ann) and visible("Hide !lr messages in my chat", ann) and visible("!lr in raid chat", ann) and visible("Minimap button", ann)
     and ticked("Say my trades nearby when I'm not in a group", ann) == true)
+  check("opening a trade with the winner is off to start with", ticked("Open a trade with the winner", ann) == false and not ann.LR.db.settings.autoTrade)
   check("each says what it does", visible("Leaves out items other players reserved", ann))
   -- every section's title fits on its gold plate, long or short
   local plates, short, longest = 0, 0, ""
