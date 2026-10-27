@@ -15,6 +15,24 @@ for _, r in ipairs(LR.RAIDS) do
   end
 end
 
+-- each raid's instance, as the game numbers it (GetInstanceInfo's instance id; GetSavedInstanceInfo's map id)
+LR.RAID_MAPS = {
+  MoltenCore = 409, Onyxia = 249, BlackwingLair = 469, ["Zul'Gurub"] = 309, TheRuinsofAhnQiraj = 509, TheTempleofAhnQiraj = 531,
+  Naxxramas = 533, Karazhan = 532, GruulsLair = 565, MagtheridonsLair = 544, SerpentshrineCavern = 548, TempestKeep = 550,
+  HyjalSummit = 534, BlackTemple = 564, ZulAman = 568, SunwellPlateau = 580,
+}
+LR.WORLD_RAIDS = { WorldBosses = true, WorldBossesBC = true }       -- (outdoors: no instance)
+local RAID_AT = {}
+for key, map in pairs(LR.RAID_MAPS) do RAID_AT[map] = key end
+--- the raid (key) whose instance this is, or nil
+function LR.raidAt(map) return map and RAID_AT[map] end
+
+--- where I am: { map = the instance's number, kind = "raid" / "party" / "none" (outdoors) / ..., name }
+function LR.where()
+  local name, kind, _, _, _, _, _, map = GetInstanceInfo()
+  return { map = map, kind = kind or "none", name = name or "" }
+end
+
 function LR.raid(key) return key and LR.RAID_BY_KEY[key] end
 function LR.raidHas(key, id) local r = LR.RAID_BY_KEY[key] return r and r.has[id] or false end
 

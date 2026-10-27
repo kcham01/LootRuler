@@ -103,12 +103,16 @@ function UI.testView(f, s)
         if #names == 0 then names = U.map(UI.PRETEND, function(x) return x[1] end) names = { names[1], names[2], names[3] } end
         LR.print("(pretend, not posted) " .. LR.Whisper.reminderText(s, names))
       end },
+      { label = "Changing raids", disabled = not s, click = function()
+        local bt = s.raid == "BlackTemple" and "Karazhan" or "BlackTemple"
+        UI.newRaidPrompt(s, { map = LR.RAID_MAPS[bt], kind = "raid", name = LR.raid(bt).name }, "raid", true)
+      end },
       { label = "A trade out of a group", click = function()
         local line = LR.Drops.tradeLine(UI.PRETEND[3][1], { LR.itemLink(UI.pretendItem()) }, 0, {}, 0)
         UI.sayPrompt({ LR.TAG .. " " .. line }, true)
       end },
     }, "left")
-    if not s then p:note("The reminder needs a session open (Session tab).") end
+    if not s then p:note("The reminder and changing raids need a session open (Session tab).") end
   end)
 
   f:panel("Names from softres.it", function(p)

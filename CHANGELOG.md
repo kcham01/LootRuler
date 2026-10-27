@@ -24,6 +24,9 @@ From the owner's in-game screenshots.
   LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
 - Saying trades nearby has its own switch (Settings, "Giving out and trading"). A trade goes to one place only: the group
   when you're in one, /s when you're not. ([#108](https://github.com/kcham01/LootRuler/pull/108))
+- A session's loot list only takes loot from inside its raid: a session left open no longer collects another raid's loot.
+  Going into a different raid, or into its raid on a new lockout, asks whether to start a new session there (it can be
+  switched off). ([#111](https://github.com/kcham01/LootRuler/pull/111))
 - "Open a trade with the winner" is off to start with (Settings, "Giving out and trading"). Settings you already saved
   stay as they are. ([#110](https://github.com/kcham01/LootRuler/pull/110))
 - Picking a disenchanter tells the raid who it is ("Dan is the disenchanter: items nobody wants go to them."), and taking

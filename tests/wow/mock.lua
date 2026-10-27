@@ -1070,6 +1070,10 @@ function M.env(player)
   -- the guild (none, unless the test or the server says so)
   G.IsInGuild = G.IsInGuild or function() return false end
   G.IsInInstance = G.IsInInstance or function() return false, "none" end
+  G.GetInstanceInfo = G.GetInstanceInfo or function() return "Outland", "none", 0, "", 0, 0, false, 530, 0, nil end
+  G.RequestRaidInfo = G.RequestRaidInfo or function() end
+  G.GetNumSavedInstances = G.GetNumSavedInstances or function() return 0 end
+  G.GetSavedInstanceInfo = G.GetSavedInstanceInfo or function() return nil end
   G.GetGuildInfo = function() return nil end
   G.GetNumGuildMembers = function() return 0, 0 end
   G.GetGuildRosterInfo = function() return nil end

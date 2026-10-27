@@ -419,6 +419,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   tab and in the new-session form (`UI.importSheet`); Settings sections fold (`Flow:fold`, `section` in `UI/Settings.lua`,
   open ones kept in `db.ui.settingsOpen`). A new setting goes in a section, and its line should say what's in it now.
   The owner kept: the windows' see-through backgrounds, the size, greyed buttons, and the tabs as they are.
+- **Loot only from the session's raid** (#111; `Drops.here(s, where)`, gating `Drops.writer`; `LR.RAID_MAPS`, `LR.raidAt`, `LR.where`;
+  `UI/Where.lua`: `UI.newRaidPrompt`, `UI.whereCheck`, setting `raidPrompt`): inside the raid's instance (by `GetInstanceInfo`'s
+  instance id), outdoors for world bosses, any raid LootRuler doesn't know for a custom raid; the practice raid anywhere. The
+  leader entering another raid, or its raid after the lockout it was for ended (`s.le`, from `GetSavedInstanceInfo` on
+  `UPDATE_INSTANCE_INFO`), is asked to start a new session (the old one ends and is archived). The test server has places
+  (`Server.PLACES`, `srv.where`, `p.where`, `Server:enter`) and lockouts (`p.saved`); loot and UI tests run in Karazhan.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,

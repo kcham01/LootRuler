@@ -9,6 +9,15 @@ local MOCK_PATH = "tests/wow/mock.lua"
 local Server = {}
 Server.__index = Server
 
+-- places to be (Server:enter): the instance numbers are the game's
+Server.PLACES = {
+  Karazhan = { map = 532, kind = "raid", name = "Karazhan" },
+  GruulsLair = { map = 565, kind = "raid", name = "Gruul's Lair" },
+  BlackTemple = { map = 564, kind = "raid", name = "Black Temple" },
+  SethekkHalls = { map = 556, kind = "party", name = "Sethekk Halls" },
+  Outdoors = { map = 530, kind = "none", name = "Outland" },
+}
+
 function Server.new(root)
   return setmetatable({ root = root or ".", players = {}, queue = {}, group = nil, clock = 0, chat = {} }, Server)
 end
@@ -68,6 +77,17 @@ end
 function Server:login(p, db) self:client(p, db) self:rosterChanged() end
 
 ---------------------------------------------------------------------- the group
+--- players go somewhere (a Server.PLACES entry, or nil for outdoors): their clients hear the game's zoning events
+function Server:enter(list, where)
+  for _, p in ipairs(list) do
+    p.where = where
+    if p.client then
+      local q = p
+      self:deliver(function() q.M.fire("PLAYER_ENTERING_WORLD", false, false) q.M.fire("ZONE_CHANGED_NEW_AREA") end)
+    end
+  end
+end
+
 function Server:setGroup(list, leader, raid)
   self.group = { members = list, leader = leader, raid = raid ~= false, assists = {} }
   for _, p in ipairs(list) do p.inGroup = true end
@@ -305,7 +325,27 @@ function Server:install(p)
   G.IsInRaid = function() return srv:inGroup(p) and srv.group.raid or false end
   G.IsInGuild = function() return p.guild ~= nil end
   -- p.instance: "party" or "raid" while they're in a dungeon or raid
-  G.IsInInstance = function() if p.instance then return true, p.instance end return false, "none" end
+  -- where they are: p.where, else srv.where (both { map, kind, name }, as Server.PLACES); outdoors when neither.
+  -- p.instance ("party" or "raid") just says they're in one; p.saved is their lockouts ({ name, id, reset, map })
+  local function place() return p.where or srv.where end
+  G.IsInInstance = function()
+    local w = place()
+    if w and w.kind ~= "none" then return true, w.kind end
+    if p.instance then return true, p.instance end
+    return false, "none"
+  end
+  G.GetInstanceInfo = function()
+    local w = place()
+    if not w then return "Outland", "none", 0, "", 0, 0, false, 530, 0, nil end
+    return w.name, w.kind, w.kind == "raid" and 4 or 1, "", w.kind == "raid" and 25 or 5, 0, false, w.map, 0, nil
+  end
+  G.RequestRaidInfo = function() srv:deliver(function() p.M.fire("UPDATE_INSTANCE_INFO") end) end
+  G.GetNumSavedInstances = function() return #(p.saved or {}) end
+  G.GetSavedInstanceInfo = function(i)
+    local x = (p.saved or {})[i]
+    if not x then return nil end
+    return x.name, x.id, x.reset, 4, true, false, 0, true, 25, "", 5, 1, false, x.map
+  end
   -- the guild: ranks are numbered from 0 (the guild master); o.rank when the player was made (default 3)
   local function guildmates()
     local list = {}
@@ -373,7 +413,7 @@ function Server:install(p)
   local function sendChat(text, channel, language, target)
     if type(text) ~= "string" then error("SendChatMessage needs text") end
     -- the game blocks /say and /yell from an addon outside a dungeon or raid unless a click started it
-    if (channel == "SAY" or channel == "YELL") and not p.instance and not p.M.hardware then
+    if (channel == "SAY" or channel == "YELL") and not G.IsInInstance() and not p.M.hardware then
       error("SendChatMessage: " .. channel .. " outside an instance needs a click (the game blocks it)")
     end
     srv:chatMessage(p, text, channel, target)

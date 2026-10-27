@@ -18,6 +18,7 @@ local function run(name, fn)
 end
 
 local srv = Server.new(".")
+srv.where = Server.PLACES.Karazhan          -- (in Karazhan, where most sessions here are: loot is only listed inside a session's raid)
 -- every item is loaded in these clients: names and links from the data, icons from Wowhead's names
 local DATA = {}
 do
@@ -1784,6 +1785,14 @@ run("the Test tab", function()
   clickText("The reminder")
   check("the reminder, shown not posted", (function() for _, l in ipairs(M.chat) do if l:find("(pretend, not posted)", 1, true) then return true end end end)()
     and #srv.chat == chatBefore)
+  for _, rf in ipairs(LR.UI.rollFrames()) do rf:Hide() end      -- (the pretend Gargul roll's window, for a clear picture)
+  clickText("Changing raids")
+  check("changing raids: the question, as it would come", visible("You're in Black Temple, but your session is for Karazhan.") and visible("Start Black Temple"))
+  shot("new-raid")
+  clickText("Start Black Temple")
+  check("pretend: nothing changes", LR.current().raid == "Karazhan"
+    and (function() for _, l in ipairs(M.chat) do if l:find("(pretend) A new session for Black Temple", 1, true) then return true end end end)())
+  clickText("Test")
   clickText("A trade out of a group")
   local say = G.LootRulerSay
   check("a trade out of a group: the Say it button", say:IsShown() and #M.findText("to Thrall.", true, say) > 0)
