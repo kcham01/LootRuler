@@ -46,6 +46,7 @@ local function leaderTools(f, s)
         UI.copyBox("Copy for Gargul", "Press Ctrl+C, then paste it into Gargul's soft-reserve importer (/gl sr). softres.it's \"Gargul export\" is the same kind of text.", LR.Gargul.export(s))
       end },
     }, "left")
+    p:buttons({ { label = s.sx and "Import from softres.it again" or "Import from softres.it", click = function() UI.importSheet(s) end } }, "left")
     p:buttons({
       { label = s.locked and "Unlock reserves" or "Lock reserves", click = function() LR.setLocked(s, not s.locked) end },
       { label = "Post in raid chat", disabled = LR.groupChannel() == nil, click = function()
