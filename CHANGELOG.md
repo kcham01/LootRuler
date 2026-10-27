@@ -13,6 +13,8 @@ From the owner's in-game screenshots.
   ([#103](https://github.com/kcham01/LootRuler/pull/103))
 - Every item search says what to type inside the box, as the Reserve tab's does ("Search Karazhan"), instead of in a line
   under it. ([#104](https://github.com/kcham01/LootRuler/pull/104))
+- On / off switches are tick boxes, the game's own, in place of "[x]" and "[ ]" in their words.
+  ([#105](https://github.com/kcham01/LootRuler/pull/105))
 
 ### Faster (26 October 2026)
 

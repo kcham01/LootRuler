@@ -333,7 +333,7 @@ local function ruleSheet(s, index)
     if #list == 0 then f:note("Nobody in the group yet.") end
     for _, m in ipairs(list) do
       local on = U.indexOf(r.to, m.name) ~= nil
-      f:chips({ { label = (on and "[x] " or "[  ] ") .. U.classText(U.short(m.name), m.class or LR.classOf(m.name)), on = on, width = 200,
+      f:chips({ { tick = true, label = U.classText(U.short(m.name), m.class or LR.classOf(m.name)), on = on, width = 200,
         click = function() LR.gdkpRuleTo(s, index, m.name, not on) h.redraw(true) end } }, { gap = 2 })
     end
     f:gap(6)
@@ -414,7 +414,7 @@ function UI.gdkpPanel(f, s)
         end
         p:chips(list, { gap = 2 })
       end
-      p:chips({ { label = (gk.strict and "[x] " or "[  ] ") .. "Bids start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
+      p:chips({ { tick = true, label = "Bids start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
         tip = "Only \"bid 150\" counts, not just \"150\": someone saying \"500\" in raid chat doesn't bid by accident." } }, { gap = 2 })
       p:gap(4)
     end

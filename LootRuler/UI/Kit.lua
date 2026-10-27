@@ -198,6 +198,36 @@ function K.setChip(b, label, on)
   end
 end
 
+-- a tick box with its words beside it (an on / off switch): Flow:chips with tick = true
+K.define("tick", function()
+  local b = CreateFrame("Button", nil, UIParent)
+  b.box = b:CreateTexture(nil, "ARTWORK")
+  b.box:SetTexture("Interface\\Buttons\\UI-CheckBox-Up")
+  b.box:SetSize(22, 22)
+  b.box:SetPoint("LEFT", -2, 0)
+  b.check = b:CreateTexture(nil, "OVERLAY")
+  b.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+  b.check:SetAllPoints(b.box)
+  b.text = fs(b, "GameFontHighlightSmall")
+  b.text:SetJustifyV("MIDDLE")
+  b.text:SetPoint("LEFT", b.box, "RIGHT", 1, 0)
+  b.text:SetPoint("RIGHT")
+  b.glow = b:CreateTexture(nil, "HIGHLIGHT")              -- (the HIGHLIGHT layer shows while the mouse is over it)
+  b.glow:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
+  b.glow:SetBlendMode("ADD")
+  b.glow:SetAllPoints(b.box)
+  b:SetHeight(20)
+  return b
+end, function(b) b:Enable() end)
+
+function K.setTick(b, label, on)
+  b.text:SetText(label)
+  b:SetWidth(b.text:GetStringWidth() + 26)
+  b.check:SetShown(on and true or false)
+  b.on = on and true or false
+  if on then b.text:SetTextColor(1, 1, 1) else b.text:SetTextColor(0.85, 0.81, 0.74) end
+end
+
 -- an icon with a thin dark border
 local function iconParts(f, size)
   f.icon = f:CreateTexture(nil, "ARTWORK")
@@ -511,6 +541,10 @@ function Flow:chips(list, opts)
       b.text:SetText(c.label)
       b:SetSize(c.width or (b.text:GetStringWidth() + 4), 20)
       b.text:SetWordWrap(not c.width)
+    elseif c.tick then
+      b = K.get(self.owner, "tick", self.parent)
+      K.setTick(b, c.label, c.on)
+      if c.width then b:SetWidth(c.width) end
     else
       b = K.get(self.owner, "chip", self.parent)
       K.setChip(b, c.label, c.on)

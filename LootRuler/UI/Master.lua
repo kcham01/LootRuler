@@ -584,7 +584,7 @@ function UI.masterLooterPrompt()
     }, "left")
     f:gap(4)
     local set = LR.db.settings
-    f:chips({ { label = (set.mlPrompt and "[  ] " or "[x] ") .. "Don't ask again", on = not set.mlPrompt, click = function() set.mlPrompt = not set.mlPrompt h.redraw(true) end,
+    f:chips({ { tick = true, label = "Don't ask again", on = not set.mlPrompt, click = function() set.mlPrompt = not set.mlPrompt h.redraw(true) end,
       tip = "Settings tab, Running loot, to ask again." } })
     f:buttons({ { label = "Not now", click = function() h.close() end } })
   end)

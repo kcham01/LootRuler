@@ -61,7 +61,7 @@ local function practicePanel(f)
       end },
       { label = "End the practice raid", click = function() P.stop() UI.render() end },
     }, "left")
-    p:chips({ { label = (P.tie and "[x] " or "[  ] ") .. "Make the next roll a tie", on = P.tie, click = function() P.tie = not P.tie UI.render() end } })
+    p:chips({ { tick = true, label = "Make the next roll a tie", on = P.tie, click = function() P.tie = not P.tie UI.render() end } })
     p:note("Everything else works as it does in a raid: the Session tab (GDKP, priority lists, +1s, hard reserves), the Reserves and Loot tabs, the loot master window and the trade timers. The pretend players roll, pass and bid on their own.")
   end)
 end
@@ -72,7 +72,7 @@ function UI.testView(f, s)
     p:note("A roll window and the strip of who reserved the item, as raiders see them. Only on your screen; clicking the dice rolls here, not with /roll.")
     stepper(p, "Players who reserved it", test.reservers, 0, #UI.PRETEND, function(v) test.reservers = v UI.render() end)
     stepper(p, "Seconds to roll", test.secs, 5, 60, function(v) test.secs = v UI.render() end)
-    p:chips({ { label = (test.mine and "[x] " or "[  ] ") .. "I reserved it too", on = test.mine, click = function() test.mine = not test.mine UI.render() end } })
+    p:chips({ { tick = true, label = "I reserved it too", on = test.mine, click = function() test.mine = not test.mine UI.render() end } })
     p:buttons({
       { label = "LootRuler roll: everyone", click = function() UI.testRoll({ mode = "OPEN", secs = test.secs, quiet = true }) end },
       { label = "LootRuler roll: reserved", click = function()
