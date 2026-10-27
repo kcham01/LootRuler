@@ -97,6 +97,13 @@ function opHtml(op) {
       const letters = ic.replace(/^(inv|spell|ability|achievement|trade)_/, '').slice(0, 2).toUpperCase();
       return `<div style="${base}${desat}background:radial-gradient(#3a2d1d,#120d08);color:#c9a227;font:bold ${Math.max(8, b.h * 0.35)}px Georgia;display:flex;align-items:center;justify-content:center;overflow:hidden">${letters}<img src="https://wow.zamimg.com/images/wow/icons/large/${ic}.jpg" onerror="this.remove()" style="position:absolute;left:-7%;top:-7%;width:114%;height:114%"></div>`;
     }
+    if (/DialogBox-Header/i.test(tex) && op.coord) {
+      // a piece of the plate (Kit's three-piece title plate): its left end, the middle, or its right end
+      const u = op.coord[0];
+      const piece = u < 0.3 ? 'left:45%;right:0;border-right:0;border-radius:5px 0 0 5px'
+        : u > 0.6 ? 'left:0;right:45%;border-left:0;border-radius:0 5px 5px 0' : 'left:0;right:0;border-left:0;border-right:0';
+      return `<div style="${base}"><div style="position:absolute;border:2px solid #c9a227;${piece};top:35%;bottom:6%;background:linear-gradient(#3b2a12,#1c1209);box-shadow:0 1px 0 0 #000"></div></div>`;
+    }
     if (/DialogBox-Header/i.test(tex)) return `<div style="${base}"><div style="position:absolute;left:18%;right:18%;top:22%;bottom:30%;background:linear-gradient(#3b2a12,#1c1209);border:2px solid #c9a227;border-radius:5px;box-shadow:0 0 0 1px #000"></div></div>`;
     if (/ActionButton-Border/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:27%;border-radius:5px;box-shadow:0 0 7px 2px ${rgba(tint, 0.9)}"></div></div>`;
     if (/UI-PaperDoll-Slot/i.test(tex)) { const n = tex.split('-').pop(); return `<div style="${base}${op.alpha < 1 ? '' : ''}background:radial-gradient(#2a241c,#0c0a08);color:#6d6253;font:bold 7px Arial;display:flex;align-items:center;justify-content:center;text-transform:uppercase">${esc(n)}</div>`; }

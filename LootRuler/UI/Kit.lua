@@ -103,20 +103,44 @@ end
 K.tooltipOn = tooltipOn
 
 ---------------------------------------------------------------------- widgets
+local PLATE_H, PLATE_END = 35, 22       -- a title plate's height, and its ends' width
+local PLATE_MIN, PLATE_PAD = 90, 12     -- its middle: at least this wide, and this much wider than the title
 -- a framed panel with a gold title plate (the app's "frame rock")
 K.define("panel", function()
   local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
   f:SetBackdrop(K.PANEL)
   f:SetBackdropBorderColor(0.72, 0.56, 0.24, 1)
+  -- the plate in three pieces of the game's header art (its left end, a middle that stretches, its right end), so it
+  -- grows with the title (K.fitPlate)
+  local art = "Interface\\DialogFrame\\UI-DialogBox-Header"
   f.plate = f:CreateTexture(nil, "ARTWORK")
-  f.plate:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
-  f.plate:SetSize(240, 56)
+  f.plate:SetTexture(art)
+  f.plate:SetTexCoord(0.31, 0.67, 0, 0.63)
+  f.plate:SetSize(PLATE_MIN, PLATE_H)
   f.plate:SetPoint("TOP", 0, 15)
+  f.plateL = f:CreateTexture(nil, "ARTWORK")
+  f.plateL:SetTexture(art)
+  f.plateL:SetTexCoord(0.21, 0.31, 0, 0.63)
+  f.plateL:SetSize(PLATE_END, PLATE_H)
+  f.plateL:SetPoint("RIGHT", f.plate, "LEFT")
+  f.plateR = f:CreateTexture(nil, "ARTWORK")
+  f.plateR:SetTexture(art)
+  f.plateR:SetTexCoord(0.67, 0.77, 0, 0.63)
+  f.plateR:SetSize(PLATE_END, PLATE_H)
+  f.plateR:SetPoint("LEFT", f.plate, "RIGHT")
   f.title = fs(f, "GameFontNormal")
   f.title:SetJustifyH("CENTER")
   f.title:SetPoint("TOP", f.plate, "TOP", 0, -13)
   return f
-end, function(f) f.title:SetText("") f.plate:Show() end)
+end, function(f) f.title:SetText("") K.fitPlate(f) end)
+
+--- sizes a panel's title plate to its title (hidden with no title)
+function K.fitPlate(f)
+  local title = f.title:GetText()
+  local on = title ~= nil and title ~= ""
+  f.plate:SetShown(on) f.plateL:SetShown(on) f.plateR:SetShown(on)
+  if on then f.plate:SetWidth(max(PLATE_MIN, f.title:GetStringWidth() + PLATE_PAD)) end
+end
 
 -- a plain container (no look of its own)
 K.define("box", function() return CreateFrame("Frame", nil, UIParent, "BackdropTemplate") end, function(f)
@@ -438,7 +462,7 @@ function Flow:note(text, color) return self:text(text, { font = "GameFontHighlig
 function Flow:panel(title, fill)
   local p = K.get(self.owner, "panel", self.parent)
   p.title:SetText(title)
-  p.plate:SetShown(title ~= nil and title ~= "")
+  K.fitPlate(p)
   p:SetWidth(self.width)
   local inner = K.flow(self.owner, p, 12, (title and title ~= "") and 24 or 12, self.width - 24)
   fill(inner)

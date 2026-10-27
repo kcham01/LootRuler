@@ -5,6 +5,13 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+### Easier on the eye (27 October 2026)
+
+From the owner's in-game screenshots.
+
+- Section titles fit on their gold plate, however long ("Need and Greed (group loot)" ran off it).
+  ([#103](https://github.com/kcham01/LootRuler/pull/103))
+
 ### Faster (26 October 2026)
 
 A benchmark of a 40-player raid night ([#89](https://github.com/kcham01/LootRuler/pull/89)) found where the loot runner's
