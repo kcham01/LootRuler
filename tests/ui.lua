@@ -465,6 +465,11 @@ run("rolling out loot", function()
   check("the loot panel beside the loot window", panel and panel:IsShown() and #M.findText("Click an item to roll it out", true, panel) > 0)
   check("with who reserved what", #M.findText("SR: Ann, Lead", true, panel) > 0 and #M.findText("Hard reserved for Ann", true, panel) > 0, s.res["Lead-Dreamscythe"] and s.res["Lead-Dreamscythe"].i[1])
   shot("loot-panel", lead, { "LootStandIn", "LootRulerLootPanel" })
+  srv:tick(1)
+  local pu = ann.G.LootRulerPickedUp
+  check("raiders get a small note of what was picked up, with who reserved it", pu and pu:IsShown()
+    and #ann.M.findText("Picked up", true, pu) > 0 and #ann.M.findText("Hard reserved for Ann", true, pu) > 0)
+  shot("picked-up", ann, { "LootRulerPickedUp" })
   -- giving one out without a roll: the panel's Give
   local giveBtn
   for _, x in ipairs(M.findText("Give", true, panel)) do if M.plain(x.fs:GetText()) == "Give" and x.clickable then giveBtn = giveBtn or x.clickable end end

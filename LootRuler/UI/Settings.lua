@@ -134,6 +134,7 @@ function UI.settingsView(f)
     toggle(p, "highlight", "Glow on my items in loot windows", "The game's loot window and need/greed windows glow on an item you reserved (or that's hard reserved for you).")
     toggle(p, "tooltipInfo", "Reserves in item tooltips", "Every item tooltip says who reserved it and who it went to, while soft reserves are open.")
     toggle(p, "lootTags", "Who reserved it, in the loot window", "The game's loot window marks every reserved item (SR, or HR when it's hard reserved) and says who reserved it, whoever you are.")
+    toggle(p, "pickedUp", "Tell me what's picked up", "When the loot master picks up loot, a small note at the top of your screen says what it was and who reserved it. It takes no clicks and goes by itself.")
     toggle(p, "reserveStrip", "Who reserved it, while it's rolled for", "When an item is rolled for, with LootRuler or Gargul, a small strip above the roll window lists everyone who reserved it. It goes when the roll ends.")
   end)
 
