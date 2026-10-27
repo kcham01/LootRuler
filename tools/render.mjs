@@ -97,6 +97,7 @@ function opHtml(op) {
       const letters = ic.replace(/^(inv|spell|ability|achievement|trade)_/, '').slice(0, 2).toUpperCase();
       return `<div style="${base}${desat}background:radial-gradient(#3a2d1d,#120d08);color:#c9a227;font:bold ${Math.max(8, b.h * 0.35)}px Georgia;display:flex;align-items:center;justify-content:center;overflow:hidden">${letters}<img src="https://wow.zamimg.com/images/wow/icons/large/${ic}.jpg" onerror="this.remove()" style="position:absolute;left:-7%;top:-7%;width:114%;height:114%"></div>`;
     }
+    if (/UI-(Plus|Minus)Button/i.test(tex)) return `<div style="${base}box-sizing:border-box;border:1px solid #c9a227;border-radius:3px;background:radial-gradient(#4a3a1c,#1a1208);color:#ffd100;font:bold ${Math.round(b.h * 0.9)}px/${b.h - 2}px Arial;text-align:center">${/Plus/i.test(tex) ? '+' : '&#8722;'}</div>`;
     if (/UI-CheckBox-Up/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:18%;background:linear-gradient(#1a1712,#0a0907);border:1px solid #8a7a5a;border-radius:2px;box-shadow:inset 0 0 2px #000"></div></div>`;
     if (/UI-CheckBox-Check/i.test(tex)) return `<div style="${base}color:#ffd100;font:bold ${Math.round(b.h * 0.75)}px Arial;display:flex;align-items:center;justify-content:center;text-shadow:0 0 2px #000">&#10004;</div>`;
     if (/UI-CheckBox-Highlight/i.test(tex)) return '';
