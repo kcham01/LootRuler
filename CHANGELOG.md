@@ -33,6 +33,8 @@ From the owner's in-game screenshots.
 - Raiders get a small note at the top of the screen when the loot master picks up loot: each item, and who reserved it
   ("Yours", or "SR: Ann, Bob"). It takes no clicks and goes by itself (Settings, "Reserves where you see items").
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
+- Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
+  about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
 - The Loot tab only lists the raid's loot: gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns,
   designs), and a short list of other raid loot: Mark of the Illidari, Heart of Darkness, Black Temple's epic gems, Nether
   Vortex, Vashj's Vial Remnant, Black Sack of Gems, the Amani Charms, Amani Hex Stick, Mojo, Soul Essence and Karazhan's

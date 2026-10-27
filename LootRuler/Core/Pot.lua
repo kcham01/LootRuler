@@ -97,6 +97,7 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("GROUP_ROSTER_UPDATE")
 events:SetScript("OnEvent", function()
   LR.rosterChanged()                -- (the kept group is out of date: this may run before Core/Net.lua's handler)
+  if not LR.db then return end      -- (before the saved data has loaded: logging in while in a group)
   local s = Pot.mine()
   -- (who's in the pot: raiders see it within a few seconds, or with the next change)
   if s and G.saw(s, U.map(LR.roster(), function(m) return m.name end), U.now()) then

@@ -59,6 +59,11 @@ function Server:client(o, savedVariables)
   if self.gargul and p.gargul then self.gargul(p) end
   p.LR = L.load(self.root, G)
   M.fire("ADDON_LOADED", "LootRuler")
+  -- events the game may send between loading the addon and logging in (o.early: event names), before the saved data is read
+  for _, e in ipairs(o.early or {}) do
+    local ok, err = xpcall(function() M.fire(e) end, debug.traceback)
+    if not ok then table.insert(M.errors, tostring(err)) end
+  end
   M.fire("PLAYER_LOGIN")
   -- (players in tests have seen the welcome tour, unless the test is about it: o.newPlayer)
   if p.LR.db and not o.newPlayer and p.LR.db.ui.toured == false then p.LR.db.ui.toured = true end

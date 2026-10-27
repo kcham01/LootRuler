@@ -973,6 +973,30 @@ do
     fresh .. " of " .. handlers)
 end
 
+section("events before the saved data is loaded")
+-- the game can send events (raid lockouts, the group, the guild) after loading LootRuler but before logging in, when its
+-- saved data isn't read yet: none of them may break it
+do
+  local srv2 = Server.new(".")
+  srv2.where = Server.PLACES.Karazhan
+  local rl = srv2:client({ name = "Rhea", class = "PALADIN", guild = "Night Watch", rank = 1 })
+  local zed = srv2:client({ name = "Zed", class = "MAGE", guild = "Night Watch", rank = 4 })
+  srv2:setGroup({ rl, zed }, rl, true)
+  srv2:tick(6)
+  rl.LR.startSession("Karazhan", 2, true, false)
+  srv2:tick(2)
+  local early = {}
+  for e in pairs(rl.M.events) do if e ~= "ADDON_LOADED" and e ~= "PLAYER_LOGIN" and not e:find("^CHAT_MSG_ADDON") then early[#early + 1] = e end end   -- (AceComm's own)
+  table.sort(early)
+  local saved = srv2:logout(rl)
+  rl = srv2:client({ client = false, name = "Rhea", class = "PALADIN", guild = "Night Watch", rank = 1, early = early }, saved)
+  check("every event LootRuler listens for can come before logging in (" .. #early .. " of them)", #rl.M.errors == 0,
+    table.concat(rl.M.errors, " | "))
+  srv2:tick(8)
+  check("and after logging in it carries on: its session is there", rl.LR.current() ~= nil and #rl.M.errors == 0,
+    table.concat(rl.M.errors, " | "))
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

@@ -99,6 +99,7 @@ UI.whereLockout = noteLockout
 local events = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "UPDATE_INSTANCE_INFO" }) do events:RegisterEvent(e) end
 events:SetScript("OnEvent", function(_, event)
+  if not LR.db then return end              -- (the game can say this before LootRuler has loaded its saved data)
   local ok, err = pcall(function()
     if event == "UPDATE_INSTANCE_INFO" then noteLockout()
     else C_Timer.After(2, check) end         -- (a moment after loading in, when the instance is known)
