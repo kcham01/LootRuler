@@ -722,6 +722,13 @@ end
 function M.click(frame, button)
   if not frame then error("nothing to click", 2) end
   if frame._enabled == false then return false end
+  M.hardware = true                      -- (a click: what the game calls a hardware event, until it's handled)
+  local ok, err = xpcall(function() return M.clickNow(frame, button) end, debug.traceback)
+  M.hardware = nil
+  if not ok then error(err, 0) end
+  return true
+end
+function M.clickNow(frame, button)
   local s = frame._scripts
   if frame._type == "EditBox" then frame:SetFocus() end
   if s.PreClick then s.PreClick(frame, button or "LeftButton") end
@@ -1062,6 +1069,7 @@ function M.env(player)
   G.C_PartyInfo = { GetLootMethod = function() return 3 end }
   -- the guild (none, unless the test or the server says so)
   G.IsInGuild = G.IsInGuild or function() return false end
+  G.IsInInstance = G.IsInInstance or function() return false, "none" end
   G.GetGuildInfo = function() return nil end
   G.GetNumGuildMembers = function() return 0, 0 end
   G.GetGuildRosterInfo = function() return nil end

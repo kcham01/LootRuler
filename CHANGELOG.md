@@ -86,6 +86,9 @@ numbers are in [docs/benchmark.md](docs/benchmark.md).
 
 - Trade announcements: the raid hears what the loot master trades, stacks and enchants included.
   ([#9](https://github.com/kcham01/LootRuler/pull/9), [#36](https://github.com/kcham01/LootRuler/pull/36))
+- Trades when you're not in a group are said nearby (/s) while you lead reserves: in a dungeon or raid straight away,
+  elsewhere with one click on "Say it" (the game only lets addons /say on a click there).
+  ([#102](https://github.com/kcham01/LootRuler/pull/102))
 - Open a trade with the winner, with their item put in. ([#47](https://github.com/kcham01/LootRuler/pull/47))
 - A warning before the 2 hours to trade an item run out; trade timers on screen; post what you hold (`/lr held`).
   ([#38](https://github.com/kcham01/LootRuler/pull/38), [#51](https://github.com/kcham01/LootRuler/pull/51),

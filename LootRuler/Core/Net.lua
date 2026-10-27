@@ -349,6 +349,14 @@ function LR.say(text, channel, target)
   end
 end
 
+--- a chat line sent this moment, not queued: for a click's /say (the game blocks /say outside dungeons and raids unless
+--- it comes from a click, and ChatThrottleLib's queue sends later)
+function LR.sayNow(text, channel)
+  if LR.Practice.on then LR.Practice.show(text, channel) return end
+  local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+  fn(text, channel)
+end
+
 --- where the leader's messages go: the group (if any) and the guild (when shared)
 local function publishTo(s)
   local out = {}

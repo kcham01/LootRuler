@@ -304,6 +304,8 @@ function Server:install(p)
   G.IsInGroup = function() return srv:inGroup(p) and true or false end
   G.IsInRaid = function() return srv:inGroup(p) and srv.group.raid or false end
   G.IsInGuild = function() return p.guild ~= nil end
+  -- p.instance: "party" or "raid" while they're in a dungeon or raid
+  G.IsInInstance = function() if p.instance then return true, p.instance end return false, "none" end
   -- the guild: ranks are numbered from 0 (the guild master); o.rank when the player was made (default 3)
   local function guildmates()
     local list = {}
@@ -370,6 +372,10 @@ function Server:install(p)
   end
   local function sendChat(text, channel, language, target)
     if type(text) ~= "string" then error("SendChatMessage needs text") end
+    -- the game blocks /say and /yell from an addon outside a dungeon or raid unless a click started it
+    if (channel == "SAY" or channel == "YELL") and not p.instance and not p.M.hardware then
+      error("SendChatMessage: " .. channel .. " outside an instance needs a click (the game blocks it)")
+    end
     srv:chatMessage(p, text, channel, target)
   end
   G.C_ChatInfo = {

@@ -408,6 +408,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   owner wants it: a new message kind, so older versions must still get full copies. Then a pass on how screens look (text
   that runs into buttons or past its box), when the owner says. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
+- **Trades out of a group** (`Drops.tradeChannel`, `Drops.sayNearby`, `UI.sayPrompt` in `UI/Say.lua`, `LR.sayNow`): with no group, the
+  trade line goes to SAY when I lead a session that hasn't ended (or a past GDKP owes this player). The game blocks addon /say
+  outside instances unless a click started it, so there the lines wait on a "Say it" box (said with `LR.sayNow`, not the
+  ChatThrottleLib queue); inside one (`IsInInstance`) they're said straight away. The stand-in enforces this: `M.click` sets
+  `M.hardware`, the test server errors on SAY / YELL without it unless `p.instance` is set.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,

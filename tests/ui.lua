@@ -1695,6 +1695,12 @@ run("the Test tab", function()
   clickText("The reminder")
   check("the reminder, shown not posted", (function() for _, l in ipairs(M.chat) do if l:find("(pretend, not posted)", 1, true) then return true end end end)()
     and #srv.chat == chatBefore)
+  clickText("A trade out of a group")
+  local say = G.LootRulerSay
+  check("a trade out of a group: the Say it button", say:IsShown() and #M.findText("to Thrall.", true, say) > 0)
+  M.click(say.say)
+  check("shown, not said", (function() for _, l in ipairs(M.chat) do if l:find("(pretend, not said)", 1, true) then return true end end end)()
+    and #srv.chat == chatBefore and not say:IsShown())
   local box
   local function walk(fr2) for _, c in ipairs(fr2._children or {}) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
   walk(G.LootRulerFrame)
@@ -2016,6 +2022,19 @@ run("trade timers", function()
   LR.endSession(ts)
   srv:tick(1)
   check("it goes with the session", not tw:IsShown())
+end)
+
+run("saying trades nearby", function()
+  local link = srv:link(28762)
+  LR.UI.sayPrompt({ LR.TAG .. " Traded " .. link .. " to Ann.", LR.TAG .. " Bob traded me 250g." })
+  local box = G.LootRulerSay
+  local function onBox(text) return #M.findText(text, true, box) > 0 end
+  check("the trades, and a button to say them", box:IsShown() and onBox("Say these 2 trades nearby?") and onBox("to Ann.")
+    and onBox("Bob traded me 250g.") and onBox("Say it") and onBox("Not now"))
+  check("without LootRuler's tag on screen", not onBox(LR.TAG))
+  shot("say-trades", lead, { "LootRulerSay" })
+  M.click(box.no)
+  check("Not now: gone", not box:IsShown())
 end)
 
 run("a new player's first look", function()
