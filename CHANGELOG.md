@@ -24,6 +24,8 @@ From the owner's in-game screenshots.
   LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
 - Saying trades nearby has its own switch (Settings, "Giving out and trading"). A trade goes to one place only: the group
   when you're in one, /s when you're not. ([#108](https://github.com/kcham01/LootRuler/pull/108))
+- The bench (Session tab, in Boosted rolls): guild members who came but sat out get the raid's points too, and count as
+  there in the fairness history. Tick who's online, or type names. ([#118](https://github.com/kcham01/LootRuler/pull/118))
 - Reserves can lock by themselves (Session tab, "Lock by itself"): in 10 to 60 minutes, or at a time you type. The raid is
   told 5, 2 and 1 minute before, with how to reserve, and when they lock. ([#117](https://github.com/kcham01/LootRuler/pull/117))
 - "One reserve win each" (Session tab): once a player wins one of their reserves, their other reserves stop counting, so

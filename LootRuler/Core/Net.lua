@@ -500,6 +500,7 @@ function LR.setDisenchanter(s, player)
     or "Nobody is the disenchanter now."), ch)
 end
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
+function LR.setBench(s, list) if LR.isLeader(s) and S.setBench(s, list, U.now()) then leaderChanged(s) end end
 function LR.setAutoLock(s, at) if S.setAutoLock(s, at, U.now()) then leaderChanged(s) end end
 function LR.setOneWin(s, on) if S.setOneWin(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end

@@ -99,11 +99,11 @@ UI.pointsSheet = pointsSheet
 --- "Give raid points": everyone from the guild in the group, once per session (asks first)
 function UI.giveRaidPoints(s, after)
   local book = LR.book()
-  local who = Guild.raidMembers()
+  local who, benched = Guild.raidMembers(s)
   if #who == 0 then UI.toast("Nobody from your guild is in the group.") return end
   local again = Guild.pointsGiven(s) and " You've already given points for this raid: this gives them again." or ""
-  UI.confirm("Give raid points", ("%s from the guild in the group get %d points each.%s"):format(
-    U.plural(#who, "player"), book.boost.perRaid, again), "Give points", function()
+  UI.confirm("Give raid points", ("%s from the guild in the group%s get %d points each.%s"):format(
+    U.plural(#who, "player"), benched > 0 and (" (%d of them on the bench)"):format(benched) or "", book.boost.perRaid, again), "Give points", function()
     local ok, why = Guild.raidPoints(s)
     if not ok then UI.refused(why) else UI.toast(("%s got %d points."):format(U.plural(#who, "player"), book.boost.perRaid)) end
     if after then after() end

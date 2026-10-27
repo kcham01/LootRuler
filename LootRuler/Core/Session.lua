@@ -532,6 +532,26 @@ function S.setAutoLock(s, at, now)
   return true
 end
 
+--- the bench: players who came but sat out (names, at most S.BENCH_MAX). They get raid points and count as there.
+S.BENCH_MAX = 40
+function S.cleanBench(list)
+  if type(list) ~= "table" then return nil end
+  local out, seen = {}, {}
+  for _, name in ipairs(list) do
+    if type(name) == "string" and name ~= "" and #name <= 64 and not seen[name:lower()] and #out < S.BENCH_MAX then
+      seen[name:lower()] = true
+      out[#out + 1] = name
+    end
+  end
+  return #out > 0 and out or nil
+end
+function S.setBench(s, list, now)
+  s.bn = S.cleanBench(list)
+  if s.bn then S.saw(s, s.bn, now) end          -- (benched players count as there: Fairness history)
+  bump(s, now)
+  return true
+end
+
 --- one reserve win each: once a player wins one of their reserves, the rest stop counting
 function S.setOneWin(s, on, now)
   on = on and true or nil
@@ -737,6 +757,7 @@ function S.valid(t)
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
   if t.ow ~= nil and type(t.ow) ~= "boolean" then t.ow = nil end    -- (one reserve win each)
   if t.al ~= nil and type(t.al) ~= "number" then t.al = nil end      -- (when reserves lock by themselves)
+  if t.bn ~= nil then t.bn = S.cleanBench(t.bn) end                   -- (the bench: names only)
   -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves
   if t.sx ~= nil then
     if type(t.sx) ~= "table" then return false end

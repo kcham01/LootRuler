@@ -346,6 +346,32 @@ srv:tick(1)
 check("a broken book is thrown away (and the guild's comes back)", type(junk.LR.db.guilds[G]) ~= "table" or junk.LR.db.guilds[G].points ~= "lots")
 check("so is anything else that isn't a book", junk.LR.db.guilds.Other == nil and junk.LR.db.guilds[7] == nil)
 
+section("the bench")
+do
+  local bs = lead.LR.startSession("Karazhan", 2, true, false)
+  lead.LR.setSessionBoost(bs, true)
+  srv:tick(1)
+  check("nobody to start with", bs.bn == nil and #lead.LR.Guild.raidMembers(bs) == #lead.LR.Guild.raidMembers())
+  lead.LR.setBench(bs, { full(mira), full(zed) })
+  srv:tick(2)
+  check("the leader benches Mira (and Zed, who isn't in the guild)", bs.bn and #bs.bn == 2 and ann.LR.current().bn and #ann.LR.current().bn == 2)
+  local who, benched = lead.LR.Guild.raidMembers(bs)
+  check("raid points go to the bench from the guild too", benched == 1 and lead.LR.U.indexOf(who, full(mira)) ~= nil and not lead.LR.U.indexOf(who, full(zed)))
+  local before = points(lead, mira)
+  lead.LR.Guild.raidPoints(bs)
+  srv:tick(1)
+  check("Mira gets the raid's points", points(lead, mira) == before + 10, points(lead, mira))
+  check("the raid is told how many were on the bench", chat("got 10 points each for boosted rolls (1 on the bench).", "RAID") ~= nil)
+  check("the bench counts as there", lead.LR.Session.cleanAtt(bs.att) and (function() for _, n in ipairs(bs.att) do if n == full(mira) then return true end end end)())
+  lead.LR.setBench(bs, {})
+  srv:tick(1)
+  check("the bench can be emptied", bs.bn == nil)
+  bs.bn = { 7, "x" }
+  check("a broken bench from a message is cleaned", lead.LR.Session.valid(bs) and #bs.bn == 1)
+  lead.LR.endSession(bs)
+  srv:tick(1)
+end
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
