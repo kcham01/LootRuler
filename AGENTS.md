@@ -224,7 +224,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Giving an item without a roll** (`Rolls.give`, `UI.giveSheet`): the loot panel's Give, or clicking an item still to
   give out on the Loot tab. It's a closed roll (`roll.given`) awarded straight away through `Rolls.award`, so it's
   recorded, announced, undoable and traded like any other award. Kinds: MS, OS, SR (their reserve), or disenchant.
-- **Opening a trade with the winner** (`Drops.openTrade`, `LR.unitOf`, setting `autoTrade`, on to start with): an award
+- **Opening a trade with the winner** (`Drops.openTrade`, `LR.unitOf`, setting `autoTrade`, off to start with since #110): an award
   of an item in the loot master's bags opens a trade (`InitiateTrade`, after `CheckInteractDistance`), and trade help
   puts the item in; too far away, the winner is whispered; in combat, the loot master is told. Never accepts a trade.
 - **Telling a raider their item is up** (`UI.reservedAlert`, setting `reservedAlert`, on to start with): a roll (LootRuler's or
