@@ -488,7 +488,15 @@ function LR.setLocked(s, locked)
     if locked and LR.Gargul.available() then LR.Gargul.send(s, true) end
   end
 end
-function LR.setDisenchanter(s, player) if S.setDisenchanter(s, player, U.now()) then leaderChanged(s) end end
+--- who disenchants; the group hears who it is (or that there's nobody now)
+function LR.setDisenchanter(s, player)
+  if not S.setDisenchanter(s, player, U.now()) then return end
+  leaderChanged(s)
+  local ch = LR.groupChannel()
+  if not ch then return end
+  LR.say(LR.TAG .. " " .. (s.de and ("%s is the disenchanter: items nobody wants go to them."):format(U.short(s.de))
+    or "Nobody is the disenchanter now."), ch)
+end
 function LR.setPlusOne(s, on) if S.setPlusOne(s, on, U.now()) then leaderChanged(s) end end
 function LR.setSessionBoost(s, on) if S.setBoost(s, on, U.now()) then leaderChanged(s) end end
 function LR.setExtra(s, player, n)
