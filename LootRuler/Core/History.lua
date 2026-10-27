@@ -35,7 +35,7 @@ function H.archive(s, now)
   local drops = {}
   for i, d in ipairs(s.drops or {}) do
     if i > S.MAX_DROPS then break end
-    drops[i] = { k = d.k, i = d.i, b = d.b, at = d.at }
+    drops[i] = { k = d.k, i = d.i, b = d.b, at = d.at, n = d.n }
   end
   local e = {
     id = s.id, rev = s.rev, leader = s.leader, raid = s.raid, raidName = s.raidName, sr = s.sr, any = s.any,

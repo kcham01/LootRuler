@@ -430,6 +430,14 @@ function Server:install(p)
   G.BNSendGameData = function() end
   -- items: the test can say which ones the client has loaded (names from the data until then)
   G.C_Item = {
+    -- what kind of item, without loading it: srv.itemInfo's `equip` (an INVTYPE_ name) and `class` (the game's class
+    -- number: 7 trade goods, 9 recipe, 15 miscellaneous) when it gives them
+    GetItemInfoInstant = function(id)
+      id = tonumber(id) or tonumber(tostring(id):match("item:(%d+)"))
+      local it = id and srv.itemInfo and srv.itemInfo(id)
+      if not it then return nil end
+      return id, "", "", it.equip or "", 133000 + id % 1000, it.class or 15, 0
+    end,
     GetItemInfo = function(id)
       id = tonumber(id) or tonumber(tostring(id):match("item:(%d+)"))      -- (an item number, or a link, as the game takes)
       local it = id and srv.itemInfo and srv.itemInfo(id)
@@ -495,7 +503,7 @@ function Server:install(p)
     if not it then return nil end
     if it.money then return 133784, ("%d Gold"):format(math.floor(it.money / 10000)), 0, nil, 0, false end
     local info = srv.itemInfo and srv.itemInfo(it.id)
-    return 133000 + it.id % 1000, info and info.name or ("item " .. it.id), 1, nil, it.quality, false
+    return 133000 + it.id % 1000, info and info.name or ("item " .. it.id), it.count or 1, nil, it.quality, false
   end
   G.GetMasterLootCandidate = function(slot, i)
     if not lootItem(slot) or srv.masterLooter ~= p then return nil end
@@ -556,7 +564,7 @@ function Server:willRoll(p, ...) self.rolls = self.rolls or {} self.rolls[p] = s
 --- p (the master looter) opens a corpse with these items: { { id, quality }, ... }
 function Server:openLoot(p, items)
   p.loot = {}
-  for _, it in ipairs(items) do p.loot[#p.loot + 1] = it[1] == "money" and { money = it[2] } or { id = it[1], quality = it[2] or 4 } end
+  for _, it in ipairs(items) do p.loot[#p.loot + 1] = it[1] == "money" and { money = it[2] } or { id = it[1], quality = it[2] or 4, count = it[3] } end
   p.G.LootFrame:Show()
   p.M.fire("LOOT_OPENED", 0, false)
 end
@@ -567,16 +575,17 @@ function Server:link(id)
   local info = self.itemInfo and self.itemInfo(id)
   return info and info.link or ("|cffa335ee|Hitem:%d::::::::70:::::|h[item %d]|h|r"):format(id, id)
 end
-function Server:lootTo(p, id)
+function Server:lootTo(p, id, count)
   local link = self:link(id)
   p.bags = p.bags or {}
   local slot = 1
   while p.bags[slot] do slot = slot + 1 end
-  p.bags[slot] = { id = id, link = link }
+  p.bags[slot] = { id = id, link = link, count = count }
+  local x = (count or 1) > 1 and ("x" .. count) or ""          -- (a stack: "[Item]x3", as the game says it)
   for _, q in ipairs(self:inGroup(p) and self.group.members or { p }) do
     self:deliver(function()
       if q.client and q.online then
-        q.M.fire("CHAT_MSG_LOOT", q == p and ("You receive loot: %s."):format(link) or ("%s receives loot: %s."):format(seenAs(p, q), link))
+        q.M.fire("CHAT_MSG_LOOT", q == p and ("You receive loot: %s%s."):format(link, x) or ("%s receives loot: %s%s."):format(seenAs(p, q), link, x))
       end
     end)
   end

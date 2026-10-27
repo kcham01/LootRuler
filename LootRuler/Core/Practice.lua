@@ -236,10 +236,17 @@ function P.drop(count)
       list[#list + 1] = { k = d.k, i = id, q = LR.quality(id), link = LR.itemLink(id) }
     end
   end
+  -- and something to count, not roll for (the Loot tab's "Everything else that dropped")
+  local x = P.COUNTED[math.random(#P.COUNTED)]
+  local who = P.on and P.roster()[math.random(#P.roster())]
+  S.addDrop(s, { k = LR.Drops.newKey(x[1]), i = x[1], b = boss and boss.name or "", at = now, by = U.me(), src = "practice",
+    h = who and who.name or U.me(), ht = now, n = x[2] }, now)
   LR.Drops.announce(s, list)
   LR.leaderChanged(s)
   return list
 end
+-- trade goods a boss drops beside its loot: { item, how many } (Nether Vortex, Primal Nether, Netherweave Cloth)
+P.COUNTED = { { 30183, 1 }, { 23572, 2 }, { 21877, 5 } }
 
 --- the next drop still to give out (for "Roll out the next item")
 function P.nextDrop()

@@ -24,8 +24,14 @@ do
   chunk("LootRuler", DATA)
 end
 local QHEX = { [0] = "9d9d9d", [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000" }
+-- items that aren't in the loot lists: trade goods and the like (class 7: trade goods, 9: recipe)
+local EXTRA = { [30183] = { "Nether Vortex", 4, 7 }, [23572] = { "Primal Nether", 2, 7 }, [21877] = { "Netherweave Cloth", 1, 7 },
+  [99902] = { "Pattern: Shiny Thing", 4, 9 } }
+QHEX[1] = "ffffff"
 srv.itemInfo = function(id)
   local it = DATA.ITEMS[id]
+  local x = EXTRA[id]
+  if x then return { name = x[1], quality = x[2], class = x[3], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[x[2]], id, x[1]) } end
   if not it then return { name = "Grey thing", quality = 0, link = ("|cff9d9d9d|Hitem:%d::::::::70:::::|h[Grey thing]|h|r"):format(id) } end
   return { name = it[1], quality = it[2], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[it[2]] or "ffffff", id, it[1]) }
 end
@@ -1589,6 +1595,50 @@ do
   srv3:openLoot(ml, { { 28570, 4 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
   check("but in a raid it doesn't know, yes, and no question", chas(28570) and sheet() == nil)
   for _, p in ipairs(all) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
+section("everything that drops is counted")
+do
+  local srv4 = Server.new(".")
+  srv4.itemInfo = srv.itemInfo
+  srv4.where = Server.PLACES.Karazhan
+  local ml = srv4:client({ name = "Mel", class = "PALADIN" })
+  local zoe = srv4:client({ name = "Zoe", class = "PRIEST" })
+  srv4:setGroup({ ml, zoe }, ml, true)
+  srv4:setMasterLooter(ml)
+  srv4:tick(6)
+  local ks = ml.LR.startSession("Karazhan", 2, true, false)
+  srv4:tick(2)
+  local function dropsOf(id) local out = {} for _, d in ipairs(ks.drops or {}) do if d.i == id then out[#out + 1] = d end end return out end
+  local before = #srv4.chat
+  srv4:openLoot(ml, { { 28570, 4 }, { 30183, 4, 2 }, { 23572, 2 }, { 21877, 1, 5 }, { 99901, 0 }, { 99902, 4 } })
+  srv4:tick(2)
+  check("a corpse: everything but grey goes on the list, stacks with how many", #dropsOf(28570) == 1 and #dropsOf(30183) == 1
+    and dropsOf(30183)[1].n == 2 and #dropsOf(23572) == 1 and dropsOf(21877)[1].n == 5 and #dropsOf(99902) == 1 and #dropsOf(99901) == 0)
+  local posted = {}
+  for i = before + 1, #srv4.chat do posted[#posted + 1] = srv4.chat[i].text end
+  posted = table.concat(posted, "\n")
+  check("the raid hears about the loot to roll for, not the trade goods", posted:find("Shadow-Cloak", 1, true) and posted:find("Pattern: Shiny Thing", 1, true)
+    and not posted:find("Nether Vortex", 1, true), posted)
+  srv4:closeLoot(ml)
+  srv4:lootTo(zoe, 21877, 5)
+  srv4:lootTo(ml, 30183, 2)
+  srv4:lootTo(zoe, 21877, 3)                 -- (another stack, from a corpse LootRuler didn't see)
+  srv4:tick(2)
+  check("looting them says who has them", dropsOf(21877)[1].h == full(zoe) and dropsOf(30183)[1].h == full(ml))
+  check("one LootRuler didn't see dropping goes on too, with how many", #dropsOf(21877) == 2 and dropsOf(21877)[2].n == 3)
+  local holding = {}
+  for _, x in ipairs(ml.LR.Drops.holding()) do holding[#holding + 1] = x.d.i end
+  check("the loot master holding Nether Vortexes isn't asked to roll them out or trade them", #holding == 0, table.concat(holding, ","))
+  check("they can't be reserved", not ml.LR.allowedItem(ks, 30183) and not ml.LR.allowedItem(ks, 21877))
+  ml.LR.UI.show("loot")
+  srv4:tick(0.5)
+  local win = ml.G.LootRulerFrame
+  check("the Loot tab counts them, one row each", found(ml, "Everything else that dropped", win) and found(ml, "Nether Vortex", win)
+    and found(ml, "x2", win) and found(ml, "x8", win) and found(ml, "Looted by Zoe (8)", win) and found(ml, "x1", win))
+  check("and the loot to roll for is counted apart", found(ml, "2 items dropped, 0 given out, 2 still to roll for.", win))
+  ml.LR.UI.win:Hide()
+  for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
 section("trades out of a group are said nearby")

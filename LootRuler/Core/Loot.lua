@@ -161,6 +161,18 @@ function LR.wornIn(id)
   return WORN[kind or 0] or {}
 end
 
+--- loot to count, not to roll for (Nether Vortexes, Primal Nethers, Marks, cloth): not in the session's raid's lists, not
+--- worn, not a recipe, and below epic unless it's a trade good. The Loot tab lists these with how many dropped; they
+--- aren't held for rolling out or trading.
+function LR.minorLoot(s, id)
+  if LR.raidHas(s and s.raid, id) or #LR.wornIn(id) > 0 then return false end
+  local it = LR.ITEMS[id]
+  local class = it and it[4]
+  if not class and C_Item and C_Item.GetItemInfoInstant then class = select(6, C_Item.GetItemInfoInstant(id)) end
+  if class == 9 then return false end
+  return LR.quality(id) < 4 or class == 7
+end
+
 local SLOT_NAME = {
   [1] = "Head", [2] = "Neck", [3] = "Shoulder", [5] = "Chest", [6] = "Waist", [7] = "Legs", [8] = "Feet", [9] = "Wrist",
   [10] = "Hands", [11] = "Finger", [12] = "Trinket", [13] = "One-Hand", [14] = "Off Hand", [15] = "Ranged", [16] = "Back",
