@@ -35,7 +35,8 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
   The pull request's description says what changed.
 - **Never push to `main`.** One branch and one pull request per feature. The owner reviews and merges.
 - **A pull request says** what changed for players (in plain words, not code words), how it was tested, and
-  shows pictures of anything on screen (from `build/shots`).
+  shows pictures of anything on screen (from `build/shots`). Anything players notice also gets a line in
+  `CHANGELOG.md` (under the version being worked on, linking the pull request), in the same pull request.
 - **Every change keeps every test passing**, and new behaviour gets new tests: rules in `tests/rolls.lua` or
   `tests/session.lua`, anything between players in a whole-raid test, anything on screen in `tests/ui.lua`
   with a picture.
