@@ -90,6 +90,7 @@ local function as(p, fn, ...) return measured(p, fn)(...) end
 ---------------------------------------------------------------------- the network, as the server sees it
 local net = { addon = {}, chat = {} }
 local srv = Server.new(".")
+srv.where = Server.PLACES.Karazhan          -- (in the raid: loot is only listed inside a session's raid)
 local addonMessage, chatMessage = srv.addonMessage, srv.chatMessage
 srv.addonMessage = function(self, from, prefix, text, channel, target)
   table.insert(net.addon, { from = from, prefix = prefix, text = text, channel = channel, at = self.clock })

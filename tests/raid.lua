@@ -808,7 +808,7 @@ local function sendsOf(p, fn)
       elseif c == "\003" then table.insert(parts[key], rest) whole = table.concat(parts[key]) else whole = text end
       if whole then
         local msg = p.LR.Net.decode(whole)
-        out[#out + 1] = { channel = channel, target = target, kind = msg and msg.t }
+        out[#out + 1] = { channel = channel, target = target, kind = msg and msg.t, size = #whole }
       end
     end
     return real(self, from, prefix, text, channel, target)
@@ -863,8 +863,54 @@ sent = sendsOf(lead, function()
   end
   srv:tick(30)
 end)
-check("five copies in a row: the one going out, then only the newest (to the raid)", count(sent, "T", "RAID") == 2, count(sent, "T", "RAID"))
+check("five copies in a row: the one going out, then only the newest (to the raid)", count(sent, "T", "RAID") + count(sent, "U", "RAID") == 2,
+  count(sent, "T", "RAID") .. " " .. count(sent, "U", "RAID"))
 check("raiders end up with the newest", cur(ann).rev == fs.rev and cur(ann).sr == fs.sr)
+
+section("only what changed goes to the raid")
+do
+  local S2 = lead.LR.Session
+  srv:tick(6)
+  local kara = lead.LR.raid("Karazhan").order
+  for i = 1, 30 do      -- (a full-sized session: 30 players, two reserves each)
+    lead.LR.leaderAdd(fs, ("Alt%02d-Dreamscythe"):format(i), "WARRIOR", kara[(i * 7) % #kara + 1])
+    lead.LR.leaderAdd(fs, ("Alt%02d-Dreamscythe"):format(i), "WARRIOR", kara[(i * 13) % #kara + 1])
+  end
+  srv:tick(6)
+  sent = sendsOf(lead, function()
+    lead.LR.leaderAdd(fs, "Alt31-Dreamscythe", "WARRIOR", 28528)
+    srv:tick(3)
+  end)
+  local u
+  for _, m in ipairs(sent) do if m.kind == "U" and m.channel == "RAID" then u = m end end
+  local t = { size = #lead.LR.Net.encode({ t = "T", s = fs }) }
+  check("a change goes to the raid as just that change", u ~= nil and count(sent, "T", "RAID") == 0)
+  check("much smaller than the whole session", u and t and u.size * 4 < t.size, (u and u.size or "?") .. " vs " .. (t and t.size or "?"))
+  check("raiders' copies end up the same as the leader's", S2.same(cur(ann), fs) and S2.same(cur(dorran), fs))
+  -- a raider who missed one (here: their copy is older than the change is from) asks for the whole session
+  cur(dorran).rev = cur(dorran).rev - 2
+  sent = sendsOf(lead, function()
+    lead.LR.leaderRemove(fs, "Alt31-Dreamscythe", 28528)
+    srv:tick(4)
+  end)
+  check("a raider who missed a change is sent the whole session, by whisper", count(sent, "T", "WHISPER") == 1 and S2.same(cur(dorran), fs))
+  -- someone in the group with an older LootRuler (that doesn't take changes): whole copies for everyone
+  local real = lead.LR.hasFeature
+  lead.LR.hasFeature = function(name, bit) if bit == lead.LR.FEATURE_CHANGES and name:find("Ann", 1, true) then return false end return real(name, bit) end
+  sent = sendsOf(lead, function()
+    lead.LR.leaderAdd(fs, "Alt32-Dreamscythe", "WARRIOR", 28529)
+    srv:tick(3)
+  end)
+  lead.LR.hasFeature = real
+  check("with an older LootRuler in the group, the whole session goes", count(sent, "T", "RAID") == 1 and count(sent, "U", "RAID") == 0)
+  -- changes only count from the session's leader
+  local before = cur(ann).sr
+  ann.LR.Net.handlers.U({ id = fs.id, f = cur(ann).rev, r = cur(ann).rev + 1, c = { sr = { v = 9 } } }, "RAID", full(bob))
+  check("changes from someone who isn't its leader don't count", cur(ann).sr == before)
+  ann.LR.Net.handlers.U({ id = fs.id, f = cur(ann).rev, r = cur(ann).rev + 1, c = { sr = { v = 99 }, res = "junk" } }, "RAID", full(lead))
+  check("nor changes that would make it wrong", cur(ann).sr == before)
+  srv:tick(4)
+end
 srv:leaveGroup(quiet)
 srv:leaveGroup(dorran)
 srv:logout(dorran)

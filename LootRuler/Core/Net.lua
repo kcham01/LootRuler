@@ -8,6 +8,9 @@
 --
 -- Messages (LibSerialize + LibDeflate over AceComm, prefix "LootRuler"):
 --   T  leader -> group / guild    the whole session
+--   U  leader -> group            what changed in it since the copy the group last had: { id, f = that copy's rev, r = the
+--                                 new rev, c = S.diff }. Only when everyone in the group with LootRuler takes it (fl 8);
+--                                 else, to the guild, by whisper and every SESSION_FULL_EVERY sends, the whole session.
 --   E  leader -> group / guild    the session was ended
 --   Q  anyone -> group / guild    "which sessions are open?" (leaders answer with T)
 --   P  raider -> leader           my picks for session id: { c = class, i = items }
@@ -16,7 +19,8 @@
 --   D                             the raid's drops (Core/Drops.lua)
 --   V  anyone -> group            "I have LootRuler, this version" (on joining a group, and when asked)
 -- Every message also says what the sender's addon can do (fl, bits added together): 1 = it can take over a session
--- (a new leader), 2 = it takes bids ahead on queued auctions (B, Core/Rolls.lua), 4 = it takes reserve swap requests (S, Core/Swap.lua).
+-- (a new leader), 2 = it takes bids ahead on queued auctions (B, Core/Rolls.lua), 4 = it takes reserve swap requests (S, Core/Swap.lua),
+-- 8 = it takes a session's changes (U).
 -- Who sent a message is told by the game, so nobody can send picks in someone else's name or a session
 -- for a leader who isn't them.
 --
@@ -30,8 +34,8 @@ local _, LR = ...
 local U, S = LR.U, LR.Session
 
 local PROTOCOL = 1
-LR.FEATURE_LEAD, LR.FEATURE_AHEAD, LR.FEATURE_SWAP = 1, 2, 4
-local FEATURES = LR.FEATURE_LEAD + LR.FEATURE_AHEAD + LR.FEATURE_SWAP   -- what this version can do, sent as fl (see the top)
+LR.FEATURE_LEAD, LR.FEATURE_AHEAD, LR.FEATURE_SWAP, LR.FEATURE_CHANGES = 1, 2, 4, 8
+local FEATURES = LR.FEATURE_LEAD + LR.FEATURE_AHEAD + LR.FEATURE_SWAP + LR.FEATURE_CHANGES   -- what this version can do, sent as fl (see the top)
 local KEEP_DAYS = 7
 
 local Net = {}
@@ -333,9 +337,32 @@ local function sendNewest(name, build, channel, target)
   end)
 end
 Net.sendNewest = sendNewest
---- a copy of a session
+--- a copy of a session: to the group, only what changed since the copy it last had (U), when everyone in it with
+--- LootRuler takes that; else the whole session (T). The changes are worked out when it goes, so a change that waited
+--- behind another still goes with everything since.
+local SESSION_FULL_EVERY = 25                  -- a whole copy every so often, so a raider who missed something catches up
+local groupSent = {}                           -- session id .. "|" .. channel -> { copy = what the group has, n = changes since a whole one }
+local function everyoneTakesChanges()
+  for _, m in ipairs(LR.roster()) do
+    if not U.samePlayer(m.name, U.me()) and LR.versionOf(m.name) and not LR.hasFeature(m.name, LR.FEATURE_CHANGES) then return false end
+  end
+  return true
+end
+Net.everyoneTakesChanges = everyoneTakesChanges
 local function sendSession(s, channel, target)
-  sendNewest("T:" .. s.id, function() return { t = "T", s = s } end, channel, target)
+  local group = (channel == "RAID" or channel == "PARTY") and not target
+  sendNewest("T:" .. s.id, function()
+    local key = s.id .. "|" .. channel
+    local last = group and groupSent[key]
+    -- (a new leader, or one handing it on, sends it whole: raiders take changes only from the leader they know)
+    if last and last.n < SESSION_FULL_EVERY and U.samePlayer(last.copy.leader, s.leader) and not s.next and everyoneTakesChanges() then
+      local msg = { t = "U", id = s.id, f = last.copy.rev, r = s.rev, c = S.diff(last.copy, s) or {} }
+      groupSent[key] = { copy = U.copy(s), n = last.n + 1 }
+      return msg
+    end
+    if group then groupSent[key] = { copy = U.copy(s), n = 0 } end
+    return { t = "T", s = s }
+  end, channel, target)
 end
 Net.sendSession = sendSession
 
@@ -777,11 +804,40 @@ local queryAnswered = {}
 local handlers = {}
 Net.handlers = handlers          -- Core/Rolls.lua adds the messages for rolling out loot
 
--- a session from its leader
+-- a session from its leader (a whole copy, T; or one put together from what changed, U)
+local accept
 function handlers.T(msg, channel, sender)
   local t = msg.s
   if not S.valid(t) or not U.samePlayer(t.leader, sender) then return end
+  accept(t, channel, sender)
+end
+
+-- what changed in a session, from its leader: put in to our copy. A copy that isn't the one the changes are from (missed
+-- one, or just came) asks the leader for the whole session (Q, by whisper: answered with T), once in a while at most.
+local askedWhole = {}
+function handlers.U(msg, channel, sender)
+  if type(msg.id) ~= "string" or type(msg.f) ~= "number" or type(msg.r) ~= "number" or type(msg.c) ~= "table" then return end
+  local known = db.sessions[msg.id]
+  if known and (LR.isLeader(known) or known.rev >= msg.r) then return end
+  -- (from someone who isn't its leader to us: a new leader, maybe. Their whole copy is checked like any.)
+  if not known or not U.samePlayer(known.leader, sender) or known.rev < msg.f or msg.c.leader or msg.c.id then
+    if not askedWhole[msg.id] or GetTime() - askedWhole[msg.id] > 10 then
+      askedWhole[msg.id] = GetTime()
+      send({ t = "Q" }, "WHISPER", sender)
+    end
+    return
+  end
+  local t = S.patch(known, msg.c)
+  if not t then return end
+  t.rev = msg.r
+  if not S.valid(t) or not U.samePlayer(t.leader, sender) then return end
+  accept(t, channel, sender)
+end
+
+function accept(t, channel, sender)
   local known = db.sessions[t.id]
+  -- someone else leads it now: what I sent the group as its leader is out of date (if it comes back to me, it goes whole)
+  for k in pairs(groupSent) do if k:sub(1, #t.id + 1) == t.id .. "|" then groupSent[k] = nil end end
   local tookOurs = false
   if known and not U.samePlayer(known.leader, t.leader) then
     -- a new leader: only if it was handed to them, or they lead or assist the group and took it over while its

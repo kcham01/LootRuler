@@ -5,6 +5,25 @@ work: what was done, and the numbers before and after, are in the next section. 
 
 Run it with `lua5.1 tools/bench.lua` (about a minute; `--quick` for a small raid). It writes `build/bench.txt`.
 
+## Only what changed (#119)
+
+Raiders get the session's changes (message `U`) instead of a whole copy each time, when everyone in the group with LootRuler
+takes them. Measured on 27 October 2026, the same raid before and after (in Karazhan: loot is only listed inside a session's
+raid since #111). Work is Lua instructions in LootRuler's code, per raider:
+
+| Moment | Raider before | Raider after | Loot runner's messages |
+| --- | --- | --- | --- |
+| Lock and post | 238k | 93k (-61%) | 8 (2 KB) -> 5 (1 KB) |
+| A boss dies | 811k | 499k (-38%) | 19 (4 KB) -> 13 (3 KB) |
+| Rolling out the rest | 2.7M | 2.0M (-26%) | 48 (10 KB) -> 34 (6 KB) |
+| A GDKP auction | 888k | 523k (-41%) | 23 (5 KB) -> 16 (3 KB) |
+| Five auctions at once | 2.9M | 2.7M (-7%) | 83 (15 KB) -> 79 (14 KB) |
+| Reserving | 323k | 299k (-7%) | the raid's copies go as one change |
+
+Forming the raid and opening reserves are unchanged: newcomers get a whole copy by whisper, and a new session goes whole.
+The loot runner's own work went down with fewer copies to pack (lock and post: 794k -> 512k). Several auctions at once
+mostly send their own batch message (`Z`), which this doesn't change.
+
 ## After the speed fixes (#90 to #96)
 
 The first run's findings are below as they were found. Seven fixes came from them, one pull request each:
