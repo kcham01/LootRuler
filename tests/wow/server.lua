@@ -568,6 +568,10 @@ function Server:openLoot(p, items)
   p.G.LootFrame:Show()
   p.M.fire("LOOT_OPENED", 0, false)
 end
+--- p casts a spell (a profession's, say): their client hears it, as the game says it
+function Server:cast(p, spellID)
+  if p.client then p.M.fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-3-0-0-0-" .. spellID, spellID) end
+end
 function Server:closeLoot(p) p.loot = nil p.G.LootFrame:Hide() p.M.fire("LOOT_CLOSED") end
 
 --- puts an item in p's bags and tells the group "p receives loot: [item]" (master loot, or a roll won)

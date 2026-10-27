@@ -443,6 +443,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   a recipe, below epic unless a trade good) are shown counted on the Loot tab ("Everything else that dropped"), and left out of
   announcements, `Drops.holding`, `toDeliver`, trade warnings and group-loot awards. The test server has stacks (`openLoot` items'
   third value, `lootTo(p, id, count)`) and `C_Item.GetItemInfoInstant` (from `srv.itemInfo`'s `equip` and `class`).
+- **Loot from professions isn't the raid's** (#121; `Drops.spellCast`, `Drops.fromProfession`, `Drops.PROFESSION_SPELLS`,
+  `Drops.professionMade`, `Drops.CRYSTALS`, `LR.itemClass`): a loot window opened within `Drops.PROFESSION_WAIT` seconds of my own
+  Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`, matched by spell name), or while
+  `IsFishingLoot()`, isn't read. From loot lines, an item not seen dropping that's a trade good or gem (class 7 or 3) is skipped
+  unless it's in the raid's lists or epic and not an enchanting crystal. The stand-in has `Server:cast(p, spellID)` and `M.fishing`.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,

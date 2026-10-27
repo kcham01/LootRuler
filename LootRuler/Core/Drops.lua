@@ -103,6 +103,46 @@ local function newKey(id)
 end
 Drops.newKey = newKey
 
+---------------------------------------------------------------------- loot that isn't a drop
+-- A loot window opened by a profession (disenchanting, prospecting, gathering herbs or ore, skinning, fishing, picking
+-- pockets or locks) isn't the raid's loot: it's skipped. Professions are known by the spell I cast just before (by name,
+-- so any rank counts); fishing by the game saying so.
+Drops.PROFESSION_SPELLS = { 13262, 31252, 2366, 2575, 8613, 7620, 921, 1804 }   -- Disenchant, Prospecting, Herb Gathering,
+                                                                               -- Mining, Skinning, Fishing, Pick Pocket, Pick Lock
+Drops.PROFESSION_WAIT = 5            -- seconds after such a spell that a loot window is taken to be from it
+local professionNames, gatheredAt
+local function isProfession(spellID)
+  if not professionNames then
+    professionNames = {}
+    for _, id in ipairs(Drops.PROFESSION_SPELLS) do
+      local name = GetSpellInfo(id)
+      if name then professionNames[name] = true end
+    end
+  end
+  local name = spellID and GetSpellInfo(spellID)
+  return name ~= nil and professionNames[name] == true
+end
+--- I cast a spell (UNIT_SPELLCAST_SUCCEEDED for "player")
+function Drops.spellCast(spellID)
+  if isProfession(spellID) then gatheredAt = GetTime() end
+end
+--- whether the loot window open now is from a profession, not a corpse or a chest
+function Drops.fromProfession()
+  if IsFishingLoot() then return true end
+  return gatheredAt ~= nil and GetTime() - gatheredAt < Drops.PROFESSION_WAIT
+end
+
+--- whether a loot line's item may be from someone's profession, not the raid: the game says "Zoe receives loot: [Arcane Dust]"
+--- just as it does for a drop. Trade goods (dust, essences, shards, herbs, ore, leather, cloth, fish) and gems are, unless
+--- they're the raid's own or epic (a Nether Vortex); enchanting's crystals are epic but are too.
+Drops.CRYSTALS = { [20725] = true, [22450] = true }      -- Nexus Crystal, Void Crystal
+function Drops.professionMade(s, id, q)
+  if LR.raidHas(s.raid, id) then return false end
+  local class = LR.itemClass(id)
+  if class ~= 7 and class ~= 3 then return false end
+  return q < 4 or Drops.CRYSTALS[id] == true
+end
+
 ---------------------------------------------------------------------- corpses (master loot)
 --- every item on the open corpse that isn't grey (vendor trash), whatever the loot threshold:
 --- { { slot, id, link, quality, n = how many } }
@@ -124,7 +164,7 @@ end
 function Drops.lootOpened()
   Drops.slotKeys = {}
   local s = writer()
-  if not s or not LR.isMasterLooter() then return end
+  if not s or not LR.isMasterLooter() or Drops.fromProfession() then return end
   local target = UnitExists("target") and UnitIsDead("target")
   local src = target and UnitGUID("target") or "corpse"
   local boss = target and UnitName("target") or nil
@@ -226,9 +266,9 @@ function Drops.lootMessage(line)
     return
   end
   -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): anything that
-  -- isn't grey (vendor trash)
+  -- isn't grey (vendor trash) or made by a profession
   local q = qualityOf(link, id)
-  if q < 1 then return end
+  if q < 1 or Drops.professionMade(s, id, q) then return end
   local ml = LR.masterLooter()
   local key = newKey(id)
   save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })
@@ -544,10 +584,12 @@ for _, e in ipairs({ "CHAT_MSG_LOOT", "TRADE_SHOW", "TRADE_PLAYER_ITEM_CHANGED",
   "TRADE_ACCEPT_UPDATE", "TRADE_UPDATE", "UI_INFO_MESSAGE", "TRADE_CLOSED" }) do
   events:RegisterEvent(e)
 end
-events:SetScript("OnEvent", function(_, event, a1, a2)
+events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+events:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if not LR.db then return end
   local ok, err = pcall(function()
     if event == "CHAT_MSG_LOOT" then Drops.lootMessage(a1)
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then if a1 == "player" then Drops.spellCast(a3) end
     elseif event == "TRADE_SHOW" then Drops.tradeShow()
     elseif event == "TRADE_PLAYER_ITEM_CHANGED" or event == "TRADE_TARGET_ITEM_CHANGED" or event == "TRADE_MONEY_CHANGED"
       or event == "TRADE_ACCEPT_UPDATE" or event == "TRADE_UPDATE" then Drops.tradeItems()

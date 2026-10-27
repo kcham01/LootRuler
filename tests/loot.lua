@@ -26,7 +26,8 @@ end
 local QHEX = { [0] = "9d9d9d", [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000" }
 -- items that aren't in the loot lists: trade goods and the like (class 7: trade goods, 9: recipe)
 local EXTRA = { [30183] = { "Nether Vortex", 4, 7 }, [23572] = { "Primal Nether", 2, 7 }, [21877] = { "Netherweave Cloth", 1, 7 },
-  [99902] = { "Pattern: Shiny Thing", 4, 9 } }
+  [99902] = { "Pattern: Shiny Thing", 4, 9 }, [22445] = { "Arcane Dust", 1, 7 }, [22450] = { "Void Crystal", 4, 7 },
+  [23436] = { "Living Ruby", 3, 3 }, [99903] = { "Mark of the Pretend", 2, 12 } }
 QHEX[1] = "ffffff"
 srv.itemInfo = function(id)
   local it = DATA.ITEMS[id]
@@ -1636,10 +1637,34 @@ do
   srv4:closeLoot(ml)
   srv4:lootTo(zoe, 21877, 5)
   srv4:lootTo(ml, 30183, 2)
-  srv4:lootTo(zoe, 21877, 3)                 -- (another stack, from a corpse LootRuler didn't see)
+  srv4:lootTo(zoe, 30183, 1)                 -- (another, from a corpse LootRuler didn't see)
+  srv4:lootTo(zoe, 99903, 3)
   srv4:tick(2)
   check("looting them says who has them", dropsOf(21877)[1].h == full(zoe) and dropsOf(30183)[1].h == full(ml))
-  check("one LootRuler didn't see dropping goes on too, with how many", #dropsOf(21877) == 2 and dropsOf(21877)[2].n == 3)
+  check("one LootRuler didn't see dropping goes on too, with how many", #dropsOf(30183) == 2 and dropsOf(30183)[2].n == nil
+    and dropsOf(30183)[2].h == full(zoe) and #dropsOf(99903) == 1 and dropsOf(99903)[1].n == 3)
+  -- what someone disenchants, prospects, gathers or skins comes as the same loot line: it isn't the raid's loot
+  ;(function()                               -- (its own function: this file is at Lua's limit of locals)
+  local before2 = #ks.drops
+  srv4:lootTo(zoe, 22445, 3)                 -- Arcane Dust
+  srv4:lootTo(zoe, 22450)                    -- Void Crystal (epic, but enchanting's)
+  srv4:lootTo(ml, 23436)                     -- Living Ruby (prospected)
+  srv4:lootTo(zoe, 21877, 3)                 -- cloth can't be told from what someone else gathered either
+  srv4:tick(2)
+  check("loot lines for things professions make aren't put on the list", #ks.drops == before2 and #dropsOf(22445) == 0 and #dropsOf(22450) == 0
+    and #dropsOf(23436) == 0)
+  -- the loot master's own loot windows from professions aren't corpses
+  ml.LR.Drops.spellCast(0)                   -- (nothing to do with loot)
+  srv4:cast(ml, 13262)                       -- Disenchant
+  srv4:openLoot(ml, { { 22445, 1, 2 }, { 22450, 4 } }) srv4:tick(1) srv4:closeLoot(ml)
+  srv4:tick(6)
+  ml.M.fishing = true
+  srv4:openLoot(ml, { { 99904, 2 } }) srv4:tick(1) srv4:closeLoot(ml)
+  ml.M.fishing = false
+  check("a loot window from disenchanting or fishing isn't put on the list", #ks.drops == before2 and #dropsOf(99904) == 0)
+  srv4:openLoot(ml, { { 23436, 3 } }) srv4:tick(1) srv4:closeLoot(ml)
+  check("a while after, the next one is a corpse again", #dropsOf(23436) == 1)
+  end)()
   local holding = {}
   for _, x in ipairs(ml.LR.Drops.holding()) do holding[#holding + 1] = x.d.i end
   check("the loot master holding Nether Vortexes isn't asked to roll them out or trade them", #holding == 0, table.concat(holding, ","))
@@ -1648,7 +1673,8 @@ do
   srv4:tick(0.5)
   local win = ml.G.LootRulerFrame
   check("the Loot tab counts them, one row each", found(ml, "Everything else that dropped", win) and found(ml, "Nether Vortex", win)
-    and found(ml, "x2", win) and found(ml, "x8", win) and found(ml, "Looted by Zoe (8)", win) and found(ml, "x1", win))
+    and found(ml, "x3", win) and found(ml, "Looted by Mel (2), Zoe", win) and found(ml, "x5", win) and found(ml, "Looted by Zoe (5)", win)
+    and found(ml, "x1", win) and not found(ml, "Arcane Dust", win))
   check("and the loot to roll for is counted apart", found(ml, "2 items dropped, 0 given out, 2 still to roll for.", win))
   ml.LR.UI.win:Hide()
   for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end

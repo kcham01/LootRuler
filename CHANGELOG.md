@@ -33,6 +33,10 @@ From the owner's in-game screenshots.
 - Raiders get a small note at the top of the screen when the loot master picks up loot: each item, and who reserved it
   ("Yours", or "SR: Ann, Bob"). It takes no clicks and goes by itself (Settings, "Reserves where you see items").
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
+- Things made with professions no longer go on the Loot tab: the dust, essences and crystals from disenchanting, and what's
+  prospected, gathered, skinned or fished, by the loot master or anyone else in the raid. The game says "Zoe receives loot"
+  for those just as for a drop, so from those lines trade goods and gems only count when they're the raid's own or epic (a
+  Nether Vortex), and cloth is only counted from corpses the loot master opens. ([#121](https://github.com/kcham01/LootRuler/pull/121))
 - The loot list works when the master looter doesn't have LootRuler: the leader's LootRuler lists what they give out, from
   the game's own "receives loot" lines (so nothing is counted twice from Gargul's lines). ([#114](https://github.com/kcham01/LootRuler/pull/114))
 - A row of buttons too wide for its panel goes on over two lines instead of running past the edge (seen on the Test
