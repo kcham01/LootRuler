@@ -130,6 +130,9 @@ numbers are in [docs/benchmark.md](docs/benchmark.md).
 
 ### Fixed
 
+- The softres.it import box (and the other boxes you paste lists into) could not be typed in. The cursor is now in the
+  import box as soon as it opens, ready for Ctrl+V; a click anywhere in a box puts the cursor in it; nothing in the window
+  can cover it; and it takes an export of any length. ([#101](https://github.com/kcham01/LootRuler/pull/101))
 - Every login showed an error: LootRuler listened for the game's "disenchant roll" question, which TBC doesn't have (it
   came with Wrath). It now asks the game first, and the Need / Greed rules only offer Disenchant where the game has it.
   ([#100](https://github.com/kcham01/LootRuler/pull/100))

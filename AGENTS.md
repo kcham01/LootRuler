@@ -409,6 +409,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   that runs into buttons or past its box), when the owner says. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
   tried it in the game. Keep an eye on WoW: Forever's new raids.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
+    inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,
+    and the import box takes the focus when it opens. The stand-in works out frame levels from parents, so it can't show
+    a frame hidden under another: tests check the levels are in order instead.
   - (fixed, owner's first in-game test) "Forget it" on someone else's session (and the x beside one) called `LR.forget`,
     which #76 had deleted. And `CONFIRM_DISENCHANT_ROLL` was registered, which TBC doesn't have: an error at every login.
   - (fixed in #27) Re-importing an updated softres.it sheet didn't apply changed picks.

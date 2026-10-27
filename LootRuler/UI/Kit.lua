@@ -242,9 +242,20 @@ K.define("memo", function()
   f.edit:SetAutoFocus(false)
   f.edit:SetFontObject("GameFontHighlightSmall")
   f.edit:SetPoint("TOPLEFT")
+  f.edit:SetMaxLetters(0)                  -- (no limit: a softres.it export is thousands of letters)
   f.edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  -- a click anywhere in the box puts the cursor in it (the text box itself is only as tall as its lines)
+  f:EnableMouse(true)
+  f:SetScript("OnMouseDown", function() f.edit:SetFocus() end)
   return f
-end, function(f) f.edit:SetText("") f.edit:SetScript("OnTextChanged", nil) f.edit:ClearFocus() end)
+end, function(f)
+  f.edit:SetText("") f.edit:SetScript("OnTextChanged", nil) f.edit:ClearFocus()
+  -- (made on UIParent and moved into a window: K.get raises the box itself, so raise what's inside it too,
+  -- or the window's own frames can cover the text box and take its clicks)
+  f.scroll:SetFrameLevel(f:GetFrameLevel() + 1)
+  f.scroll.child:SetFrameLevel(f:GetFrameLevel() + 2)
+  f.edit:SetFrameLevel(f:GetFrameLevel() + 3)
+end)
 
 --- fills a memo with text that can be copied but not changed; height: the box's height
 function K.setMemo(f, width, height, text)
@@ -259,8 +270,9 @@ function K.setMemo(f, width, height, text)
   f.edit:HighlightText()
 end
 
---- a memo that can be typed and pasted in (several lines); changed(text) on each change
-function K.setEditMemo(f, width, height, text, changed)
+--- a memo that can be typed and pasted in (several lines); changed(text) on each change; focus: the cursor goes in
+--- at once, ready to paste
+function K.setEditMemo(f, width, height, text, changed, focus)
   f:SetSize(width, height)
   f.edit:SetWidth(width - 20)
   f.edit:SetText(text)
@@ -273,6 +285,7 @@ function K.setEditMemo(f, width, height, text, changed)
     f.scroll:setContentHeight(math.max(height - 12, lines * 13 + 6))
     changed(self:GetText())
   end)
+  if focus then f.edit:SetFocus() end
 end
 
 --- text boxes that take item links: shift-clicking an item (in your bags, chat, anywhere) while one has the
