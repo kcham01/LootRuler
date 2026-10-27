@@ -123,22 +123,21 @@ function UI.saveProfileSheet()
 end
 
 --- the Settings tab's panel
-function UI.profilesPanel(f)
-  f:panel("Profiles", function(p)
-    p:note("Save all these settings under a name, and switch between them (they're shared by every character on this account).")
-    local names = {}
-    for name in pairs(LR.db.profiles) do names[#names + 1] = name end
-    table.sort(names)
-    for _, name in ipairs(names) do
-      local b = K.get(p.owner, "item", p.parent)
-      K.setItem(b, p.width, "Interface\\Icons\\INV_Misc_Note_01", name, LR.db.ui.profile == name and "In use" or "", "",
-        { text = "Use", width = 40, tip = "Use these settings", click = function() LR.useProfile(name) UI.toast(("Using \"%s\"."):format(name)) UI.render() end })
-      b:SetScript("OnClick", function()
-        UI.confirm("Delete the profile", ("\"%s\" is deleted. The settings you're using stay as they are."):format(name), "Delete", function() LR.deleteProfile(name) UI.render() end)
-      end)
-      p:place(b, 36)
-      p:gap(2)
-    end
-    p:buttons({ { label = "Save these settings as...", click = function() UI.saveProfileSheet() end } }, "left")
-  end)
+--- the Profiles section's contents (Settings tab)
+function UI.profilesFill(p)
+  p:note("Save all these settings under a name, and switch between them (they're shared by every character on this account).")
+  local names = {}
+  for name in pairs(LR.db.profiles) do names[#names + 1] = name end
+  table.sort(names)
+  for _, name in ipairs(names) do
+    local b = K.get(p.owner, "item", p.parent)
+    K.setItem(b, p.width, "Interface\\Icons\\INV_Misc_Note_01", name, LR.db.ui.profile == name and "In use" or "", "",
+      { text = "Use", width = 40, tip = "Use these settings", click = function() LR.useProfile(name) UI.toast(("Using \"%s\"."):format(name)) UI.render() end })
+    b:SetScript("OnClick", function()
+      UI.confirm("Delete the profile", ("\"%s\" is deleted. The settings you're using stay as they are."):format(name), "Delete", function() LR.deleteProfile(name) UI.render() end)
+    end)
+    p:place(b, 36)
+    p:gap(2)
+  end
+  p:buttons({ { label = "Save these settings as...", click = function() UI.saveProfileSheet() end } }, "left")
 end

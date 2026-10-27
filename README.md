@@ -301,7 +301,7 @@ Also on the tab: pretend LootRuler and Gargul rolls with as many made-up reserve
 
 ## Settings and getting started
 
-The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. The Settings tab has every option, each saying what it does, and can turn roll windows off, or show them only for items you can roll on.
+The loot master (or the raid leader, or an assistant) needs LootRuler; raiders don't, but it's nicer if they have it. The Settings tab has every option, each saying what it does, and can turn roll windows off, or show them only for items you can roll on. Its sections open and close with a click: each says what's in it ("Auto-roll: no rules yet"), under three headings (for everyone, running loot, this window), and **Open all** shows everything at once.
 
 - **Getting started:** the first time you open LootRuler, a five-page tour shows where everything is (`/lr tour` any time). After an update, one chat line says there's something new (`/lr whatsnew`).
 - **Profiles** (Settings tab) save all your settings under a name, to switch between, say, "Running loot" and "Raiding".

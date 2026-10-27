@@ -142,6 +142,25 @@ function K.fitPlate(f)
   if on then f.plate:SetWidth(max(PLATE_MIN, f.title:GetStringWidth() + PLATE_PAD)) end
 end
 
+-- a section that opens and closes (Flow:fold): a bar with a + or -, the section's name and a line saying what's in it
+K.define("fold", function()
+  local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+  b:SetBackdrop(K.INSET)
+  b:SetBackdropColor(0.11, 0.09, 0.07, 1)
+  b:SetBackdropBorderColor(0.72, 0.56, 0.24, 0.9)
+  b.sign = b:CreateTexture(nil, "ARTWORK")
+  b.sign:SetSize(16, 16)
+  b.sign:SetPoint("TOPLEFT", 9, -8)
+  b.title = fs(b, "GameFontNormal")
+  b.title:SetPoint("TOPLEFT", 32, -8)
+  b.title:SetPoint("RIGHT", -10, 0)
+  b.what = fs(b, "GameFontHighlightSmall")
+  b.what:SetPoint("TOPLEFT", b.title, "BOTTOMLEFT", 0, -3)
+  b.what:SetPoint("RIGHT", -10, 0)
+  b:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+  return b
+end, function(b) b.title:SetText("") b.what:SetText("") b.what:SetTextColor(K.rgb(K.SUB)) end)
+
 -- a plain container (no look of its own)
 K.define("box", function() return CreateFrame("Frame", nil, UIParent, "BackdropTemplate") end, function(f)
   f:SetBackdrop(nil)
@@ -510,6 +529,28 @@ function Flow:text(text, opts)
   return l
 end
 function Flow:note(text, color) return self:text(text, { font = "GameFontHighlightSmall", color = color or K.SUB, gap = 5 }) end
+
+--- a section that opens and closes: its bar (title, and what's in it), then, while it's open, its contents in a panel.
+--- toggle: what a click on the bar does (the caller keeps whether it's open)
+function Flow:fold(title, what, open, toggle, fill)
+  local b = K.get(self.owner, "fold", self.parent)
+  b.sign:SetTexture(open and "Interface\\Buttons\\UI-MinusButton-Up" or "Interface\\Buttons\\UI-PlusButton-Up")
+  b.title:SetText(title)
+  b.title:SetWidth(self.width - 42)
+  b.what:SetText(what or "")
+  b.what:SetWidth(self.width - 42)
+  b:SetScript("OnClick", toggle)
+  b.open = open and true or false
+  local h = 8 + b.title:GetStringHeight() + ((what and what ~= "") and (3 + b.what:GetStringHeight()) or 0) + 8
+  self:place(b, max(32, h), nil, self.width)
+  if open then
+    self:gap(2)
+    self:panel(nil, fill)
+  else
+    self:gap(6)
+  end
+  return b
+end
 
 --- a framed panel with a title; `fill(flow)` lays out its contents; returns the panel
 function Flow:panel(title, fill)

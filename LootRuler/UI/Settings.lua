@@ -16,10 +16,46 @@ local function toggle(p, key, label, what, after)
   p:note(what)
 end
 
+--- which sections are open (saved, per character): title -> true
+local function openSections()
+  if type(LR.db.ui.settingsOpen) ~= "table" then LR.db.ui.settingsOpen = {} end
+  return LR.db.ui.settingsOpen
+end
+local titles = {}            -- every section's title, in order, as drawn (for "Open all")
+
+--- a section that opens and closes: its title, a line saying what's in it, and its contents
+local function section(f, title, what, fill)
+  titles[#titles + 1] = title
+  local open = openSections()
+  f:fold(title, what, open[title] == true, function() open[title] = not open[title] or nil UI.render() end, fill)
+end
+
+--- a group of sections under a heading
+local function group(f, text, note)
+  f:gap(4)
+  f:text(text, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
+  if note then f:note(note) end
+  f:gap(2)
+end
+
+local function count(n, one, zero) return n == 0 and zero or U.plural(n, one) end
+
 function UI.settingsView(f)
   local set = LR.db.settings
+  titles = {}
+  local open = openSections()
+  local anyOpen = next(open) ~= nil
+  f:chips({
+    { label = "Open all", click = function() for _, t in ipairs(titles) do open[t] = true end UI.render() end,
+      tip = "Opens every section below." },
+    { label = "Close all", click = function() for k in pairs(open) do open[k] = nil end UI.render() end,
+      tip = "Closes every section, so you see just their names." },
+  })
+  if not anyOpen then f:note("Click a section to open it.") end
 
-  f:panel("Roll windows", function(p)
+  group(f, "For everyone")
+
+  section(f, "Roll windows", "What pops up when loot is rolled out, and what it shows.", function(p)
     p:note("When loot is rolled out with LootRuler, a roll window pops up: dice for main spec, coin for off spec, x to pass. On a reserved item only the players who reserved it can roll.")
     toggle(p, "rollWindow", "Show roll windows", "Off: roll by typing /roll like everyone without the addon.", function() UI.rollWindows() end)
     toggle(p, "rollList", "Show everyone's rolls", "Roll windows list the best rolls so far (the ones that count), with who rolled them, under the timer.", function() UI.rollWindows() end)
@@ -47,7 +83,7 @@ function UI.settingsView(f)
     p:note("Drag a roll window to move them all.")
   end)
 
-  f:panel("Sounds", function(p)
+  section(f, "Sounds", (set.sounds and "On" or "Off") .. ": LootRuler's sounds, and which volume they follow.", function(p)
     toggle(p, "sounds", "LootRuler's sounds", "Off: LootRuler makes no sound (new roll windows, your item being up, being outbid, trade time running out).")
     local chips = { { plain = true, label = "Play them on:" } }
     for _, c in ipairs(LR.SOUND_CHANNELS) do
@@ -57,7 +93,9 @@ function UI.settingsView(f)
     p:note("The game's sound volume for that channel decides how loud they are.")
   end)
 
-  f:panel("Auto-roll", function(p)
+  local autoRules = 0
+  for _ in pairs(set.autoRollRules) do autoRules = autoRules + 1 end
+  section(f, "Auto-roll", "Rolls or passes for you on items you pick: " .. count(autoRules, "rule", "no rules yet") .. ".", function(p)
     p:note("Your own rules for roll windows: LootRuler rolls or passes for you, and says so.")
     toggle(p, "autoPassUnusable", "Pass on items my class can't use", "Only for items everyone can roll on (not reserved ones).")
     local ids = {}
@@ -74,7 +112,8 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add an item rule", click = function() UI.addRollRule() end } }, "left")
   end)
 
-  f:panel("Need and Greed (group loot)", function(p)
+  section(f, "Need and Greed (group loot)", (set.groupLoot and "On" or "Off") .. ": your rules for the game's Need / Greed rolls ("
+    .. count(#set.groupLootRules, "rule", "no rules yet") .. ").", function(p)
     p:note("Your own rules for the game's Need / Greed windows, when the group isn't on master loot. LootRuler rolls what the first matching rule says, and tells you.")
     toggle(p, "groupLoot", "Roll Need / Greed by my rules", "Off: you roll every item yourself.")
     toggle(p, "groupLootConfirm", "Don't ask \"this item will bind to you\" for my rules", "When a rule needs or greeds an item that binds when picked up, the game's question is answered yes. Only for rolls your rules make.")
@@ -91,15 +130,15 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add a Need / Greed rule", click = function() UI.addGroupRule() end } }, "left")
   end)
 
-  f:panel("Reserves where you see items", function(p)
+  section(f, "Reserves where you see items", "Who reserved it: in tooltips, loot windows and roll windows.", function(p)
     toggle(p, "highlight", "Glow on my items in loot windows", "The game's loot window and need/greed windows glow on an item you reserved (or that's hard reserved for you).")
     toggle(p, "tooltipInfo", "Reserves in item tooltips", "Every item tooltip says who reserved it and who it went to, while soft reserves are open.")
     toggle(p, "lootTags", "Who reserved it, in the loot window", "The game's loot window marks every reserved item (SR, or HR when it's hard reserved) and says who reserved it, whoever you are.")
     toggle(p, "reserveStrip", "Who reserved it, while it's rolled for", "When an item is rolled for, with LootRuler or Gargul, a small strip above the roll window lists everyone who reserved it. It goes when the roll ends.")
   end)
 
-  f:panel("Running loot", function(p)
-    p:note("For the raid leader, an assistant or the master looter.")
+  group(f, "Running loot", "For the raid leader, an assistant or the master looter.")
+  section(f, "Rolling out loot", "How long rolls last, shortcut keys, and what the raid hears.", function(p)
     local chips = { { plain = true, label = "Seconds to roll:" } }
     for _, n in ipairs(LR.Rolls.SECONDS) do
       chips[#chips + 1] = { label = tostring(n), width = 32, on = n == set.rollSeconds, click = function() set.rollSeconds = n UI.render() end }
@@ -112,27 +151,36 @@ function UI.settingsView(f)
     end
     p:chips(keys, { gap = 2 })
     p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
+    toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
+    toggle(p, "announceLoot", "Post the loot in raid chat", "When you open a corpse with master loot, each epic item, and anything reserved, is posted in raid chat once, with who reserved it (or who it's hard reserved for).")
     toggle(p, "inspectGear", "See what raiders without LootRuler wear", "When they roll, LootRuler looks at what they wear in that slot with the game's inspect (when they're close, and not in combat), and shows it beside their roll.")
-    toggle(p, "recordGroupWins", "Count group loot wins as given out", "Without a master looter, an epic item someone wins with the game's Need / Greed goes on the list of loot given out (their reserve if they had one on it, else main spec). For the leader of the reserves.")
-    toggle(p, "remindUnrecorded", "Ask to record loot given without LootRuler", "When you give an item out with the game's own loot menu, LootRuler asks whether to put it on the list of loot given out (and how they got it).")
     toggle(p, "mlPrompt", "Ask me when I become master looter", "LootRuler asks whether to open the loot master window and tell the raid how loot works.")
     toggle(p, "mlAnnounce", "Tell the raid when I become master looter", "One line in raid chat: who runs loot, and how to roll.")
-    toggle(p, "finalCall", "Final call in auctions", "With 10 seconds left on an auction, raid chat hears the highest bid and who has it.")
-    toggle(p, "potAfterSale", "Say the pot after each sale", "The line saying who bought an item ends with how big the pot is so far.")
-    toggle(p, "awardGuild", "Tell my guild who got what", "Each item you give out (and any you take back) gets a line in guild chat too, with the raid's name: \"Karazhan: [item] goes to Ann (MS 85).\"")
-    toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
-    toggle(p, "remindOnJoin", "Tell people who join how to reserve", "While your soft reserves are open, anyone who joins the group and hasn't reserved hears how to, in one raid chat line a few seconds after they join.")
+  end)
+
+  section(f, "Giving out and trading", "Trades with winners, trade timers, and the list of loot given out.", function(p)
     toggle(p, "autoTrade", "Open a trade with the winner", "When you give out an item that's in your bags, a trade with the winner opens if they're close, and LootRuler puts the item in. Too far away: they're whispered to come and trade you.")
     toggle(p, "tradeHelp", "Put won items in trades for me", "When someone who won an item you're holding opens a trade with you, LootRuler puts it in.")
-    toggle(p, "announceLoot", "Post the loot in raid chat", "When you open a corpse with master loot, each epic item, and anything reserved, is posted in raid chat once, with who reserved it (or who it's hard reserved for).")
     toggle(p, "tradeTimers", "Trade timers on screen", "A small window with a bar for each item in your bags that you still have to roll out or trade, and how long is left of the 2 hours to trade it. Click one to roll it out, or to open a trade with whoever won it.", function() UI.tradeTimers() end)
     toggle(p, "tradeWarn", "Warn me before the 2 hours to trade run out", "For items you're holding, a message in the middle of your screen 15 minutes before you can't trade one any more, and again at 5: which item, who it's for, or that it hasn't been rolled out yet. Only you see it.")
     toggle(p, "tradeAnnounce", "Tell the raid what I trade", "While you're running loot, a line in raid chat says what you traded and to whom (\"Traded [item] x3 to Ann.\"), and what you enchanted for someone and what they paid, so nobody wonders where an item went. Out of a group, while you lead reserves, it's said nearby (/s): in a dungeon or raid straight away, elsewhere when you click \"Say it\" (the game only lets addons /say on a click there).")
-    toggle(p, "raidCommands", "!lr in raid chat", "Raiders without the addon can type \"!lr [item]\" in raid chat, not just whisper you. The answers still go by whisper.")
-    toggle(p, "hideWhispers", "Hide !lr messages in my chat", "\"!lr\" whispers, \"!lr\" lines in raid chat and LootRuler's answers stay out of your chat while soft reserves are open.")
+    toggle(p, "remindUnrecorded", "Ask to record loot given without LootRuler", "When you give an item out with the game's own loot menu, LootRuler asks whether to put it on the list of loot given out (and how they got it).")
+    toggle(p, "recordGroupWins", "Count group loot wins as given out", "Without a master looter, an epic item someone wins with the game's Need / Greed goes on the list of loot given out (their reserve if they had one on it, else main spec). For the leader of the reserves.")
+    toggle(p, "awardGuild", "Tell my guild who got what", "Each item you give out (and any you take back) gets a line in guild chat too, with the raid's name: \"Karazhan: [item] goes to Ann (MS 85).\"")
   end)
 
-  f:panel("Roll types", function(p)
+  section(f, "Raiders without LootRuler", "!lr in raid chat, and how people who join hear how to reserve.", function(p)
+    toggle(p, "raidCommands", "!lr in raid chat", "Raiders without the addon can type \"!lr [item]\" in raid chat, not just whisper you. The answers still go by whisper.")
+    toggle(p, "hideWhispers", "Hide !lr messages in my chat", "\"!lr\" whispers, \"!lr\" lines in raid chat and LootRuler's answers stay out of your chat while soft reserves are open.")
+    toggle(p, "remindOnJoin", "Tell people who join how to reserve", "While your soft reserves are open, anyone who joins the group and hasn't reserved hears how to, in one raid chat line a few seconds after they join.")
+  end)
+
+  section(f, "Auctions (GDKP)", "Final calls and the pot, while items are auctioned for gold.", function(p)
+    toggle(p, "finalCall", "Final call in auctions", "With 10 seconds left on an auction, raid chat hears the highest bid and who has it.")
+    toggle(p, "potAfterSale", "Say the pot after each sale", "The line saying who bought an item ends with how big the pot is so far.")
+  end)
+
+  section(f, "Roll types", "Your own kinds of roll, like Transmog (/roll 98): " .. count(#set.rollKinds, "roll type", "none yet") .. ".", function(p)
     p:note("Besides main spec (/roll) and off spec (/roll 99), items rolled out to everyone can have your own kinds of roll, each with its own number. They count after off spec, in this order. Everyone sees them in the roll window and in raid chat.")
     for i, x in ipairs(set.rollKinds) do
       local b = K.get(p.owner, "item", p.parent)
@@ -149,7 +197,9 @@ function UI.settingsView(f)
     if #acts > 0 then p:buttons(acts, "left") end
   end)
 
-  f:panel("Item notes", function(p)
+  local noted = 0
+  for _ in pairs(LR.db.notes) do noted = noted + 1 end
+  section(f, "Item notes", "Your notes on items (\"Tanks first\"), shown when they're rolled out: " .. count(noted, "note", "none yet") .. ".", function(p)
     p:note("Your own note on an item, like \"Warrior > Rogue\" or \"Tanks first\". When you roll the item out, raid chat and everyone's roll window show it, and you see it in the item's tooltip. Kept between raids.")
     local ids = {}
     for id in pairs(LR.db.notes) do ids[#ids + 1] = id end
@@ -169,7 +219,8 @@ function UI.settingsView(f)
     }, "left")
   end)
 
-  f:panel("thatsmybis wishlists", function(p)
+  local wished = LR.Prio.count(LR.db.wish)
+  section(f, "thatsmybis wishlists", "Who wishlisted an item, from thatsmybis.com: " .. (wished > 0 and U.plural(wished, "item") .. " on wishlists" or "none brought in") .. ".", function(p)
     local items, places = LR.Prio.count(LR.db.wish)
     p:note("Bring in your guild's wishlists from thatsmybis.com (its Gargul download). When you roll an item out, raid chat and everyone's roll window say who in the group wishlisted it, and so do the loot posts and the item's tooltip. Someone who has been given the item is left out.")
     if items > 0 then
@@ -187,7 +238,7 @@ function UI.settingsView(f)
     }, "left")
   end)
 
-  f:panel("Loot rules (master looter)", function(p)
+  section(f, "Loot rules (master looter)", "Gold, and items your rules match, handed out as you loot: " .. count(#set.autoLootRules, "rule", "no rules yet") .. ".", function(p)
     toggle(p, "lootGold", "Pick up the gold", "When you open a corpse with master loot, its gold is picked up (the game shares it out with the group).")
     toggle(p, "autoLoot", "Hand out loot by my rules", "When you open a corpse with master loot, items your rules match go straight to whoever the rule says. Anything someone reserved is always rolled for instead.")
     local s = LR.Rolls.session()
@@ -205,7 +256,8 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add a rule", click = function() UI.addLootRule() end } }, "left")
   end)
 
-  f:panel("This window", function(p)
+  group(f, "This window, and more")
+  section(f, "This window", "The minimap button.", function(p)
     p:chips({ { tick = true, label = "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
       if LR.minimap then LR.minimap:SetShown(not LR.db.ui.hideMinimap) end
@@ -214,13 +266,15 @@ function UI.settingsView(f)
     p:note("Without it, /lr opens LootRuler.")
   end)
 
-  f:panel("Testing", function(p)
+  section(f, "Testing", "The Test tab: pretend rolls, messages and a practice raid.", function(p)
     toggle(p, "testTab", "Show the Test tab", "A tab of pretend rolls and messages, to see how LootRuler looks before a raid. Everything on it happens only on your screen: nothing is said in chat or sent to anyone.")
   end)
 
-  UI.profilesPanel(f)
+  local profiles = 0
+  for _ in pairs(LR.db.profiles) do profiles = profiles + 1 end
+  section(f, "Profiles", "Save these settings under a name, and switch between them: " .. count(profiles, "profile", "none saved") .. ".", UI.profilesFill)
 
-  f:panel("About", function(p)
+  section(f, "About", "Version " .. LR.VERSION .. ", who has LootRuler, what's new and the tour.", function(p)
     p:kv({ { "Version", LR.VERSION } })
     p:gap(4)
     p:buttons({ { label = "Who has LootRuler", click = function() UI.versionSheet() end },

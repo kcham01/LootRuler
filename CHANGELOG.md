@@ -18,6 +18,10 @@ From the owner's in-game screenshots.
 - The softres.it import is easier to reach: first on the Session tab (with the raid's link), on the Reserves tab's raid
   leader box, and as "Open and import from softres.it" when opening reserves. It was at the bottom of the Session tab,
   next to End session. ([#106](https://github.com/kcham01/LootRuler/pull/106))
+- The Settings tab's sections open and close with a click, under three headings (for everyone, running loot, this window).
+  Each says what's in it, like "Auto-roll: no rules yet", so the tab is a short list to start with; "Open all" shows
+  everything. The long "Running loot" section is now four: rolling out loot, giving out and trading, raiders without
+  LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
 
 ### Faster (26 October 2026)
 

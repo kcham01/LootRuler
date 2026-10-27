@@ -413,6 +413,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   outside instances unless a click started it, so there the lines wait on a "Say it" box (said with `LR.sayNow`, not the
   ChatThrottleLib queue); inside one (`IsInInstance`) they're said straight away. The stand-in enforces this: `M.click` sets
   `M.hardware`, the test server errors on SAY / YELL without it unless `p.instance` is set.
+- **Polish from the owner's in-game screenshots** (#103-#107): title plates in three pieces sized to the title (`K.fitPlate`);
+  text boxes carry their own greyed hint (`K.setHint`, `K.onText`; `UI.searchHint` for item searches); on/off switches are
+  tick boxes (`tick = true` in `Flow:chips`, `K.setTick`); the softres.it import is first on the Session tab, on the Reserves
+  tab and in the new-session form (`UI.importSheet`); Settings sections fold (`Flow:fold`, `section` in `UI/Settings.lua`,
+  open ones kept in `db.ui.settingsOpen`). A new setting goes in a section, and its line should say what's in it now.
+  The owner kept: the windows' see-through backgrounds, the size, greyed buttons, and the tabs as they are.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,
