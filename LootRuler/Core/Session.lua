@@ -508,11 +508,28 @@ function S.srWins(s, player, id)
   return n
 end
 
---- a player's reserves on an item that haven't won it yet
+--- how many reserves a player has won, on any item
+function S.srWinsAll(s, player)
+  local n = 0
+  for _, w in ipairs(s.won or {}) do if w.k == "SR" and U.samePlayer(w.p, player) then n = n + 1 end end
+  return n
+end
+
+--- a player's reserves on an item that haven't won it yet. With one reserve win each (s.ow), none once they've won one.
 function S.claims(s, player, id)
+  if s.ow and S.srWinsAll(s, player) > 0 then return 0 end
   local n = 0
   for _, x in ipairs(S.reservesOf(s, player)) do if x == id then n = n + 1 end end
   return math.max(0, n - S.srWins(s, player, id))
+end
+
+--- one reserve win each: once a player wins one of their reserves, the rest stop counting
+function S.setOneWin(s, on, now)
+  on = on and true or nil
+  if s.ow == on then return false end
+  s.ow = on
+  bump(s, now)
+  return true
 end
 
 --- who has been given an item: { { name, kind }, ... } in the order it was given
@@ -709,6 +726,7 @@ function S.valid(t)
     end
   end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
+  if t.ow ~= nil and type(t.ow) ~= "boolean" then t.ow = nil end    -- (one reserve win each)
   -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves
   if t.sx ~= nil then
     if type(t.sx) ~= "table" then return false end

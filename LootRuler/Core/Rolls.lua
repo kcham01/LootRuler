@@ -537,6 +537,11 @@ function Rolls.award(player, kind, n, de)
   else line = ("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")) end
   say(line)
   toGuild(line)
+  -- one reserve win each: their first win on a reserve, and they have others that stop counting now
+  -- (the leader's list has this win already; another loot master's copy gets it later)
+  if kind == "SR" and s and s.ow and S.srWinsAll(s, player) + (LR.isLeader(s) and 0 or 1) == 1 and #S.reservesOf(s, player) > 1 then
+    say(("%s has won a reserve, so their other reserves don't count now (one reserve win each)."):format(U.short(player)))
+  end
   -- the next item in the queue, a moment later (the loot master's window shows this one until then; not if the
   -- award is undone meanwhile)
   if #Rolls.queue > 0 then

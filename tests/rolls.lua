@@ -98,6 +98,22 @@ local rev = s.rev
 S.unaward(s, 3, 114)
 check("a mistake can be taken back", #s.won == 3 and S.claims(s, ANN, WATCH) == 1 and s.rev == rev + 1)
 check("and something nonsensical isn't recorded", not S.award(s, WATCH, ANN, "BEST", 1, 115))
+
+print("== one reserve win each")
+local ow = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 200)
+S.set(ow, ANN, "PRIEST", { WATCH, BROOCH }, false, 201)
+S.set(ow, BOB, "MAGE", { BROOCH }, false, 202)
+check("off to start with", not ow.ow and S.setOneWin(ow, true, 203) and ow.ow == true and not S.setOneWin(ow, true, 204))
+S.award(ow, WATCH, ANN, "SR", 80, 205)
+check("once Ann wins a reserve, her other one stops counting", S.claims(ow, ANN, BROOCH) == 0 and S.claims(ow, BOB, BROOCH) == 1)
+p = R.plan(ow, BROOCH, roster)
+check("so only Bob rolls for the brooch as a reserve", p.mode == "SR" and #p.who == 1 and p.who[1][1] == BOB)
+S.award(ow, 28525, ANN, "MS", 40, 206)
+check("a main spec win doesn't count as a reserve win", S.srWinsAll(ow, ANN) == 1 and S.srWinsAll(ow, BOB) == 0)
+S.setOneWin(ow, false, 207)
+check("switched off, her other reserve counts again", ow.ow == nil and S.claims(ow, ANN, BROOCH) == 1)
+ow.ow = "yes"
+check("saved or sent wrong, it's dropped, not trusted", S.valid(ow) and ow.ow == nil)
 local bad1 = U.copy(s) bad1.won = { { i = "x", p = ANN, k = "SR" } }
 check("a session with a broken record isn't trusted", not S.valid(bad1))
 
