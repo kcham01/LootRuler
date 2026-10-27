@@ -91,6 +91,32 @@ end
 
 UI.importSheet = importSheet
 
+--- when reserves lock by themselves: in some minutes, or at a time of day
+function UI.autoLockSheet(s)
+  local typed = ""
+  UI.openSheet("Lock reserves by themselves", function(f, h)
+    f:text("When should reserves lock? The raid is told 5, 2 and 1 minute before, and when they lock.")
+    local function set(at) h.close() LR.setAutoLock(s, at) UI.toast(("Reserves lock at %s."):format(LR.Lock.clock(at))) end
+    local chips = {}
+    for _, m in ipairs({ 10, 15, 30, 45, 60 }) do
+      chips[#chips + 1] = { label = ("In %d min"):format(m), click = function() set(U.now() + m * 60) end }
+    end
+    f:chips(chips)
+    f:text("Or at a time on your clock", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, 120)
+    e:SetText(typed)
+    K.setHint(e, "20:00")
+    K.onText(e, function(self) typed = self:GetText() end)
+    f:gap(8)
+    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = "Lock at that time", click = function()
+      local secs = LR.Lock.parseTime(typed)
+      if not secs then UI.toast("Type a time like 20:00 or 8:30pm.") return end
+      set(LR.Lock.atTime(secs))
+    end } })
+  end)
+end
+
 --- softres.it: importing (the first thing many raids do), and its link
 local function softresPanel(f, s)
   f:panel("softres.it", function(p)
@@ -159,7 +185,14 @@ local function manage(f, s)
         tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
       { tick = true, label = "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
         tip = "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
+      not s.locked and { tick = true, label = "Lock by itself", on = s.al ~= nil, click = function()
+        if s.al then LR.setAutoLock(s, nil) else UI.autoLockSheet(s) end
+      end, tip = "Pick when reserves lock. The raid is told 5, 2 and 1 minute before, and when they lock." } or false,
     })
+    if s.al and not s.locked then
+      local mins = math.max(1, math.ceil((s.al - U.now()) / 60))
+      p:note(("Reserves lock by themselves at %s (in %s). The raid is told 5, 2 and 1 minute before."):format(LR.Lock.clock(s.al), U.plural(mins, "minute")), K.GOLD)
+    end
   end)
 
   f:panel("Hard reserves", function(p)

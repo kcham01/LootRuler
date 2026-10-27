@@ -41,6 +41,7 @@ Core\GroupLoot.lua
 Core\Batch.lua
 Core\Council.lua
 Core\Swap.lua
+Core\Lock.lua
 Core\Bags.lua
 Core\Overview.lua
 Core\Practice.lua

@@ -523,6 +523,15 @@ function S.claims(s, player, id)
   return math.max(0, n - S.srWins(s, player, id))
 end
 
+--- when reserves lock by themselves (a server time), or nil (Core/Lock.lua)
+function S.setAutoLock(s, at, now)
+  at = tonumber(at)
+  if s.al == at then return false end
+  s.al = at
+  bump(s, now)
+  return true
+end
+
 --- one reserve win each: once a player wins one of their reserves, the rest stop counting
 function S.setOneWin(s, on, now)
   on = on and true or nil
@@ -727,6 +736,7 @@ function S.valid(t)
   end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
   if t.ow ~= nil and type(t.ow) ~= "boolean" then t.ow = nil end    -- (one reserve win each)
+  if t.al ~= nil and type(t.al) ~= "number" then t.al = nil end      -- (when reserves lock by themselves)
   -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves
   if t.sx ~= nil then
     if type(t.sx) ~= "table" then return false end
