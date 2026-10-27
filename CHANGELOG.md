@@ -22,6 +22,8 @@ From the owner's in-game screenshots.
   Each says what's in it, like "Auto-roll: no rules yet", so the tab is a short list to start with; "Open all" shows
   everything. The long "Running loot" section is now four: rolling out loot, giving out and trading, raiders without
   LootRuler, and auctions. ([#107](https://github.com/kcham01/LootRuler/pull/107))
+- Saying trades nearby has its own switch (Settings, "Giving out and trading"). A trade goes to one place only: the group
+  when you're in one, /s when you're not. ([#108](https://github.com/kcham01/LootRuler/pull/108))
 
 ### Faster (26 October 2026)
 

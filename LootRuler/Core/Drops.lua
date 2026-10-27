@@ -462,7 +462,10 @@ function Drops.tradeDone()
   local partner = trade.partner
   local enchant = trade.enchant
   local line = partner and Drops.tradeLine(partner, trade.gave, trade.gaveMoney, trade.got, trade.gotMoney, enchant)
-  local channel = line and LR.db.settings.tradeAnnounce and Drops.tradeChannel(partner)
+  -- one place only: the group when I'm in one, else nearby; each with its own switch
+  local channel = line and Drops.tradeChannel(partner)
+  if channel == "SAY" and not LR.db.settings.tradeSay then channel = nil end
+  if channel and channel ~= "SAY" and not LR.db.settings.tradeAnnounce then channel = nil end
   if channel == "SAY" then
     Drops.sayNearby(line)
   elseif channel then

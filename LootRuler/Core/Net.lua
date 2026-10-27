@@ -78,6 +78,7 @@ LR.DEFAULTS = {
   rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
   tradeHelp = true,        -- won items go into trades with their winners
   tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom
+  tradeSay = true,         -- ...and out of a group, it's said nearby (/s; Drops.sayNearby)
   tradeTimers = true,      -- a bar for each item I hold to roll out or trade, with the time left (UI/Timers.lua)
   tradeWarn = true,        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)
   announceLoot = true,     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)
