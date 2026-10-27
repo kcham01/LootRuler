@@ -438,11 +438,17 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   leader entering another raid, or its raid after the lockout it was for ended (`s.le`, from `GetSavedInstanceInfo` on
   `UPDATE_INSTANCE_INFO`), is asked to start a new session (the old one ends and is archived). The test server has places
   (`Server.PLACES`, `srv.where`, `p.where`, `Server:enter`) and lockouts (`p.saved`); loot and UI tests run in Karazhan.
-- **Everything that drops is counted** (#112; `LR.minorLoot(s, id)`, `Drops.corpse()`, drops' `n` = a stack): every non-grey item on a
-  corpse (whatever the loot threshold) and in loot messages goes on the list. "Minor" items (not in the raid's lists, not worn, not
+- **Everything that drops is counted** (#112; `LR.minorLoot(s, id)`, `Drops.corpse()`, drops' `n` = a stack): every listed item on a
+  corpse (whatever the loot threshold) and in loot messages goes on the list (since #121, only `LR.listedLoot`). "Minor" items (not in the raid's lists, not worn, not
   a recipe, below epic unless a trade good) are shown counted on the Loot tab ("Everything else that dropped"), and left out of
   announcements, `Drops.holding`, `toDeliver`, trade warnings and group-loot awards. The test server has stacks (`openLoot` items'
   third value, `lootTo(p, id, count)`) and `C_Item.GetItemInfoInstant` (from `srv.itemInfo`'s `equip` and `class`).
+- **Only the raid's loot is listed** (#121; `LR.listedLoot(s, id)`, `LR.LISTED_LOOT`, `LR.itemClass` (class, subclass); `Drops.spellCast`,
+  `Drops.fromProfession`, `Drops.PROFESSION_SPELLS`): a drop goes on the list only if it's worn, a mount (class 15 subclass 5), a recipe
+  (class 9), in the raid's lists (tokens, Magtheridon's Head) or on the owner's list `LR.LISTED_LOOT` (marks, Black Temple gems, Amani
+  charms, Karazhan's books...). Add a raid's new non-gear loot there (Forever's too). Loot windows within `Drops.PROFESSION_WAIT` seconds
+  of my own Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`), or while `IsFishingLoot()`,
+  aren't read. The stand-in has `Server:cast(p, spellID)`, `M.fishing` and `srv.itemInfo`'s `subclass`.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,

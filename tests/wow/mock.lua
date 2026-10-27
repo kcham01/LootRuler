@@ -947,6 +947,7 @@ function M.env(player)
     left = { [1] = { 0.5, 1.0, 0, 0.5 }, [-1] = { 0.5, 1.0, 0.5, 1.0 } } }
   G.GetItemIcon = function() return 134400 end
   G.GetSpellInfo = function(id) return "Spell " .. tostring(id), nil, 136243 end
+  G.IsFishingLoot = function() return M.fishing == true end
   G.GetSpellTexture = function() return 136243 end
   G.ChatFrame_OpenChat = function() end
   G.HandleModifiedItemClick = function(link) return false end

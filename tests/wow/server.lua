@@ -431,12 +431,12 @@ function Server:install(p)
   -- items: the test can say which ones the client has loaded (names from the data until then)
   G.C_Item = {
     -- what kind of item, without loading it: srv.itemInfo's `equip` (an INVTYPE_ name) and `class` (the game's class
-    -- number: 7 trade goods, 9 recipe, 15 miscellaneous) when it gives them
+    -- number: 7 trade goods, 9 recipe, 15 miscellaneous) and `subclass` when it gives them
     GetItemInfoInstant = function(id)
       id = tonumber(id) or tonumber(tostring(id):match("item:(%d+)"))
       local it = id and srv.itemInfo and srv.itemInfo(id)
       if not it then return nil end
-      return id, "", "", it.equip or "", 133000 + id % 1000, it.class or 15, 0
+      return id, "", "", it.equip or "", 133000 + id % 1000, it.class or 15, it.subclass or 0
     end,
     GetItemInfo = function(id)
       id = tonumber(id) or tonumber(tostring(id):match("item:(%d+)"))      -- (an item number, or a link, as the game takes)
@@ -567,6 +567,10 @@ function Server:openLoot(p, items)
   for _, it in ipairs(items) do p.loot[#p.loot + 1] = it[1] == "money" and { money = it[2] } or { id = it[1], quality = it[2] or 4, count = it[3] } end
   p.G.LootFrame:Show()
   p.M.fire("LOOT_OPENED", 0, false)
+end
+--- p casts a spell (a profession's, say): their client hears it, as the game says it
+function Server:cast(p, spellID)
+  if p.client then p.M.fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-3-0-0-0-" .. spellID, spellID) end
 end
 function Server:closeLoot(p) p.loot = nil p.G.LootFrame:Hide() p.M.fire("LOOT_CLOSED") end
 

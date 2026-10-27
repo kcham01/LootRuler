@@ -103,8 +103,37 @@ local function newKey(id)
 end
 Drops.newKey = newKey
 
+---------------------------------------------------------------------- loot that isn't a drop
+-- A loot window opened by a profession (disenchanting, prospecting, gathering herbs or ore, skinning, fishing, picking
+-- pockets or locks) isn't the raid's loot: it's skipped. Professions are known by the spell I cast just before (by name,
+-- so any rank counts); fishing by the game saying so.
+Drops.PROFESSION_SPELLS = { 13262, 31252, 2366, 2575, 8613, 7620, 921, 1804 }   -- Disenchant, Prospecting, Herb Gathering,
+                                                                               -- Mining, Skinning, Fishing, Pick Pocket, Pick Lock
+Drops.PROFESSION_WAIT = 5            -- seconds after such a spell that a loot window is taken to be from it
+local professionNames, gatheredAt
+local function isProfession(spellID)
+  if not professionNames then
+    professionNames = {}
+    for _, id in ipairs(Drops.PROFESSION_SPELLS) do
+      local name = GetSpellInfo(id)
+      if name then professionNames[name] = true end
+    end
+  end
+  local name = spellID and GetSpellInfo(spellID)
+  return name ~= nil and professionNames[name] == true
+end
+--- I cast a spell (UNIT_SPELLCAST_SUCCEEDED for "player")
+function Drops.spellCast(spellID)
+  if isProfession(spellID) then gatheredAt = GetTime() end
+end
+--- whether the loot window open now is from a profession, not a corpse or a chest
+function Drops.fromProfession()
+  if IsFishingLoot() then return true end
+  return gatheredAt ~= nil and GetTime() - gatheredAt < Drops.PROFESSION_WAIT
+end
+
 ---------------------------------------------------------------------- corpses (master loot)
---- every item on the open corpse that isn't grey (vendor trash), whatever the loot threshold:
+--- every item on the open corpse that isn't grey (vendor trash), whatever the loot threshold (gold isn't an item):
 --- { { slot, id, link, quality, n = how many } }
 function Drops.corpse()
   local out = {}
@@ -124,7 +153,7 @@ end
 function Drops.lootOpened()
   Drops.slotKeys = {}
   local s = writer()
-  if not s or not LR.isMasterLooter() then return end
+  if not s or not LR.isMasterLooter() or Drops.fromProfession() then return end
   local target = UnitExists("target") and UnitIsDead("target")
   local src = target and UnitGUID("target") or "corpse"
   local boss = target and UnitName("target") or nil
@@ -140,7 +169,9 @@ function Drops.lootOpened()
   local new = {}
   for _, it in ipairs(here) do
     local known = onCorpse[it.id]
-    if known and #known > 0 then
+    if not LR.listedLoot(s, it.id) then
+      -- (cloth, trade goods, potions and the like: not the raid's loot)
+    elseif known and #known > 0 then
       Drops.slotKeys[it.slot] = table.remove(known, 1)          -- seen it before: the corpse was opened again
     else
       local from = boss or (LR.dropsFrom(s.raid, it.id)[1]) or ""
@@ -225,10 +256,10 @@ function Drops.lootMessage(line)
     end
     return
   end
-  -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): anything that
-  -- isn't grey (vendor trash)
+  -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): the raid's loot,
+  -- not grey. (The game says "Zoe receives loot" for what someone disenchants or gathers too: those aren't listed.)
   local q = qualityOf(link, id)
-  if q < 1 then return end
+  if q < 1 or not LR.listedLoot(s, id) then return end
   local ml = LR.masterLooter()
   local key = newKey(id)
   save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })
@@ -544,10 +575,12 @@ for _, e in ipairs({ "CHAT_MSG_LOOT", "TRADE_SHOW", "TRADE_PLAYER_ITEM_CHANGED",
   "TRADE_ACCEPT_UPDATE", "TRADE_UPDATE", "UI_INFO_MESSAGE", "TRADE_CLOSED" }) do
   events:RegisterEvent(e)
 end
-events:SetScript("OnEvent", function(_, event, a1, a2)
+events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+events:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if not LR.db then return end
   local ok, err = pcall(function()
     if event == "CHAT_MSG_LOOT" then Drops.lootMessage(a1)
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then if a1 == "player" then Drops.spellCast(a3) end
     elseif event == "TRADE_SHOW" then Drops.tradeShow()
     elseif event == "TRADE_PLAYER_ITEM_CHANGED" or event == "TRADE_TARGET_ITEM_CHANGED" or event == "TRADE_MONEY_CHANGED"
       or event == "TRADE_ACCEPT_UPDATE" or event == "TRADE_UPDATE" then Drops.tradeItems()
