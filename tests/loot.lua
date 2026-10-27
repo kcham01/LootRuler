@@ -15,6 +15,7 @@ end
 local function section(name) print("== " .. name) end
 
 local srv = Server.new(".")
+srv.where = Server.PLACES.Karazhan          -- (in Karazhan, where most sessions here are: loot is only listed inside a session's raid)
 -- items as the game knows them: names and links from the data
 local DATA = {}
 do
@@ -1506,6 +1507,89 @@ check("the kinds, in words", Hs.kindsText({ MS = 3, OS = 1, SR = 1, BID = 2, DE 
   and Hs.kindsText({ X9 = 2 }) == "2 X9")
 check("raiders have it too, from their own copies", #ann.LR.History.fairness(0) > 0)
 check("a time range leaves older raids out", #Hs.fairness(lead.LR.U.now() + 60) == 0)
+
+section("loot is only listed inside the session's raid")
+do
+  local srv3 = Server.new(".")
+  srv3.itemInfo = srv.itemInfo
+  local ml = srv3:client({ name = "Mel", class = "PALADIN" })
+  local zoe = srv3:client({ name = "Zoe", class = "PRIEST" })
+  local all = { ml, zoe }
+  srv3:setGroup(all, ml, true)
+  srv3:setMasterLooter(ml)
+  srv3:enter(all, Server.PLACES.Karazhan)
+  srv3:tick(6)
+  local ks = ml.LR.startSession("Karazhan", 2, true, false)
+  srv3:tick(2)
+  local function has(id) for _, d in ipairs(ks.drops or {}) do if d.i == id then return true end end return false end
+  local function sheet() return ml.LR.UI.topSheet() end
+  srv3:openLoot(ml, { { 28570, 4 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
+  check("in Karazhan, Karazhan's loot is listed", has(28570))
+  -- the same session, still open, in Black Temple
+  srv3:enter(all, Server.PLACES.BlackTemple)
+  srv3:tick(4)
+  check("going into another raid asks whether to start a new session there", sheet() ~= nil
+    and found(ml, "You're in Black Temple, but your session is for Karazhan. Start a new session for Black Temple?", sheet()))
+  check("raiders aren't asked", zoe.LR.UI.topSheet() == nil)
+  srv3:openLoot(ml, { { 32837, 5 }, { 32235, 4 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
+  srv3:lootTo(zoe, 32471) srv3:tick(1)
+  check("Black Temple's loot doesn't go on the Karazhan session (from a corpse, or given out)", not has(32837) and not has(32235) and not has(32471))
+  clickText(ml, "Keep Karazhan", sheet())
+  srv3:tick(1)
+  check("keeping it closes the question", sheet() == nil and ml.LR.current() == ks)
+  srv3:enter(all, Server.PLACES.Outdoors) srv3:tick(4)
+  srv3:enter(all, Server.PLACES.BlackTemple) srv3:tick(4)
+  check("and it isn't asked again for the same raid", sheet() == nil)
+  srv3:enter(all, Server.PLACES.SethekkHalls) srv3:tick(4)
+  srv3:openLoot(ml, { { 27948, 3 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
+  check("a dungeon isn't a raid: no question, and no loot listed", sheet() == nil and not has(27948))
+  -- the lockout: the game says Karazhan's lockout ends in an hour, so the session knows
+  ml.saved = { { name = "Karazhan", id = 4242, reset = 3600, map = 532 } }
+  srv3:enter(all, Server.PLACES.Karazhan) srv3:tick(4)
+  srv3:openLoot(ml, { { 28453, 4 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(2)
+  check("back in Karazhan, its loot is listed again", has(28453) and sheet() == nil)
+  ml.LR.Rolls.give(28453, full(zoe), "MS", { link = srv3:link(28453) })
+  srv3:tick(2)
+  ml.LR.Rolls.dismiss()
+  check("the session knows when its lockout ends", ks.le and math.abs(ks.le - (ml.LR.U.now() + 3600)) < 10, ks.le)
+  -- a week later: a new lockout of the same raid
+  ml.saved = {}
+  ks.le = ml.LR.U.now() - 1
+  srv3:enter(all, Server.PLACES.Outdoors) srv3:tick(4)
+  srv3:enter(all, Server.PLACES.Karazhan) srv3:tick(4)
+  check("its raid on a new lockout asks too", sheet() ~= nil and found(ml, "Your Karazhan session is from an earlier lockout", sheet()))
+  clickText(ml, "Start Karazhan", sheet())
+  srv3:tick(3)
+  local ns = ml.LR.current()
+  check("a new session, like the old one", ns and ns ~= ks and ns.raid == "Karazhan" and ns.sr == 2 and ns.dupes and not ns.le)
+  check("the old one is kept under Past raids, with what it gave out", ml.LR.History.all()[1] and ml.LR.History.all()[1].id == ks.id
+    and ml.LR.History.all()[1].won[1].i == 28453)
+  check("raiders have the new one", zoe.LR.current() and zoe.LR.current().id == ns.id)
+  -- into Black Temple: start a session for it from the question
+  srv3:enter(all, Server.PLACES.BlackTemple) srv3:tick(4)
+  clickText(ml, "Start Black Temple", sheet())
+  srv3:tick(3)
+  local bt = ml.LR.current()
+  check("a new raid's session from the question", bt and bt.raid == "BlackTemple" and bt.id ~= ns.id)
+  srv3:openLoot(ml, { { 32837, 5 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
+  check("and its loot is listed", (function() for _, d in ipairs(bt.drops or {}) do if d.i == 32837 then return true end end end)())
+  -- switched off: not asked
+  ml.LR.db.settings.raidPrompt = false
+  srv3:enter(all, Server.PLACES.Karazhan) srv3:tick(4)
+  check("it can be switched off", sheet() == nil)
+  ml.LR.db.settings.raidPrompt = true
+  -- a raid LootRuler doesn't know (WoW: Forever's): its session lists loot in a raid it doesn't know, not in Karazhan
+  local cs = ml.LR.startSession(ml.LR.CUSTOM, 2, true, false, "The New Raid", true)
+  srv3:tick(2)
+  local function chas(id) for _, d in ipairs(cs.drops or {}) do if d.i == id then return true end end return false end
+  srv3:openLoot(ml, { { 28570, 4 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
+  check("a raid LootRuler doesn't know: not in Karazhan", not chas(28570))
+  ml.LR.UI.closeAll()
+  srv3:enter(all, { map = 9999, kind = "raid", name = "The New Raid" }) srv3:tick(4)
+  srv3:openLoot(ml, { { 28570, 4 } }) srv3:tick(1) srv3:closeLoot(ml) srv3:tick(1)
+  check("but in a raid it doesn't know, yes, and no question", chas(28570) and sheet() == nil)
+  for _, p in ipairs(all) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
 
 section("trades out of a group are said nearby")
 -- its own little world: the loot master on their own (the raid's over), trading with a raider

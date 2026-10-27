@@ -52,10 +52,22 @@ local function qualityOf(link, id)
   return (hex and q[hex:lower()]) or (LR.ITEMS[id] and LR.quality(id)) or 1
 end
 
---- the session drops go on, when this client is the one writing them down (see the top)
+--- whether loot here belongs to a session: inside its raid; outdoors for world bosses; for a raid LootRuler doesn't know
+--- (a new one, or Forever's), any raid that isn't one it knows. Anywhere for the practice raid (its loot is pretend).
+function Drops.here(s, where)
+  if s.practice then return true end
+  where = where or LR.where()
+  local map = LR.RAID_MAPS[s.raid]
+  if map then return where.map == map end
+  if LR.WORLD_RAIDS[s.raid] then return where.kind == "none" end
+  return where.kind == "raid" and not LR.raidAt(where.map)
+end
+
+--- the session drops go on, when this client is the one writing them down (see the top), and only while we're in
+--- its raid: a session left open doesn't collect another raid's loot
 local function writer()
   local s = Rolls.session()
-  if not s or not IsInGroup() then return nil end
+  if not s or not IsInGroup() or not Drops.here(s) then return nil end
   if LR.masterLooter() then return LR.isMasterLooter() and s or nil end
   return LR.isLeader(s) and s or nil
 end
@@ -65,6 +77,7 @@ Drops.writer = writer
 local function save(s, list)
   if #list == 0 then return end
   if LR.isLeader(s) then
+    if not s.le and not s.practice then RequestRaidInfo() end     -- (the lockout these drops are on: UI/Where.lua)
     local changed = false
     for _, d in ipairs(list) do if S.addDrop(s, d, U.now()) then changed = true end end
     if changed then LR.leaderChanged(s) end

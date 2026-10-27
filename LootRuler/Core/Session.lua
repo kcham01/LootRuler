@@ -694,6 +694,7 @@ function S.valid(t)
   if t.att ~= nil then t.att = S.cleanAtt(t.att) end                -- (who came: names only)
   if t.next ~= nil and type(t.next) ~= "string" then return false end
   if t.go ~= nil and type(t.go) ~= "boolean" then return false end
+  if t.le ~= nil and type(t.le) ~= "number" then t.le = nil end       -- (when its raid's lockout ends: UI/Where.lua)
   if t.was ~= nil then
     if type(t.was) ~= "table" or #t.was > 20 then return false end
     for _, name in ipairs(t.was) do if type(name) ~= "string" then return false end end
