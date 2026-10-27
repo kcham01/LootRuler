@@ -43,6 +43,9 @@ local pug = srv:player({ name = "Pug", class = "WARRIOR" })
 srv:setGroup({ lead, ann, bob, dan, pug }, lead, true)
 srv:setMasterLooter(lead)
 srv:tick(6)
+check("trade help and trade timers are off to start with", not lead.LR.db.settings.tradeHelp and not lead.LR.db.settings.tradeTimers
+  and not lead.LR.db.settings.autoTrade)
+lead.LR.db.settings.tradeHelp, lead.LR.db.settings.tradeTimers = true, true        -- (switched on: they're tested here)
 
 local WATCH, SIGNET, HANDWRAPS, ROYAL, BROOCH = 28528, 28525, 28507, 28529, 28530
 local function full(p) return Server.full(p) end
