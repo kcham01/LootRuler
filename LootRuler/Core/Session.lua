@@ -718,6 +718,73 @@ function S.dropState(s, d)
   return "looted"
 end
 
+---------------------------------------------------------------------- sending only what changed (Core/Net.lua: U)
+--- whether two values are the same, all the way down
+local function same(a, b)
+  if a == b then return true end
+  if type(a) ~= "table" or type(b) ~= "table" then return false end
+  for k, v in pairs(a) do if not same(v, b[k]) then return false end end
+  for k in pairs(b) do if a[k] == nil then return false end end
+  return true
+end
+S.same = same
+
+--- what changed from one copy of a session to the next, field by field: { field = { v = its new value } (a plain value),
+--- { x = true } (gone), or { s = { key = new entry }, d = { keys gone } } (a table: only the entries that changed) }.
+--- nil when nothing did.
+function S.diff(old, new)
+  local ch, any = {}, false
+  for k, v in pairs(new) do
+    local o = old[k]
+    if not same(o, v) then
+      any = true
+      if type(o) == "table" and type(v) == "table" then
+        local set, del = {}, {}
+        for ik, iv in pairs(v) do if not same(o[ik], iv) then set[ik] = iv end end
+        for ik in pairs(o) do if v[ik] == nil then del[#del + 1] = ik end end
+        ch[k] = { s = set, d = #del > 0 and del or nil }
+      else
+        ch[k] = { v = v }
+      end
+    end
+  end
+  for k in pairs(old) do if new[k] == nil then any = true ch[k] = { x = true } end end
+  return any and ch or nil
+end
+
+--- a session with changes (S.diff's) put in: a new copy (the fields that didn't change are shared with base), or nil when
+--- the changes aren't the right shape. The result still has to pass S.valid, like a whole copy.
+S.PATCH_MAX = 2000
+function S.patch(base, ch)
+  if type(base) ~= "table" or type(ch) ~= "table" then return nil end
+  local t, n = {}, 0
+  for k, v in pairs(base) do t[k] = v end
+  for k, c in pairs(ch) do
+    n = n + 1
+    if n > 100 or type(k) ~= "string" or type(c) ~= "table" then return nil end
+    if c.x then
+      t[k] = nil
+    elseif c.s ~= nil then
+      if type(c.s) ~= "table" or type(base[k]) ~= "table" then return nil end
+      local inner, m = {}, 0
+      for ik, iv in pairs(base[k]) do inner[ik] = iv end
+      for ik, iv in pairs(c.s) do
+        m = m + 1
+        if m > S.PATCH_MAX then return nil end
+        inner[ik] = iv
+      end
+      if c.d ~= nil then
+        if type(c.d) ~= "table" or #c.d > S.PATCH_MAX then return nil end
+        for _, ik in ipairs(c.d) do inner[ik] = nil end
+      end
+      t[k] = inner
+    else
+      t[k] = c.v
+    end
+  end
+  return t
+end
+
 --- a session from another player, checked before it's trusted: right shape, known raid, sane numbers
 function S.valid(t)
   if type(t) ~= "table" or type(t.id) ~= "string" or type(t.leader) ~= "string" or type(t.rev) ~= "number" then return false end

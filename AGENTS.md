@@ -404,10 +404,23 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   something goes out while one is still going (#93, #96 for batches); `R.standings` works out ranks first (#94); finished
   master / batch bars switch their `OnUpdate` off (#95). Not done: lower priority for session copies (long messages at two
   priorities could interleave and be lost), unpacked tiny messages (older versions unpack everything).
-- **Next:** sending only what changed in a session instead of whole copies (unpacking them is now most of the work), if the
-  owner wants it: a new message kind, so older versions must still get full copies. Then a pass on how screens look (text
-  that runs into buttons or past its box), when the owner says. Bump `LR.VERSION` and the TOC to 1.0.0 once the owner has
-  tried it in the game. Keep an eye on WoW: Forever's new raids.
+- **Next:** the owner is testing in the game. Bump `LR.VERSION` and the TOC to 1.0.0 once that passes. On hold, from the owner's
+  list: a `/lr bug` report box, the winner passing (dropped: the loot master undoes and re-gives), rolls surviving a reload (a loot
+  master who drops out just rolls again), a Discord recap, drop history on the Reserve tab, "My night", opening reserves on zoning
+  in, splitting the loot list per dungeon run (instance numbers: lockout ids, or the zone part of mobs' GUIDs). Not wanted: less
+  contested picks, reading Gargul's reserves. Keep an eye on WoW: Forever's new raids.
+- **Only what changed** (#119; message `U` = { id, f, r, c = `S.diff` }, `S.patch`, `S.same`; feature bit `FEATURE_CHANGES` 8;
+  `Net.everyoneTakesChanges`): the leader keeps a copy of what it last sent each group channel (`groupSent`) and sends the changes
+  when everyone in the group with LootRuler has bit 8; a whole `T` goes first, to the guild, by whisper, from a new leader or one
+  handing it on, and every `SESSION_FULL_EVERY` sends. A raider whose copy is older than `f` (or who hasn't got it, or hears it
+  from someone who isn't its leader) asks the sender by whispered `Q` (answered with `T`), at most every 10 seconds. The patched
+  copy goes through `S.valid` and the same path as `T` (`accept`).
+- **From the owner's list** (#110, #113-#118): "Open a trade with the winner" off to start with; button rows wrap (`Flow:buttons`;
+  a UI test checks no button runs past its panel on any tab); the leader records loot from the game's loot lines when the master
+  looter has no LootRuler (`Drops.writer`); "Picked up" note for raiders (`UI/PickedUp.lua`, setting `pickedUp`); one reserve win
+  each (`s.ow`, `S.srWinsAll`, checked in `S.claims`); reserves locking by themselves (`Core/Lock.lua`, `s.al`, `UI.autoLockSheet`;
+  warnings `Lock.WARN`, a mark already passed when it was set isn't said late); the bench (`s.bn`, `S.setBench`, `S.cleanBench`,
+  `Guild.raidMembers(s)` adds the guild's benched players, `Guild.onlineOutside`, `UI.benchSheet`).
 - **Trades out of a group** (`Drops.tradeChannel`, `Drops.sayNearby`, `UI.sayPrompt` in `UI/Say.lua`, `LR.sayNow`): with no group, the
   trade line goes to SAY when I lead a session that hasn't ended (or a past GDKP owes this player). The game blocks addon /say
   outside instances unless a click started it, so there the lines wait on a "Say it" box (said with `LR.sayNow`, not the

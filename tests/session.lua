@@ -345,6 +345,34 @@ do
   check("a group can't take more than five; it still ends", n4 < 50 and in1 == 5, n4)
 end
 
+-- sending only what changed: a session's changes, put in to an older copy, give the newer one
+do
+  local a = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1000)
+  S.set(a, "Ann-Dreamscythe", "PRIEST", { 28528, 28530 }, false, 1001)
+  S.set(a, "Bob-Faerlina", "MAGE", { 28528 }, false, 1002)
+  S.addDrop(a, { k = "d1", i = 28528, b = "Moroes" }, 1003)
+  local old = U.copy(a)
+  S.set(a, "Ann-Dreamscythe", "PRIEST", { 28530 }, false, 1004)        -- (a reserve taken back)
+  S.set(a, "Cara-Dreamscythe", "DRUID", { 28529 }, false, 1005)        -- (a new player)
+  S.set(a, "Bob-Faerlina", "MAGE", {}, false, 1006)                    -- (a player gone)
+  S.addDrop(a, { k = "d2", i = 28530, b = "Moroes", n = 3 }, 1007)     -- (to the end of a list)
+  S.award(a, 28528, "Ann-Dreamscythe", "SR", 88, 1008, "d1")
+  a.url = nil
+  old.url = "https://softres.it/raid/x"                                -- (a field gone)
+  local ch = S.diff(old, a)
+  local b = S.patch(old, ch)
+  check("changes put in to the older copy give the newer one", ch and b and S.same(b, a))
+  check("only what changed is in them", ch.res and ch.res.s and ch.res.s["Cara-Dreamscythe"] and not ch.sr and ch.url and ch.url.x
+    and ch.drops.s[2] and not ch.drops.s[1])
+  check("nothing changed: nothing to send", S.diff(a, U.copy(a)) == nil)
+  check("the older copy isn't touched", old.url == "https://softres.it/raid/x" and #old.drops == 1)
+  check("changes that aren't the right shape are refused", S.patch(old, { res = { s = "x" } }) == nil and S.patch(old, { [5] = { v = 1 } }) == nil
+    and S.patch(old, "x") == nil and S.patch(old, { sr = 5 }) == nil)
+  local huge = {}
+  for i = 1, S.PATCH_MAX + 1 do huge[i] = i end
+  check("and so are too many", S.patch(old, { drops = { s = huge } }) == nil)
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)
