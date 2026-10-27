@@ -130,10 +130,27 @@ end
 function Guild.unlinkAlt(alt) return Guild.edit(function(book, now) return B.unlinkAlt(book, alt, now) end) end
 
 ---------------------------------------------------------------------- raid points
---- who in the group is in my guild (names)
-function Guild.raidMembers()
+--- who in the group is in my guild (names), and the session's bench from the guild after them (with how many benched)
+function Guild.raidMembers(s)
+  local out, here = {}, {}
+  for _, m in ipairs(LR.roster()) do
+    if Guild.rank(m.name) ~= nil then out[#out + 1] = m.name here[U.full(m.name):lower()] = true end
+  end
+  local benched = 0
+  for _, name in ipairs(s and s.bn or {}) do
+    if Guild.rank(name) ~= nil and not here[U.full(name):lower()] then out[#out + 1] = name benched = benched + 1 end
+  end
+  return out, benched
+end
+
+--- guild members who are online and not in the group, for the bench (names, at most 60)
+function Guild.onlineOutside()
   local out = {}
-  for _, m in ipairs(LR.roster()) do if Guild.rank(m.name) ~= nil then out[#out + 1] = m.name end end
+  for i = 1, GetNumGuildMembers() do
+    local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
+    if name and online and not LR.inGroup(name) and not U.samePlayer(name, U.me()) and #out < 60 then out[#out + 1] = name end
+  end
+  table.sort(out)
   return out
 end
 
@@ -146,7 +163,7 @@ end
 
 --- everyone from the guild in the group gets the points for a raid
 function Guild.raidPoints(s)
-  local who = Guild.raidMembers()
+  local who, benched = Guild.raidMembers(s)
   if #who == 0 then return false, "Nobody from your guild is in the group." end
   local ok, why = Guild.edit(function(book, now) return B.raidAttended(book, who, now) end)
   if not ok then return false, why end
@@ -156,7 +173,8 @@ function Guild.raidPoints(s)
   LR.db.ui.pointsGiven[raidKey(s)] = U.now()
   local book = LR.book()
   if IsInGroup() then
-    LR.Rolls.say(("Raid points: %s from %s got %d points each for boosted rolls."):format(U.plural(#who, "player"), book.guild, book.boost.perRaid))
+    LR.Rolls.say(("Raid points: %s from %s got %d points each for boosted rolls%s."):format(U.plural(#who, "player"), book.guild, book.boost.perRaid,
+      benched > 0 and (" (%d on the bench)"):format(benched) or ""))
   end
   return true
 end

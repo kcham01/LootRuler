@@ -91,6 +91,42 @@ end
 
 UI.importSheet = importSheet
 
+--- who's on the bench: guild members online and not in the group to tick, or names typed in
+function UI.benchSheet(s)
+  local on = {}
+  for _, name in ipairs(s.bn or {}) do on[name] = true end
+  local typed = ""
+  UI.openSheet("The bench", function(f, h)
+    f:text("Who came but sat out? They get the raid's points too, and count as there in the fairness history.")
+    local names = LR.Guild.onlineOutside()
+    for name in pairs(on) do if not U.indexOf(names, name) then names[#names + 1] = name end end
+    table.sort(names)
+    if #names == 0 then f:note("Nobody from your guild is online outside the group. Type names below.") end
+    local chips = {}
+    for _, name in ipairs(names) do
+      chips[#chips + 1] = { tick = true, label = U.short(name), on = on[name] or false, click = function() on[name] = not on[name] or nil h.redraw(true) end }
+    end
+    if #chips > 0 then f:chips(chips) end
+    f:text("Or type names", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+    local e = K.get(f.owner, "edit", f.parent)
+    f:place(e, 22, 6, f.width - 12)
+    e:SetText(typed)
+    K.setHint(e, "Names, with commas between them")
+    K.onText(e, function(self) typed = self:GetText() end)
+    f:gap(8)
+    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = "Save", click = function()
+      for name in typed:gmatch("[^,%s]+") do on[U.full(name)] = true end
+      local list = {}
+      for name in pairs(on) do list[#list + 1] = name end
+      table.sort(list)
+      if #list > LR.Session.BENCH_MAX then UI.toast(("At most %d on the bench."):format(LR.Session.BENCH_MAX)) return end
+      h.close()
+      LR.setBench(s, list)
+      UI.toast(#list > 0 and ("%s on the bench."):format(U.plural(#list, "player")) or "Nobody on the bench.")
+    end } })
+  end)
+end
+
 --- when reserves lock by themselves: in some minutes, or at a time of day
 function UI.autoLockSheet(s)
   local typed = ""
@@ -356,10 +392,16 @@ local function manage(f, s)
       if LR.canEditBook() then
         local given = LR.Guild.pointsGiven(s)
         p:buttons({ { label = given and "Give raid points again" or "Give raid points", click = function() UI.giveRaidPoints(s) end } }, "left")
-        p:note(given and "You've given this raid its points." or "Everyone from the guild in the group gets them. You can also give them when you end the session.")
+        p:note(given and "You've given this raid its points." or "Everyone from the guild in the group gets them, and the bench. You can also give them when you end the session.")
       else
         p:note("An officer gives the raid its points (Guild tab).")
       end
+      -- the bench: players who came but sat out get the raid's points too, and count as there
+      local bench = s.bn or {}
+      p:text("The bench", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+      p:note(#bench > 0 and ("%s: %s."):format(U.plural(#bench, "player"), table.concat(U.map(bench, U.short), ", "))
+        or "Nobody. Players on the bench get the raid's points too, and count as there in the fairness history.")
+      p:buttons({ { label = #bench > 0 and "Change the bench" or "Bench players", click = function() UI.benchSheet(s) end } }, "left")
     end)
   end
 
@@ -394,12 +436,12 @@ local function manage(f, s)
           end)
           return
         end
-        if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers() > 0 then
+        if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers(s) > 0 then
           -- the end of a raid is when its points are usually given
           UI.openSheet("End the session", function(sf, h)
             sf:text(text)
             sf:note(("This raid's points haven't been given yet (%d each for %s from the guild)."):format(LR.book().boost.perRaid,
-              U.plural(#LR.Guild.raidMembers(), "player")), K.GOLD)
+              U.plural(#LR.Guild.raidMembers(s), "player")), K.GOLD)
             sf:gap(6)
             sf:buttons({
               { label = "Cancel", click = function() h.close() end },
