@@ -34,13 +34,13 @@ local function lootPatterns()
   return patterns
 end
 
---- who got what, from a loot message: "Name-Realm", item link (or nil)
+--- who got what, from a loot message: "Name-Realm", item link (or nil), how many
 function Drops.parseLoot(line)
   for _, p in ipairs(lootPatterns()) do
-    local a, b = tostring(line or ""):match(p[1])
+    local a, b, c = tostring(line or ""):match(p[1])
     if a then
-      if p[2] then return U.me(), a end
-      return U.full(a), b
+      if p[2] then return U.me(), a, tonumber(b) or 1 end
+      return U.full(a), b, tonumber(c) or 1
     end
   end
 end
@@ -100,6 +100,22 @@ end
 Drops.newKey = newKey
 
 ---------------------------------------------------------------------- corpses (master loot)
+--- every item on the open corpse that isn't grey (vendor trash), whatever the loot threshold:
+--- { { slot, id, link, quality, n = how many } }
+function Drops.corpse()
+  local out = {}
+  for slot = 1, GetNumLootItems() do
+    local link = LootSlotHasItem(slot) and GetLootSlotLink(slot)
+    local id = link and tonumber(link:match("item:(%d+)"))
+    if id then
+      local _, _, n, _, quality = GetLootSlotInfo(slot)
+      quality = quality or qualityOf(link, id)
+      if quality >= 1 then out[#out + 1] = { slot = slot, id = id, link = link, quality = quality, n = tonumber(n) or 1 } end
+    end
+  end
+  return out
+end
+
 --- the loot window opened on the master looter's screen (Core/Rolls.lua tells us): anything new in it goes on the list
 function Drops.lootOpened()
   Drops.slotKeys = {}
@@ -109,8 +125,7 @@ function Drops.lootOpened()
   local src = target and UnitGUID("target") or "corpse"
   local boss = target and UnitName("target") or nil
   -- what's here, and which drops from this corpse are still on it
-  local here = {}
-  for _, it in ipairs(Rolls.loot()) do here[#here + 1] = it end
+  local here = Drops.corpse()
   local onCorpse = {}
   for _, d in ipairs(s.drops or {}) do
     if d.src == src and not d.h and not S.dropWin(s, d.k) then
@@ -125,7 +140,7 @@ function Drops.lootOpened()
       Drops.slotKeys[it.slot] = table.remove(known, 1)          -- seen it before: the corpse was opened again
     else
       local from = boss or (LR.dropsFrom(s.raid, it.id)[1]) or ""
-      local d = { k = newKey(it.id), i = it.id, b = from, at = U.now(), by = U.me(), src = src }
+      local d = { k = newKey(it.id), i = it.id, b = from, at = U.now(), by = U.me(), src = src, n = it.n > 1 and it.n or nil }
       new[#new + 1] = d
       d.q = it.quality
       d.link = it.link
@@ -142,7 +157,7 @@ end
 function Drops.announce(s, list)
   local ch = LR.groupChannel()
   if not ch or not LR.db.settings.announceLoot then return end
-  for _, d in ipairs(list) do
+  for _, d in ipairs(list) do if not LR.minorLoot(s, d.i) then
     local hr = s.hr[d.i]
     local who = {}
     for _, w in ipairs(S.byItem(s)[d.i] or {}) do
@@ -159,7 +174,7 @@ function Drops.announce(s, list)
     if line then
       for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, ch) end
     end
-  end
+  end end
 end
 
 --- the drop in a slot of the open loot window (nil when not known)
@@ -170,7 +185,8 @@ function Drops.forSlot(slot) return Drops.slotKeys[slot] end
 --- group loot (no master looter): an item someone won with the game's Need / Greed counts as given out (Settings:
 --- recordGroupWins, off to start with; epic and better). Their reserve, when they had one on it, else main spec.
 local function recordGroupWin(s, key, id, who, q)
-  if not LR.db.settings.recordGroupWins or not LR.isLeader(s) or LR.masterLooter() or (q or 0) < 4 or S.dropWin(s, key) then return end
+  if not LR.db.settings.recordGroupWins or not LR.isLeader(s) or LR.masterLooter() or (q or 0) < 4 or S.dropWin(s, key)
+    or LR.minorLoot(s, id) then return end
   local kind = S.claims(s, who, id) > 0 and "SR" or "MS"
   if S.award(s, id, who, kind, nil, U.now(), key) then
     LR.leaderChanged(s)
@@ -179,7 +195,7 @@ local function recordGroupWin(s, key, id, who, q)
 end
 
 function Drops.lootMessage(line)
-  local who, link = Drops.parseLoot(line)
+  local who, link, n = Drops.parseLoot(line)
   local id = idOf(link)
   if not who or not id then return end
   local s = writer()
@@ -205,12 +221,13 @@ function Drops.lootMessage(line)
     end
     return
   end
-  -- not seen dropping (group loot, or picked up before LootRuler was watching): raid loot only
+  -- not seen dropping (group loot, below the loot threshold, or picked up before LootRuler was watching): anything that
+  -- isn't grey (vendor trash)
   local q = qualityOf(link, id)
-  if q < 3 or not (LR.raidHas(s.raid, id) or q >= 4) then return end
+  if q < 1 then return end
   local ml = LR.masterLooter()
   local key = newKey(id)
-  save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now() } })
+  save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })
   recordGroupWin(s, key, id, who, q)
 end
 
@@ -244,7 +261,7 @@ function Drops.tradeWarnings()
   local s = Rolls.session()
   if not s or not LR.db.settings.tradeWarn then return out end
   for _, d in ipairs(s.drops or {}) do
-    local left = d.h and U.samePlayer(d.h, U.me()) and Drops.tradeLeft(d)
+    local left = d.h and U.samePlayer(d.h, U.me()) and not LR.minorLoot(s, d.i) and Drops.tradeLeft(d)
     local state, w = S.dropState(s, d)
     if left and left > 0 and (state == "held" or state == "toTrade") then
       local mark
@@ -279,7 +296,7 @@ function Drops.holding()
   local s = Rolls.session()
   if not s then return out end
   for _, d in ipairs(s.drops or {}) do
-    local left = d.h and U.samePlayer(d.h, U.me()) and Drops.tradeLeft(d)
+    local left = d.h and U.samePlayer(d.h, U.me()) and not LR.minorLoot(s, d.i) and Drops.tradeLeft(d)
     if left and left > 0 then
       local state, w = S.dropState(s, d)
       if state == "held" or state == "toTrade" then out[#out + 1] = { d = d, state = state, left = left, to = w and w.p } end
@@ -311,7 +328,7 @@ function Drops.toDeliver(player)
   local s = Rolls.session()
   if not s then return out end
   for _, d in ipairs(s.drops or {}) do
-    if d.h and U.samePlayer(d.h, U.me()) then
+    if d.h and U.samePlayer(d.h, U.me()) and not LR.minorLoot(s, d.i) then
       local state, w = S.dropState(s, d)
       if state == "toTrade" and (not player or U.samePlayer(w.p, player)) then out[#out + 1] = { d, w.p } end
     end

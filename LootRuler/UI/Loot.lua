@@ -288,7 +288,11 @@ function UI.lootView(f, s)
     pastRaids(f)
     return
   end
-  local drops = s.drops or {}
+  -- the loot to roll for, and everything else that dropped (counted: LR.minorLoot)
+  local drops, minor = {}, {}
+  for _, d in ipairs(s.drops or {}) do
+    if LR.minorLoot(s, d.i) then minor[#minor + 1] = d else drops[#drops + 1] = d end
+  end
   local runner = LR.canRunLoot()
   local leader = LR.isLeader(s)
   local given, toRoll = 0, 0
@@ -296,12 +300,12 @@ function UI.lootView(f, s)
     local state = S.dropState(s, d)
     if state == "given" or state == "toTrade" or state == "looted" then given = given + 1 else toRoll = toRoll + 1 end
   end
-  if #drops == 0 then
+  if #drops == 0 and #minor == 0 then
     f:panel("The raid's loot", function(p)
       p:text("Nothing has dropped yet. Items show up here as the loot master opens corpses (with master loot on), or as people loot them.")
       if runner then p:note("You can roll things out straight away, or keep them in your bags and roll them out from here at the end. The game lets you trade raid loot for 2 hours after you loot it.") end
     end)
-  else
+  elseif #drops > 0 then
     f:note(("%s dropped, %d given out, %d still to roll for."):format(U.plural(#drops, "item"), given, toRoll), toRoll > 0 and K.GOLD or K.GREEN)
   end
   if s.won and #s.won > 0 then
@@ -357,6 +361,46 @@ function UI.lootView(f, s)
     f:place(hd, 22)
     f:gap(3)
     for _, d in ipairs(byBoss[boss]) do dropRow(f, s, d, runner, leader) end
+    f:gap(6)
+  end
+
+  -- everything else that dropped, counted: one row per item, with who looted how many
+  if #minor > 0 then
+    local order, by = {}, {}
+    for _, d in ipairs(minor) do
+      local x = by[d.i]
+      if not x then x = { id = d.i, n = 0, who = {}, whoOrder = {}, left = 0 } by[d.i] = x order[#order + 1] = x end
+      local n = d.n or 1
+      x.n = x.n + n
+      if d.h then
+        if not x.who[d.h] then x.who[d.h] = 0 x.whoOrder[#x.whoOrder + 1] = d.h end
+        x.who[d.h] = x.who[d.h] + n
+      else x.left = x.left + n end
+    end
+    local hd = K.get(f.owner, "head", f.parent)
+    hd.text:SetText("Everything else that dropped")
+    local total = 0
+    for _, x in ipairs(order) do total = total + x.n end
+    hd.right:SetText(U.plural(total, "item"))
+    hd:SetWidth(f.width)
+    f:place(hd, 22)
+    f:gap(3)
+    for _, x in ipairs(order) do
+      local parts = {}
+      for i, name in ipairs(x.whoOrder) do
+        if i > 4 then parts[#parts + 1] = ("%d more"):format(#x.whoOrder - 4) break end
+        parts[#parts + 1] = who(name, s) .. (x.who[name] > 1 and (" (" .. x.who[name] .. ")") or "")
+      end
+      local line = #parts > 0 and ("Looted by " .. table.concat(parts, ", ")) or ""
+      if x.left > 0 then line = line .. (line ~= "" and "; " or "") .. x.left .. " on the corpse" end
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(x.id), LR.coloredName(x.id), line, "|cffffffffx" .. x.n .. "|r")
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, x.id) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      b:SetScript("OnClick", function() UI.modifiedClick(LR.itemLink(x.id)) end)
+      f:place(b, 36)
+      f:gap(2)
+    end
     f:gap(6)
   end
 

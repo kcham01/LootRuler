@@ -638,8 +638,9 @@ function S.addDrop(s, d, now)
   end
   s.drops = s.drops or {}
   if #s.drops >= S.MAX_DROPS then return false end
+  local n = tonumber(d.n)
   s.drops[#s.drops + 1] = { k = d.k, i = d.i, b = str(d.b) or "", at = tonumber(d.at) or now, by = str(d.by), src = str(d.src),
-    h = str(d.h), ht = tonumber(d.ht) }
+    h = str(d.h), ht = tonumber(d.ht), n = n and n > 1 and math.min(math.floor(n), 1000) or nil }   -- (n: a stack of them)
   bump(s, now)
   return true
 end
@@ -742,6 +743,7 @@ function S.valid(t)
     if type(t.drops) ~= "table" or #t.drops > S.MAX_DROPS then return false end
     for _, d in ipairs(t.drops) do
       if type(d) ~= "table" or type(d.k) ~= "string" or type(d.i) ~= "number" or type(d.b) ~= "string" then return false end
+      if d.n ~= nil and (type(d.n) ~= "number" or d.n < 1 or d.n > 1000) then d.n = nil end
     end
   end
   for id, h in pairs(t.hr) do if type(id) ~= "number" or type(h) ~= "table" then return false end end

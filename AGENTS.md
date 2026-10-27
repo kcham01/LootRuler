@@ -425,6 +425,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   leader entering another raid, or its raid after the lockout it was for ended (`s.le`, from `GetSavedInstanceInfo` on
   `UPDATE_INSTANCE_INFO`), is asked to start a new session (the old one ends and is archived). The test server has places
   (`Server.PLACES`, `srv.where`, `p.where`, `Server:enter`) and lockouts (`p.saved`); loot and UI tests run in Karazhan.
+- **Everything that drops is counted** (#112; `LR.minorLoot(s, id)`, `Drops.corpse()`, drops' `n` = a stack): every non-grey item on a
+  corpse (whatever the loot threshold) and in loot messages goes on the list. "Minor" items (not in the raid's lists, not worn, not
+  a recipe, below epic unless a trade good) are shown counted on the Loot tab ("Everything else that dropped"), and left out of
+  announcements, `Drops.holding`, `toDeliver`, trade warnings and group-loot awards. The test server has stacks (`openLoot` items'
+  third value, `lootTo(p, id, count)`) and `C_Item.GetItemInfoInstant` (from `srv.itemInfo`'s `equip` and `class`).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test) The softres.it import box couldn't be typed in. Memos (`K.setEditMemo`) now raise their
     inner frames above the memo (the pool raises only the outer frame), focus on a click anywhere in them, take any length,

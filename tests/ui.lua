@@ -28,8 +28,11 @@ do
   chunk("LootRuler", DATA)
 end
 local QHEX = { [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000" }
+local EXTRA = { [30183] = { "Nether Vortex", 4, 7 }, [21877] = { "Netherweave Cloth", 1, 7 } }    -- (not in the loot lists; class 7: trade goods)
 srv.itemInfo = function(id)
   local it = DATA.ITEMS[id]
+  local x = EXTRA[id]
+  if x then return { name = x[1], quality = x[2], class = x[3], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[x[2]] or "ffffff", id, x[1]) } end
   if not it then return nil end
   return { name = it[1], quality = it[2], link = ("|cff%s|Hitem:%d::::::::70:::::|h[%s]|h|r"):format(QHEX[it[2]] or "ffffff", id, it[1]) }
 end
@@ -536,13 +539,25 @@ run("rolling out loot", function()
   LR.UI.show("reserves")
   srv:tick(0.3)
   check("a reserve that's won its item shows it on the Reserves tab", visible("Ann (won)"))
+  srv:lootTo(bob, 30183, 2)
+  srv:lootTo(ann, 21877, 4)
+  srv:tick(1)
   LR.UI.go("loot")
   srv:tick(0.3)
+  check("everything else that dropped is counted below", visible("Everything else that dropped") and visible("Nether Vortex")
+    and visible("Looted by Bob-Faerlina (2)") and visible("x4"))
   check("the Loot tab lists what dropped, boss by boss", visible("4 items dropped, 1 given out, 3 still to roll for") and visible("Moroes"))
   check("with who won what", visible("Won by Ann (SR 88)"))
   check("and what's still on the corpse, and who reserved it", visible("On the corpse. Hard reserved for Ann") and visible("On the corpse. SR: Pug"))
   check("the loot master can roll things out from it", #find("Roll") >= 3)
   shot("loot-tab")
+  do        -- (scrolled down: everything else that dropped)
+    local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
+    local sf = scrollers(G.LootRulerFrame, {})[1]
+    sf:SetVerticalScroll(sf:GetVerticalScrollRange())
+    shot("loot-tab-counted")
+    sf:SetVerticalScroll(0)
+  end
   clickText("Roll")
   local fromTab = LR.Rolls.mine()
   check("its Roll button rolls that item out", fromTab and fromTab.state == "open" and fromTab.drop ~= nil)
@@ -1846,7 +1861,7 @@ run("the practice raid", function()
   LR.UI.go("test")
   clickText("A boss drops loot")
   srv:tick(0.5)
-  check("a boss drops loot into my bags", #ps.drops == 3)
+  check("a boss drops loot into my bags (and something to count)", #ps.drops == 4)
   clickText("Roll out the next item")
   srv:tick(8)
   local pr = LR.Rolls.mine()
