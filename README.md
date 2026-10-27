@@ -167,7 +167,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 
 **Holding and trading items:**
 
-- **Trade timers:** a small window for the loot master with a bar for each item in their bags still to roll out or trade, and how long is left of the 2 hours (green, then yellow at 30 minutes, red at 15). Click one to roll it out, or, once it's won, to open a trade with the winner. Right-click to give it without a roll. Drag it anywhere. The x hides it until another item comes in. **Post** (or `/lr held`) puts the list in raid chat, with the time left on each.
+- **Trade timers** (switch them on in Settings): a small window for the loot master with a bar for each item in their bags still to roll out or trade, and how long is left of the 2 hours (green, then yellow at 30 minutes, red at 15). Click one to roll it out, or, once it's won, to open a trade with the winner. Right-click to give it without a roll. Drag it anywhere. The x hides it until another item comes in. **Post** (or `/lr held`) puts the list in raid chat, with the time left on each.
 - **The 2 hours to trade:** for items the loot master is holding, a message in the middle of their screen 15 minutes before they can't be traded any more, and again at 5: which item, who it's for, or that it hasn't been rolled out yet.
 
 **Other ways loot is handed out:**
@@ -205,7 +205,7 @@ The **Loot** tab lists everything that has dropped this raid, boss by boss, for 
 </p>
 
 - **Roll now or at the end.** The loot master can roll an item out as soon as it drops, or give it to themselves, keep going, and roll it out from the Loot tab later. The game lets you trade raid loot for 2 hours after you loot it, so the list shows how long is left.
-- **Trade help.** Switch on "Open a trade with the winner" (Settings, off to start with) and giving out an item the loot master is holding opens a trade with the winner when they're close (too far away, they're whispered to come and trade). When the trade opens (either of them can open it), LootRuler puts their item in the trade window. When the trade goes through, the list shows they have it. A "To trade" list shows the loot master what they still have to hand over. You can turn this off.
+- **Trade help.** Switch on "Open a trade with the winner" (Settings, off to start with) and giving out an item the loot master is holding opens a trade with the winner when they're close (too far away, they're whispered to come and trade). Switch on "Put won items in trades for me" too, and when the trade opens (either of them can open it), LootRuler puts their item in the trade window. When the trade goes through, the list shows they have it. A "To trade" list shows the loot master what they still have to hand over. You can turn this off.
 - **Any loot method.** With master loot the loot master's addon writes down each corpse's loot (opening a corpse again doesn't list it twice). With group loot the leader's addon writes down the epics people loot.
 - **Mistakes:** the leader can right-click an item to take it off the list, or take an award off.
 - **Change an award** (the leader): click a given-out item on the Loot tab to change who got it, or how (their reserve, main spec, off spec, to disenchant). The raid is told, and reserves used, +1s and who has it to trade follow.

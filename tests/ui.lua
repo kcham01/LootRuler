@@ -2144,6 +2144,8 @@ run("who has LootRuler", function()
 end)
 
 run("trade timers", function()
+  check("off to start with", not LR.db.settings.tradeTimers)
+  LR.db.settings.tradeTimers = true
   local ts = LR.startSession("Karazhan", 2, true, false)
   srv:tick(1)
   for _, id in ipairs({ 28762, 28767, 28745 }) do srv:lootTo(lead, id) end

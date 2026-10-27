@@ -44,7 +44,8 @@ From the owner's in-game screenshots.
   Going into a different raid, or into its raid on a new lockout, asks whether to start a new session there (it can be
   switched off). ([#111](https://github.com/kcham01/LootRuler/pull/111))
 - "Open a trade with the winner" is off to start with (Settings, "Giving out and trading"). Settings you already saved
-  stay as they are. ([#110](https://github.com/kcham01/LootRuler/pull/110))
+  stay as they are. ([#110](https://github.com/kcham01/LootRuler/pull/110)) So are "Put won items in trades for me" and
+  "Trade timers on screen". ([#120](https://github.com/kcham01/LootRuler/pull/120))
 - Picking a disenchanter tells the raid who it is ("Dan is the disenchanter: items nobody wants go to them."), and taking
   them off says so too. ([#109](https://github.com/kcham01/LootRuler/pull/109))
 

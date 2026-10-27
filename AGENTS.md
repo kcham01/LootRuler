@@ -238,7 +238,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   A tie on one is rolled again the same way. A win on one is an award of kind `OS` with `xn` = its name (`X` messages carry
   `xn`), so older versions read it as off spec. Older raiders' windows don't show the buttons, and count those rolls as
   wrong rolls on their own screen; the loot master's addon decides. The Test tab's pretend roll shows them.
-- **Trade timers** (`UI/Timers.lua`, `Drops.holding`, setting `tradeTimers`, on to start with): a window listing the loot master's
+- **Trade timers** (`UI/Timers.lua`, `Drops.holding`, setting `tradeTimers`, off to start with since #120): a window listing the loot master's
   held and to-trade items, soonest first, with a bar of the 2 hours; click rolls out (held) or `Drops.openTrade` (won), right-click
   `UI.giveSheet`. Redrawn on session, loot and roll changes, and every 15 seconds while it's up (no `OnUpdate`). Its x hides
   it until a new item comes in. Saved position: `db.ui.timersPoint`.
