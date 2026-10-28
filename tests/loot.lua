@@ -1794,6 +1794,85 @@ do
   for _, p in ipairs({ rl, zoe, mel }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("loot given out with Gargul")
+-- the raid leader runs Gargul and master loot, not LootRuler; a raider leads LootRuler's reserves. Gargul's lines (as the
+-- owner saw them in a raid, " Gargul : " in front) put what it gives out on the list of loot given out
+do
+  local srv6 = Server.new(".")
+  srv6.itemInfo = srv.itemInfo
+  srv6.where = Server.PLACES.Karazhan
+  local rl = srv6:client({ name = "Rhea", class = "PALADIN" })
+  local zoe = srv6:client({ name = "Zoe", class = "PRIEST" })
+  local gus = srv6:player({ name = "Gus", class = "ROGUE" })            -- (Gargul, no LootRuler)
+  local pug = srv6:player({ name = "Pug", class = "WARRIOR" })
+  local bob = srv6:player({ name = "Bob", realm = "Faerlina", class = "MAGE" })
+  srv6:setGroup({ gus, rl, zoe, pug, bob }, gus, true)
+  srv6:setMasterLooter(gus)
+  srv6:tick(6)
+  local ks = rl.LR.startSession("Karazhan", 2, true, false)
+  rl.LR.leaderAdd(ks, full(zoe), "PRIEST", 28570)
+  srv6:tick(2)
+  local function wonBy(id) for _, w in ipairs(ks.won or {}) do if w.i == id then return w end end end
+  local function says(p, text, channel) srv6:chatMessage(p, " Gargul : " .. text, channel or "RAID") srv6:tick(1) end
+  srv6:lootTo(gus, 28570)                    -- Gus keeps the cloak to give out
+  srv6:tick(1)
+  says(gus, "You have 10 seconds to roll on " .. srv6:link(28570) .. " - /roll for MS or /roll 99 for OS", "RAID_WARNING")
+  check("Gargul's roll, with its name in front, gives Zoe a roll window", zoe.LR.Rolls.lastGargul and zoe.LR.Rolls.lastGargul.id == 28570
+    and zoe.LR.Rolls.lastGargul.state == "open")
+  says(gus, "Stop your rolls!", "RAID_WARNING")
+  check("and \"Stop your rolls!\" ends it", zoe.LR.Rolls.lastGargul.state ~= "open")
+  says(gus, srv6:link(28570) .. " was awarded to Zoe. Congrats!")
+  local w = wonBy(28570)
+  check("Gargul's line puts it on the list of loot given out: to Zoe, her reserve, on the drop Gus has", w and w.p == full(zoe)
+    and w.k == "SR" and w.d and rl.LR.Session.drop(ks, w.d).h == full(gus))
+  check("so the Loot tab shows Gus has to trade it to her", rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, w.d)) == "toTrade",
+    rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, w.d)))
+  check("raiders see it too", zoe.LR.current().won and #zoe.LR.current().won == 1)
+  says(gus, srv6:link(28570) .. " was awarded to Zoe. Congrats!")
+  says(gus, "I gave " .. srv6:link(28570) .. " to " .. full(zoe))
+  check("said again, or \"I gave it to\", it's on the list once", #ks.won == 1)
+  -- awarded before anyone looted it: the loot master loots it later, to trade over
+  says(gus, srv6:link(29760) .. " was awarded to Bob. Congrats!")
+  check("someone from another realm named without it is found", wonBy(29760) and wonBy(29760).p == full(bob) and wonBy(29760).d == nil,
+    wonBy(29760) and (wonBy(29760).p .. " " .. tostring(wonBy(29760).d)))
+  srv6:lootTo(gus, 29760)
+  srv6:tick(1)
+  check("when Gus loots it, the award is that drop: his to trade to Bob", wonBy(29760).d ~= nil and #ks.drops == 2
+    and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(29760).d)) == "toTrade")
+  local line = rl.M.plain(rl.LR.UI.dropLine(ks, rl.LR.Session.drop(ks, wonBy(29760).d)))
+  check("the Loot tab just says who won it: Gus has no LootRuler, so his trade can't be seen", line:find("^Won by Bob") ~= nil
+    and not line:find("to trade", 1, true), line)
+  -- the trade, later in the night: only Gus and Bob see it, but Gargul says so
+  srv6:tick(900)
+  says(gus, "I gave " .. srv6:link(29760) .. " to " .. full(bob))
+  check("traded later: Gargul's \"I gave\" marks it handed over, on the same award", #ks.won == 2
+    and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(29760).d)) == "given" and rl.LR.Session.drop(ks, wonBy(29760).d).h == full(bob))
+  -- given straight from the loot window: the game's loot line says who got it
+  says(gus, srv6:link(28477) .. " was awarded to Zoe. Congrats!")
+  srv6:lootTo(zoe, 28477)
+  srv6:tick(1)
+  check("given from the loot window: hers, nothing left to trade", wonBy(28477) and wonBy(28477).d
+    and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(28477).d)) == "given")
+  says(gus, "I gave " .. srv6:link(28477) .. " to " .. full(zoe))
+  check("and Gargul saying so after changes nothing", #ks.won == 3, #ks.won)
+  rl.LR.unaward(ks, #ks.won)
+  says(gus, "I gave " .. srv6:link(28454) .. " to " .. full(pug))
+  check("\"I gave [item] to Pug\" counts on its own too", wonBy(28454) and wonBy(28454).p == full(pug))
+  rl.LR.unaward(ks, #ks.won)
+  -- off spec, when the line says so; nobody's reserve: main spec
+  says(gus, srv6:link(28453) .. " was awarded to Pug (OS). Congrats!")
+  check("off spec when Gargul says so", wonBy(28453) and wonBy(28453).k == "OS" and wonBy(28453).p == full(pug))
+  says(gus, srv6:link(28477) .. " was awarded to Pug. Congrats!", "RAID")
+  check("else main spec", wonBy(28477) and wonBy(28477).k == "MS")
+  -- someone who can't run loot can't put things on the list by typing the line
+  says(pug, srv6:link(28454) .. " was awarded to Pug. Congrats!", "RAID")
+  check("only from someone who may run loot", wonBy(28454) == nil)
+  rl.LR.db.settings.recordGargul = false
+  says(gus, srv6:link(28454) .. " was awarded to Pug. Congrats!")
+  check("it can be switched off", wonBy(28454) == nil)
+  for _, p in ipairs({ rl, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 section("trades out of a group are said nearby")
 -- its own little world: the loot master on their own (the raid's over), trading with a raider
 local srv2 = Server.new(".")
