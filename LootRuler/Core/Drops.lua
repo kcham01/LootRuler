@@ -69,6 +69,7 @@ end
 local function writer()
   local s = Rolls.session()
   if not s or not IsInGroup() or not Drops.here(s) then return nil end
+  if s.pv then return LR.isLeader(s) and s or nil end            -- (my private session: everything I see goes on it)
   local ml = LR.masterLooter()
   if ml and LR.isMasterLooter() then return s end
   -- a master looter without LootRuler: the leader writes it down, from the game's own loot messages only
@@ -191,7 +192,7 @@ end
 --- anything reserved, one line each, saying who reserved it or who it's hard reserved for. Settings: announceLoot.
 function Drops.announce(s, list)
   local ch = LR.groupChannel()
-  if not ch or not LR.db.settings.announceLoot then return end
+  if not ch or not LR.db.settings.announceLoot or s.pv then return end
   for _, d in ipairs(list) do if not LR.minorLoot(s, d.i) then
     local hr = s.hr[d.i]
     local who = {}
@@ -575,7 +576,7 @@ function Drops.tradeChannel(partner)
   if IsInGroup() then return LR.canRunLoot() and LR.groupChannel() or nil end
   if LR.Practice.on then return nil end
   for _, s in pairs(LR.db.sessions) do
-    if not s.ended and not s.practice and LR.isLeader(s) then return "SAY" end
+    if not s.ended and not s.practice and not s.pv and LR.isLeader(s) then return "SAY" end
   end
   if partner and LR.History.owing(partner) then return "SAY" end
 end

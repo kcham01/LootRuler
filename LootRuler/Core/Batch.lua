@@ -99,6 +99,7 @@ end
 --- puts items up together. items: { { id, link, slot, drop } } (2 to B.MAX). Returns the batch, or nil and why.
 function B.start(items, secs)
   local s = Rolls.session()
+  if s and s.pv then return nil, Rolls.PRIVATE end
   if not (s and s.gdkp and s.gk) then return nil, "Several auctions at once is for a GDKP: turn it on on the Session tab." end
   if not LR.canRunLoot() then return nil, "Only the master looter can auction loot (or the raid leader, without master loot)." end
   local cur = Rolls.current

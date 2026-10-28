@@ -378,6 +378,20 @@ do
   for i, p in ipairs(raiders) do p.LR.reserve(p.LR.current(), ITEMS[i]) srv:tick(0.3) end
   srv:tick(2)
   local resBefore = snapshot(s.res)
+  -- a raider keeps a private session (only on their screen): nothing that comes in may make it say or send anything
+  local priv = raiders[3]
+  local pv = priv.LR.startPrivate("Karazhan", 2, true)
+  local privSent = 0
+  local addonMessage = srv.addonMessage
+  srv.addonMessage = function(self, from, prefix, text, channel, target)
+    if from == priv and prefix == "LootRuler" then
+      local m = priv.LR.Net.decode(text)
+      if not (m and (m.t == "V" or m.t == "Q")) then privSent = privSent + 1 end
+    end
+    return addonMessage(self, from, prefix, text, channel, target)
+  end
+  local privSaid = 0
+  for _, m in ipairs(srv.chat) do if m.from == Server.full(priv) then privSaid = privSaid + 1 end end
   for _, p in ipairs(all) do if p.client then p.LR.db.settings.autoTrade, p.LR.db.settings.tradeHelp = true, true end end
   local setBefore = {}
   for _, p in ipairs(all) do if p.client then setBefore[p] = snapshot(p.LR.db.settings) end end
@@ -386,11 +400,11 @@ do
   local ARGS = { "", " 0", " -5", " 999999999", " 1.5k", " #9 300", " #0 1", " Lead", " Stranger", " " .. srv:link(ITEMS[1]),
     " " .. srv:link(ITEMS[1]) .. " " .. srv:link(ITEMS[2]), " |cffff0000|Hitem:0|h[]|h|r", " for", (" x"):rep(100), " %s%d%%", " \0" }
   local sent = 0
-  local function burst(who, how)
+  local function burst(who, how, to)
     for _, c in ipairs(CMDS) do
       for _, a in ipairs(ARGS) do
         local text = ("!lr " .. c .. a):sub(1, 255)
-        if how == "WHISPER" then srv:whisper(who, lead, text) else srv:chatMessage(who, text, "RAID") end
+        if how == "WHISPER" then srv:whisper(who, to or lead, text) else srv:chatMessage(who, text, "RAID") end
         sent = sent + 1
       end
       srv:tick(0.5)
@@ -398,7 +412,7 @@ do
   end
   clearErrors(all)
   local ms = cost(function()
-    burst(pugs[1], "WHISPER") burst(pugs[1], "RAID") burst(outsider, "WHISPER") burst(raiders[1], "RAID")
+    burst(pugs[1], "WHISPER") burst(pugs[1], "RAID") burst(outsider, "WHISPER") burst(raiders[1], "RAID") burst(pugs[2], "WHISPER", priv)
     -- and raid chat lines that look like the game's or Gargul's
     for _, line in ipairs({ "Lead rolls 100 (1-100)", "Aldric rolls 100 (100-100)", " Gargul : Stop your rolls!",
       (" Gargul : %s was awarded to Brenna. Congrats!"):format(srv:link(ITEMS[1])), "#1 999999999", "bid 0", "1.5k", "999999999999" }) do
@@ -417,8 +431,14 @@ do
   for p, before in pairs(setBefore) do if not same(before, p.LR.db.settings) then changedSet = changedSet + 1 end end
   if changedSet > 0 then problem("broken whispers changed %d players' settings", changedSet) end
   if #(s.won or {}) > 0 then problem("broken whispers or chat lines made %d winners", #s.won) end
+  srv.addonMessage = addonMessage
+  local privNow = 0
+  for _, m in ipairs(srv.chat) do if m.from == Server.full(priv) then privNow = privNow + 1 end end
+  local privOk = privSent == 0 and privNow == privSaid and #(pv.won or {}) == 0 and lead.LR.session(pv.id) == nil
+  if not privOk then problem("a private session sent %d messages, said %d lines, has %d winners, or reached the leader", privSent, privNow - privSaid, #(pv.won or {})) end
   say("%d broken !lr commands and lookalike lines (by whisper and raid chat, from a pug, a raider and someone outside the group): %.0f ms for the whole raid here", sent, ms)
   say("no errors, nobody else's reserves changed, no setting changed, no winner made: %s", (errs == 0 and others == 0 and changedSet == 0 and #(s.won or {}) == 0) and "yes" or "NO")
+  say("a raider's private session (whispered too) sent nothing, said nothing and has no winner: %s", privOk and "yes" or "NO")
 end
 
 ---------------------------------------------------------------------- 2. the biggest raid

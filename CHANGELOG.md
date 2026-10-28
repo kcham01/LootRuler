@@ -5,6 +5,12 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- A private session, for when you're not running loot and whoever is doesn't have LootRuler: a button beside opening reserves
+  on the Session tab. It keeps the raid's loot list (from the game's loot lines and Gargul's awards) and the reserves you
+  import, on your screen only. Nothing is sent to anyone or said in chat, and nothing is rolled out from it. Closing it
+  forgets it (it isn't kept as a past raid). When the loot master opens LootRuler reserves you're asked to join, and joining
+  closes it; so does opening your own. ([#148](https://github.com/kcham01/LootRuler/pull/148))
+
 ### Stress test (28 October 2026)
 
 Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`).

@@ -105,6 +105,7 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
 ## For raiders
 
 - **With the addon:** a message tells you when your leader opens reserves. Type **/lr**, open a boss, click an item to reserve it, right-click to take it back. The list only shows what your class would wear unless you switch "For my class" off. If the leader is offline, your picks wait and go to them when they're back. Reserves opened by someone who isn't the raid leader or master looter don't take over your window: you're asked "Join their reserves?" first.
+- **Not running loot, and nobody running it has LootRuler?** Open a **private session** (Session tab, beside opening reserves). It keeps the raid's loot list (from the game's loot lines and Gargul's awards) and the reserves you import from softres.it, on your screen only: nothing is sent to anyone or said in chat. Closing it forgets it. When the loot master opens LootRuler reserves you're asked to join, and joining closes it.
 - **When the loot master picks up loot**, a small note at the top of your screen lists each item and who reserved it ("Yours", or "SR: Ann, Bob"). It needs no clicks and goes by itself.
 - **Without the addon:** type in raid chat, or whisper the leader. The answer comes by whisper.
 
@@ -114,6 +115,7 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/swap-ask.png" alt="Asking to swap a reserve" width="32%">
   <br>
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/picked-up.png" alt="What the loot master picked up, and who reserved it" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/private-session.png" alt="A private session, only on your screen" width="49%">
 </p>
 
 | Type (raid chat or whisper) | Does |
@@ -337,7 +339,7 @@ Whoever runs loot needs LootRuler: the master looter, or the raid leader without
 The pictures are drawn by the tests on every build, from the addon's own code, in a stand-in for the game.
 
 <details>
-<summary>Show all 122 screens</summary>
+<summary>Show all 124 screens</summary>
 
 <table>
 <tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/empty.png" alt="empty" width="100%"><br><sub>empty</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/browse.png" alt="browse" width="100%"><br><sub>browse</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/new-session.png" alt="new session" width="100%"><br><sub>new-session</sub></td></tr>
@@ -380,7 +382,8 @@ The pictures are drawn by the tests on every build, from the addon's own code, i
 <tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-rule-turns.png" alt="loot rule turns" width="100%"><br><sub>loot-rule-turns</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/group-rule.png" alt="group rule" width="100%"><br><sub>group-rule</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/raid-setup.png" alt="raid setup" width="100%"><br><sub>raid-setup</sub></td></tr>
 <tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/versions.png" alt="versions" width="100%"><br><sub>versions</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/trade-timers.png" alt="trade timers" width="100%"><br><sub>trade-timers</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/say-trades.png" alt="say trades" width="100%"><br><sub>say-trades</sub></td></tr>
 <tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/tour.png" alt="tour" width="100%"><br><sub>tour</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/whats-new.png" alt="whats new" width="100%"><br><sub>whats-new</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/profiles.png" alt="profiles" width="100%"><br><sub>profiles</sub></td></tr>
-<tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/join-reserves.png" alt="join reserves" width="100%"><br><sub>join-reserves</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/test-tab-buttons.png" alt="test tab buttons" width="100%"><br><sub>test-tab-buttons</sub></td></tr>
+<tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/join-reserves.png" alt="join reserves" width="100%"><br><sub>join-reserves</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/private-session.png" alt="private session" width="100%"><br><sub>private-session</sub></td><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/join-closes-private.png" alt="join closes private" width="100%"><br><sub>join-closes-private</sub></td></tr>
+<tr><td width="33%" align="center"><img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/test-tab-buttons.png" alt="test tab buttons" width="100%"><br><sub>test-tab-buttons</sub></td></tr>
 </table>
 
 </details>

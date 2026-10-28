@@ -147,8 +147,8 @@ the mock (and to `tests/wow/server.lua` if it involves other players), never loo
 
 Start here in a new session; rewrite this section at the end of each piece of work.
 
-- **Open pull requests:** none (everything up to #146 is merged). When several are open they're stacked, each built on the one
-  before, so they merge in order (one per feature).
+- **Open pull requests:** #147 (Tidy, notes only) and #148 (Private, built on it). When several are open they're stacked, each
+  built on the one before, so they merge in order (one per feature).
 - **Decided for the guild features:** officer ranks (picked by the guild master) edit priority lists; a
   player who gets an item they had priority on comes off that item's list; boosted roll points are earned
   per raid attended. Both live in a "guild book" shared over the guild channel.
@@ -474,13 +474,22 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
   "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
-  to start with (now: only while leading reserves, on; #144 built it by mistake and was closed); a private session button
-  (forgotten when it ends, kept out of award history); opening trades only from a click (`autoTrade` and `tradeHelp` are off
-  to start with, which the owner says is enough for now).
+  to start with (now: only while leading reserves, on; #144 built it by mistake and was closed); opening trades only from a
+  click (`autoTrade` and `tradeHelp` are off to start with, which the owner says is enough for now).
+- **Private sessions** (#148, the owner's design; `s.pv`, `LR.startPrivate`, `LR.privateSession`, `LR.closePrivate`; `privateView` in
+  `UI/Setup.lua`, the "Private session" button in the new-session form): a session I lead on my own screen only (id ends ":private").
+  `LR.publish` and `Q` skip it, `P` is ignored for it, `W.session` (whispers, `!lr`, join reminders) skips it, and every line
+  it could say is held back (`Whisper.announce`/`remind`, `postLink`, `setDisenchanter`, `editAward`, `Lock.check`, `Drops.announce`,
+  trade lines out of a group); `Rolls.start`, `Rolls.give` and `Batch.start` refuse with `Rolls.PRIVATE`; `handOver` refuses.
+  `Drops.writer` returns it whatever the master looter runs, so loot lines and Gargul's awards fill it. Ending or closing it forgets
+  it (no archive, no `E`; a week-old one is dropped by `loadDB`); award history and fairness leave it out. One at a time. Joining
+  someone's session through `UI.joinPrompt` closes it, and so does `LR.startSession`; while it's on screen a real session never
+  shows by itself (it's "busy"), so the join prompt always asks. `accept` drops `pv` and `practice` from any session received.
+  No practice raid part: a practice raid is already only on my screen.
 - **Award history** (#125; `UI.awardHistory()`, `historyView` in `UI/Loot.lua`; `db.ui.lootPage` "raid" / "history", `db.ui.historyOpen`
   date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
   session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`
-  opens that page. Private sessions (when built) stay out: they're forgotten when ended (the owner's choice).
+  opens that page. Private sessions stay out: they're forgotten when closed (the owner's choice).
 - **Bosses that open and close** (#126; `UI.bossFold(f, where, key, name, what, fill, force)`, `UI.bossIsOpen`, `UI.bossChips`;
   `db.ui.bossOpen` "<where>:<raid>:<boss>" -> true, closed to start with; `where` is "reserve" or "reserves"): the Reserve tab's loot list
   (`lootList`, with a session or browsing) and the Reserves tab's soft reserves by item. A search or "Reserved only" opens every
