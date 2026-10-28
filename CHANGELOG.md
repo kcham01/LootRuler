@@ -9,6 +9,10 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 From the owner's in-game screenshots.
 
+- GDKP: the organiser can stop taking a player's bids for the rest of the night (someone who won't pay), optionally:
+  right-click them in the loot master window. Their bids, in raid chat or by whisper, max bids included, don't count, the
+  highest bid is the best of everyone else's again, and the raid is told once. The GDKP panel lists them, to take them back.
+  ([#131](https://github.com/kcham01/LootRuler/pull/131))
 - The guild book can't be locked by a change stamped far in the future (a wrong or tampered clock): a change more than an
   hour ahead counts as made an hour from now, so the next real change still replaces it.
   ([#130](https://github.com/kcham01/LootRuler/pull/130))

@@ -487,6 +487,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Guild book times capped** (#130; `B.merge(book, c, fromGM, now)`, `B.AHEAD` = 3600): a change's time is taken as at most now + an hour
   (edits in the same second are stamped a little ahead, and clocks differ a little), so a far-future stamp can't make an entry
   unchangeable. `Guild.lua` passes the server's time.
+- **Bids not taken** (#131; `s.gk.nb` names, `G.setNoBids`, `G.noBids`, `G.MAX_NOBID`; `LR.gdkpNoBids`; `Rolls.noBidsFrom(player, on)`,
+  `Rolls.applyNoBids` (on session changes, so a loot master who isn't the organiser follows); rolls' `nb` (key -> name, from
+  `plan.nb`), `R.ban`, why "banned"; `R`/`Z` messages carry `nb`; `UI.noBidsSheet`, right-click on a master window bid row,
+  "Bids not taken from:" chips on the GDKP panel): the organiser's choice, off until used. `R.resolve` skips their max bids.
+  Older versions ignore `nb` (their own window may show such a bid; the loot master's addon decides).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

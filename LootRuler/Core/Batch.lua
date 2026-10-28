@@ -58,7 +58,8 @@ local function wire(batch)
   for i, item in ipairs(batch.items) do
     it[i] = { id = item.id, l = item.link, mn = item.min, inc = item.inc, tb = item.top and { item.top.p, item.top.n } or nil }
   end
-  return { t = "Z", k = batch.k, e = batch.state, left = math.max(0, batch.ends - now()), s = batch.secs, sb = batch.strict or nil, it = it }
+  local nb = batch.items[1] and LR.Rolls.noBidList(batch.items[1])
+  return { t = "Z", k = batch.k, e = batch.state, left = math.max(0, batch.ends - now()), s = batch.secs, sb = batch.strict or nil, it = it, nb = nb }
 end
 
 -- the group hears the batch now, and again shortly after a burst of bids (once)
@@ -77,6 +78,18 @@ end
 
 local function say(text, warning) Rolls.say(text, warning) end
 
+--- whose bids aren't taken changed (Core/Rolls.lua): my batch on now follows, at once
+function B.applyNoBids(nb)
+  local batch = B.current
+  if not batch or batch.state ~= "open" then return end
+  local any = false
+  for _, item in ipairs(batch.items) do
+    for _, name in pairs(nb) do if R.ban(item, name) then any = true end end
+    for k in pairs(item.nb or {}) do if not nb[k] then item.nb[k] = nil any = true end end
+  end
+  if any then publish(batch) changed() end
+end
+
 --- puts items up together. items: { { id, link, slot, drop } } (2 to B.MAX). Returns the batch, or nil and why.
 function B.start(items, secs)
   local s = Rolls.session()
@@ -92,7 +105,8 @@ function B.start(items, secs)
     secs = math.max(20, math.min(300, tonumber(secs) or LR.db.settings.batchSeconds or B.SECONDS)) }
   for i, it in ipairs(items) do
     if i > B.MAX then break end
-    local item = R.new(k .. ":" .. i, it.id, { mode = "BID", min = LR.Gdkp.minFor(s, it.id), inc = s.gk.inc, strict = s.gk.strict, who = {}, away = {} })
+    local item = R.new(k .. ":" .. i, it.id, { mode = "BID", min = LR.Gdkp.minFor(s, it.id), inc = s.gk.inc, strict = s.gk.strict,
+      nb = LR.Gdkp.noBids(s), who = {}, away = {} })
     item.n, item.link, item.slot, item.drop, item.by, item.batch = i, it.link or LR.itemLink(it.id), it.slot, it.drop, U.me(), k
     item.state = "open"
     batch.items[i] = item
@@ -301,6 +315,13 @@ function B.follow(msg, sender)
   copy.secs = math.max(1, math.min(600, tonumber(msg.s) or 60))
   copy.ends = now() + math.max(0, math.min(600, tonumber(msg.left) or 0))
   if msg.e == "open" or msg.e == "closed" or msg.e == "cancelled" then copy.state = msg.e end
+  -- whose bids aren't taken (older versions don't send it)
+  if type(msg.nb) == "table" then
+    for j, name in ipairs(msg.nb) do
+      if j > 40 then break end
+      if type(name) == "string" and #name <= 60 then for _, item in ipairs(copy.items) do R.ban(item, name) end end
+    end
+  end
   -- the highest bids as the loot master has them (we may have missed some lines)
   for i, x in ipairs(msg.it) do
     local item = copy.items[i]

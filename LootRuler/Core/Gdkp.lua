@@ -166,6 +166,30 @@ function G.setStrict(s, on, now)
   return true
 end
 
+--- players whose bids aren't taken tonight (the organiser's call: someone who won't pay): names, at most G.MAX_NOBID
+G.MAX_NOBID = 40
+function G.setNoBids(s, player, on, now)
+  if not s.gk or type(player) ~= "string" then return false end
+  local list, at = s.gk.nb or {}, nil
+  for i, name in ipairs(list) do if U.samePlayer(name, player) then at = i end end
+  if on and not at then
+    if #list >= G.MAX_NOBID then return false end
+    list[#list + 1] = U.full(player)
+  elseif not on and at then
+    table.remove(list, at)
+  else return false end
+  s.gk.nb = #list > 0 and list or nil
+  S.bump(s, now)
+  return true
+end
+--- whose bids aren't taken, for a roll: name (lower case) -> name; nil when nobody's
+function G.noBids(s)
+  if not (s and s.gk and s.gk.nb) then return nil end
+  local out = {}
+  for _, name in ipairs(s.gk.nb) do out[LR.Roll.key(name)] = name end
+  return out
+end
+
 --- the lowest first bid for an item
 function G.minFor(s, id) return (s.gk and s.gk.prices[id]) or (s.gk and s.gk.min) or G.DEFAULTS.min end
 function G.setPrice(s, id, gold, now)
@@ -501,6 +525,10 @@ function G.valid(gk)
   if type(gk) ~= "table" then return false end
   for _, k in ipairs({ "min", "inc", "cut" }) do if type(gk[k]) ~= "number" then return false end end
   if gk.strict ~= nil and type(gk.strict) ~= "boolean" then return false end
+  if gk.nb ~= nil then
+    if type(gk.nb) ~= "table" or #gk.nb > G.MAX_NOBID then return false end
+    for _, name in ipairs(gk.nb) do if type(name) ~= "string" or #name > 60 then return false end end
+  end
   local function map(t, keyType, valType)
     if type(t) ~= "table" then return false end
     local n = 0

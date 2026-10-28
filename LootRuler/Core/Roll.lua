@@ -48,6 +48,7 @@ R.WHY = {
   low = "less than the lowest bid",
   high = "more gold than there is",
   raised = "bid again",
+  banned = "bids not taken",
   hard = "it's hard reserved",
 }
 
@@ -136,7 +137,8 @@ end
 --- a new roll (the loot master's, or a raider's copy of it)
 function R.new(k, id, plan)
   return { k = k, id = id, mode = plan.mode, who = plan.who or {}, away = plan.away or {}, f = plan.f, n = plan.n,
-    tie = plan.tie, po = plan.po, bp = plan.bp, xk = plan.xk, min = plan.min, inc = plan.inc, strict = plan.strict, entries = {}, rolled = {}, passed = {} }
+    tie = plan.tie, po = plan.po, bp = plan.bp, xk = plan.xk, min = plan.min, inc = plan.inc, strict = plan.strict, nb = plan.nb,
+    entries = {}, rolled = {}, passed = {} }
 end
 
 --- a player's boosted roll range in a roll, or nil when they have no points
@@ -247,6 +249,7 @@ function R.bid(roll, player, g, late)
   g = math.floor(tonumber(g) or 0)
   local e = { p = U.full(player), n = g, seq = #roll.entries + 1 }
   if roll.mode ~= "BID" then e.why = "notAuction"
+  elseif roll.nb and roll.nb[key(player)] then e.why = "banned"
   elseif late then e.why = "late"
   elseif g < R.nextBid(roll) then e.why = "low"
   elseif g > R.MAX_BID then e.why = "high"
@@ -261,6 +264,27 @@ function R.bid(roll, player, g, late)
   return e
 end
 
+--- the organiser stopped taking a player's bids (GDKP: their bids don't count tonight): their bids in this auction stop
+--- counting, and the highest bid is the best of everyone else's again. Returns whether anything changed.
+function R.ban(roll, player)
+  local k = key(player)
+  roll.nb = roll.nb or {}
+  if roll.nb[k] then return false end
+  roll.nb[k] = U.full(player)
+  for _, e in ipairs(roll.entries) do
+    if e.kind == "BID" and key(e.p) == k then e.kind, e.why = nil, "banned" end
+  end
+  roll.rolled[k] = nil
+  if roll.top and key(roll.top.p) == k then
+    local best
+    for _, e in ipairs(roll.entries) do
+      if e.kind == "BID" and (not best or e.n > best.n or (e.n == best.n and e.seq < best.seq)) then best = e end
+    end
+    roll.top = best
+  end
+  return true
+end
+
 --- max bids ("bid for me up to 800g"), kept by the loot master's addon: maxes = { [key] = { p, g, at } }.
 --- Bids for them as little as it takes to keep them on top, up to their max; when two maxes meet, the higher
 --- one wins at the lower one's max (or just above the other's bid), and an equal one goes to whoever set it
@@ -273,7 +297,7 @@ function R.resolve(roll, maxes)
     local need = R.nextBid(roll)
     local best
     for k, m in pairs(maxes) do
-      if not (top and key(top.p) == k) and m.g >= need then
+      if not (top and key(top.p) == k) and m.g >= need and not (roll.nb and roll.nb[k]) then
         if not best or m.g > best.g or (m.g == best.g and m.at < best.at) then best = m end
       end
     end
