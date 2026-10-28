@@ -522,7 +522,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   names its button): the auction window's `extras[1]` (then "Bid ahead" in `extras[2]`) opens a gold box; the bid goes through
   `Rolls.bid` / `Batch.bid`, typed in raid chat like the window's two buttons; too little asks again.
 - **No faking a win** (#141): `tests/loot.lua`, "nobody can fake a win", tries every way a raider might be recorded as a winner.
-  A new way to record a winner gets a check there.
+  A new way to record a winner gets a check there. Since #145 it runs with both trade switches on and the item in the loot
+  master's bags: the winner's trade opens and gets the item, someone else's gets nothing, and a pug's every `!lr` command
+  changes no setting. `tools/stress.lua` checks the same under its broken messages, and sends every `!lr` command with
+  nonsense ("1b"). **Test everything:** a new feature, setting or command gets into both.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

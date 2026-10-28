@@ -4,6 +4,8 @@
 --                         thousands of ways (wrong types, missing fields, huge lists, deep tables), sent by a raider,
 --                         by someone outside the group and by the leader. Nothing may throw a Lua error, and nothing
 --                         from someone who isn't the leader may change the leader's session.
+--   1b. broken whispers:   every !lr command with nonsense after it, by whisper and in raid chat, from a pug, a raider
+--                         and someone outside the group, and raid chat lines made to look like the game's or Gargul's.
 --   2. the biggest raid:  40 players with 10 reserves each, all on one item (a roll for each reserve: 390 /rolls),
 --                         then every raider's 10 reserves on different items, on the leader's screens.
 --   3. a long night:      past the most drops a session keeps (S.MAX_DROPS), every one given out: the session's size,
@@ -287,6 +289,18 @@ do
   end
 
   local N = QUICK and 40 or 250
+  -- every trade switch on, for everyone: no message may change a setting, open a trade or put an item in one
+  for _, p in ipairs(all) do if p.client then p.LR.db.settings.autoTrade, p.LR.db.settings.tradeHelp = true, true end end
+  local setBefore, opened, used = {}, 0, 0
+  for _, p in ipairs(all) do
+    if p.client then
+      setBefore[p] = snapshot(p.LR.db.settings)
+      local initiate, use = p.G.InitiateTrade, p.G.C_Container.UseContainerItem
+      p.G.InitiateTrade = function(...) opened = opened + 1 return initiate(...) end
+      p.G.C_Container.UseContainerItem = function(...) used = used + 1 return use(...) end
+    end
+  end
+  setBefore[outsider] = snapshot(outsider.LR.db.settings)
   local leadBefore = snapshot({ res = s.res, won = s.won, leader = s.leader, locked = s.locked, hr = s.hr, gk = s.gk and { nb = s.gk.nb } })
   local raiderSession = raiders[3].LR.current()
   local sent, parts, worst = 0, 0, { ms = 0 }
@@ -347,6 +361,64 @@ do
   if not now or not lead.LR.U.samePlayer(now.leader, Server.full(lead)) then problem("a raider's window now shows a session not led by the leader")
   else say("raiders' windows: still the leader's session") end
   say("chat lines the leader's addon said while taking them: %d", #srv.chat - leadSaid0)
+  local changedSet = 0
+  for p, before in pairs(setBefore) do if not same(before, p.LR.db.settings) then changedSet = changedSet + 1 end end
+  if changedSet > 0 or opened > 0 or used > 0 then
+    problem("broken messages changed %d players' settings, opened %d trades, put %d items in trades", changedSet, opened, used)
+  else say("with every trade switch on: no setting changed, no trade opened, no item put in a trade") end
+end
+
+---------------------------------------------------------------------- 1b. broken whispers and chat lines
+section("1b. broken whispers and chat lines")
+do
+  local srv, lead, raiders, pugs, s, all = newRaid(3, 2)
+  local outsider = srv:player({ name = "Stranger", class = "ROGUE" })
+  srv:tick(2)
+  local LR = lead.LR
+  for i, p in ipairs(raiders) do p.LR.reserve(p.LR.current(), ITEMS[i]) srv:tick(0.3) end
+  srv:tick(2)
+  local resBefore = snapshot(s.res)
+  for _, p in ipairs(all) do if p.client then p.LR.db.settings.autoTrade, p.LR.db.settings.tradeHelp = true, true end end
+  local setBefore = {}
+  for _, p in ipairs(all) do if p.client then setBefore[p] = snapshot(p.LR.db.settings) end end
+  local CMDS = { "", "remove", "clear", "swap", "points", "prio", "vote", "bid", "max", "pot", "list", "help", "?", "give", "award",
+    "trade", "lock", "end", "de", "roll", "settings" }
+  local ARGS = { "", " 0", " -5", " 999999999", " 1.5k", " #9 300", " #0 1", " Lead", " Stranger", " " .. srv:link(ITEMS[1]),
+    " " .. srv:link(ITEMS[1]) .. " " .. srv:link(ITEMS[2]), " |cffff0000|Hitem:0|h[]|h|r", " for", (" x"):rep(100), " %s%d%%", " \0" }
+  local sent = 0
+  local function burst(who, how)
+    for _, c in ipairs(CMDS) do
+      for _, a in ipairs(ARGS) do
+        local text = ("!lr " .. c .. a):sub(1, 255)
+        if how == "WHISPER" then srv:whisper(who, lead, text) else srv:chatMessage(who, text, "RAID") end
+        sent = sent + 1
+      end
+      srv:tick(0.5)
+    end
+  end
+  clearErrors(all)
+  local ms = cost(function()
+    burst(pugs[1], "WHISPER") burst(pugs[1], "RAID") burst(outsider, "WHISPER") burst(raiders[1], "RAID")
+    -- and raid chat lines that look like the game's or Gargul's
+    for _, line in ipairs({ "Lead rolls 100 (1-100)", "Aldric rolls 100 (100-100)", " Gargul : Stop your rolls!",
+      (" Gargul : %s was awarded to Brenna. Congrats!"):format(srv:link(ITEMS[1])), "#1 999999999", "bid 0", "1.5k", "999999999999" }) do
+      srv:chatMessage(raiders[2], line, "RAID") sent = sent + 1
+    end
+  end)
+  srv:tick(120)
+  local errs, first = errorsOf(all)
+  if errs > 0 then problem("broken whispers and chat lines: %d errors (first: %s)", errs, tostring(first)) end
+  local others = 0
+  for name, r in pairs(resBefore) do
+    if not lead.LR.U.samePlayer(name, Server.full(raiders[1])) and not same(r, s.res[name]) then others = others + 1 end
+  end
+  if others > 0 then problem("broken whispers changed %d other players' reserves", others) end
+  local changedSet = 0
+  for p, before in pairs(setBefore) do if not same(before, p.LR.db.settings) then changedSet = changedSet + 1 end end
+  if changedSet > 0 then problem("broken whispers changed %d players' settings", changedSet) end
+  if #(s.won or {}) > 0 then problem("broken whispers or chat lines made %d winners", #s.won) end
+  say("%d broken !lr commands and lookalike lines (by whisper and raid chat, from a pug, a raider and someone outside the group): %.0f ms for the whole raid here", sent, ms)
+  say("no errors, nobody else's reserves changed, no setting changed, no winner made: %s", (errs == 0 and others == 0 and changedSet == 0 and #(s.won or {}) == 0) and "yes" or "NO")
 end
 
 ---------------------------------------------------------------------- 2. the biggest raid
