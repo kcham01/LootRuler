@@ -141,8 +141,9 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
 When it's time to hand out loot, LootRuler pops up a roll window for everyone, like the game's own Need/Greed window, and it knows who reserved what.
 
 <p align="center">
-  <img src="docs/screens/loot-master.png" alt="The loot master's window: everyone's rolls, best first" width="40%">
-  <img src="docs/screens/roll-window.png" alt="A roll window, with the best rolls so far" width="48%">
+  <img src="docs/screens/loot-master.png" alt="The loot master's window: everyone's rolls, best first" width="34%">
+  <img src="docs/screens/rolls-closed.png" alt="Rolls closed: award it, roll again, and a roll that came too late" width="31%">
+  <img src="docs/screens/roll-window.png" alt="A roll window, with the best rolls so far" width="31%">
 </p>
 
 - **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. The raid hears it too, once per corpse: each epic, and anything reserved, with who reserved it. Click one to roll it out, or **Roll them all out** to put every item up one after another. **Ctrl+Alt+click** any item (in your bags, the loot window or a chat link), or type `/lr roll` and an item link. (The shortcut can be changed to Alt+click, Gargul's, on the Settings tab.)
