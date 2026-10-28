@@ -45,6 +45,9 @@ From the owner's in-game screenshots.
   (" Gargul : Stop your rolls!"), which LootRuler now reads. ([#123](https://github.com/kcham01/LootRuler/pull/123))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
   about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
+- The Loot tab has an "Award history": everything given out in your raids, by date, newest first. Each date opens and closes
+  with a click to show what was given out that day, who won it, how, and in which raid. Export, "Who got what, over time" and
+  Past raids are there too, instead of at the bottom of the Loot tab. ([#125](https://github.com/kcham01/LootRuler/pull/125))
 - Fixed: who reserved an item didn't show in its tooltip in your bags or on a boss's loot window, only in LootRuler's own
   windows. With Gargul loaded, LootRuler leaves the reserves in tooltips to Gargul, so they aren't shown twice.
   ([#124](https://github.com/kcham01/LootRuler/pull/124))

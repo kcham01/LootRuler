@@ -463,6 +463,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
   to start with (now: only while leading reserves, on).
+- **Award history** (#125; `UI.awardHistory()`, `historyView` in `UI/Loot.lua`; `db.ui.lootPage` "raid" / "history", `db.ui.historyOpen`
+  date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
+  session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`
+  opens that page. Private sessions (when built) stay out: they're forgotten when ended (the owner's choice).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`
