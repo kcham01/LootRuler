@@ -24,7 +24,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
 | `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
-| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `gen_loot.py`, `art.mjs` |
+| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
 | `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (what LootRuler protects against) |
 
@@ -115,12 +115,18 @@ lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
 lua5.1 tools/coverage.lua                                   # functions no test reaches: build/coverage.txt
 lua5.1 tools/bench.lua                                      # a 40-player raid, measured: build/bench.txt (about a minute)
+lua5.1 tools/stress.lua                                     # past an ordinary night: build/stress.txt (about a minute)
 ```
 
 `tools/bench.lua` plays a raid night for 40 players (30 with LootRuler) in the stand-in and writes, moment by moment, the
 Lua instructions run in LootRuler's code (sampled; within about 2% between runs), CPU time, garbage, addon messages
 by kind and size, how long until every raider has a change, and the busiest functions. Not part of CI. What the last
 run found, and ideas: `docs/benchmark.md`.
+
+`tools/stress.lua` sends thousands of broken copies of every kind of message (from a raider, someone outside the group
+and the leader), plays the biggest raid the limits allow (390 /rolls on one item), a night past `S.MAX_DROPS` and chat
+floods. A line starting "PROBLEM" is something to fix; run it after anything that reads messages or chat. Not part of CI.
+A finding that is a weak spot goes to the owner, not into this repository (see "Security rules").
 
 `tools/coverage.lua` runs the tests with a line hook and lists every function no test runs (`build/coverage.lines` has
 every line that ran). Not part of CI; run it after a feature lands and add tests for anything new it lists. Only
@@ -497,6 +503,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `plan.nb`), `R.ban`, why "banned"; `R`/`Z` messages carry `nb`; `UI.noBidsSheet`, right-click on a master window bid row,
   "Bids not taken from:" chips on the GDKP panel): the organiser's choice, off until used. `R.resolve` skips their max bids.
   Older versions ignore `nb` (their own window may show such a bid; the loot master's addon decides).
+- **Stress test** (#138; `tools/stress.lua`, notes in `docs/benchmark.md`): found a raider's Lua error from a broken answer `A`
+  (#136: `handlers.A` checks its fields; `U.full` takes only text, so a name that isn't text is nobody everywhere) and a slow
+  loot master window with many rolls on one item (#137: lower rolls on reserves aren't rows, "(best of N)" on the best;
+  `R.rollsFor` keeps counts per `roll.who` above 8 reservers). Ideas not done are listed there.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

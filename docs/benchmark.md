@@ -4,6 +4,65 @@ First measured on 26 October 2026, on `main` after #88 (every planned feature in
 work: what was done, and the numbers before and after, are in the next section. The findings after it are as first found.
 
 Run it with `lua5.1 tools/bench.lua` (about a minute; `--quick` for a small raid). It writes `build/bench.txt`.
+The stress test, `lua5.1 tools/stress.lua` (about a minute), goes past an ordinary night; it writes `build/stress.txt`.
+
+## The latest version, and a stress test (28 October 2026)
+
+Measured on `main` after #135 (everything through "bids not taken"), against the same night on `main` before #121
+(after #120), both run on the same computer. Work is Lua instructions in LootRuler's code:
+
+| Moment | Leader before | Leader now | Longest at once, leader | Each raider | Leader's messages |
+| --- | --- | --- | --- | --- | --- |
+| Forming the raid (39 joins) | 16.3M | **8.8M** | 18.9 → 5.2 ms | 515k → 516k | 72 → 72 |
+| Opening reserves | 524k | 450k | 5.5 → 3.4 ms | 125k → 127k | 6 → 6 |
+| Reserving (78 reserves) | 13.7M | **7.1M** | 6.5 → 4.0 ms | 298k → 299k | 65 → 65 |
+| Lock and post | 503k | 432k | 4.0 → 2.2 ms | 94k → 93k | 5 → 5 |
+| A boss dies (1 roll) | 2.8M | 2.7M | 6.5 → 3.6 ms | 495k → 511k | 13 → 13 |
+| Rolling out 4 more | 9.9M | 9.9M | 11.5 → 9.3 ms | 2.0M → 2.0M | 34 → 34 |
+| The leader's screens | 581k | **310k** | 5.8 → 2.9 ms | | 0 |
+| A GDKP auction (25 bids) | 1.7M | 1.8M | 4.6 → 4.2 ms | 524k → 528k | 16 → 16 |
+| Five auctions at once (40 bids) | 5.3M | 5.3M | 5.4 → 7.5 ms | 2.7M → 2.7M | 79 → 79 |
+
+- **Forming the raid and reserving cost the leader half what they did.** The bosses on the Reserve tab start closed (#126),
+  so the leader's open window lists boss names until one is opened, and its redraws while people join and reserve are
+  cheaper. With every boss open it costs what it did before.
+- **Nothing else moved** beyond the 2% the benchmark varies by. The features since #121 (a roll for each reserve, only the
+  loot runner runs loot, gear by inspection, bids not taken) added no measurable work to an ordinary night, and no messages.
+- Loading the addon: 33 ms and 3.1 MB for one player. Saved file: 5 KB after one raid, 109 KB with 30 past raids.
+- Where the work is, over the whole night: unpacking messages (LibDeflate 52%, LibSerialize 9%), then roll standings
+  (`Core/Roll.lua`, 12%).
+
+**The stress test** (`tools/stress.lua`) pushes past an ordinary night. What it found:
+
+1. **Broken messages:** 5,750 of them, 250 of each of the 23 kinds LootRuler takes, built from a real night's messages and
+   broken (wrong types, missing fields, huge lists, deep tables), sent by a raider, by someone outside the group and by the
+   leader. One kind, the leader's answer to a raider's reserves, made a Lua error on the raider's screen: fixed in #136.
+   Now none does. Nothing anyone but the leader sent changed the leader's session, and raiders kept the leader's session.
+   The slowest single message took 23 ms to throw away.
+2. **The biggest raid:** 40 players with 10 reserves each, all on one item, so 390 /rolls (a roll for each reserve). The loot
+   master's window drew a row for every roll and was redrawn on each: 5.4 s of work over the roll, 35 ms at the longest
+   (two frames). #137 lists each player's best roll once and works out roll counts once: 1.9 s, 13 to 19 ms at the
+   longest. The session copy is small (636 characters), and every raider's 10 reserves on different items draw the
+   Reserves tab in about 10 ms, bosses open or closed.
+3. **A long night:** 320 items from 64 corpses, every one given out.
+   - A session keeps at most 300 drops (`S.MAX_DROPS`). A real night never comes near it: only the raid's loot is listed
+     (#121), and a session only takes loot inside its own raid, on one lockout (#111), so this is a safety cap, not a limit.
+   - A whole copy of the session grows to 7.4 KB (30 parts, about 10 seconds to send). Changes go as small updates (#119),
+     but every 25th send, and copies to newcomers and the guild, are whole.
+   - Giving out an item costs about 3 ms, late in the night as at the start.
+   - Given out five every 2 seconds (far faster than a real loot master), raiders' copies had every award 63 seconds after
+     the last one: the send queue (about 800 characters a second) catches up.
+   - The Loot tab with 300 drops draws in 56 ms. With 30 past raids of 300 awards each, the award history draws in 68 ms
+     (only the open day's items are drawn) and "who got what, over time" in 14 ms. The saved file is then 1.7 MB.
+4. **Chat floods:** 600 raid chat lines during an auction (a third of them bids) sold the item right, with 3 lines from the
+   leader. Gargul's roll lines typed by a raider (not the loot runner) opened no roll windows (#128).
+
+Ideas from it (not done):
+
+- Redraw the loot master window at most a few times a second during a roll (like `UI.renderSoon`): the longest moment in
+  the 390-roll case is the redraw.
+- Unpacking messages is still half of all the work: sending less (smaller whole copies, or fewer of them) is where the
+  next big saving is.
 
 ## Only what changed (#119)
 
