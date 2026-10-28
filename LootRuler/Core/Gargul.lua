@@ -360,6 +360,8 @@ function G.importInto(s, text, roster)
   local data, err = G.decode(text)
   if not data then return nil, err end
   local now = U.now()
+  -- (what the sheet brought can change with nobody's reserves changing: the version still goes up, or raiders miss it)
+  local was = { rev = s.rev, sx = U.copy(s.sx), hx = U.copy(s.hx), nm = U.copy(s.nm) }
   -- the sheet's own page on softres.it, to post in raid chat
   local sid = type(data.metadata) == "table" and type(data.metadata.id) == "string" and data.metadata.id
   if sid and sid:match("^[%w%-]+$") and #sid <= 40 and not sid:find("^LootRuler") then S.setLink(s, "https://softres.it/raid/" .. sid, now) end
@@ -489,6 +491,7 @@ function G.importInto(s, text, roster)
   end
   if not next(s.sx) then s.sx = nil end
   if not next(s.nm) then s.nm = nil end
+  if s.rev == was.rev and not (S.same(was.sx, s.sx) and S.same(was.hx, s.hx) and S.same(was.nm, s.nm)) then S.bump(s, now) end
   LR.leaderChanged(s)
   return sum
 end

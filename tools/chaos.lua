@@ -360,6 +360,20 @@ for r = 1, RAIDS do
   local function hookTrace(p)
     if not tracing or p.name ~= tracing or not online(p) then return end
     local H = p.LR.Net.handlers
+    -- (and what they send)
+    local N = p.LR.Net
+    if not N.tracedOut then
+      N.tracedOut = true
+      local orig = N.SendCommMessage
+      N.SendCommMessage = function(self, prefix, text, channel, target, ...)
+        local ok, msg = pcall(N.decode, text)
+        if ok and type(msg) == "table" and (msg.t == "T" or msg.t == "U" or msg.t == "Q") then
+          io.stderr:write(("   [%s] sends %s to %s %s %s\n"):format(p.name, msg.t, channel, tostring(target or ""),
+            msg.s and ("%s/%s"):format(msg.s.leader:sub(1, 5), tostring(msg.s.rev)) or (msg.t == "U" and ("f%s r%s"):format(tostring(msg.f), tostring(msg.r)) or tostring(msg.id or ""))))
+        end
+        return orig(self, prefix, text, channel, target, ...)
+      end
+    end
     for _, k in ipairs({ "T", "U", "A", "E" }) do
       local orig = H[k]
       if orig and not H["traced" .. k] then
@@ -467,7 +481,7 @@ for r = 1, RAIDS do
           problem("%s's copy differs from %s's (rev %s / %s; reserves %s, hard %s, given out %s; %s's copy names %s, next %s; leader's was %s)",
             p.name, b.name, tostring(c.rev), tostring(s.rev),
             tostring(S.same(c.res, s.res)), tostring(S.same(c.hr, s.hr)), tostring(S.same(c.won or {}, s.won or {})), p.name, tostring(c.leader),
-            tostring(c.next), table.concat(s.was or {}, ",") .. "; first difference " .. tostring(where(c.res, s.res, "res") or where(c.won or {}, s.won or {}, "won") or where(c.hr, s.hr, "hr") or (function() local a, b2 = U.copy(c), U.copy(s) a.rev, a.updated, b2.rev, b2.updated = nil, nil, nil, nil return where(a, b2, "s") end)()))
+            tostring(c.next), table.concat(s.was or {}, ",") .. "; theirs was " .. table.concat(c.was or {}, ",") .. "; first difference " .. tostring(where(c.res, s.res, "res") or where(c.won or {}, s.won or {}, "won") or where(c.hr, s.hr, "hr") or (function() local a, b2 = U.copy(c), U.copy(s) a.rev, a.updated, b2.rev, b2.updated = nil, nil, nil, nil return where(a, b2, "s") end)()))
         end
       end
     end

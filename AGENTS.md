@@ -570,10 +570,14 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   for their latest copy (the kept one may be a change old). The loot master's own copy, with drops the leader hasn't taken yet
   (`Drops` `save`), is marked half a version behind, so the leader's next copy always replaces it and nothing only it had stays.
   A copy whose leader our copy lists in `was`, older than ours, is never taken (whoever sends it: everything since would be lost)
-  and its sender is whispered ours (`LR.tellStale`, every 30 seconds at most); a leader told so by someone who isn't the raid
-  leader or master looter gets the Session tab's choice (`handlers.T`). A claim that our copy already settled disappears
-  (`LR.claim`). A change with no group to send it to (a lock at login) goes when the group is known (`groupHas`, slowly).
-  `tools/chaos.lua`'s settle waits until copies stop changing, and checks no copy is handed on to its own leader.
+  and its sender is whispered ours (`LR.tellStale`, every 30 seconds at most; changes `U` made on a copy older than ours too); a leader told so by someone who isn't the raid
+  leader or master looter gets the Session tab's choice (`handlers.T`). A claim that our copy already settled, or that has become an
+  old copy (its leader is in our `was`, its `rev` below ours), disappears (`LR.claim`); `LR.followClaim` puts our `next` back if
+  the copy isn't taken. A change with no group to send it to (a lock at login) goes when the group is known (`groupHas`, slowly).
+  `tools/chaos.lua`'s settle waits until copies stop changing, and checks no copy is handed on to its own leader. A new leader's
+  `rev` is always whole (`math.floor`), so the half-version mark keeps working. **Every change bumps `rev`**: `Gargul.importInto`
+  does when only `sx` / `hx` / `nm` changed, and `sendSession` bumps a leader's copy that differs from what the group last got at
+  the same version (else raiders ignore it as old).
 - **A reserver away while a roll waits for them** (#152, the owner's call: the players decide, not the addon; `Rolls.away(roll, waiting)`,
   `Rolls.tellAway`, `roll.toldAway`): the roll still waits for every reserver until time runs out. The loot master's window lists
   anyone away first ("Bob (offline)", "(left the group)") with a gold line to wait or Close now, and their chat is told once each time

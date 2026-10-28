@@ -15,7 +15,8 @@ it becomes 1.0.0. Each line links the pull request it came from.
   leader no longer keeps a drop the leader never took (say, the master looter changed just then). A leader who comes back
   with an old copy, after the reserves were taken over, can no longer wipe out everything done since (even as the raid
   leader): raiders send them the newer copy instead. A change made before the group is known (reserves locking by
-  themselves at login) now reaches the raid as soon as it is.
+  themselves at login) now reaches the raid as soon as it is. Re-importing a softres.it sheet that only matched items
+  already reserved in LootRuler could leave raiders' copies quietly different from the leader's; fixed.
   ([#159](https://github.com/kcham01/LootRuler/pull/159))
 - Fixes from a fuzz test (random and broken input everywhere, `tools/fuzz.lua`): a raid chat line with a very long word
   could run past the game's 255 characters; a guild book could be thrown away at login after linking an alt to a blank name

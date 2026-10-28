@@ -387,6 +387,8 @@ local function sendSession(s, channel, target)
     local key = s.id .. "|" .. channel
     local last = group and groupSent[key]
     -- (a new leader, or one handing it on, sends it whole: raiders take changes only from the leader they know)
+    -- (a change that didn't move the version would be ignored by everyone: it moves now, before it goes)
+    if last and last.copy.rev == s.rev and LR.isLeader(s) and S.diff(last.copy, s) then S.bump(s, U.now()) end
     if last and last.n < SESSION_FULL_EVERY and U.samePlayer(last.copy.leader, s.leader) and not s.next and everyoneTakesChanges() then
       local msg = { t = "U", id = s.id, f = last.copy.rev, r = s.rev, c = S.diff(last.copy, s) or {} }
       groupSent[key] = { copy = U.copy(s), n = last.n + 1 }
@@ -950,6 +952,9 @@ end
 function handlers.U(msg, channel, sender)
   if type(msg.id) ~= "string" or type(msg.f) ~= "number" or type(msg.r) ~= "number" or type(msg.c) ~= "table" then return end
   local known = db.sessions[msg.id]
+  -- (changes from someone who ran it before ours went on from them, made on a copy older than ours: they were away when it
+  -- changed hands, and hear ours)
+  if known and not U.samePlayer(known.leader, sender) and S.ledBy(known, sender) and msg.r < known.rev then LR.tellStale(known, sender) return end
   if known and (LR.isLeader(known) or known.rev >= msg.r) then return end
   -- (from someone who isn't its leader to us: a new leader, maybe. Their whole copy is checked like any. And changes
   -- only go onto the very copy they were made from: put onto a newer one, something added and taken back in between
@@ -1061,7 +1066,8 @@ end
 local claims = {}
 function LR.claim(id)
   local c, k = claims[id], db and db.sessions[id]
-  if c and (not k or U.samePlayer(c.leader, k.leader)) then claims[id] = nil return nil end   -- (settled already)
+  -- (settled already; or ours has gone on from them since: theirs is an old copy now)
+  if c and (not k or U.samePlayer(c.leader, k.leader) or (S.ledBy(k, c.leader) and c.t.rev < k.rev)) then claims[id] = nil return nil end
   return c
 end
 function LR.noteClaim(known, t, sender)
@@ -1084,8 +1090,10 @@ function LR.followClaim(id)
   claims[id] = nil
   if not c or not known or not S.valid(c.t) then return false end
   if U.samePlayer(c.leader, known.leader) then LR.changed("session") return not LR.isLeader(known) end   -- (already so)
+  local was = known.next
   known.next = c.leader                                  -- (taken as handed to them: the player said so)
   accept(c.t, "WHISPER", c.from)
+  if db.sessions[id] == known then known.next = was end  -- (not taken after all: ours stays as it was)
   -- the copy we kept may be a change or two old by now: ask them for theirs
   if not LR.isLeader(db.sessions[id]) then send({ t = "Q" }, "WHISPER", c.leader) end
   return not LR.isLeader(db.sessions[id])

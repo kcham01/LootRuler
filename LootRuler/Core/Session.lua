@@ -229,7 +229,7 @@ function S.newLeader(s, player, now)
   s.nl = now                                  -- (when it changed hands: a leader who comes back yields to a change after theirs)
   -- a new leader starts well past any change the old one made after letting it go (they may make a few before they
   -- hear from the new one): every copy then takes the new leader's, whatever version it's on
-  s.rev = s.rev + S.EPOCH
+  s.rev = math.floor(s.rev) + S.EPOCH        -- (a whole number: a loot master's own copy may be half a version behind, Drops)
   bump(s, now)
   return true
 end

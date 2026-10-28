@@ -1180,7 +1180,8 @@ do
 end
 
 section("an old leader back while the one who took over is away (found by tools/chaos.lua)")
-for _, mlHasIt in ipairs({ false, true }) do
+for _, case in ipairs({ { ml = false }, { ml = true }, { ml = false, left = true } }) do
+  local mlHasIt = case.ml
   local srv6 = Server.new(".")
   srv6.where = Server.PLACES.Karazhan
   local l6 = srv6:client({ name = "Lia", class = "PALADIN" })
@@ -1192,8 +1193,10 @@ for _, mlHasIt in ipairs({ false, true }) do
   srv6:tick(2)
   local s6 = l6.LR.startSession("Karazhan", 2, true, false)
   srv6:tick(3)
-  -- Lia goes offline; Amy, the master looter, takes over; then Amy is away too
-  local liaDB = srv6:logout(l6)
+  -- Lia goes offline (or leaves the group, still sending only what changes when she's back); Amy, the master looter, takes
+  -- over; then Amy is away too
+  local liaDB
+  if case.left then l6.LR.setLocked(l6.LR.session(s6.id), true) srv6:tick(3) srv6:leaveGroup(l6) else liaDB = srv6:logout(l6) end
   srv6:setMasterLooter(a6)
   srv6:tick(2)
   a6.LR.takeOver(a6.LR.session(s6.id))
@@ -1203,7 +1206,12 @@ for _, mlHasIt in ipairs({ false, true }) do
   local amyDB = srv6:logout(a6)
   srv6:tick(2)
   -- Lia comes back with her copy from before, and changes something
-  srv6:login(l6, liaDB)
+  if case.left then
+    l6.LR.setLocked(l6.LR.session(s6.id), false)
+    srv6:setGroup({ l6, b6, p6, a6 }, l6, true)
+  else
+    srv6:login(l6, liaDB)
+  end
   srv6:tick(3)
   l6.LR.setLocked(l6.LR.session(s6.id), true)
   srv6:tick(30)
@@ -1223,6 +1231,17 @@ for _, mlHasIt in ipairs({ false, true }) do
   for _, p in ipairs({ l6, a6, b6 }) do if p.LR.isLeader(p.LR.session(s6.id)) then leaders = leaders + 1 end end
   check("Amy comes back: one leader, the same copy everywhere", leaders == 1 and a6.LR.isLeader(a6.LR.session(s6.id))
     and l6.LR.session(s6.id).rev == a6.LR.session(s6.id).rev and b6.LR.session(s6.id).rev == a6.LR.session(s6.id).rev)
+  if case.left then
+    -- (found by tools/chaos.lua) a claim that has become an old copy: following it changes nothing, and it isn't offered
+    local k = b6.LR.session(s6.id)
+    local old = b6.LR.U.copy(k)
+    old.leader, old.rev, old.was, old.next = full(l6), k.rev - 150, nil, nil
+    b6.LR.noteClaim(k, old, full(l6))
+    b6.LR.followClaim(s6.id)
+    check("following a claim that's an old copy now changes nothing", b6.LR.session(s6.id) == k and k.leader == full(a6) and k.next == nil)
+    b6.LR.noteClaim(k, old, full(l6))
+    check("and such a claim isn't offered", b6.LR.claim(s6.id) == nil)
+  end
   for _, p in ipairs({ l6, a6, b6 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
