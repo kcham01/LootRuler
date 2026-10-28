@@ -23,6 +23,24 @@ local function swapRequests(f, s)
   end)
 end
 
+--- reserves of players who aren't in the group (left, or never came): cleared after a confirm. In a session for the group
+--- and in a private one alike (there, the group I'm in now).
+local function clearAbsentButton(p, s)
+  local away = LR.absent(s)
+  p:buttons({
+    { label = #away > 0 and ("Clear reserves of players not in the group (" .. #away .. ")") or "Clear reserves of players not in the group",
+      disabled = #away == 0, click = function()
+        local names = table.concat(U.map(away, U.short), ", ")
+        UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
+          names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
+          "Clear " .. #away, function()
+            local cleared = LR.clearAbsent(s)
+            UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
+          end)
+      end },
+  }, "left")
+end
+
 --- the leader's tools for the whole list
 local function leaderTools(f, s)
   -- a private session (Core/Net.lua): only what I bring in. Nothing here is said or sent.
@@ -35,6 +53,7 @@ local function leaderTools(f, s)
           UI.copyBox("Copy for Gargul", "Press Ctrl+C, then paste it into Gargul's soft-reserve importer (/gl sr).", LR.Gargul.export(s))
         end },
       }, "left")
+      clearAbsentButton(p, s)
     end)
     return
   end
@@ -73,20 +92,7 @@ local function leaderTools(f, s)
         UI.toast(ok and ("Reminded %s in raid chat."):format(U.plural(why, "player")) or why)
       end },
     }, "left")
-    -- reserves of players who aren't in the group (left, or never came): cleared after a confirm
-    local away = LR.absent(s)
-    p:buttons({
-      { label = #away > 0 and ("Clear reserves of players not in the group (" .. #away .. ")") or "Clear reserves of players not in the group",
-        disabled = #away == 0, click = function()
-          local names = table.concat(U.map(away, U.short), ", ")
-          UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
-            names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
-            "Clear " .. #away, function()
-              local cleared = LR.clearAbsent(s)
-              UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
-            end)
-        end },
-    }, "left")
+    clearAbsentButton(p, s)
   end)
 end
 
