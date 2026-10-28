@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- A private session has "Clear reserves of players not in the group" too, like a session for the group: after importing a
+  softres.it sheet, the reserves of anyone not in your group come off in one click (after saying who). It works while
+  you're in a group. ([#160](https://github.com/kcham01/LootRuler/pull/160))
 - Fixes from whole raids played at random (`tools/chaos.lua`), all about the reserves changing hands while someone's away:
   a raider who was offline or out of the group when they were handed on (or taken over) now catches up, where before they stayed
   on the old leader for good and their reserves went nowhere; a leader who comes back to find the reserves taken over now
