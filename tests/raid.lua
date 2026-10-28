@@ -136,9 +136,30 @@ srv:tick(3)
 check("shared again: they catch up", cara.LR.session(s.id).guild and not cara.LR.session(s.id).locked)
 lead.LR.setLocked(s, true)
 srv:tick(2)
-check("in a group, the guild's copy waits a few seconds after the last one (raiders get theirs at once)", cur(ann).locked and not cara.LR.session(s.id).locked)
-srv:tick(3)
+check("in a group, the guild's copy waits a while after the last one (raiders get theirs at once)", cur(ann).locked and not cara.LR.session(s.id).locked)
+srv:tick(lead.LR.Net.GUILD_EVERY)
 check("and hear the next change", cara.LR.session(s.id).locked)
+do
+  -- with every guild member who's online in the group, nobody can need the guild's copy: none goes
+  local caraDB = srv:logout(cara)
+  local toGuild = 0
+  local addonMessage = srv.addonMessage
+  srv.addonMessage = function(self, from, prefix, text, channel, target)
+    if from == lead and channel == "GUILD" then toGuild = toGuild + 1 end
+    return addonMessage(self, from, prefix, text, channel, target)
+  end
+  lead.LR.setLocked(s, false)
+  srv:tick(lead.LR.Net.GUILD_EVERY + 2)
+  srv.addonMessage = addonMessage
+  check("everyone from the guild who's online is in the group: no copy goes to the guild", toGuild == 0, toGuild)
+  check("the raid still hears it", not cur(ann).locked)
+  srv:login(cara, caraDB)
+  srv:tick(8)
+  check("a guild member who logs in then gets the session as it is now", cara.LR.session(s.id) and not cara.LR.session(s.id).locked)
+  lead.LR.setLocked(s, true)
+  srv:tick(lead.LR.Net.GUILD_EVERY + 2)
+  check("and, outside the group, hears changes again", cara.LR.session(s.id).locked)
+end
 lead.LR.setLocked(s, false)
 srv:tick(2)
 
@@ -250,7 +271,7 @@ srv:tick(2)
 check("and the leader's addon refuses her picks if they're sent anyway", #lead.LR.Session.reservesOf(s, full(cara)) == 0)
 -- the leader lets the guild reserve before the raid forms
 lead.LR.setGroupOnly(s, false)
-srv:tick(2)
+srv:tick(lead.LR.Net.GUILD_EVERY)       -- (in a group, the guild's copy goes at most every Net.GUILD_EVERY seconds)
 check("the leader switches it off, for everyone", s.go == false and cara.LR.session(s.id).go == false)
 cara.LR.reserve(cara.LR.session(s.id), ROYAL)
 srv:tick(2)
