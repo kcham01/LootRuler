@@ -8,7 +8,7 @@ local G = LR.Gdkp
 local RED, GREEN = { 1, 0.35, 0.29 }, { 0.12, 1, 0 }
 
 --- a sheet asking for an amount of gold; done(gold)
-local function goldSheet(title, note, current, done)
+local function goldSheet(title, note, current, done, okLabel)
   local text = current and tostring(current) or ""
   UI.openSheet(title, function(f, h)
     if note then f:note(note) end
@@ -20,7 +20,7 @@ local function goldSheet(title, note, current, done)
     f:gap(8)
     f:buttons({
       { label = "Cancel", click = function() h.close() end },
-      { label = "Save", click = function()
+      { label = okLabel or "Save", click = function()
         local g = tonumber((U.trim(text):gsub("[gG]$", "")))
         if not g or g < 0 then UI.toast("That's not an amount of gold.") return end
         h.close()

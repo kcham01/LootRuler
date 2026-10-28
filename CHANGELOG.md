@@ -25,6 +25,9 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
   only, and a Confirm button beside rolling it again says "[item]: Ann wins with 88 (MS)." (or that it was the loot master's
   pick). Raiders' windows wait for it too. Settings, "Rolling out loot": switch it off to say the winner as rolls close.
   ([#142](https://github.com/kcham01/LootRuler/pull/142))
+- GDKP: bid any amount from the auction window. "Bid an amount" opens a box for the gold, and the bid is typed in raid chat
+  like the window's two buttons (too little, and you're told the least that counts). With several auctions at once, pick
+  the item, then the amount. ([#143](https://github.com/kcham01/LootRuler/pull/143))
 
 ### Easier on the eye (27 October 2026)
 

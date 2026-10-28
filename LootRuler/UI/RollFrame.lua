@@ -384,8 +384,24 @@ local function rollList(f, copy)
   f.list:Show()
 end
 
---- the row of the loot master's own roll types (a roll open to everyone that has them); in an auction with more to
---- come, a "Bid ahead" button instead (when the loot master's LootRuler takes bids ahead)
+--- a bid of any amount (not just the window's two): it's typed in raid chat, like theirs. lowest(): the least that counts now;
+--- place(g): bids it
+function UI.bidAmount(title, lowest, place)
+  UI.show()
+  UI.goldSheet(title, ("It's typed in raid chat for you, like the window's buttons. The lowest bid that counts now: %s."):format(LR.Gdkp.gold(lowest())),
+    lowest(), function(g)
+      local least = lowest()
+      if g < least then        -- (too little: asked again)
+        UI.bidAmount(title, lowest, place)
+        UI.toast(("The lowest bid that counts now is %s."):format(LR.Gdkp.gold(least)))
+        return
+      end
+      place(g)
+    end, "Bid")
+end
+
+--- the row of the loot master's own roll types (a roll open to everyone that has them); in an auction, "Bid an amount",
+--- and "Bid ahead" when more is to come (and the loot master's LootRuler takes bids ahead)
 local function extraRow(f, copy)
   for _, b in ipairs(f.extras) do b.action = nil end
   -- a loot council member: a button to vote (Core/Council.lua)
@@ -403,19 +419,35 @@ local function extraRow(f, copy)
     for i = 2, #f.extras do f.extras[i]:Hide() end
     return true
   end
-  if copy.mode == "BID" and copy.upNext and copy.state == "open" and LR.hasFeature(copy.by, LR.FEATURE_AHEAD) then
+  if copy.mode == "BID" and copy.state == "open" then
+    local top = R.topBid(copy)
     local b = f.extras[1]
     b.kind, b.shows = nil, nil
-    b.action = function() UI.bidAheadSheet(copy) end
-    local n = 0
-    for _, id in ipairs(copy.upNext) do if LR.Rolls.myAhead[id] then n = n + 1 end end
-    K.setChip(b, n > 0 and ("Bid ahead (%d)"):format(n) or "Bid ahead", false)
-    setButton(b, true)
+    b.action = function()
+      UI.bidAmount("Bid on " .. LR.itemName(copy.id), function() return R.nextBid(copy) end, function(g) LR.Rolls.bid(copy, g) end)
+    end
+    K.setChip(b, "Bid an amount", false)
+    setButton(b, not (top and U.samePlayer(top.p, me())))
     b:ClearAllPoints()
     b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.note:IsShown() and f.note or f.status, "BOTTOMLEFT", 0, -6)
     b:SetWidth(110)
     b:Show()
-    for i = 2, #f.extras do f.extras[i]:Hide() end
+    local used = 1
+    if copy.upNext and LR.hasFeature(copy.by, LR.FEATURE_AHEAD) then
+      local a = f.extras[2]
+      a.kind, a.shows = nil, nil
+      a.action = function() UI.bidAheadSheet(copy) end
+      local n = 0
+      for _, id in ipairs(copy.upNext) do if LR.Rolls.myAhead[id] then n = n + 1 end end
+      K.setChip(a, n > 0 and ("Bid ahead (%d)"):format(n) or "Bid ahead", false)
+      setButton(a, true)
+      a:ClearAllPoints()
+      a:SetPoint("LEFT", b, "RIGHT", 4, 0)
+      a:SetWidth(100)
+      a:Show()
+      used = 2
+    end
+    for i = used + 1, #f.extras do f.extras[i]:Hide() end
     return true
   end
   local xk = copy.mode == "OPEN" and copy.xk or {}
