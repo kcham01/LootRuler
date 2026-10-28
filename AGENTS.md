@@ -26,6 +26,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
+| `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (how it could be misused, and what's done) |
 
 ## Working rules
 
@@ -76,6 +77,9 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
   Need / Greed rules may answer the game's "this item will bind to you" for the rolls those rules made, only when
   the player has switched that on (`groupLootConfirm`, off to start with).
 - **Saved data is checked when loaded**, like messages are.
+
+**How it could be exploited, and what's done about each:** `docs/exploits.md`. A feature that trusts a message, a chat line
+or another player adds a line there.
 
 ## Versions
 
