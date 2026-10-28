@@ -1994,6 +1994,53 @@ for _, p in ipairs({ solo, kim }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
 
+section("a reserver who goes offline or leaves while the roll waits for them")
+-- the addon doesn't decide: the roll still waits for them until time runs out; the loot master is told, and decides
+;(function()   -- (its own function: the file has too many locals for one more block)
+  local srv8 = Server.new(".")
+  srv8.itemInfo = srv.itemInfo
+  local lia = srv8:client({ name = "Lia", class = "PALADIN" })
+  local amy = srv8:client({ name = "Amy", class = "PRIEST" })
+  local ben = srv8:client({ name = "Ben", class = "MAGE" })
+  srv8:setGroup({ lia, amy, ben }, lia, true)
+  srv8:tick(6)
+  lia.LR.startSession("Karazhan", 1, true, false)
+  srv8:tick(2)
+  amy.LR.reserve(amy.LR.current(), WATCH)
+  ben.LR.reserve(ben.LR.current(), WATCH)
+  srv8:tick(3)
+  local r = lia.LR.Rolls.start(WATCH, { secs = 60 })
+  srv8:tick(1)
+  local mf = lia.G.LootRulerMasterFrame
+  local function shown(text) return #lia.M.findText(text, true, mf) > 0 end
+  local function told(text) for _, l in ipairs(lia.M.chat) do if l:find(text, 1, true) then return true end end return false end
+  check("a reserved roll for Amy and Ben", r and r.mode == "SR" and #r.who == 2 and shown("Still to roll: Amy, Ben"))
+  local benDB = srv8:logout(ben)
+  srv8:tick(1)
+  check("Ben goes offline: the loot master is told once, in chat", told("Ben, who reserved") and told("is offline. The roll waits for them until time runs out"))
+  check("and their window marks him", shown("Ben (offline)") and shown("Waiting for someone who's away: wait for them to come back, or click Close now."))
+  srv8:roll(amy, 1, 100, 50)
+  srv8:tick(4)
+  check("Amy rolls: it still waits for Ben (the addon doesn't decide)", r.state == "open")
+  local tells = 0
+  for _, l in ipairs(lia.M.chat) do if l:find("Ben, who reserved", 1, true) then tells = tells + 1 end end
+  check("told only once while he's away", tells == 1, tostring(tells))
+  srv8:login(ben, benDB)
+  srv8:tick(2)
+  check("Ben comes back: no longer marked, and he can still roll", r.state == "open" and shown("Still to roll: Ben") and not shown("(offline)")
+    and not shown("Waiting for someone who's away"))
+  srv8:leaveGroup(ben)
+  srv8:tick(1)
+  check("Ben leaves the group: told again, and marked", told("has left the group. The roll waits for them") and shown("Ben (left the group)"))
+  check("still the loot master's call", r.state == "open")
+  lia.LR.Rolls.stop()
+  srv8:tick(1)
+  check("Close now: Amy's roll wins", r.state == "closed" and (lia.LR.Roll.result(r)).p == full(amy))
+  for _, p in ipairs({ lia, amy }) do
+    check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
+  end
+end)()
+
 section("nobody can fake a win")
 ;(function()
   -- every way a raider (with LootRuler, or without) might try to be put down as the winner of an item they didn't win.

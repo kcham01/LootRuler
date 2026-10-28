@@ -283,7 +283,21 @@ function UI.masterDraw()
     end
     if lower > 0 then f:note(("%s not listed: with more than one reserve, a player's best roll counts."):format(U.plural(lower, "lower roll"))) end
     local waiting = R.waiting(roll)
-    if waiting and #waiting > 0 and roll.state == "open" then f:note("Still to roll: " .. R.names(waiting, 8)) end
+    if waiting and #waiting > 0 and roll.state == "open" then
+      -- (anyone away first, so they're never cut off by "+N")
+      local away = Rolls.away(roll, waiting)
+      local list = {}
+      for _, name in ipairs(waiting) do if away[R.key(name)] then list[#list + 1] = name end end
+      for _, name in ipairs(waiting) do if not away[R.key(name)] then list[#list + 1] = name end end
+      local parts = {}
+      for i, name in ipairs(list) do
+        if i > 8 then parts[#parts + 1] = "+" .. (#list - 8) break end
+        local why = away[R.key(name)]
+        parts[#parts + 1] = U.short(name) .. (why == "offline" and " (offline)" or why == "left" and " (left the group)" or "")
+      end
+      f:note("Still to roll: " .. table.concat(parts, ", "))
+      if next(away) then f:note("Waiting for someone who's away: wait for them to come back, or click Close now.", K.GOLD) end
+    end
     local gs = Rolls.session()
     if roll.mode == "BID" and gs and gs.gdkp and LR.isLeader(gs) and #good > 0 then f:note("Right-click a bidder to stop taking their bids tonight.") end
     -- the loot council's votes so far
@@ -564,7 +578,11 @@ LR.onChange(function(what)
   if not LR.db then return end
   -- (a roll changes with every /roll: forty in two seconds redraw a few times, not forty)
   if what == "roll" then UI.atMostEvery("master", UI.REDRAW_GAP, function() UI.masterDraw() UI.lootPanel() end)
-  elseif what == "loot" or what == "session" or what == "roster" then UI.lootPanel() if what == "loot" and master and master:IsShown() then UI.masterDraw() end end
+  elseif what == "loot" or what == "session" or what == "roster" then
+    UI.lootPanel()
+    -- (someone a roll waits for may have gone offline, or come back)
+    if (what == "loot" or what == "roster") and master and master:IsShown() then UI.masterDraw() end
+  end
 end)
 
 --- /lr roll <item link, id or name>
