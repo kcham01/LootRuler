@@ -111,6 +111,16 @@ check("whoever left the sheet loses what it gave them", list(s3, "Cara-Dreamscyt
 check("hard reserves the sheet dropped come off; ones set in LootRuler stay", s3.hr[28770] == nil and s3.hr[30480] ~= nil)
 check("and it says what changed", r3.added == 1 and r3.removed == 3 and r3.hardRemoved == 1, ("%d %d %d"):format(r3.added, r3.removed, r3.hardRemoved))
 check("it's still a valid session", S.valid(s3))
+do
+  -- (found by tools/chaos.lua) a sheet giving Bob the item he already reserved in LootRuler changes nobody's reserves, only
+  -- what the sheet brought: the version still goes up, so raiders get it
+  local s5 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+  S.set(s5, "Bob-Dreamscythe", "MAGE", { 28529 }, false, 1760000000)
+  local before = s5.rev
+  LR.Gargul.importInto(s5, pack({ metadata = { instance = "karazhan" }, softreserves = { { name = "Bob", class = "mage", items = { { id = 28529 } } } } }))
+  check("an import that only changes what the sheet brought still changes the version", list(s5, "Bob-Dreamscythe") == "28529"
+    and s5.sx and s5.sx["Bob-Dreamscythe"] and s5.rev > before, tostring(s5.rev) .. " " .. tostring(before))
+end
 s3.sx = { ["Zed-Dreamscythe"] = "lots" }
 check("but not with nonsense in it", not S.valid(s3))
 local bad, err = LR.Gargul.importInto(s2, "this isn't an export")

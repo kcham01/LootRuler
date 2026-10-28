@@ -360,6 +360,8 @@ function G.importInto(s, text, roster)
   local data, err = G.decode(text)
   if not data then return nil, err end
   local now = U.now()
+  -- (what the sheet brought can change with nobody's reserves changing: the version still goes up, or raiders miss it)
+  local was = { rev = s.rev, sx = U.copy(s.sx), hx = U.copy(s.hx), nm = U.copy(s.nm) }
   -- the sheet's own page on softres.it, to post in raid chat
   local sid = type(data.metadata) == "table" and type(data.metadata.id) == "string" and data.metadata.id
   if sid and sid:match("^[%w%-]+$") and #sid <= 40 and not sid:find("^LootRuler") then S.setLink(s, "https://softres.it/raid/" .. sid, now) end
@@ -429,7 +431,8 @@ function G.importInto(s, text, roster)
   for _, x in ipairs(list) do
     local e, player = x.e, x.player
     seen[player] = true
-    local class = classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
+    -- the game's word on someone in the group first (a sheet's class can be wrong), then the sheet's, then what we had
+    local class = LR.classOf(player) or classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
     local before = s.sx[player] or {}
     local mine = U.copy(S.reservesOf(s, player))
     local used, gone = usedOrNot(s, player, before)
@@ -488,6 +491,7 @@ function G.importInto(s, text, roster)
   end
   if not next(s.sx) then s.sx = nil end
   if not next(s.nm) then s.nm = nil end
+  if s.rev == was.rev and not (S.same(was.sx, s.sx) and S.same(was.hx, s.hx) and S.same(was.nm, s.nm)) then S.bump(s, now) end
   LR.leaderChanged(s)
   return sum
 end

@@ -2053,6 +2053,37 @@ section("a reserver who goes offline or leaves while the roll waits for them")
   end
 end)()
 
+section("drops the leader didn't take don't stay in the loot master's copy (found by tools/chaos.lua)")
+;(function()
+  local srv9 = Server.new(".")
+  srv9.where = Server.PLACES.Karazhan
+  srv9.itemInfo = srv.itemInfo
+  local lia = srv9:client({ name = "Lia", class = "PALADIN" })
+  local mo = srv9:client({ name = "Mo", class = "PRIEST" })
+  local nia = srv9:client({ name = "Nia", class = "MAGE" })
+  srv9:tick(6)
+  srv9:setGroup({ lia, mo, nia }, lia, true)
+  srv9:setMasterLooter(mo)
+  srv9:tick(2)
+  local s9 = lia.LR.startSession("Karazhan", 2, true, false)
+  srv9:tick(3)
+  -- Mo, the master looter, opens a corpse: his copy shows the drop at once and sends it to Lia; before it gets there,
+  -- Nia becomes master looter, so Lia's LootRuler doesn't take it from Mo
+  srv9:openLoot(mo, { { WATCH, 4 } })
+  srv9:setMasterLooter(nia)
+  local mc = mo.LR.session(s9.id)
+  check("Mo's copy shows the drop at once", #(mc.drops or {}) == 1)
+  srv9:tick(3)
+  check("Lia's list doesn't have it (Mo isn't the master looter any more)", #(s9.drops or {}) == 0)
+  -- Lia's next change settles Mo's copy: nothing only he had stays
+  lia.LR.setLocked(s9, true)
+  srv9:tick(20)
+  mc = mo.LR.session(s9.id)
+  check("Lia's next copy replaces Mo's: the drop Lia never took is gone, and the copies match",
+    #(mc.drops or {}) == 0 and mc.rev == s9.rev and mc.locked == true)
+  for _, p in ipairs({ lia, mo, nia }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end)()
+
 section("nobody can fake a win")
 ;(function()
   -- every way a raider (with LootRuler, or without) might try to be put down as the winner of an item they didn't win.

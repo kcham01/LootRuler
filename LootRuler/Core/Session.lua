@@ -60,6 +60,7 @@ S.WHY = {
   PRIO_ONLY = "This raid goes by the guild's priority lists, not reserves.",
   GDKP = "This raid auctions its loot for gold (GDKP): there are no reserves.",
   GROUP_ONLY = "Only players in the group can reserve. Ask for an invite first.",
+  HANDING = "The reserves are being handed to someone else: try again in a moment.",
 }
 
 --- a new session. raidKey: a built-in raid, or LR.CUSTOM with name (a raid that isn't in the lists).
@@ -111,6 +112,7 @@ end
 --- Returns true (changed or not), or false and the reason.
 function S.set(s, player, class, items, byLeader, now)
   if s.locked and not byLeader then return false, "LOCKED" end
+  if s.next and not byLeader then return false, "HANDING" end        -- (made now, it could be lost: the new leader's copy wins)
   if s.prio == "only" and #items > 0 and not byLeader then return false, "PRIO_ONLY" end
   if s.gdkp and #items > 0 and not byLeader then return false, "GDKP" end
   local ok, why, id = S.check(s, items, nil, player)
@@ -132,6 +134,7 @@ end
 function S.add(s, player, class, id, byLeader, now)
   local items = U.copy(S.reservesOf(s, player))
   if s.locked and not byLeader then return false, "LOCKED" end
+  if s.next and not byLeader then return false, "HANDING" end
   if s.prio == "only" and not byLeader then return false, "PRIO_ONLY" end
   if s.gdkp and not byLeader then return false, "GDKP" end
   if not LR.allowedItem(s, id) then return false, "NOT_IN_RAID", id end
@@ -145,6 +148,7 @@ end
 --- takes one reserve on an item away from a player
 function S.remove(s, player, id, byLeader, now)
   if s.locked and not byLeader then return false, "LOCKED" end
+  if s.next and not byLeader then return false, "HANDING" end
   local items = U.copy(S.reservesOf(s, player))
   local i = U.indexOf(items, id)
   if not i then return false, "NOT_RESERVED", id end
@@ -222,18 +226,26 @@ function S.newLeader(s, player, now)
   while #s.was > 10 do table.remove(s.was, 1) end
   s.leader = player
   s.next = nil
+  s.nl = now                                  -- (when it changed hands: a leader who comes back yields to a change after theirs)
+  -- a new leader starts well past any change the old one made after letting it go (they may make a few before they
+  -- hear from the new one): every copy then takes the new leader's, whatever version it's on
+  s.rev = math.floor(s.rev) + S.EPOCH        -- (a whole number: a loot master's own copy may be half a version behind, Drops)
   bump(s, now)
   return true
 end
 
 --- whether a copy of a session that names a different leader may replace the one we have: it was handed to
 --- them, or they took it over. gone: our copy's leader isn't in the group (or is offline); boss: the one who sent
---- it leads or assists the group (the game says so); ours: we lead it; fromUs: their copy says it carried on
---- from us; newer: their copy is newer than ours. When it's ours, only a newer copy can take it from us (we were
---- away, and it was taken over, or taken over and handed on): an old copy someone kept never wins it back.
-function S.newLeaderOk(known, leader, gone, boss, ours, fromUs, newer)
+--- it leads the group or is its master looter (the game says so); ours: we lead it; fromUs: (no longer used: a
+--- copy's say-so that it carried on from us proves nothing); newer: their copy is newer than ours; vouched: our
+--- copy's own leader sent it, and it says they led it before (they passed it on while we were away); later: it
+--- changed hands after our last change. When it's ours, only the group's leader or master looter can take it from
+--- us, with a copy newer than ours or one that changed hands after our last change (we were away, and it was
+--- taken over, maybe handed on since): an old copy never wins it back, and nobody else's ever does.
+function S.newLeaderOk(known, leader, gone, boss, ours, fromUs, newer, vouched, later)
   if known.next and U.samePlayer(known.next, leader) then return true end
-  if ours then return (newer and (boss or fromUs)) and true or false end
+  if ours then return ((newer or later) and boss) and true or false end
+  if vouched then return true end
   return (boss and gone) and true or false
 end
 --- whether a session says it was led by a player before
@@ -243,6 +255,7 @@ function S.ledBy(s, player)
 end
 
 S.MAX_EXTRA = 5
+S.EPOCH = 100                       -- how far a session's version jumps when it changes hands (S.newLeader)
 
 --- gives a player extra reserves (0 takes them away; their last picks over the new limit go). Returns whether
 --- anything changed, and whether they lost reserves.
@@ -828,6 +841,7 @@ function S.valid(t)
   if t.ow ~= nil and type(t.ow) ~= "boolean" then t.ow = nil end    -- (one reserve win each)
   if t.pv ~= nil and t.pv ~= true then t.pv = nil end                -- (my private session: Core/Net.lua)
   if t.al ~= nil and not S.okTime(t.al) then t.al = nil end          -- (when reserves lock by themselves)
+  if t.nl ~= nil and not S.okTime(t.nl) then t.nl = nil end          -- (when it last changed hands)
   if t.bn ~= nil then t.bn = S.cleanBench(t.bn) end                   -- (the bench: names only)
   -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves
   if t.sx ~= nil then

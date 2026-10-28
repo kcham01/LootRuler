@@ -24,7 +24,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
 | `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
-| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `fuzz.lua` (random and broken input into every rule and parser, checking what they promise), `gen_loot.py`, `art.mjs` |
+| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `fuzz.lua` (random and broken input into every rule and parser, checking what they promise), `chaos.lua` (whole raids where everyone does random things; copies must agree), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
 | `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (what LootRuler protects against), `screens/` (the owner's in-game screenshots, used in the README; retake or swap back to a `results/shots` picture when that screen changes) |
 
@@ -117,6 +117,7 @@ lua5.1 tools/coverage.lua                                   # functions no test 
 lua5.1 tools/bench.lua                                      # a 40-player raid, measured: build/bench.txt (about a minute)
 lua5.1 tools/stress.lua                                     # past an ordinary night: build/stress.txt (about a minute)
 lua5.1 tools/fuzz.lua [rounds]                              # random and broken input everywhere: build/fuzz.txt (a few minutes at 300)
+lua5.1 tools/chaos.lua [raids] [steps]                      # whole raids doing random things: build/chaos.txt (SEEDBASE=n for new seeds; ONLY=n one raid; TRACEP=Name its messages)
 ```
 
 `tools/bench.lua` plays a raid night for 40 players (30 with LootRuler) in the stand-in and writes, moment by moment, the
@@ -427,8 +428,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Only what changed** (#119; message `U` = { id, f, r, c = `S.diff` }, `S.patch`, `S.same`; feature bit `FEATURE_CHANGES` 8;
   `Net.everyoneTakesChanges`): the leader keeps a copy of what it last sent each group channel (`groupSent`) and sends the changes
   when everyone in the group with LootRuler has bit 8; a whole `T` goes first, to the guild, by whisper, from a new leader or one
-  handing it on, and every `SESSION_FULL_EVERY` sends. A raider whose copy is older than `f` (or who hasn't got it, or hears it
-  from someone who isn't its leader) asks the sender by whispered `Q` (answered with `T`), at most every 10 seconds. The patched
+  handing it on, and every `SESSION_FULL_EVERY` sends. A raider whose copy isn't exactly `f` (or who hasn't got it, or hears it from someone who isn't its leader) asks the sender by
+  whispered `Q` (answered with `T`), at most every 10 seconds (`LR.catchUp`: asked as soon as it may if it has to wait, and looked at
+  again after each answer, up to four tries, until the copy has caught up). Changes are never
+  put onto a newer copy than `f` (#159): something added and taken back in between would stay in it for good. The patched
   copy goes through `S.valid` and the same path as `T` (`accept`).
 - **From the owner's list** (#110, #113-#118): "Open a trade with the winner" off to start with; button rows wrap (`Flow:buttons`;
   a UI test checks no button runs past its panel on any tab); the leader records loot from the game's loot lines when the master
@@ -550,6 +553,32 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   (`S.okTime`, `U.clock`), and the guild book: an alt linked to nobody or a priority list over 100 made the officer's own book
   fail its check, and a book that failed was thrown away at login; now `B.repair` keeps every good entry. Run it after anything
   that changes the rules or reads text, with `tools/stress.lua`.
+- **Changing hands while someone's away** (#159, found by `tools/chaos.lua`): a raider (or the old leader) away when the reserves
+  changed hands used to stay on their old copy for good, and a leader with unsent changes who came back could keep leading beside
+  the one who took over. Now: `S.newLeader` jumps `rev` by `S.EPOCH` (100) and records `s.nl` (when it changed hands); a copy that
+  isn't accepted makes `LR.askWho` ask the leader we know (else the raid leader and master looter) by `Q` with `id`, answered by
+  anyone with the session; `handlers.T` takes a copy passed on (`relay`) from our copy's own leader when it says they led it before
+  (`vouched`), or from the raid leader / master looter; a leader yields only to them (`newLeaderOk`'s `ours` needs `boss`), with a
+  newer copy or one that changed hands after its last change (`later`); a leader who yields passes the new copy to the group once.
+  A copy saying it carried on from our leader, changed hands after our last change, that nobody we trust can confirm
+  (`LR.noteClaim`, `LR.claim`, `LR.followClaim`, `LR.dropClaim`; `claimPanel` in `UI/Setup.lua`): the player decides on the Session
+  tab ("Follow Ann", or for the old leader "Let Ann run them"). While a session is being handed on (`s.next`), raiders' changes are
+  refused (`HANDING`): the new leader's copy wins, so they'd be lost. The softres.it import takes the game's class for someone in the
+  group, and `handlers.A` keeps the class the leader has, so copies match. A claim is noted for a raider when our leader is away (or
+  the copy is at least `S.EPOCH` past ours) and the sender runs it from in the group; for a leader, when the copy says it carried on
+  from us and comes from the group (`Net.wentOnFromUs`: changed hands after our last change, or its leader is one we never took
+  it from, or it's past ours). Following asks the new leader
+  for their latest copy (the kept one may be a change old). The loot master's own copy, with drops the leader hasn't taken yet
+  (`Drops` `save`), is marked half a version behind, so the leader's next copy always replaces it and nothing only it had stays.
+  A copy whose leader our copy lists in `was`, older than ours, is never taken (whoever sends it: everything since would be lost)
+  and its sender is whispered ours (`LR.tellStale`, every 30 seconds at most; changes `U` made on a copy older than ours too); a leader told so by someone who isn't the raid
+  leader or master looter gets the Session tab's choice (`handlers.T`). A claim that our copy already settled, or that has become an
+  old copy (its leader is in our `was`, its `rev` below ours), disappears (`LR.claim`); `LR.followClaim` puts our `next` back if
+  the copy isn't taken. A change with no group to send it to (a lock at login) goes when the group is known (`groupHas`, slowly).
+  `tools/chaos.lua`'s settle waits until copies stop changing, and checks no copy is handed on to its own leader. A new leader's
+  `rev` is always whole (`math.floor`), so the half-version mark keeps working. **Every change bumps `rev`**: `Gargul.importInto`
+  does when only `sx` / `hx` / `nm` changed, and `sendSession` bumps a leader's copy that differs from what the group last got at
+  the same version (else raiders ignore it as old).
 - **A reserver away while a roll waits for them** (#152, the owner's call: the players decide, not the addon; `Rolls.away(roll, waiting)`,
   `Rolls.tellAway`, `roll.toldAway`): the roll still waits for every reserver until time runs out. The loot master's window lists
   anyone away first ("Bob (offline)", "(left the group)") with a gold line to wait or Close now, and their chat is told once each time
