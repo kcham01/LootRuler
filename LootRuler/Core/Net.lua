@@ -192,14 +192,25 @@ function LR.isLeader(s) return s ~= nil and U.samePlayer(s.leader, U.me()) end
 function LR.myClass() local _, c = UnitClass("player") return c end
 
 --- the session the window shows: the chosen one, else the newest open one whose leader is in the group or is us
+--- sessions someone in the group runs that I said no to ("Join their reserves?"): id -> true
+local function declined()
+  if type(db.ui.declined) ~= "table" then db.ui.declined = {} end
+  return db.ui.declined
+end
+--- whether a session shows by itself, without asking: mine, or run by the group's leader or master looter
+function LR.showsBySelf(s)
+  return LR.isLeader(s) or (LR.inGroup(s.leader) and LR.groupBoss(s.leader) and not declined()[s.id])
+end
 function LR.current()
   if db.current and db.sessions[db.current] then return db.sessions[db.current] end
   local best
   for _, s in pairs(db.sessions) do
-    if not s.ended and (LR.isLeader(s) or LR.inGroup(s.leader)) and (not best or s.created > best.created) then best = s end
+    if not s.ended and LR.showsBySelf(s) and (not best or s.created > best.created) then best = s end
   end
   return best
 end
+--- I said no to joining a session (it's still kept, and can be picked from the session list)
+function LR.decline(id) declined()[id] = true if db.current == id then db.current = nil end LR.changed("select") end
 function LR.select(id) db.current = id LR.changed("select") end
 
 --- every known session, newest first
@@ -653,12 +664,15 @@ function LR.leaderGone(s)
   local m = LR.inGroup(s.leader)
   return not m or not m.online
 end
---- someone leads or assists the group (the game says so)
+--- someone leads the group, or is its master looter (the game says so); assistants don't count
 function LR.groupBoss(name)
   local m = LR.inGroup(name)
-  return m and (m.leader or m.assist) and true or false
+  if not m then return false end
+  if m.leader then return true end
+  local ml = LR.masterLooter()
+  return ml ~= nil and U.samePlayer(ml, name)
 end
---- whether I may take over a session: its leader is away, and I lead or assist the group
+--- whether I may take over a session: its leader is away, and I lead the group or am its master looter
 function LR.mayTakeOver(s) return s ~= nil and not LR.isLeader(s) and not s.archived and LR.leaderGone(s) and LR.groupBoss(U.me()) end
 
 local function tellGroup(text)
@@ -680,7 +694,7 @@ local function nowMine(s, from, quiet)
 end
 --- takes over a session whose leader is gone (I lead or assist the group). Returns true, or false and why not.
 function LR.takeOver(s)
-  if not LR.mayTakeOver(s) then return false, "Only the raid leader or an assistant can take over, while the reserves' leader is away." end
+  if not LR.mayTakeOver(s) then return false, "Only the raid leader or the master looter can take over, while the reserves' leader is away." end
   nowMine(s, s.leader)
   return true
 end
@@ -688,7 +702,7 @@ end
 function LR.passOn(s, player)
   if not LR.canLead(player) then return false, ("%s's LootRuler can't take the reserves over (it's too old, or not there)."):format(U.short(player)) end
   if U.samePlayer(player, U.me()) then return LR.takeOver(s) end
-  if not LR.mayTakeOver(s) then return false, "Only the raid leader or an assistant can take over, while the reserves' leader is away." end
+  if not LR.mayTakeOver(s) then return false, "Only the raid leader or the master looter can take over, while the reserves' leader is away." end
   nowMine(s, s.leader, true)
   return LR.handOver(s, player)
 end
@@ -852,6 +866,7 @@ function accept(t, channel, sender)
     return
   end
   local first = not known
+  local shown = first and LR.current()           -- (what I'm looking at before this one came)
   t.guild = t.guild or channel == "GUILD"
   db.sessions[t.id] = t
   local mine = db.mine[t.id]
@@ -867,8 +882,13 @@ function accept(t, channel, sender)
   if t.next and U.samePlayer(t.next, U.me()) then LR.adopt(t) end
   if first then
     LR.preload(t.raid)
-    -- a new session from someone in our group is the one to show (last week's can go to the back)
-    if LR.inGroup(t.leader) then db.current = t.id end
+    -- a new session from someone in our group: the group's leader's or master looter's shows by itself, unless I'm
+    -- looking at someone else's that's open; anyone else's (or when I am) asks first, so nobody's window is taken over
+    if LR.inGroup(t.leader) and not t.ended then
+      local busy = shown and shown.id ~= t.id and not shown.ended and not U.samePlayer(shown.leader, t.leader)
+      if LR.groupBoss(t.leader) and not busy then db.current = t.id
+      elseif LR.UI and LR.UI.joinPrompt then LR.UI.joinPrompt(t) end
+    end
     if not t.ended then
       LR.print(("%s opened soft reserves for %s%s: %s each%s. Type |cffffd100/lr|r to reserve."):format(
         U.short(t.leader), LR.raidOf(t).name, (t.br and t.br.n) and (" (" .. t.br.n .. ")") or "", U.plural(t.sr, "reserve"), t.dupes and "" or ", one per item"))

@@ -13,6 +13,12 @@ From the owner's in-game screenshots.
   out, and your highest counts. The raid line says so ("x2 rolls twice, best counts"), and the roll window offers the next
   roll until they're used up ("1 roll left"). Before, more reserves on one item only counted if it dropped again.
   ([#127](https://github.com/kcham01/LootRuler/pull/127))
+- Only the one holding the loot runs it: with master loot on, the master looter; without it, the raid leader. Assistants
+  no longer can (pugs often make everyone one), so nobody else can start rolls or auctions on everyone's screen, or have a
+  typed Gargul line ("awarded to", "You have 10 seconds to roll on...") count. Taking over reserves while their leader is
+  away is for the raid leader or the master looter. ([#128](https://github.com/kcham01/LootRuler/pull/128))
+- Reserves run by someone other than the raid leader or master looter don't take over your window: LootRuler asks "Join
+  their reserves?" first (and when you're looking at someone else's). ([#128](https://github.com/kcham01/LootRuler/pull/128))
 - Section titles fit on their gold plate, however long ("Need and Greed (group loot)" ran off it).
   ([#103](https://github.com/kcham01/LootRuler/pull/103))
 - Every item search says what to type inside the box, as the Reserve tab's does ("Search Karazhan"), instead of in a line

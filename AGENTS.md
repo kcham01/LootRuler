@@ -65,8 +65,9 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 - **Every addon message is untrusted.** Check its shape and types before using it (`Session.valid`, the checks
   at the top of each handler); cap list lengths; ignore unknown message types.
 - **The sender is who the game says sent it**, never a name inside the message. Changes to a session only
-  count from its leader; rolls and loot only from the leader, an assistant or the master looter
-  (`LR.canRunLoot`). The leader's addon is the only one that decides.
+  count from its leader; rolls, auctions, Gargul's lines and loot only from whoever holds the loot: the master looter
+  with master loot on, else the group's leader (`LR.canRunLoot`; assistants don't count, pugs often make everyone one).
+  The leader's addon is the only one that decides.
 - **Handlers run in `pcall`**, so one bad message can't break the addon.
 - **Never run received text as code** (`loadstring` and friends are banned).
 - **Never use a bag item unless the trade window is open** (`C_Container.UseContainerItem` equips it otherwise).
@@ -475,6 +476,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   may /roll once for each reserve they have left on the item (`roll.who`'s counts, at most 10); their highest is `roll.rolled` and
   counts, the others are "lower"; past that, "again". `R.waiting` waits for every roll. Ties still reroll once each. Older raiders'
   windows count only the first (the loot master's addon decides). Practice players use all their rolls.
+- **Who runs loot** (#128; `LR.canRunLoot`, `LR.groupBoss`, `LR.showsBySelf`, `LR.decline`, `db.ui.declined`; `UI.joinPrompt` in `UI/Setup.lua`):
+  `canRunLoot` is the master looter (master loot) or the group leader, nobody else; `groupBoss` (taking over a session) is the
+  leader or master looter. Gargul's start / stop lines are checked too (`UI/ReserveStrip.lua`). A first-seen session from the
+  group shows by itself only when its leader is the group's leader or master looter and I'm not looking at someone else's
+  open one; otherwise `UI.joinPrompt` asks (in combat, a chat line). `LR.current`'s fallback skips declined and others' sessions.
+  A raider who doesn't run loot no longer says trades in raid chat (an enchant is still noted in their own chat).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

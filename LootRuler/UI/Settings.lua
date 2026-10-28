@@ -138,7 +138,7 @@ function UI.settingsView(f)
     toggle(p, "reserveStrip", "Who reserved it, while it's rolled for", "When an item is rolled for, with LootRuler or Gargul, a small strip above the roll window lists everyone who reserved it. It goes when the roll ends.")
   end)
 
-  group(f, "Running loot", "For the raid leader, an assistant or the master looter.")
+  group(f, "Running loot", "For whoever runs the loot: the master looter, or the raid leader without master loot.")
   section(f, "Rolling out loot", "How long rolls last, shortcut keys, and what the raid hears.", function(p)
     local chips = { { plain = true, label = "Seconds to roll:" } }
     for _, n in ipairs(LR.Rolls.SECONDS) do
