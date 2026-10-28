@@ -710,6 +710,24 @@ do
   check("300 rolls of every kind, with +1s, come out in the same order", same and #good + #bad == 300)
 end
 
+-- GDKP: bids not taken from a player (the organiser's call)
+do
+  local a = R.new("nb", WATCH, { mode = "BID", min = 100, inc = 10, nb = { [R.key(DAN)] = DAN } })
+  local e = R.bid(a, DAN, 500)
+  check("a player whose bids aren't taken: their bid doesn't count", e.kind == nil and e.why == "banned" and a.top == nil)
+  R.bid(a, ANN, 100)
+  check("everyone else's do", a.top and a.top.p == ANN)
+  local b2 = R.new("nb2", WATCH, { mode = "BID", min = 100, inc = 10 })
+  R.bid(b2, ANN, 100)
+  R.bid(b2, BOB, 300)
+  check("stopped in the middle of an auction: their top bid goes, the best of the rest is top again",
+    R.ban(b2, BOB) and b2.top and b2.top.p == ANN and b2.top.n == 100 and b2.entries[2].why == "banned")
+  check("their next bid doesn't count either", R.bid(b2, BOB, 900).why == "banned" and b2.top.p == ANN)
+  check("stopping them twice changes nothing", not R.ban(b2, BOB))
+  local made = R.resolve(b2, { [R.key(BOB)] = { p = BOB, g = 2000, at = 1 }, [R.key(CARA)] = { p = CARA, g = 150, at = 2 } })
+  check("a max bid of theirs isn't used, anyone else's is", b2.top.p == CARA and #made >= 1)
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

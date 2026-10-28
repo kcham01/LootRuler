@@ -17,6 +17,7 @@ K.define("rollrow", function()
   local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
   b:SetBackdrop(K.FLAT)
   b:SetHeight(20)
+  b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b.rank = K.fs(b, "GameFontNormalSmall")
   b.rank:SetPoint("LEFT", 6, 0)
   b.rank:SetWidth(16)
@@ -221,11 +222,27 @@ local function rowFor(f, roll, e, rank, pick)
     b:SetBackdropColor(0.35, 0.27, 0.05, 0.9)
     b:SetBackdropBorderColor(1, 0.82, 0, 1)
   end
-  if e.kind and roll.state == "closed" then
-    b:SetScript("OnClick", function() roll.pick = e.p UI.masterDraw() end)
-  end
+  local s = Rolls.session()
+  local organiser = roll.mode == "BID" and s and s.gdkp and LR.isLeader(s) and not U.samePlayer(e.p, U.me())
+  b:SetScript("OnClick", function(_, button)
+    -- right-click a bidder: their bids aren't taken for the rest of tonight (the organiser's, optional)
+    if button == "RightButton" then
+      if organiser and not (roll.nb and roll.nb[R.key(e.p)]) then UI.noBidsSheet(e.p) end
+      return
+    end
+    if e.kind and roll.state == "closed" then roll.pick = e.p UI.masterDraw() end
+  end)
   f:place(b, 20)
   f:gap(2)
+end
+
+--- asks before the organiser stops taking a player's bids for tonight
+function UI.noBidsSheet(player)
+  UI.confirm("Stop taking their bids?", ("%s's bids won't count for the rest of tonight's auctions, this one included. The raid is told once. You can take them again on the Session tab."):format(U.short(player)),
+    "Stop taking them", function()
+      local ok, why = Rolls.noBidsFrom(player, true)
+      if not ok and why then UI.toast(why) end
+    end)
 end
 
 --- draws the loot master window for the roll that's on (or was last)
@@ -261,6 +278,8 @@ function UI.masterDraw()
     for _, e in ipairs(bad) do rowFor(f, roll, e, nil, pick) end
     local waiting = R.waiting(roll)
     if waiting and #waiting > 0 and roll.state == "open" then f:note("Still to roll: " .. R.names(waiting, 8)) end
+    local gs = Rolls.session()
+    if roll.mode == "BID" and gs and gs.gdkp and LR.isLeader(gs) and #good > 0 then f:note("Right-click a bidder to stop taking their bids tonight.") end
     -- the loot council's votes so far
     local s = Rolls.session()
     if LR.Council.on(s) and LR.Council.votable(roll) then

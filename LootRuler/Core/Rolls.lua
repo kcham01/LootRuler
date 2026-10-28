@@ -167,12 +167,21 @@ local function sendGroup(msg)
   local ch = LR.groupChannel()
   if ch then Net.send(msg, ch) end
 end
+--- whose bids aren't taken, as a list of names for a message (nil when nobody's)
+local function noBidList(roll)
+  if not roll.nb then return nil end
+  local out = {}
+  for _, name in pairs(roll.nb) do out[#out + 1] = name end
+  table.sort(out)
+  return #out > 0 and out or nil
+end
+Rolls.noBidList = noBidList
 local function wire(roll)
   local who = {}
   for _, w in ipairs(roll.who) do who[#who + 1] = type(w) == "table" and { w[1], w[2] } or w end
   return { t = "R", k = roll.k, id = roll.id, l = roll.link, s = roll.secs, left = math.max(0, roll.ends - now()),
     m = roll.mode, w = who, f = roll.f, tie = roll.tie, po = roll.po, bp = roll.bp, xk = roll.xk, nt = roll.note, wl = roll.wish, pn = roll.mode == "PR" and roll.n or nil,
-    mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil,
+    mn = roll.min, inc = roll.inc, sb = roll.strict or nil, tb = roll.top and { roll.top.p, roll.top.n } or nil, nb = noBidList(roll),
     qn = Rolls.upNext() }
 end
 
@@ -247,7 +256,7 @@ function Rolls.start(id, opts)
     plan = R.plan(s, id, LR.roster())
     -- GDKP: it's auctioned (a hard reserve still comes first)
     if s and s.gdkp and s.gk and plan.mode ~= "HR" then
-      plan = { mode = "BID", min = LR.Gdkp.minFor(s, id), inc = s.gk.inc, strict = s.gk.strict, who = {}, away = {} }
+      plan = { mode = "BID", min = LR.Gdkp.minFor(s, id), inc = s.gk.inc, strict = s.gk.strict, nb = LR.Gdkp.noBids(s), who = {}, away = {} }
     -- the guild's priority lists, when the session goes by them: the best priority here gets it (a hard
     -- reserve still comes first); with "only", reserves don't count
     elseif s and s.prio and plan.mode ~= "HR" then
@@ -697,7 +706,13 @@ function Rolls.follow(msg, sender)
     -- a tie roll is only for the players who tied
     if copy.mode == "TIE" and not R.inList(copy.who, U.me()) then copy.hidden = true end
   end
-  -- an auction: the highest bid so far (we may have missed some)
+  -- an auction: whose bids aren't taken (older versions don't send it), and the highest bid so far (we may have missed some)
+  if copy.mode == "BID" and type(msg.nb) == "table" then
+    for i, name in ipairs(msg.nb) do
+      if i > 40 then break end
+      if type(name) == "string" and #name <= 60 then R.ban(copy, name) end
+    end
+  end
   if copy.mode == "BID" and type(msg.tb) == "table" and type(msg.tb[1]) == "string" and tonumber(msg.tb[2]) then
     local g = math.floor(tonumber(msg.tb[2]))
     local before = copy.top
@@ -1030,6 +1045,39 @@ function Rolls.openAuction()
     local c = Rolls.seen[Rolls.order[i]]
     if c and c.mode == "BID" and c.state == "open" then return c end
   end
+end
+
+---------------------------------------------------------------------- auctions: bids not taken
+-- The organiser can stop taking a player's bids for the rest of the GDKP (someone who won't pay): kept on the session
+-- (gk.nb), so the auction on now, the next ones and a batch all leave them out; taken again just as easily.
+local function applyNoBids()
+  local s = session()
+  local nb = LR.Gdkp.noBids(s) or {}
+  local roll = Rolls.current
+  if roll and roll.mode == "BID" and roll.state == "open" then
+    local any = false
+    for _, name in pairs(nb) do if R.ban(roll, name) then any = true end end
+    for k in pairs(roll.nb or {}) do if not nb[k] then roll.nb[k] = nil any = true end end      -- (taken again: from now on)
+    if any then sendGroup(wire(roll)) changed() end
+  end
+  if LR.Batch and LR.Batch.applyNoBids then LR.Batch.applyNoBids(nb) end
+end
+Rolls.applyNoBids = applyNoBids
+LR.onChange(function(what) if what == "session" then applyNoBids() end end)
+
+--- the organiser stops taking a player's bids for the rest of tonight (on), or takes them again; the raid is told once.
+--- Returns true, or false and why not.
+function Rolls.noBidsFrom(player, on)
+  local s = session()
+  if not (s and s.gdkp and s.gk) then return false, "That's for a GDKP." end
+  if not LR.isLeader(s) then return false, "Only the GDKP's organiser can." end
+  if not LR.gdkpNoBids(s, player, on) then return false end
+  applyNoBids()
+  local ch = LR.groupChannel()
+  if ch then
+    LR.say(LR.TAG .. " " .. (on and "%s's bids aren't taken for the rest of tonight." or "%s's bids count again."):format(U.short(player)), ch)
+  end
+  return true
 end
 
 ---------------------------------------------------------------------- auctions: bids typed in raid chat

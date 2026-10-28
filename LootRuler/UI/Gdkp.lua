@@ -416,6 +416,17 @@ function UI.gdkpPanel(f, s)
       end
       p:chips({ { tick = true, label = "Bids start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
         tip = "Only \"bid 150\" counts, not just \"150\": someone saying \"500\" in raid chat doesn't bid by accident." } }, { gap = 2 })
+      -- bidders the organiser stopped taking bids from (right-click one in the loot master window)
+      if gk.nb and #gk.nb > 0 then
+        local list = { { plain = true, label = "Bids not taken from:" } }
+        for _, name in ipairs(gk.nb) do
+          list[#list + 1] = { label = U.short(name) .. "  x", tip = "Take their bids again.", click = function()
+            local ok, why = LR.Rolls.noBidsFrom(name, false)
+            if not ok and why then UI.toast(why) end
+          end }
+        end
+        p:chips(list, { gap = 2 })
+      end
       p:gap(4)
     end
     p:kv({
