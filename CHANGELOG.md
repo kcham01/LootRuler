@@ -45,6 +45,9 @@ From the owner's in-game screenshots.
   (" Gargul : Stop your rolls!"), which LootRuler now reads. ([#123](https://github.com/kcham01/LootRuler/pull/123))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
   about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
+- Bosses open and close on the Reserve and Reserves tabs, like the Settings sections: each shows its name and how many items
+  (and, on the Reserves tab, how many reserves) until you click it, with "Open all" and "Close all". Searching, or "Reserved
+  only", opens every boss with a match. LootRuler remembers which ones you opened. ([#126](https://github.com/kcham01/LootRuler/pull/126))
 - The Loot tab has an "Award history": everything given out in your raids, by date, newest first. Each date opens and closes
   with a click to show what was given out that day, who won it, how, and in which raid. Export, "Who got what, over time" and
   Past raids are there too, instead of at the bottom of the Loot tab. ([#125](https://github.com/kcham01/LootRuler/pull/125))

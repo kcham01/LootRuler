@@ -467,6 +467,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
   session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`
   opens that page. Private sessions (when built) stay out: they're forgotten when ended (the owner's choice).
+- **Bosses that open and close** (#126; `UI.bossFold(f, where, key, name, what, fill, force)`, `UI.bossIsOpen`, `UI.bossChips`;
+  `db.ui.bossOpen` "<where>:<raid>:<boss>" -> true, closed to start with; `where` is "reserve" or "reserves"): the Reserve tab's loot list
+  (`lootList`, with a session or browsing) and the Reserves tab's soft reserves by item. A search or "Reserved only" opens every
+  boss with a match (`force`); the 200-row limit counts only open bosses. Tests that click items open them first ("Open all").
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

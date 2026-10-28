@@ -357,52 +357,51 @@ local function byItem(f, s, leader)
   for id, who in pairs(S.byItem(s)) do list[id] = who end      -- (a copy: items are taken off it below)
   local total = 0
   for _ in pairs(list) do total = total + 1 end
-  f:panel("Soft reserves", function(p)
-    if total == 0 then p:note("Nobody has reserved anything yet.") return end
-    for _, boss in ipairs(LR.raidOf(s).bosses) do
-      local ids = U.filter(boss.items, function(id) return list[id] ~= nil end)
-      if #ids > 0 then
-        local hd = K.get(p.owner, "head", p.parent)
-        hd.text:SetText(boss.name)
-        hd:SetWidth(p.width)
-        p:place(hd, 22)
-        p:gap(3)
-        for _, id in ipairs(ids) do
-          local who = list[id]
-          local n = 0
-          for _, w in ipairs(who) do n = n + w[2] end
-          local b = K.get(p.owner, "item", p.parent)
-          K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), UI.whoLine(s, id), n > 1 and (n .. " SR") or "1 SR")
-          b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
-          b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-          p:place(b, 36)
-          p:gap(3)
-        end
-        for _, id in ipairs(ids) do list[id] = nil end    -- an item two bosses drop is shown under the first
-      end
-    end
-    -- reserves on items that aren't the raid's own loot (any item allowed, or a raid not in the lists)
-    local rest = {}
-    for id in pairs(list) do rest[#rest + 1] = id end
-    table.sort(rest)
-    if #rest > 0 then
-      local hd = K.get(p.owner, "head", p.parent)
-      hd.text:SetText(LR.raidOf(s).custom and "Reserved items" or "Other items")
-      hd:SetWidth(p.width)
-      p:place(hd, 22)
+  local hd = K.get(f.owner, "head", f.parent)
+  hd.text:SetText("Soft reserves")
+  hd.right:SetText(U.plural(total, "item"))
+  hd:SetWidth(f.width)
+  f:place(hd, 22)
+  f:gap(4)
+  if total == 0 then f:note("Nobody has reserved anything yet.") return end
+  -- each boss with reserved items opens and closes (closed to start with); its line says how many
+  local byItem = S.byItem(s)
+  local function count(id) local n = 0 for _, w in ipairs(byItem[id] or {}) do n = n + w[2] end return n end
+  local function rows(p, ids)
+    for _, id in ipairs(ids) do
+      local n = count(id)
+      local b = K.get(p.owner, "item", p.parent)
+      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), UI.whoLine(s, id), n > 1 and (n .. " SR") or "1 SR")
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      p:place(b, 36)
       p:gap(3)
-      for _, id in ipairs(rest) do
-        local n = 0
-        for _, w in ipairs(list[id]) do n = n + w[2] end
-        local b = K.get(p.owner, "item", p.parent)
-        K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), UI.whoLine(s, id), n > 1 and (n .. " SR") or "1 SR")
-        b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
-        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        p:place(b, 36)
-        p:gap(3)
-      end
     end
-  end)
+  end
+  local sections = {}
+  for _, boss in ipairs(LR.raidOf(s).bosses) do
+    local ids = U.filter(boss.items, function(id) return list[id] ~= nil end)
+    if #ids > 0 then
+      local n = 0
+      for _, id in ipairs(ids) do n = n + count(id) end
+      sections[#sections + 1] = { name = boss.name, ids = ids, n = n }
+      for _, id in ipairs(ids) do list[id] = nil end    -- an item two bosses drop is shown under the first
+    end
+  end
+  -- reserves on items that aren't the raid's own loot (any item allowed, or a raid not in the lists)
+  local rest = {}
+  for id in pairs(list) do rest[#rest + 1] = id end
+  table.sort(rest)
+  if #rest > 0 then
+    local n = 0
+    for _, id in ipairs(rest) do n = n + count(id) end
+    sections[#sections + 1] = { name = LR.raidOf(s).custom and "Reserved items" or "Other items", ids = rest, n = n }
+  end
+  UI.bossChips(f, "reserves", U.map(sections, function(x) return { s.raid, x.name } end))
+  for _, x in ipairs(sections) do
+    UI.bossFold(f, "reserves", s.raid, x.name, ("%s, %s"):format(U.plural(#x.ids, "item"), U.plural(x.n, "reserve")),
+      function(p) rows(p, x.ids) end)
+  end
 end
 
 local function byPlayer(f, s, leader)
