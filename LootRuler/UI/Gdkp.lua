@@ -189,7 +189,7 @@ function UI.goldInOutSheet(s)
     for i, a in ipairs(s.gk.adds or {}) do
       local b = K.get(f.owner, "item", f.parent)
       K.setItem(b, f.width, LR.LOGO, (a.g > 0 and "|cff1eff00+" or "|cffff5a4a-") .. G.gold(math.abs(a.g)) .. "|r", a.n ~= "" and a.n or "(no note)",
-        a.at and date("%H:%M", a.at) or "", { text = "x", tip = "Take this back", click = function() LR.gdkpRemoveAdd(s, i) h.redraw(true) end })
+        U.clock(a.at), { text = "x", tip = "Take this back", click = function() LR.gdkpRemoveAdd(s, i) h.redraw(true) end })
       f:place(b, 36)
       f:gap(2)
     end
@@ -225,7 +225,7 @@ function UI.ledgerSheet(s)
     local list = G.ledger(s)
     if #list == 0 then f:note("Nothing yet: sales, gold put in or out, and payments show here as they happen.") end
     for _, e in ipairs(list) do
-      local when = e.at > 0 and ("|cff9d9d9d%s|r  "):format(date("%H:%M", e.at)) or ""
+      local when = U.clock(e.at) ~= "" and ("|cff9d9d9d%s|r  "):format(U.clock(e.at)) or ""
       local who = e.p and U.classText(U.short(e.p), LR.classOf(e.p)) or ""
       local text
       if e.kind == "sale" then text = ("%s bought %s for %s"):format(who, LR.coloredName(e.i), G.gold(e.g))

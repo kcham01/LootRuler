@@ -56,8 +56,9 @@ end
 --- whether a session lets an item be reserved: any item for a raid that isn't in the lists, or when the
 --- leader allows any item; else the raid's own loot. lenient: don't judge by the built-in lists at all (a
 --- raider's addon, before asking the leader's, which decides)
+LR.MAX_ITEM_ID = 2147483647      -- (the game's item numbers are 32-bit)
 function LR.allowedItem(s, id, lenient)
-  if type(id) ~= "number" or id <= 0 or id % 1 ~= 0 then return false end
+  if type(id) ~= "number" or id <= 0 or id % 1 ~= 0 or id > LR.MAX_ITEM_ID then return false end
   if lenient or s.any or not LR.RAID_BY_KEY[s.raid] then return true end
   return LR.RAID_BY_KEY[s.raid].has[id] == true
 end

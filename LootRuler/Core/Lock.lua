@@ -35,7 +35,7 @@ function L.atTime(secs)
 end
 
 --- when a lock time is, on my clock: "20:15"
-function L.clock(at) return date("%H:%M", time() + (at - U.now())) end
+function L.clock(at) return (LR.Session.okTime(at) and date("%H:%M", time() + (at - U.now()))) or "?" end
 
 --- what the raid hears before it locks
 function L.warning(left)

@@ -23,6 +23,7 @@ LR.Book = B
 
 B.DEFAULT_PER_RAID = 10
 B.MAX_POINTS = 1000
+B.MAX_PRIO = 100                -- players on one item's list (B.valid refuses more)
 
 --- when an entry changes: now, or just after its last change (two changes in the same second still spread)
 local function stamp(old, now)
@@ -61,6 +62,7 @@ end
 --- Returns the change, or nil and why not.
 function B.setAlt(book, alt, main, now)
   alt, main = U.full(alt), B.mainOf(book, main)
+  if not alt or not main then return nil, "Pick both characters." end
   if U.samePlayer(alt, main) then return nil, "That's the same character." end
   book.alts = book.alts or {}
   local change = { alts = {} }
@@ -79,7 +81,7 @@ end
 --- unlinks an alt: it has its own points again. Returns the change, or nil.
 function B.unlinkAlt(book, alt, now)
   alt = U.full(alt)
-  local cur = book.alts and book.alts[alt]
+  local cur = alt and book.alts and book.alts[alt]
   if not cur or cur.m == "" then return nil end
   book.alts[alt] = { m = "", t = stamp(cur, now) }
   return { alts = { [alt] = book.alts[alt] } }
@@ -101,9 +103,11 @@ end
 --- sets a player's points (their main's, for a linked alt; 0 to MAX_POINTS); returns the change to send, or
 --- nil when nothing changed
 function B.setPoints(book, player, n, now)
-  n = math.max(0, math.min(B.MAX_POINTS, math.floor(tonumber(n) or 0)))
+  n = tonumber(n) or 0
+  if n ~= n then n = 0 end                                             -- (not a number at all)
+  n = math.max(0, math.min(B.MAX_POINTS, math.floor(n)))
   player = B.mainOf(book, player)
-  if B.points(book, player) == n then return nil end
+  if not player or B.points(book, player) == n then return nil end
   book.points[player] = { n = n, t = stamp(book.points[player], now) }
   return { points = { [player] = book.points[player] } }
 end
@@ -144,10 +148,12 @@ end
 
 --- replaces an item's list; returns the change
 function B.setPrio(book, id, list, now)
+  if type(id) ~= "number" or id ~= id then return nil end
   local clean = {}
   local seen = {}
-  for _, x in ipairs(list or {}) do
-    if type(x) == "table" and type(x.p) == "string" and not seen[U.full(x.p):lower()] then
+  for _, x in ipairs(type(list) == "table" and list or {}) do
+    if #clean >= B.MAX_PRIO then break end                             -- (B.valid refuses a longer list)
+    if type(x) == "table" and type(x.p) == "string" and U.full(x.p) and not seen[U.full(x.p):lower()] then
       seen[U.full(x.p):lower()] = true
       clean[#clean + 1] = { p = U.full(x.p), n = math.max(1, math.floor(tonumber(x.n) or 1)), note = type(x.note) == "string" and x.note:sub(1, 60) or nil }
     end
@@ -198,7 +204,7 @@ function B.valid(c)
     local n = 0
     for p, e in pairs(c.points) do
       n = n + 1
-      if n > 2000 or type(p) ~= "string" or type(e) ~= "table" or type(e.n) ~= "number" or type(e.t) ~= "number" then return false end
+      if n > 2000 or type(p) ~= "string" or type(e) ~= "table" or type(e.n) ~= "number" or e.n ~= e.n or type(e.t) ~= "number" or e.t ~= e.t then return false end
     end
   end
   if c.prio ~= nil then
@@ -221,6 +227,30 @@ function B.valid(c)
   if c.boost ~= nil and (type(c.boost) ~= "table" or type(c.boost.t) ~= "number") then return false end
   if c.editRank ~= nil and (type(c.editRank) ~= "number" or type(c.et) ~= "number") then return false end
   return true
+end
+
+--- a saved book that isn't valid, mended: every entry that is valid is kept, the rest dropped (so one bad entry
+--- never costs the guild all its points and lists). nil when there's nothing to keep.
+function B.repair(book, guild)
+  if type(book) ~= "table" then return nil end
+  local out = B.new(guild)
+  if type(book.editRank) == "number" and type(book.et) == "number" and book.editRank == book.editRank then out.editRank, out.et = book.editRank, book.et end
+  if type(book.boost) == "table" and B.valid({ boost = book.boost }) and type(book.boost.perRaid) == "number" and book.boost.perRaid == book.boost.perRaid then
+    out.boost = { on = book.boost.on and true or false, perRaid = math.max(1, math.min(100, math.floor(book.boost.perRaid))), t = book.boost.t }
+  end
+  for _, part in ipairs({ "points", "prio", "alts" }) do
+    if type(book[part]) == "table" then
+      for k, e in pairs(book[part]) do
+        if part == "prio" and type(e) == "table" and type(e.list) == "table" and #e.list > B.MAX_PRIO then
+          local cut = {}
+          for i = 1, B.MAX_PRIO do cut[i] = e.list[i] end
+          e = { list = cut, t = e.t }
+        end
+        if B.valid({ [part] = { [k] = e } }) and not (part == "alts" and (e.m == nil or k == "")) then out[part][k] = e end
+      end
+    end
+  end
+  return out
 end
 
 --- whether saved data is a whole book (checked when loaded)

@@ -75,6 +75,7 @@ end
 function G.setRole(s, player, role, now)
   if not s.gk or (role ~= nil and not ROLE[role]) then return false end
   player = U.full(player)
+  if not player then return false end
   s.gk.role = s.gk.role or {}
   if s.gk.role[player] == role then return false end
   s.gk.role[player] = role
@@ -250,9 +251,9 @@ function G.saw(s, names, now)
   if not s.gdkp then return false end
   local added, n = false, 0
   for _ in pairs(s.gk.seen) do n = n + 1 end
-  for _, name in ipairs(names) do
+  for _, name in ipairs(type(names) == "table" and names or {}) do
     name = U.full(name)
-    if not s.gk.seen[name] and n < G.MAX_PEOPLE then s.gk.seen[name] = true n = n + 1 added = true end
+    if name and not s.gk.seen[name] and n < G.MAX_PEOPLE then s.gk.seen[name] = true n = n + 1 added = true end
   end
   if added then S.bump(s, now) end
   return added
@@ -260,6 +261,7 @@ end
 
 function G.setOut(s, player, out, now)
   player = U.full(player)
+  if not s.gk or not player then return false end
   if (s.gk.out[player] or false) == (out and true or false) then return false end
   s.gk.out[player] = out and true or nil
   S.bump(s, now)
@@ -269,7 +271,7 @@ end
 function G.setBonus(s, player, gold, now)
   player = U.full(player)
   gold = num(gold, 0, G.MAX_GOLD)
-  if not gold then return false end
+  if not gold or not s.gk or not player then return false end
   s.gk.bonus[player] = gold > 0 and math.floor(gold) or nil
   S.bump(s, now)
   return true
@@ -282,7 +284,7 @@ G.MAX_LOG, G.MAX_ADDS, G.MAX_NOTE = 300, 100, 40
 function G.paid(s, player, gold, now, how)
   player = U.full(player)
   gold = tonumber(gold)
-  if not s.gk or not gold or gold == 0 then return false end
+  if not s.gk or not player or not gold or gold == 0 or gold ~= gold or math.abs(gold) > G.MAX_GOLD then return false end
   s.gk.paid[player] = (s.gk.paid[player] or 0) + gold
   if math.abs(s.gk.paid[player]) < 0.0001 then s.gk.paid[player] = nil end
   s.gk.log = s.gk.log or {}
@@ -325,6 +327,7 @@ end
 function G.setFixed(s, player, gold, now)
   if not s.gk then return false end
   player = U.full(player)
+  if not player then return false end
   gold = gold ~= nil and num(gold, 0, G.MAX_GOLD) or nil
   gold = gold and math.floor(gold) or nil
   s.gk.fixed = s.gk.fixed or {}

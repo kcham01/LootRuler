@@ -250,7 +250,7 @@ function S.setExtra(s, player, n, now)
   n = tonumber(n)
   if not n or n % 1 ~= 0 or n < 0 or n > S.MAX_EXTRA then return false end
   player = U.full(player)
-  if S.extra(s, player) == n then return false end
+  if not player or S.extra(s, player) == n then return false end
   s.xr = s.xr or {}
   s.xr[player] = n > 0 and n or nil
   local lost = false
@@ -524,8 +524,11 @@ function S.claims(s, player, id)
 end
 
 --- when reserves lock by themselves (a server time), or nil (Core/Lock.lua)
+--- a time the game can show (a number of seconds, not too far either way)
+function S.okTime(t) return type(t) == "number" and t == t and t > 0 and t < 2 ^ 31 end
 function S.setAutoLock(s, at, now)
   at = tonumber(at)
+  if at ~= nil and not S.okTime(at) then return false end
   if s.al == at then return false end
   s.al = at
   bump(s, now)
@@ -615,7 +618,7 @@ end
 
 --- the leader gives a player a +1 (delta 1) or takes one off (delta -1)
 function S.adjustPlusOne(s, player, delta, now)
-  if type(player) ~= "string" or (delta ~= 1 and delta ~= -1) then return false end
+  if not U.full(player) or (delta ~= 1 and delta ~= -1) then return false end
   if delta < 0 and S.plusOnes(s, player) == 0 then return false end
   s.po = s.po or {}
   local key = U.full(player)
@@ -629,7 +632,7 @@ end
 --- sets a player's +1s to a number (brought in from Gargul, say): the change is kept on top of what they won
 function S.setPlusOnes(s, player, n, now)
   n = tonumber(n)
-  if type(player) ~= "string" or not n or n < 0 or n > 99 or n % 1 ~= 0 then return false end
+  if not U.full(player) or not n or n < 0 or n > 99 or n % 1 ~= 0 then return false end
   local won = 0
   for _, w in ipairs(s.won or {}) do if w.k == "MS" and U.samePlayer(w.p, player) then won = won + 1 end end
   s.po = s.po or {}
@@ -824,7 +827,7 @@ function S.valid(t)
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
   if t.ow ~= nil and type(t.ow) ~= "boolean" then t.ow = nil end    -- (one reserve win each)
   if t.pv ~= nil and t.pv ~= true then t.pv = nil end                -- (my private session: Core/Net.lua)
-  if t.al ~= nil and type(t.al) ~= "number" then t.al = nil end      -- (when reserves lock by themselves)
+  if t.al ~= nil and not S.okTime(t.al) then t.al = nil end          -- (when reserves lock by themselves)
   if t.bn ~= nil then t.bn = S.cleanBench(t.bn) end                   -- (the bench: names only)
   -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves
   if t.sx ~= nil then
@@ -863,7 +866,12 @@ function S.valid(t)
       if d.n ~= nil and (type(d.n) ~= "number" or d.n < 1 or d.n > 1000) then d.n = nil end
     end
   end
-  for id, h in pairs(t.hr) do if type(id) ~= "number" or type(h) ~= "table" then return false end end
+  for id, h in pairs(t.hr) do
+    if type(id) ~= "number" or type(h) ~= "table" then return false end
+    -- who it's for and its note are text everywhere they're shown (a copy without them still works)
+    if type(h.f) ~= "string" then h.f = "" end
+    if type(h.n) ~= "string" then h.n = "" end
+  end
   for name, r in pairs(t.res) do
     if type(name) ~= "string" or type(r) ~= "table" or type(r.i) ~= "table" then return false end
     for _, id in ipairs(r.i) do if type(id) ~= "number" then return false end end

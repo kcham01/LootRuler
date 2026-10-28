@@ -219,8 +219,8 @@ end
 ---------------------------------------------------------------------- past raids (Core/History.lua)
 --- one past raid: what it gave out, the export, and (a GDKP of mine) the payouts
 function UI.pastRaidSheet(e)
-  UI.openSheet(LR.raidOf(e).name .. ", " .. date("%b %d", e.ended), function(f, h)
-    f:note(("Led by %s. Ended %s."):format(U.short(e.leader), date("%b %d, %H:%M", e.ended)))
+  UI.openSheet(LR.raidOf(e).name .. ", " .. U.clock(e.ended, "%b %d"), function(f, h)
+    f:note(("Led by %s. Ended %s."):format(U.short(e.leader), U.clock(e.ended, "%b %d, %H:%M")))
     if e.gdkp and e.gk then
       local split = LR.Gdkp.split(e)
       f:kv({ { "Pot", LR.Gdkp.gold(split.pot) }, { "Split " .. #split.players .. " ways", LR.Gdkp.gold(split.share) .. " each" } })
@@ -262,7 +262,7 @@ function UI.historySheet()
         badge = "|cffffd100" .. LR.Gdkp.gold(LR.Gdkp.pot(e)) .. "|r"
         if LR.isLeader(e) and #LR.Gdkp.unsettled(e) > 0 then badge = badge .. " |cffff5a4aunpaid|r" end
       end
-      K.setItem(b, f.width, LR.raidIcon(e.raid), LR.raidOf(e).name, ("%s - by %s - %s given out"):format(date("%b %d", e.ended), U.short(e.leader),
+      K.setItem(b, f.width, LR.raidIcon(e.raid), LR.raidOf(e).name, ("%s - by %s - %s given out"):format(U.clock(e.ended, "%b %d"), U.short(e.leader),
         U.plural(#(e.won or {}), "item")), badge)
       b:SetScript("OnClick", function() UI.pastRaidSheet(e) end)
       f:place(b, 36)
@@ -306,7 +306,7 @@ local function historyView(f)
   if #all == 0 then f:note("Nothing given out yet. Once items are won, they're listed here under the day they were given out.") return end
   local days, byDay = {}, {}
   for _, x in ipairs(all) do
-    local day = date("%Y-%m-%d", x.at)
+    local day = U.clock(x.at, "%Y-%m-%d")
     if not byDay[day] then byDay[day] = {} days[#days + 1] = day end
     table.insert(byDay[day], x)
   end
@@ -320,14 +320,14 @@ local function historyView(f)
     end
     local isOpen = open[day]
     if isOpen == nil then isOpen = i == 1 end
-    f:fold(date("%A, %B %d", list[1].at), ("%s: %s"):format(U.plural(#list, "item"), table.concat(raids, ", ")), isOpen,
+    f:fold(U.clock(list[1].at, "%A, %B %d") ~= "" and U.clock(list[1].at, "%A, %B %d") or "Some time", ("%s: %s"):format(U.plural(#list, "item"), table.concat(raids, ", ")), isOpen,
       function() open[day] = not isOpen UI.render() end,
       function(p)
         for _, x in ipairs(list) do
           local w = x.w
           local b = K.get(p.owner, "item", p.parent)
           K.setItem(b, p.width, LR.itemIcon(w.i), LR.coloredName(w.i),
-            ("Won by %s (%s) - %s, %s"):format(who(w.p, x.s), how(w), LR.raidOf(x.s).name, date("%H:%M", x.at)),
+            ("Won by %s (%s) - %s, %s"):format(who(w.p, x.s), how(w), LR.raidOf(x.s).name, U.clock(x.at, "%H:%M")),
             U.samePlayer(w.p, U.me()) and "|cff1eff00Yours|r" or "")
           b:SetScript("OnEnter", function(self) UI.itemTooltip(self, nil, w.i) end)
           b:SetScript("OnLeave", function() GameTooltip:Hide() end)
