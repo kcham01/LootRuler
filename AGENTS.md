@@ -449,11 +449,34 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   charms, Karazhan's books...). Add a raid's new non-gear loot there (Forever's too). Loot windows within `Drops.PROFESSION_WAIT` seconds
   of my own Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`), or while `IsFishingLoot()`,
   aren't read. The stand-in has `Server:cast(p, spellID)`, `M.fishing` and `srv.itemInfo`'s `subclass`.
+- **Gargul's awards** (#123; `Drops.gargulAward(id, winner, sender, text)`, called from `UI/ReserveStrip.lua`'s chat handler on
+  `Gargul.END_LINES`' "awarded to" line; setting `recordGargul`, on): the leader's addon records it with `S.award` (SR with a reserve
+  claim, OS if the line says "OS" / "off spec", else MS) on the drop the winner holds or the oldest not given out, then
+  `LR.leaderChanged`. Only from `LR.canRunLoot(sender)`, inside the session's raid, not twice within 2 minutes or right after
+  LootRuler gave it (`Rolls.justGave`). No raid line (Gargul said it). Gargul's real lines (from the owner's raid log) start
+  " Gargul : " (stripped before matching); "I gave [item] to Name-Realm" is an end line too; a winner named without a realm is
+  matched by the name alone when only one member has it. An award with no drop yet (awarded before the loot master looted it)
+  takes the next drop of that item from a loot line (`Drops.lootMessage`, leader only, within 10 minutes). "I gave" (`handed`,
+  `G.rollEndFromChat`'s 4th value) finds the winner's award still to hand over (any time; recorded if there's none, nothing if
+  it's hers already) and sets the drop's holder to them: a trade only its two sides see. "awarded to" again within
+  `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
+  "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
+- **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
+  to start with (now: only while leading reserves, on).
+- **Award history** (#125; `UI.awardHistory()`, `historyView` in `UI/Loot.lua`; `db.ui.lootPage` "raid" / "history", `db.ui.historyOpen`
+  date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
+  session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`
+  opens that page. Private sessions (when built) stay out: they're forgotten when ended (the owner's choice).
 - **Bosses that open and close** (#126; `UI.bossFold(f, where, key, name, what, fill, force)`, `UI.bossIsOpen`, `UI.bossChips`;
   `db.ui.bossOpen` "<where>:<raid>:<boss>" -> true, closed to start with; `where` is "reserve" or "reserves"): the Reserve tab's loot list
   (`lootList`, with a session or browsing) and the Reserves tab's soft reserves by item. A search or "Reserved only" opens every
   boss with a match (`force`); the 200-row limit counts only open bosses. Tests that click items open them first ("Open all").
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
+    for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`
+    hooks both, once per item (`tooltip.lrItem`, cleared on `OnTooltipCleared`). The stand-in's tooltips now run `OnTooltipSetItem`
+    for `SetHyperlink`, `SetBagItem` and `SetLootItem` and post-calls only with `M.tooltipPostCalls`. With Gargul loaded, game
+    tooltips leave out LootRuler's "soft reserved by" line (`UI.tooltipLines(s, id, gameTip)`).
   - (fixed, owner's in-game test, #122) `Net.lua:195: attempt to index upvalue 'db'` at login: `UPDATE_INSTANCE_INFO` came
     between `ADDON_LOADED` and `PLAYER_LOGIN` (where `LR.loadDB` runs), and `UI/Where.lua` read the session. Every event handler
     that reads saved data returns while `LR.db` is nil. The stand-in fires `o.early` (event names) in that gap; `tests/raid.lua`

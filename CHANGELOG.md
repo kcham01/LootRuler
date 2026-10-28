@@ -33,11 +33,27 @@ From the owner's in-game screenshots.
 - Raiders get a small note at the top of the screen when the loot master picks up loot: each item, and who reserved it
   ("Yours", or "SR: Ann, Bob"). It takes no clicks and goes by itself (Settings, "Reserves where you see items").
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
+- Loot rolled out with Gargul goes on the Loot tab as given out. When Gargul says in raid chat who an item was awarded to,
+  the leader's LootRuler records it: their reserve if they had one on it, off spec if Gargul's line says so, else main
+  spec. Both ways of handing it over are followed: given straight from the loot window (the game's loot line says who got
+  it), or looted by the loot master and traded over later, which only the two of them see, so Gargul's "I gave [item] to
+  Name" marks it handed over. It can be switched off (Settings, "Giving out and trading"). ([#123](https://github.com/kcham01/LootRuler/pull/123))
+- When the one holding a won item doesn't have LootRuler, the Loot tab just says who won it ("Won by Ann"), not that it's
+  still to trade: a trade is only seen by the two in it, so LootRuler can't tell when it happens.
+  ([#123](https://github.com/kcham01/LootRuler/pull/123))
+- Fixed: Gargul's "Stop your rolls!" didn't close LootRuler's roll windows. Gargul puts its name in front of its lines
+  (" Gargul : Stop your rolls!"), which LootRuler now reads. ([#123](https://github.com/kcham01/LootRuler/pull/123))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
   about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
 - Bosses open and close on the Reserve and Reserves tabs, like the Settings sections: each shows its name and how many items
   (and, on the Reserves tab, how many reserves) until you click it, with "Open all" and "Close all". Searching, or "Reserved
   only", opens every boss with a match. LootRuler remembers which ones you opened. ([#126](https://github.com/kcham01/LootRuler/pull/126))
+- The Loot tab has an "Award history": everything given out in your raids, by date, newest first. Each date opens and closes
+  with a click to show what was given out that day, who won it, how, and in which raid. Export, "Who got what, over time" and
+  Past raids are there too, instead of at the bottom of the Loot tab. ([#125](https://github.com/kcham01/LootRuler/pull/125))
+- Fixed: who reserved an item didn't show in its tooltip in your bags or on a boss's loot window, only in LootRuler's own
+  windows. With Gargul loaded, LootRuler leaves the reserves in tooltips to Gargul, so they aren't shown twice.
+  ([#124](https://github.com/kcham01/LootRuler/pull/124))
 - The Loot tab only lists the raid's loot: gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns,
   designs), and a short list of other raid loot: Mark of the Illidari, Heart of Darkness, Black Temple's epic gems, Nether
   Vortex, Vashj's Vial Remnant, Black Sack of Gems, the Amani Charms, Amani Hex Stick, Mojo, Soul Essence and Karazhan's

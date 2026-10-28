@@ -123,8 +123,9 @@ if GroupLootFrame_OnShow then
 end
 
 ---------------------------------------------------------------------- tooltips
---- the lines LootRuler adds to an item's tooltip: who reserved it, hard reserved for whom, who got it
-function UI.tooltipLines(s, id)
+--- the lines LootRuler adds to an item's tooltip: who reserved it, hard reserved for whom, who got it. In the game's own
+--- tooltips (gameTip), the reserves are left to Gargul when it's loaded: it shows its own.
+function UI.tooltipLines(s, id, gameTip)
   local out = {}
   local note = id and LR.noteFor(id)
   if note then out[1] = { "LootRuler note: " .. note, 0.5, 0.8, 1 } end
@@ -133,7 +134,7 @@ function UI.tooltipLines(s, id)
   if not s or not id then return out end
   local hr = s.hr[id]
   if hr then out[#out + 1] = { "LootRuler: hard reserved" .. (hr.f ~= "" and (" for " .. hr.f) or ""), 1, 0.35, 0.3 } end
-  local who = UI.whoLine(s, id, 5)
+  local who = not (gameTip and type(_G.Gargul) == "table") and UI.whoLine(s, id, 5)
   if who then out[#out + 1] = { "LootRuler: soft reserved by " .. who, 1, 0.82, 0 } end
   for _, w in ipairs(S.winners(s, id)) do
     out[#out + 1] = { "LootRuler: given to " .. U.short(w[1]), 0.12, 1, 0 }
@@ -145,11 +146,21 @@ function UI.tooltipLines(s, id)
   return out
 end
 
+-- The TBC client builds item tooltips (bags, the loot window, links) the older way: OnTooltipSetItem runs, and its tooltip
+-- data post-calls don't. Both are hooked, and the lines go on once per item shown.
 local function addLines(tooltip, id)
-  if not LR.db or not LR.db.settings.tooltipInfo or UI.ownTooltip then return end
-  for _, l in ipairs(UI.tooltipLines(LR.current(), id)) do tooltip:AddLine(l[1], l[2], l[3], l[4], true) end
+  if not LR.db or not LR.db.settings.tooltipInfo or UI.ownTooltip or not id or tooltip.lrItem == id then return end
+  tooltip.lrItem = id
+  for _, l in ipairs(UI.tooltipLines(LR.current(), id, true)) do tooltip:AddLine(l[1], l[2], l[3], l[4], true) end
 end
 
+for _, tip in ipairs({ GameTooltip, ItemRefTooltip }) do
+  tip:HookScript("OnTooltipSetItem", function(self)
+    local _, link = self:GetItem()
+    addLines(self, link and tonumber(link:match("item:(%d+)")))
+  end)
+  tip:HookScript("OnTooltipCleared", function(self) self.lrItem = nil end)
+end
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
   TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
     if tooltip == GameTooltip or tooltip == ItemRefTooltip then addLines(tooltip, data and data.id) end

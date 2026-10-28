@@ -583,6 +583,7 @@ SlashCmdList.LOOTRULER = function(msg)
     local ok, why = LR.Rolls.myMax(LR.Rolls.openAuction(), g)
     LR.print(ok and ("your max bid of %s is in."):format(LR.Gdkp.gold(g)) or why)
   elseif msg == "history" or msg == "past" then
+    LR.db.ui.lootPage = "history"
     UI.show("loot")
     UI.historySheet()
   elseif msg == "guild" or msg == "points" then
