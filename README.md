@@ -431,7 +431,7 @@ Every build:
 
 What LootRuler protects against (someone faking a roll, an award or a reserve list): [docs/exploits.md](docs/exploits.md).
 
-A benchmark (`tools/bench.lua`, not run on every build) plays a 40-player raid night and measures the work, messages and memory of each moment; what it found and what was made faster are in [docs/benchmark.md](docs/benchmark.md).
+A benchmark (`tools/bench.lua`, not run on every build) plays a 40-player raid night and measures the work, messages and memory of each moment; what it found and what was made faster are in [docs/benchmark.md](docs/benchmark.md). A stress test (`tools/stress.lua`) goes further: thousands of broken messages of every kind, 40 players rolling 390 times on one item, a night of 320 items, and floods of raid chat.
 
 The loot lists were made from AtlasLoot's raid tables and checked boss by boss against the cmangos TBC database; where they disagreed (Hakkar's off-hand Warblade really drops from Mandokir, for example) the database won. `tools/gen_loot.py` makes them again.
 
