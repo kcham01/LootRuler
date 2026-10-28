@@ -107,10 +107,6 @@ function UI.testView(f, s)
         local bt = s.raid == "BlackTemple" and "Karazhan" or "BlackTemple"
         UI.newRaidPrompt(s, { map = LR.RAID_MAPS[bt], kind = "raid", name = LR.raid(bt).name }, "raid", true)
       end },
-      { label = "A trade out of a group", click = function()
-        local line = LR.Drops.tradeLine(UI.PRETEND[3][1], { LR.itemLink(UI.pretendItem()) }, 0, {}, 0)
-        UI.sayPrompt({ LR.TAG .. " " .. line }, true)
-      end },
     }, "left")
     if not s then p:note("The reminder and changing raids need a session open (Session tab).") end
   end)

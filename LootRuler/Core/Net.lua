@@ -86,7 +86,6 @@ LR.DEFAULTS = {
   tradeHelp = false,       -- won items go into trades with their winners
   tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom
   raidPrompt = true,       -- going into a different raid (or a new lockout) with a session open asks to start a new one (UI/Where.lua)
-  tradeSay = true,         -- ...and out of a group, it's said nearby (/s; Drops.sayNearby)
   tradeTimers = false,     -- a bar for each item I hold to roll out or trade, with the time left (UI/Timers.lua)
   tradeWarn = true,        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)
   announceLoot = true,     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)
@@ -141,6 +140,7 @@ function LR.checkSettings(set)
     if type(id) ~= "number" or (action ~= "pass" and action ~= "MS" and action ~= "OS") then set.autoRollRules[id] = nil end
   end
   set.rollKinds = LR.Roll.checkKinds(set.rollKinds) or {}
+  set.tradeSay = nil                 -- (a setting older versions had: trades said nearby out of a group)
   if set.rollScale < 0.5 or set.rollScale > 2 then set.rollScale = 1 end
   local okChannel = false
   for _, c in ipairs(LR.SOUND_CHANNELS) do if c[1] == set.soundChannel then okChannel = true end end
@@ -394,14 +394,6 @@ function LR.say(text, channel, target)
     local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
     fn(text, channel, nil, target)
   end
-end
-
---- a chat line sent this moment, not queued: for a click's /say (the game blocks /say outside dungeons and raids unless
---- it comes from a click, and ChatThrottleLib's queue sends later)
-function LR.sayNow(text, channel)
-  if LR.Practice.on then LR.Practice.show(text, channel) return end
-  local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
-  fn(text, channel)
 end
 
 --- where the leader's messages go: the group (if any) and the guild (when shared)

@@ -725,7 +725,7 @@ run("settings", function()
   clickText("Open all", nil, ann)
   check("every option is on the Settings tab", visible("Show roll windows", ann) and visible("Seconds to roll:", ann)
     and visible("Put won items in trades for me", ann) and visible("Hide !lr messages in my chat", ann) and visible("!lr in raid chat", ann) and visible("Minimap button", ann)
-    and ticked("Say my trades nearby when I'm not in a group", ann) == true)
+    and not visible("Say my trades nearby when I'm not in a group", ann))
   check("opening a trade with the winner is off to start with", ticked("Open a trade with the winner", ann) == false and not ann.LR.db.settings.autoTrade)
   check("the countdown and confirming the winner are on to start with", ticked("Count down the last 5 seconds", ann) == true
     and ticked("Say the winner when I confirm it", ann) == true)
@@ -1993,12 +1993,7 @@ run("the Test tab", function()
   check("pretend: nothing changes", LR.current().raid == "Karazhan"
     and (function() for _, l in ipairs(M.chat) do if l:find("(pretend) A new session for Black Temple", 1, true) then return true end end end)())
   clickText("Test")
-  clickText("A trade out of a group")
-  local say = G.LootRulerSay
-  check("a trade out of a group: the Say it button", say:IsShown() and #M.findText("to Thrall.", true, say) > 0)
-  M.click(say.say)
-  check("shown, not said", (function() for _, l in ipairs(M.chat) do if l:find("(pretend, not said)", 1, true) then return true end end end)()
-    and #srv.chat == chatBefore and not say:IsShown())
+  check("no trade-out-of-a-group button (nothing is said out of a group)", not visible("A trade out of a group"))
   local box
   local function walk(fr2) for _, c in ipairs(fr2._children or {}) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
   walk(G.LootRulerFrame)
@@ -2367,19 +2362,6 @@ run("trade timers", function()
   check("it goes with the session", not tw:IsShown())
 end)
 
-run("saying trades nearby", function()
-  local link = srv:link(28762)
-  LR.UI.sayPrompt({ LR.TAG .. " Traded " .. link .. " to Ann.", LR.TAG .. " Bob traded me 250g." })
-  local box = G.LootRulerSay
-  local function onBox(text) return #M.findText(text, true, box) > 0 end
-  check("the trades, and a button to say them", box:IsShown() and onBox("Say these 2 trades nearby?") and onBox("to Ann.")
-    and onBox("Bob traded me 250g.") and onBox("Say it") and onBox("Not now"))
-  check("without LootRuler's tag on screen", not onBox(LR.TAG))
-  shot("say-trades", lead, { "LootRulerSay" })
-  M.click(box.no)
-  check("Not now: gone", not box:IsShown())
-end)
-
 run("a new player's first look", function()
   local neo = srv:client({ name = "Neo", class = "WARRIOR", newPlayer = true })
   srv:tick(7)
@@ -2556,7 +2538,7 @@ run("no button runs past its panel", function()
   check("the Test tab's messages wrap onto two lines", (function()
     local a, b
     for _, x in ipairs(find("The 2 hours running out")) do if x.clickable then a = M.rect(x.clickable) end end
-    for _, x in ipairs(find("A trade out of a group")) do if x.clickable then b = M.rect(x.clickable) end end
+    for _, x in ipairs(find("Changing raids")) do if x.clickable then b = M.rect(x.clickable) end end
     return a and b and b.t < a.b
   end)())
   local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end

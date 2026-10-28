@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Trades are no longer said nearby (/s) when you're out of a group. The game only lets an addon talk in /s after a click,
+  so it needed a "Say it" button every time; that button and its setting are gone. In a group, trades are said in the
+  group's chat as before. ([#151](https://github.com/kcham01/LootRuler/pull/151))
 - Raid gear and the gear beside each roll say what they really do: everything is read with the game's own inspect, one
   player at a time, and nobody's LootRuler is asked. The list's button is "Inspect again", and the setting is "Inspect raiders'
   gear". (Since #129 nothing was asked of other addons; only the words were left over.) ([#150](https://github.com/kcham01/LootRuler/pull/150))

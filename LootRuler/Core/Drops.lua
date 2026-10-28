@@ -570,41 +570,20 @@ function Drops.tradeLine(partner, gave, gaveMoney, got, gotMoney, enchant)
   return ("%s traded me %s."):format(who, r)
 end
 
---- where my trade lines go: the group, when I may run its loot; out of a group, nearby (/say) when I'm running loot all
---- the same (I lead reserves that haven't ended, or a past GDKP and this player still owe each other); nil: nowhere
-function Drops.tradeChannel(partner)
+--- where my trade lines go: the group, when I may run its loot; nil: nowhere (out of a group nothing is said: the game
+--- lets an addon /say outside a dungeon or raid only from a click)
+function Drops.tradeChannel()
   if IsInGroup() then return LR.canRunLoot() and LR.groupChannel() or nil end
-  if LR.Practice.on then return nil end
-  for _, s in pairs(LR.db.sessions) do
-    if not s.ended and not s.practice and not s.pv and LR.isLeader(s) then return "SAY" end
-  end
-  if partner and LR.History.owing(partner) then return "SAY" end
 end
 
---- a trade line said nearby. The game lets an addon /say outside a dungeon or raid only on a click, so there it waits
---- on a small "Say it" button (UI.sayPrompt); inside one it's said straight away.
-function Drops.sayNearby(line)
-  local lines = U.chatLines(LR.TAG .. " " .. line, 255)
-  if IsInInstance() then
-    for _, l in ipairs(lines) do LR.say(l, "SAY") end
-  elseif LR.UI and LR.UI.sayPrompt then
-    LR.UI.sayPrompt(lines)
-  end
-end
-
---- the trade went through: the raid hears what changed hands (the person running loot, when that's on; nearby when
---- they're not in a group), and every raid drop we gave now belongs to the partner
+--- the trade went through: the raid hears what changed hands (the person running loot, when that's on), and every raid
+--- drop we gave now belongs to the partner
 function Drops.tradeDone()
   local partner = trade.partner
   local enchant = trade.enchant
   local line = partner and Drops.tradeLine(partner, trade.gave, trade.gaveMoney, trade.got, trade.gotMoney, enchant)
-  -- one place only: the group when I'm in one, else nearby; each with its own switch
-  local channel = line and Drops.tradeChannel(partner)
-  if channel == "SAY" and not LR.db.settings.tradeSay then channel = nil end
-  if channel and channel ~= "SAY" and not LR.db.settings.tradeAnnounce then channel = nil end
-  if channel == "SAY" then
-    Drops.sayNearby(line)
-  elseif channel then
+  local channel = line and LR.db.settings.tradeAnnounce and Drops.tradeChannel()
+  if channel then
     for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line, 255)) do LR.say(l, channel) end
   elseif line and enchant then
     LR.print(line)                     -- (an enchant is worth a note to me, whoever runs loot)
