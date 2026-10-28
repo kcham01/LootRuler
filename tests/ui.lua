@@ -544,21 +544,18 @@ run("rolling out loot", function()
   check("Ann is picked to get it", #M.findText("Give to Ann", true, G.LootRulerMasterFrame) > 0)
   check("and the loot master sees the cloak she wears now", roll.gear and roll.gear["ann-dreamscythe"] ~= nil)
   check("and what Pug wears, though he has no LootRuler", roll.gear and roll.gear["pug-dreamscythe"] ~= nil)
-  check("a Confirm button beside rolling it again: the raid hasn't heard who won yet", #M.findText("Confirm Ann", true, G.LootRulerMasterFrame) > 0
-    and #M.findText("Let everyone roll", true, G.LootRulerMasterFrame) > 0)
+  check("no Confirm button: Give says who won", #M.findText("Confirm Ann", true, G.LootRulerMasterFrame) == 0
+    and #M.findText("Give to Ann", true, G.LootRulerMasterFrame) > 0 and #M.findText("Let everyone roll", true, G.LootRulerMasterFrame) > 0)
   shot("loot-master", lead, { "LootStandIn", "LootRulerLootPanel", "LootRulerMasterFrame" })
   local annWin
   for _, f in ipairs(ann.LR.UI.rollFrames()) do if f:IsShown() then annWin = f end end
-  check("Ann's window waits for the loot master to confirm", annWin and M.plain(annWin.status:GetText()):find("The loot master confirms the winner", 1, true) ~= nil,
+  check("Ann's window waits for the loot master to give it out", annWin and M.plain(annWin.status:GetText()):find("The loot master gives it out", 1, true) ~= nil,
     annWin and M.plain(annWin.status:GetText()))
-  M.click(M.findText("Confirm Ann", true, G.LootRulerMasterFrame)[1].clickable)
-  srv:tick(1)
-  check("confirmed: the button says so", #M.findText("Confirmed: Ann", true, G.LootRulerMasterFrame) > 0)
-  check("and Ann's window says she won", annWin and M.plain(annWin.status:GetText()):find("You win with 88", 1, true) ~= nil,
-    annWin and M.plain(annWin.status:GetText()))
-  shot("confirm-winner", lead, { "LootRulerMasterFrame" })
+  shot("rolls-closed", lead, { "LootRulerMasterFrame" })
   M.click(M.findText("Give to Ann", true, G.LootRulerMasterFrame)[1].clickable)
   srv:tick(1)
+  check("and Ann's window says it's hers", annWin and M.plain(annWin.status:GetText()):find("It's yours!", 1, true) ~= nil,
+    annWin and M.plain(annWin.status:GetText()))
   check("given to Ann", srv.given and srv.given[1].id == 28529 and s.won and s.won[1].p == "Ann-Dreamscythe" and s.won[1].k == "SR")
   check("with an Undo, for a mistake", #M.findText("Undo", true, G.LootRulerMasterFrame) > 0)
   shot("given", lead, { "LootStandIn", "LootRulerLootPanel", "LootRulerMasterFrame" })
@@ -728,7 +725,7 @@ run("settings", function()
     and not visible("Say my trades nearby when I'm not in a group", ann))
   check("opening a trade with the winner is off to start with", ticked("Open a trade with the winner", ann) == false and not ann.LR.db.settings.autoTrade)
   check("the countdown and confirming the winner are on to start with", ticked("Count down the last 5 seconds", ann) == true
-    and ticked("Say the winner when I confirm it", ann) == true)
+    and ticked("Say the winner when I give it out", ann) == true)
   check("each says what it does", visible("Leaves out items other players reserved", ann))
   -- every section's title fits on its gold plate, long or short
   local plates, short, longest = 0, 0, ""

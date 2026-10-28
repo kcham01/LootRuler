@@ -526,11 +526,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   then "4..." to "1..." (`roll.counted`, reset by `Rolls.extend`); auctions keep their final call and "5 seconds left to bid". With
   `confirmWinner` nothing is said at close: the confirm line is the next one. `Gargul.fromLootRuler(text)`: lines starting
   `LR.TAG` are never read as Gargul's (the countdown reads like Gargul's start line).
-- **Confirming the winner** (#142, the owner's idea; setting `confirmWinner`, on; `Rolls.confirm(player)`): a roll with one winner closes
-  silently (since #146; it said "Rolls closed for [item]." before) and `X` carries `cw` (raiders' copies: `copy.confirm = "wait"`, their window says the loot master
-  confirms it); the master window's "Confirm Ann" (in the row with rolling it again) says the winner, or "(the loot master's pick)" /
-  "(the council's choice)", and sends `X` with `cf` (`copy.confirm = "confirmed"`). Ties, nobody rolling and auctions are said at
-  once as before. Older versions ignore `cw` / `cf`.
+- **The winner is said when it's given out** (#142, then #154: the owner dropped the Confirm button, as Award did the same; setting
+  `confirmWinner`, on, now "Say the winner when I give it out"): a roll with one winner closes silently and `X` carries `cw`
+  (raiders' copies: `copy.confirm = "wait"`, their window says the loot master gives it out); `Rolls.award`'s line names the winner,
+  and adds "(the loot master's pick)" / "(the council's choice)" when it isn't the best roll. `Rolls.confirm` is gone; raiders still
+  read `cf` from an older loot master's Confirm (`copy.confirm = "confirmed"`). Ties, nobody rolling and auctions are said at once.
 - **Bid an amount** (#143, the owner's ask; `UI.bidAmount(title, lowest, place)`, `UI.batchBidSheet(copy)`; `UI.goldSheet`'s 5th argument
   names its button): the auction window's `extras[1]` (then "Bid ahead" in `extras[2]`) opens a gold box; the bid goes through
   `Rolls.bid` / `Batch.bid`, typed in raid chat like the window's two buttons; too little asks again.
