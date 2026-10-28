@@ -209,7 +209,8 @@ local function rowFor(f, roll, e, rank, pick)
   end
   local num = roll.mode == "BID" and LR.Gdkp.gold(e.n) or tostring(e.n)
   if e.kind then
-    b.kind:SetText(R.label(roll, e))
+    local tries = roll.used and roll.used[R.key(e.p)] or 1
+    b.kind:SetText(R.label(roll, e) .. (tries > 1 and (" |cff9d9d9d(best of %d)|r"):format(tries) or ""))
     b.num:SetText(num)
   else
     b.kind:SetText(R.WHY[e.why] or e.why or "")
@@ -275,7 +276,12 @@ function UI.masterDraw()
       else f:note(roll.state == "open" and "No rolls yet." or "Nobody rolled.") end
     end
     for i, e in ipairs(good) do rowFor(f, roll, e, i, pick) end
-    for _, e in ipairs(bad) do rowFor(f, roll, e, nil, pick) end
+    -- (a player's lower rolls on their reserves aren't rows of their own: their best says how many it was the best of)
+    local lower = 0
+    for _, e in ipairs(bad) do
+      if e.why == "lower" then lower = lower + 1 else rowFor(f, roll, e, nil, pick) end
+    end
+    if lower > 0 then f:note(("%s not listed: with more than one reserve, a player's best roll counts."):format(U.plural(lower, "lower roll"))) end
     local waiting = R.waiting(roll)
     if waiting and #waiting > 0 and roll.state == "open" then f:note("Still to roll: " .. R.names(waiting, 8)) end
     local gs = Rolls.session()

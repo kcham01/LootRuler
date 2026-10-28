@@ -210,6 +210,12 @@ check("her second roll is higher: that's the one that counts", roll.rolled["ann-
 srv:roll(ann, 1, 100, 99)
 srv:tick(0.5)
 check("a third roll doesn't count", roll.rolled["ann-dreamscythe"].n == 85)
+do
+  -- the loot master's window: her best, with how many it was the best of; her lower roll isn't a row of its own
+  local function shown(text) return #lead.M.findText(text, false, lead.G.LootRulerMasterFrame) > 0 end
+  check("the loot master sees her best roll was the best of her rolls", shown("(best of 2)"))
+  check("and her lower roll is counted in a line, not listed", shown("1 lower roll not listed") and not shown("not their best roll"))
+end
 bob.M.click(frameFor(bob, WATCH).pass)
 srv:tick(0.5)
 check("Bob passes: the loot master hears it", roll.passed["bob-faerlina"] ~= nil)
