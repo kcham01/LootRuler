@@ -62,11 +62,12 @@ local function readUnit(player)
   end
 end
 
-O.why = {}                  -- key -> why someone couldn't be read this time ("far", "gone", "silent", "off")
+O.why = {}                  -- key -> why someone couldn't be inspected this time ("far", "gone", "silent", "off")
 
---- asks the group (whoever runs loot); returns true, or false and why not
-function O.ask()
-  if not LR.canRunLoot() then return false, "Only the master looter can ask (or the raid leader, without master loot)." end
+--- inspects everyone in the group, one at a time (whoever runs loot); nothing is asked of anyone's addon.
+--- Returns true, or false and why not
+function O.inspectAll()
+  if not LR.canRunLoot() then return false, "Only the master looter can inspect the raid's gear (or the raid leader, without master loot)." end
   O.k = U.me() .. ":gear:" .. U.now()
   O.why = {}
   O.got(U.me(), O.mine(), "self")

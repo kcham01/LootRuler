@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Raid gear and the gear beside each roll say what they really do: everything is read with the game's own inspect, one
+  player at a time, and nobody's LootRuler is asked. The list's button is "Inspect again", and the setting is "Inspect raiders'
+  gear". (Since #129 nothing was asked of other addons; only the words were left over.) ([#150](https://github.com/kcham01/LootRuler/pull/150))
 - A private session, for when you're not running loot and whoever is doesn't have LootRuler: a button beside opening reserves
   on the Session tab. It keeps the raid's loot list (from the game's loot lines and Gargul's awards) and the reserves you
   import, on your screen only. Nothing is sent to anyone or said in chat, and nothing is rolled out from it. Closing it

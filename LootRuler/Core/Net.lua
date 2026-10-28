@@ -79,7 +79,7 @@ LR.DEFAULTS = {
   rollCloseAfter = false,  -- my roll window closes once I've rolled
   rollScale = 1,           -- how big roll windows are (UI.ROLL_SIZES)
   reservedAlert = true,    -- an item I reserved is rolled out: told on screen, with a sound (UI/RollFrame.lua)
-  inspectGear = true,      -- running loot: the game's inspect shows what raiders without LootRuler wear (Core/Rolls.lua)        -- when an item is rolled out, the loot master's addon is told what I wear in its slot
+  inspectGear = true,      -- running loot: the game's inspect shows what raiders wear (rolls, Core/Rolls.lua; Raid gear, Core/Overview.lua)
   sounds = true,           -- LootRuler's sounds (LR.sound)
   soundChannel = "Master", -- ...on this channel (LR.SOUND_CHANNELS)
   rollList = true,         -- roll windows list everyone's rolls that count, best first (UI/RollFrame.lua)
@@ -737,7 +737,7 @@ local function nowMine(s, from, quiet)
   tellGroup(("%s runs the soft reserves now (taking over from %s). Whisper %s \"!lr [item]\" to reserve or check yours."):format(
     U.short(U.me()), U.short(from), U.short(U.me())))
 end
---- takes over a session whose leader is gone (I lead or assist the group). Returns true, or false and why not.
+--- takes over a session whose leader is gone (I lead the group or am its master looter). Returns true, or false and why not.
 function LR.takeOver(s)
   if not LR.mayTakeOver(s) then return false, "Only the raid leader or the master looter can take over, while the reserves' leader is away." end
   nowMine(s, s.leader)
@@ -767,7 +767,7 @@ function LR.adopt(s)
   nowMine(s, s.leader)
 end
 
--- the reserves' leader left (or went offline): tell the raid leader and assistants, once per session
+-- the reserves' leader left the group: tell whoever may take over (the raid leader or master looter), once per session
 local toldGone = {}
 LR.onChange(function(what)
   if what ~= "roster" or not db then return end
