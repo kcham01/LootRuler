@@ -518,6 +518,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   confirms it); the master window's "Confirm Ann" (in the row with rolling it again) says the winner, or "(the loot master's pick)" /
   "(the council's choice)", and sends `X` with `cf` (`copy.confirm = "confirmed"`). Ties, nobody rolling and auctions are said at
   once as before. Older versions ignore `cw` / `cf`.
+- **Bid an amount** (#143, the owner's ask; `UI.bidAmount(title, lowest, place)`, `UI.batchBidSheet(copy)`; `UI.goldSheet`'s 5th argument
+  names its button): the auction window's `extras[1]` (then "Bid ahead" in `extras[2]`) opens a gold box; the bid goes through
+  `Rolls.bid` / `Batch.bid`, typed in raid chat like the window's two buttons; too little asks again.
 - **No faking a win** (#141): `tests/loot.lua`, "nobody can fake a win", tries every way a raider might be recorded as a winner.
   A new way to record a winner gets a check there.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

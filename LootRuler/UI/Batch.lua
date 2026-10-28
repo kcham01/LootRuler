@@ -92,6 +92,28 @@ local function itemLine(copy, item, mine)
   return text
 end
 
+--- a bid of any amount on one of the items: pick it, then the gold (typed in raid chat with its number)
+function UI.batchBidSheet(copy)
+  UI.show()
+  UI.openSheet("Bid an amount", function(f, h)
+    f:note("Which item? Then how much: it's typed in raid chat for you, with the item's number.")
+    for _, item in ipairs(copy.items) do
+      local b = K.get(f.owner, "item", f.parent)
+      local mineTop = item.top and U.samePlayer(item.top.p, U.me())
+      K.setItem(b, f.width, LR.itemIcon(item.id), ("|cffffd100#%d|r %s"):format(item.n, LR.coloredName(item.id)),
+        mineTop and "Your bid is the highest." or ("Lowest bid now: %s"):format(G.gold(R.nextBid(item))), "",
+        { text = "Bid", width = 50, click = function()
+          if copy.state ~= "open" or mineTop then UI.toast(mineTop and "Your bid is the highest already." or "The auction is over.") return end
+          h.close()
+          UI.bidAmount(("Bid on #%d %s"):format(item.n, LR.itemName(item.id)), function() return R.nextBid(item) end,
+            function(g) B.bid(copy, item.n, g) end)
+        end })
+      f:place(b, 36)
+      f:gap(2)
+    end
+  end)
+end
+
 function UI.batchDraw()
   local copy = shown()
   if not copy then if win then win:Hide() end return end
@@ -136,6 +158,7 @@ function UI.batchDraw()
   end
   if copy.state == "open" then
     f:note(("Type the number and your bid in raid chat: \"%s\"."):format(B.bidText(1, copy.items[1].min or 0, copy.strict)))
+    f:buttons({ { label = "Bid an amount", click = function() UI.batchBidSheet(copy) end } }, "left")
     if mine then
       f:buttons({
         { label = "+10 sec", width = 70, click = function() B.extend(10) end },
