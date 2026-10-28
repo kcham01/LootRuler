@@ -122,6 +122,8 @@ events:SetScript("OnEvent", function(_, event, text, sender)
     if id then ended(id) end
     return
   end
+  -- (only from whoever runs the loot: anyone else typing Gargul's lines changes nothing)
+  if sender and not LR.canRunLoot(U.full(sender)) then return end
   local stop, endedId, winner, handed = G.rollEndFromChat(text)
   if stop then
     ended(endedId, winner)

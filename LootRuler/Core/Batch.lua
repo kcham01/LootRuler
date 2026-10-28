@@ -81,7 +81,7 @@ local function say(text, warning) Rolls.say(text, warning) end
 function B.start(items, secs)
   local s = Rolls.session()
   if not (s and s.gdkp and s.gk) then return nil, "Several auctions at once is for a GDKP: turn it on on the Session tab." end
-  if not LR.canRunLoot() then return nil, "Only the raid leader, an assistant or the master looter can auction loot." end
+  if not LR.canRunLoot() then return nil, "Only the master looter can auction loot (or the raid leader, without master loot)." end
   local cur = Rolls.current
   if cur and cur.state == "open" then return nil, "Finish the roll for " .. U.plain(cur.link) .. " first." end
   if B.current and B.current.state == "open" then return nil, "Finish the auction that's on first." end

@@ -544,6 +544,26 @@ local function others(f, current)
   end)
 end
 
+--- someone in the group runs LootRuler reserves, and they don't show by themselves (they aren't the group's leader or
+--- master looter, or I'm looking at another session): asked once, never switched without asking. In combat, a chat
+--- line says how to get to it instead.
+function UI.joinPrompt(t)
+  local line = ("%s is running LootRuler reserves for %s here."):format(U.short(t.leader), LR.raidOf(t).name)
+  if InCombatLockdown() then LR.print(line .. " Type |cffffd100/lr|r and pick it on the Session tab to join.") return end
+  UI.show()
+  UI.openSheet("Join their reserves?", function(f, h)
+    f:text(line .. " Join them to see what's reserved, and to reserve in them?")
+    local cur = LR.current()
+    if cur and cur.id ~= t.id then f:note(("You're looking at %s's reserves for %s now."):format(U.short(cur.leader), LR.raidOf(cur).name)) end
+    f:gap(6)
+    f:buttons({
+      { label = "Join", click = function() h.close() LR.select(t.id) UI.toast(("You're in %s's reserves."):format(U.short(t.leader))) end },
+      { label = "Not now", click = function() h.close() LR.decline(t.id) end },
+    }, "left")
+    f:note("Either way, it's in the list of sessions on the Session tab.")
+  end)
+end
+
 function UI.sessionView(f, s)
   if s and LR.isLeader(s) then
     manage(f, s)
@@ -553,7 +573,7 @@ function UI.sessionView(f, s)
         f:panel("Nobody's running the reserves", function(p)
           local gone = LR.inGroup(s.leader) and "is offline" or "has left the group"
           if LR.mayTakeOver(s) then
-            p:note(("%s, who runs these reserves, %s. As the raid leader (or an assistant) you can take them over: everything reserved and given out so far stays, and the raid is told who to whisper."):format(U.short(s.leader), gone), K.GOLD)
+            p:note(("%s, who runs these reserves, %s. As the raid leader (or the master looter) you can take them over: everything reserved and given out so far stays, and the raid is told who to whisper."):format(U.short(s.leader), gone), K.GOLD)
             p:buttons({
               { label = "Take over the reserves", click = function()
                 local ok, why = LR.takeOver(s)
@@ -567,7 +587,7 @@ function UI.sessionView(f, s)
               end },
             }, "left")
           else
-            p:note(("%s, who runs these reserves, %s. The raid leader or an assistant can take them over (Session tab)."):format(U.short(s.leader), gone), K.GOLD)
+            p:note(("%s, who runs these reserves, %s. The raid leader or the master looter can take them over (Session tab)."):format(U.short(s.leader), gone), K.GOLD)
           end
         end)
       end

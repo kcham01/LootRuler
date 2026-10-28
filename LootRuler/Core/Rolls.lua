@@ -59,20 +59,17 @@ function LR.masterLooter()
 end
 function LR.isMasterLooter() local ml = LR.masterLooter() return ml ~= nil and U.samePlayer(ml, U.me()) end
 
---- whether a player may roll loot out: the group's leader or an assistant, the master looter, or the leader
---- of the soft reserves. On your own (trying it out) you may.
+--- whether a player runs the loot: the one who holds it. With master loot on, the master looter, and nobody else; without
+--- it, the group's leader. Assistants don't (pugs often make everyone one), nor does whoever leads the soft reserves.
+--- Rolls, auctions, Gargul's lines, bag and gear checks and loot lists count only from them. On your own you may.
 function LR.canRunLoot(name)
   name = name or U.me()
   if not IsInGroup() then return U.samePlayer(name, U.me()) end
   local m = LR.inGroup(name)
   if not m then return false end
-  if m.leader or m.assist then return true end
   local ml = LR.masterLooter()
-  if ml and U.samePlayer(ml, name) then return true end
-  for _, s in pairs(LR.db.sessions) do
-    if not s.ended and U.samePlayer(s.leader, name) and (LR.isLeader(s) or LR.inGroup(s.leader)) then return true end
-  end
-  return false
+  if ml then return U.samePlayer(ml, name) end
+  return m.leader == true
 end
 
 --- the soft reserves the loot in this group goes by: the current session, if its leader is with us
@@ -234,7 +231,7 @@ end
 function Rolls.start(id, opts)
   opts = opts or {}
   if type(id) ~= "number" then return nil, "That isn't an item." end
-  if not LR.canRunLoot() then return nil, "Only the raid leader, an assistant or the master looter can roll out loot." end
+  if not LR.canRunLoot() then return nil, "Only the master looter can roll out loot (or the raid leader, without master loot)." end
   local cur = Rolls.current
   if cur and cur.state == "open" then return nil, "Finish the roll for " .. U.plain(cur.link) .. " first." end
   if LR.Batch and LR.Batch.current and LR.Batch.current.state == "open" then return nil, "Finish the auction that's on first." end
@@ -557,7 +554,7 @@ end
 function Rolls.give(id, player, kind, opts)
   opts = opts or {}
   if type(id) ~= "number" or not player then return false, "Pick who gets it." end
-  if not LR.canRunLoot() then return false, "Only the raid leader, an assistant or the master looter can give out loot." end
+  if not LR.canRunLoot() then return false, "Only the master looter can give out loot (or the raid leader, without master loot)." end
   local cur = Rolls.current
   if cur and cur.state == "open" then return false, "Finish the roll for " .. U.plain(cur.link) .. " first." end
   local s = session()

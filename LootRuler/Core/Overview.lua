@@ -71,7 +71,7 @@ O.why = {}                  -- key -> why someone couldn't be read this time ("f
 
 --- asks the group (whoever runs loot); returns true, or false and why not
 function O.ask()
-  if not LR.canRunLoot() then return false, "Only the raid leader, an assistant or the master looter can ask." end
+  if not LR.canRunLoot() then return false, "Only the master looter can ask (or the raid leader, without master loot)." end
   O.k = U.me() .. ":gear:" .. U.now()
   O.why = {}
   O.got(U.me(), O.mine(), "self")

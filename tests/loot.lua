@@ -351,11 +351,18 @@ check("and says so", chat("is called off") ~= nil)
 
 section("who may roll loot out")
 local r2, no = dan.LR.Rolls.start(ROYAL)
-check("a raider can't", r2 == nil and no:find("Only the raid leader", 1, true))
+check("a raider can't", r2 == nil and no:find("Only the master looter can roll out loot", 1, true), no)
 local fake = dan.LR.Net.encode({ t = "R", k = "Dan:1:1", id = ROYAL, s = 20, left = 20, m = "OPEN", w = {} })
 srv:addonMessage(dan, "LootRuler", fake, "RAID")
 srv:tick(0.5)
 check("and a roll sent by one is ignored", copyOf(ann, ROYAL) == nil or copyOf(ann, ROYAL).k ~= "Dan:1:1")
+-- an assistant isn't trusted to either: pugs often make everyone one (with master loot on, only the master looter is)
+srv:setAssist(dan, true)
+check("nor an assistant, with master loot on", (function() local r3, no3 = dan.LR.Rolls.start(ROYAL) return r3 == nil and no3 ~= nil end)())
+srv:addonMessage(dan, "LootRuler", fake, "RAID")
+srv:tick(0.5)
+check("and raiders' addons ignore an assistant's roll", copyOf(ann, ROYAL) == nil or copyOf(ann, ROYAL).k ~= "Dan:1:1")
+srv:setAssist(dan, false)
 srv:setAssist(ann, true)
 srv:setMasterLooter(ann)
 srv:closeLoot(lead)
@@ -367,7 +374,7 @@ check("the new master looter gets the panel", ann.G.LootRulerLootPanel and ann.G
 srv:willRoll(dan, 50)
 roll = ann.LR.Rolls.start(ROYAL, { link = ann.G.GetLootSlotLink(1), slot = 1, secs = 5 })
 srv:tick(0.3)
-check("an assistant running loot rolls things out", roll and frameFor(dan, ROYAL) and frameFor(lead, ROYAL))
+check("the master looter, who isn't the leader, rolls things out", roll and frameFor(dan, ROYAL) and frameFor(lead, ROYAL))
 dan.M.click(frameFor(dan, ROYAL).dice)
 srv:tick(8)
 ann.LR.Rolls.award(full(dan))
@@ -399,7 +406,7 @@ check("not the grey", dropOf(22829) == nil)
 check("with the boss it dropped from", dropOf(WATCH).b == "Moroes")
 check("and who has it now (master loot)", dropOf(SIGNET).h == full(pug) and dropOf(WATCH).h == full(ann) and dropOf(HANDWRAPS).h == full(ann))
 check("the awards are tied to the drops", stateOf(SIGNET) == "given" and select(2, stateOf(SIGNET)).p == full(pug))
-check("an assistant running loot writes it down for the leader", dropOf(ROYAL) and dropOf(ROYAL).h == full(dan) and stateOf(ROYAL) == "given")
+check("the master looter writes it down for the leader", dropOf(ROYAL) and dropOf(ROYAL).h == full(dan) and stateOf(ROYAL) == "given")
 check("raiders have the same list", #ann.LR.current().drops == #s.drops and #bob.LR.current().drops == #s.drops)
 local count = #s.drops
 srv:closeLoot(lead)
@@ -533,7 +540,7 @@ srv:completeTrade(lead)
 srv:tick(1)
 local fromLead = 0
 for i = lines + 1, #srv.chat do if srv.chat[i].from == full(lead) then fromLead = fromLead + 1 end end
-check("it can be turned off (Ann, an assistant, still says what she got)", fromLead == 0 and chat("Traded 1g to Lead.", "RAID") ~= nil)
+check("it can be turned off (and Ann, who doesn't run loot, doesn't say what she got)", fromLead == 0 and chat("Traded 1g to Lead.", "RAID") == nil)
 lead.LR.db.settings.tradeAnnounce = true
 -- a stack: how many
 local DUST = 22445                          -- (a stack of something, not raid loot)
@@ -558,7 +565,8 @@ srv:tick(1)
 check("an enchant for a player: what, on which item, and what they paid",
   chat("Enchanted Ann's " .. srv:link(28477) .. " (Enchant Bracer - Superior Healing) for 5g.", "RAID") ~= nil)
 check("the enchanted item stays theirs", (function() for _, it in pairs(ann.bags) do if it == bracers then return true end end end)())
-check("Ann's side says it the other way round", chat("Lead put Enchant Bracer - Superior Healing on my " .. srv:link(28477) .. " for 5g.", "RAID") ~= nil)
+check("Ann's side notes it the other way round, in her own chat (she doesn't run loot)", chat("Lead put Enchant Bracer - Superior Healing on my", "RAID") == nil
+  and (function() for _, l in ipairs(ann.M.chat) do if l:find("Lead put Enchant Bracer - Superior Healing on my " .. srv:link(28477) .. " for 5g.", 1, true) then return true end end end)())
 -- someone not running loot enchants: not in raid chat, but a note in their own chat
 local dagger = srv:giveItem(bob, 28524, 1)
 local before = #srv.chat
@@ -834,8 +842,8 @@ Rolls.award(full(bob))
 srv:tick(2)
 check("then given to the right player", wonCloak() == plus(full(bob) .. ":MS") and Rolls.mine().state == "awarded")
 check("nothing to undo once it's closed", (function() Rolls.dismiss() return not Rolls.undo() end)())
--- an assistant runs the roll: the leader's addon takes the award off its list when she undoes it
-srv:setAssist(ann, true)
+-- the master looter isn't the leader of the reserves: her roll's award goes on the leader's list, and comes off when she undoes it
+srv:setMasterLooter(ann)
 local SHAWL = 28766
 local wonShawl = function() return wonBy(lead.LR.current(), SHAWL) end
 local shawlBefore = wonShawl()
@@ -847,11 +855,12 @@ ann.LR.Rolls.stop()
 srv:tick(1)
 ann.LR.Rolls.award(full(dan))
 srv:tick(2)
-check("an assistant gives one out: the leader records it", ar and wonShawl() == (shawlBefore ~= "" and (shawlBefore .. ",") or "") .. full(dan) .. ":MS")
+check("Ann, the master looter, gives one out: the leader records it", ar and wonShawl() == (shawlBefore ~= "" and (shawlBefore .. ",") or "") .. full(dan) .. ":MS")
 ann.LR.Rolls.undo()
 srv:tick(2)
 check("she undoes it: the leader takes it off", wonShawl() == shawlBefore)
 ann.LR.Rolls.dismiss()
+srv:setMasterLooter(lead)
 srv:closeLoot(lead)
 srv:tick(1)
 
@@ -1837,6 +1846,12 @@ do
   local ks = rl.LR.startSession("Karazhan", 2, true, false)
   rl.LR.leaderAdd(ks, full(zoe), "PRIEST", 28570)
   srv6:tick(2)
+  -- Rhea isn't the raid leader or the master looter: Zoe's LootRuler asks before showing her reserves
+  check("a raider is asked whether to join reserves run by someone else", zoe.LR.current() == nil
+    and zoe.LR.UI.topSheet() and zoe.M.plain(zoe.LR.UI.topSheet().title:GetText()) == "Join their reserves?")
+  clickText(zoe, "Join", zoe.LR.UI.topSheet())
+  srv6:tick(1)
+  check("she joins: they're the ones she sees", zoe.LR.current() and zoe.LR.current().id == ks.id)
   local function wonBy(id) for _, w in ipairs(ks.won or {}) do if w.i == id then return w end end end
   local function says(p, text, channel) srv6:chatMessage(p, " Gargul : " .. text, channel or "RAID") srv6:tick(1) end
   srv6:lootTo(gus, 28570)                    -- Gus keeps the cloak to give out
@@ -1892,6 +1907,15 @@ do
   -- someone who can't run loot can't put things on the list by typing the line
   says(pug, srv6:link(28454) .. " was awarded to Pug. Congrats!", "RAID")
   check("only from someone who may run loot", wonBy(28454) == nil)
+  srv6:setAssist(pug, true)
+  says(pug, srv6:link(28454) .. " was awarded to Pug. Congrats!", "RAID")
+  check("not from an assistant either (pugs often make everyone one): only the master looter", wonBy(28454) == nil)
+  ;(function()                               -- (its own function: this file is at Lua's limit of locals)
+    local seen = zoe.LR.Rolls.lastGargul
+    says(pug, "You have 10 seconds to roll on " .. srv6:link(28477) .. " - /roll for MS or /roll 99 for OS", "RAID_WARNING")
+    check("someone else typing Gargul's roll line doesn't start a roll on raiders' screens", zoe.LR.Rolls.lastGargul == seen)
+  end)()
+  srv6:setAssist(pug, false)
   rl.LR.db.settings.recordGargul = false
   says(gus, srv6:link(28454) .. " was awarded to Pug. Congrats!")
   check("it can be switched off", wonBy(28454) == nil)

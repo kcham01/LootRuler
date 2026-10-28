@@ -29,7 +29,7 @@ Bags.last = nil
 
 --- asks the group about up to Bags.MAX items; returns the check, or nil and why not
 function Bags.ask(ids)
-  if not LR.canRunLoot() then return nil, "Only the raid leader, an assistant or the master looter can ask." end
+  if not LR.canRunLoot() then return nil, "Only the master looter can ask (or the raid leader, without master loot)." end
   local list, seen = {}, {}
   for _, id in ipairs(ids or {}) do
     if type(id) == "number" and id > 0 and not seen[id] and #list < Bags.MAX then seen[id] = true list[#list + 1] = id end
