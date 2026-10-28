@@ -1,6 +1,6 @@
 # Notes: everything from the long build conversation (25 to 28 October 2026)
 
-**This file never goes to `main`.** It lives only on the `notes` branch and its pull request, which stays open as a
+**This file never goes to `main`.** It lives only on the `buildnotes` branch and its pull request, which stays open as a
 draft and is never merged. Read it from there; add to it there.
 
 It covers pull requests #30 to #148: what was added, changed and fixed, what the owner decided, and the dos and don'ts
