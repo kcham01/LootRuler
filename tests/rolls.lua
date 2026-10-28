@@ -726,6 +726,8 @@ do
   check("stopping them twice changes nothing", not R.ban(b2, BOB))
   local made = R.resolve(b2, { [R.key(BOB)] = { p = BOB, g = 2000, at = 1 }, [R.key(CARA)] = { p = CARA, g = 150, at = 2 } })
   check("a max bid of theirs isn't used, anyone else's is", b2.top.p == CARA and #made >= 1)
+end
+
 -- one roll for each reserve left on the item: the best counts
 do
   local r = R.new("multi", WATCH, { mode = "SR", who = { { ANN, 3 }, { BOB, 1 } } })
