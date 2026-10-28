@@ -433,11 +433,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   each (`s.ow`, `S.srWinsAll`, checked in `S.claims`); reserves locking by themselves (`Core/Lock.lua`, `s.al`, `UI.autoLockSheet`;
   warnings `Lock.WARN`, a mark already passed when it was set isn't said late); the bench (`s.bn`, `S.setBench`, `S.cleanBench`,
   `Guild.raidMembers(s)` adds the guild's benched players, `Guild.onlineOutside`, `UI.benchSheet`).
-- **Trades out of a group** (`Drops.tradeChannel`, `Drops.sayNearby`, `UI.sayPrompt` in `UI/Say.lua`, `LR.sayNow`): with no group, the
-  trade line goes to SAY when I lead a session that hasn't ended (or a past GDKP owes this player). The game blocks addon /say
-  outside instances unless a click started it, so there the lines wait on a "Say it" box (said with `LR.sayNow`, not the
-  ChatThrottleLib queue); inside one (`IsInInstance`) they're said straight away. The stand-in enforces this: `M.click` sets
-  `M.hardware`, the test server errors on SAY / YELL without it unless `p.instance` is set.
+- **Trades out of a group say nothing** (#151, the owner's call; `Drops.tradeChannel()` is the group or nil): saying them nearby
+  (`UI/Say.lua`'s "Say it" box, `LR.sayNow`, setting `tradeSay`) was taken out, as the game lets an addon /say outside a dungeon
+  or raid only from a click. `LR.checkSettings` drops an older version's `tradeSay`. Don't bring it back without the owner. The
+  stand-in still enforces the rule (`M.click` sets `M.hardware`; SAY / YELL without it errors unless `p.instance` is set).
 - **Polish from the owner's in-game screenshots** (#103-#107): title plates in three pieces sized to the title (`K.fitPlate`);
   text boxes carry their own greyed hint (`K.setHint`, `K.onText`; `UI.searchHint` for item searches); on/off switches are
   tick boxes (`tick = true` in `Flow:chips`, `K.setTick`); the softres.it import is first on the Session tab, on the Reserves
@@ -473,9 +472,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   it's hers already) and sets the drop's holder to them: a trade only its two sides see. "awarded to" again within
   `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
   "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
-- **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
-  to start with (now: only while leading reserves, on; #144 built it by mistake and was closed); opening trades only from a
-  click (`autoTrade` and `tradeHelp` are off to start with, which the owner says is enough for now).
+- **On hold, from the owner** (say go before building): opening trades only from a click (`autoTrade` and `tradeHelp` are off to start with, which the owner says is enough for now).
 - **Private sessions** (#148, the owner's design; `s.pv`, `LR.startPrivate`, `LR.privateSession`, `LR.closePrivate`; `privateView` in
   `UI/Setup.lua`, the "Private session" button in the new-session form): a session I lead on my own screen only (id ends ":private").
   `LR.publish` and `Q` skip it, `P` is ignored for it, `W.session` (whispers, `!lr`, join reminders) skips it, and every line

@@ -1949,20 +1949,13 @@ do
   for _, p in ipairs({ rl, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
-section("trades out of a group are said nearby")
--- its own little world: the loot master on their own (the raid's over), trading with a raider
+section("trades out of a group say nothing")
+-- the game lets an addon /say outside a dungeon or raid only from a click, so out of a group a trade line goes nowhere
 local srv2 = Server.new(".")
 srv2.itemInfo = srv.itemInfo
 local solo = srv2:client({ name = "Solo", class = "PALADIN" })
 local kim = srv2:client({ name = "Kim", class = "PRIEST" })
-local raider = srv2:client({ name = "Raider", class = "MAGE" })
 srv2:tick(6)
-local function said(text, from)
-  for i = #srv2.chat, 1, -1 do
-    local m = srv2.chat[i]
-    if m.channel == "SAY" and m.text:find(text, 1, true) and (not from or m.from == full(from)) then return m end
-  end
-end
 local function trade(a, b, copper)
   srv2:openTrade(a, b)
   srv2:setTradeMoney(b, copper)
@@ -1970,70 +1963,34 @@ local function trade(a, b, copper)
   srv2:completeTrade(a)
   srv2:tick(1)
 end
-trade(solo, kim, 20000)
-check("with no reserves of mine, nothing is said", #solo.LR.UI.sayWaiting() == 0 and not said("Kim traded me"))
+local function heard(text, channel)
+  for _, m in ipairs(srv2.chat) do
+    if m.text:find(text, 1, true) and (not channel or m.channel == channel) then return m end
+  end
+end
 solo.LR.startSession("Karazhan", 2, true, false)
 srv2:tick(1)
 trade(solo, kim, 30000)
-local box = solo.G.LootRulerSay
-check("outside a dungeon, the game only lets /say come from a click: a button asks",
-  box and box:IsShown() and #solo.LR.UI.sayWaiting() == 1 and not said("Kim traded me 3g."), solo.LR.UI.sayWaiting()[1])
-trade(solo, kim, 40000)
-check("more trades join the list", #solo.LR.UI.sayWaiting() == 2 and box.title:GetText() == "Say these 2 trades nearby?", box.title:GetText())
-check("it says what changed hands", box.text:GetText():find("Kim traded me 4g.", 1, true) ~= nil, box.text:GetText())
-solo.M.click(box.say)
-srv2:tick(1)
-check("one click says them all, nearby", said("Kim traded me 3g.", solo) and said("Kim traded me 4g.", solo)
-  and not box:IsShown() and #solo.LR.UI.sayWaiting() == 0)
-trade(solo, kim, 10000)
-solo.M.click(box.no)
-check("or not", not box:IsShown() and #solo.LR.UI.sayWaiting() == 0 and not said("Kim traded me 1g."))
-trade(solo, kim, 50000)
-srv2:tick(121)
-check("it goes by itself after two minutes", not box:IsShown() and #solo.LR.UI.sayWaiting() == 0)
 solo.instance = "raid"
-trade(solo, kim, 60000)
+trade(solo, kim, 40000)
 srv2:tick(5)
-check("in a dungeon or raid it's said straight away", said("Kim traded me 6g.", solo) ~= nil and not box:IsShown())
+check("leading reserves out of a group, a trade isn't said anywhere (not even in a dungeon)",
+  not heard("Kim traded me 3g.") and not heard("Kim traded me 4g."))
 solo.instance = nil
-solo.LR.db.settings.tradeSay = false
-trade(solo, kim, 70000)
-check("its own switch turns it off", not box:IsShown() and not said("Kim traded me 7g."))
-solo.LR.db.settings.tradeSay = true
-solo.LR.db.settings.tradeAnnounce = false
-trade(solo, kim, 75000)
-check("the group's switch doesn't", box:IsShown() and #solo.LR.UI.sayWaiting() == 1)
-solo.M.click(box.no)
-solo.LR.db.settings.tradeAnnounce = true
--- a raider who doesn't run loot says nothing
-trade(raider, kim, 80000)
-check("a raider with no reserves of their own says nothing", raider.G.LootRulerSay == nil or not raider.G.LootRulerSay:IsShown())
--- in a group, the group hears it, as before
 srv2:setGroup({ solo, kim }, solo, false)
 srv2:tick(6)
 trade(solo, kim, 90000)
 srv2:tick(5)
-local inParty
-for _, m in ipairs(srv2.chat) do if m.channel == "PARTY" and m.text:find("Kim traded me 9g.", 1, true) then inParty = true end end
-check("in a group, the group hears it (not /say)", inParty and not said("Kim traded me 9g.") and not box:IsShown())
--- in a party, in a dungeon: still only the party (never both)
-solo.instance = "party"
-trade(solo, kim, 110000)
-srv2:tick(5)
-local partyLines, sayLines = 0, 0
-for _, m in ipairs(srv2.chat) do
-  if m.text:find("Kim traded me 11g.", 1, true) then
-    if m.channel == "PARTY" then partyLines = partyLines + 1 elseif m.channel == "SAY" then sayLines = sayLines + 1 end
-  end
-end
-check("in a party in a dungeon, only the party hears it", partyLines == 1 and sayLines == 0, partyLines .. " " .. sayLines)
+check("in a group, the group hears it", heard("Kim traded me 9g.", "PARTY") and not heard("Kim traded me 9g.", "SAY"))
 solo.LR.db.settings.tradeAnnounce = false
 trade(solo, kim, 120000)
 srv2:tick(5)
-check("with the group's switch off, nothing goes to /s instead", not said("Kim traded me 12g.") and not box:IsShown())
+check("with its switch off, nothing is said", not heard("Kim traded me 12g."))
 solo.LR.db.settings.tradeAnnounce = true
-solo.instance = nil
-for _, p in ipairs({ solo, kim, raider }) do
+local old = { tradeSay = true }
+solo.LR.checkSettings(old)
+check("an older version's saved switch is dropped", old.tradeSay == nil)
+for _, p in ipairs({ solo, kim }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
 
