@@ -696,28 +696,30 @@ srv:tick(2)
 
 section("the gear overview")
 local HEAD, CHEST = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", "|cffa335ee|Hitem:29066::::::::70:::::|h[Chest]|h|r"
-ann.M.player.links = { [1] = HEAD, [5] = CHEST }
-bob.M.player.links = { [1] = HEAD }
+ann.links = { [1] = HEAD, [5] = CHEST }                -- (what the game shows when they're inspected)
+bob.links = { [1] = HEAD }
 pug.links = { [5] = CHEST, [4] = "|cffffffff|Hitem:45::::::::70:::::|h[Shirt]|h|r" }
+ann.M.player.links = { [1] = "|cffa335ee|Hitem:28733::::::::70:::::|h[Made up]|h|r" }   -- (her addon would say this: never asked)
 lead.LR.db.settings.inspectGear = true
 local O = lead.LR.Overview
-check("only someone running loot asks", not bob.LR.Overview.ask())
-check("the loot runner asks", O.ask())
-srv:tick(O.WAIT + 6)
+check("only someone running loot looks", not bob.LR.Overview.ask())
+check("the loot runner looks", O.ask())
+srv:tick(12)
 local function gearOf(p) return O.data[lead.LR.Roll.key(full(p))] end
-check("Ann's addon sends her gear", gearOf(ann) and gearOf(ann).how == "addon" and gearOf(ann).slots[1] == HEAD and gearOf(ann).slots[5] == CHEST)
-check("Bob's too", gearOf(bob) and gearOf(bob).slots[1] == HEAD)
-check("Pug has no addon: he's inspected (not the shirt)", gearOf(pug) and gearOf(pug).how == "inspect" and gearOf(pug).slots[5] == CHEST and gearOf(pug).slots[4] == nil)
+check("everyone is inspected: the game's word, not their addon's", gearOf(ann) and gearOf(ann).how == "inspect" and gearOf(ann).slots[1] == HEAD
+  and gearOf(ann).slots[5] == CHEST)
+check("Bob too", gearOf(bob) and gearOf(bob).how == "inspect" and gearOf(bob).slots[1] == HEAD)
+check("and Pug, who has no addon (not the shirt)", gearOf(pug) and gearOf(pug).how == "inspect" and gearOf(pug).slots[5] == CHEST and gearOf(pug).slots[4] == nil)
 check("mine too", gearOf(lead) and gearOf(lead).how == "self")
 local list = O.list()
 -- (this test's game hasn't loaded the items, so item levels are unknown here: tests/ui.lua has them)
 check("the overview lists everyone, with how many items", #list == #lead.LR.roster() and (function()
   for _, r in ipairs(list) do if r.name == full(ann) then return r.items == 2 end end end)())
 check("and how old it is", O.age(gearOf(ann).at) == "just now")
--- nonsense in an answer isn't kept
-lead.LR.Net.handlers.I({ t = "I", k = O.k, e = { [1] = "not a link", [99] = HEAD, [5] = CHEST } }, "WHISPER", full(bob))
-check("an answer is checked: only item links, only real slots", gearOf(bob).slots[1] == nil and gearOf(bob).slots[5] == CHEST)
-ann.M.player.links, bob.M.player.links, pug.links = nil, nil, nil
+-- what's read is checked: only item links, only real slots
+check("what's read is checked: only item links, only real slots", (function()
+  local e = O.clean({ [1] = "not a link", [99] = HEAD, [5] = CHEST }) return e[1] == nil and e[99] == nil and e[5] == CHEST end)())
+ann.M.player.links, ann.links, bob.links, pug.links = nil, nil, nil, nil
 
 section("raid setup")
 -- the leader starts on their own, with a list of who's coming pasted in

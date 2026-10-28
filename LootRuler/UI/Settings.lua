@@ -64,7 +64,6 @@ function UI.settingsView(f)
     toggle(p, "rollOnlyMine", "Only for items I can roll on", "Leaves out items other players reserved, and ties you're not in.", function() UI.rollWindows() end)
     toggle(p, "outbidAlert", "Tell me when I'm outbid", "In an auction, when someone bids more than you: a message in the middle of your screen and a sound.")
     toggle(p, "answerBagChecks", "Answer bag checks", "When whoever runs loot asks the group about some items (a flask, a key), LootRuler tells them how many you carry, in your bags and bank.")
-    toggle(p, "shareGear", "Show the loot master what I wear", "When an item is rolled out, the loot master sees what you wear in its slot beside your roll, and so do you in your roll window.")
     toggle(p, "rollHideUnusable", "Not for items my class can't use", "Leaves out items everyone can roll on that your class can't use (a plate chest for a mage, say). You can still /roll.", function() UI.rollWindows() end)
     toggle(p, "rollCloseAfter", "Close the window once I've rolled", "It goes a moment after you roll, instead of staying to show who wins.", function() UI.rollWindows() end)
     local sizes = { { plain = true, label = "Size:" } }
