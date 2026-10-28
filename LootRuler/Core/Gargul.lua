@@ -503,9 +503,15 @@ local LINK = "(|c%x+|Hitem:.-|h|r)"
 G.ROLL_LINES = { { "You have (%d+) seconds to roll on " .. LINK, "secs", "link" } }
 G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to ([^%s%.]+).-Congrats!", "^I gave " .. LINK .. " to ([^%s%.]+)" }
 local function withoutName(text) return (tostring(text or ""):gsub("^%s*Gargul%s*:%s*", "")) end   -- (" Gargul : ...")
+--- LootRuler's own lines ("[LootRuler] You have 5 seconds to roll on [item]...") are never Gargul's, however they read
+function G.fromLootRuler(text)
+  local tag = LR.TAG or "[LootRuler]"
+  return tostring(text or ""):sub(1, #tag) == tag
+end
 
 --- a raid chat line: the item, its link and the seconds when it's Gargul starting a roll, else nil
 function G.rollFromChat(text)
+  if G.fromLootRuler(text) then return nil end
   text = withoutName(text)
   for _, line in ipairs(G.ROLL_LINES) do
     local a, b = text:match(line[1])
@@ -519,6 +525,7 @@ end
 --- a raid chat line that ends Gargul's roll: true, the item when the line names one, who it went to, and whether it says
 --- the item was handed over ("I gave [item] to Ann": a trade, or straight from the loot window)
 function G.rollEndFromChat(text)
+  if G.fromLootRuler(text) then return nil end
   text = withoutName(text)
   for i, pattern in ipairs(G.END_LINES) do
     local s, e, link, winner = text:find(pattern)

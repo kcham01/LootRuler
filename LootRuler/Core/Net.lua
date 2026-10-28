@@ -91,6 +91,7 @@ LR.DEFAULTS = {
   exportHeader = "",       -- ...and its first line
   rollSeconds = 20,        -- how long everyone has to roll
   confirmWinner = true,    -- the winner of a roll is said in raid chat when the loot master confirms it (Rolls.confirm)
+  rollCountdown = true,    -- the last five seconds of a roll counted down in raid chat ("You have 5 seconds to roll on...", "4...")
   batchSeconds = 60,       -- how long several auctions at once last (Core/Batch.lua)
   answerBagChecks = true,  -- tell whoever runs loot how many of the items they ask about I carry (Core/Bags.lua)
   rollKinds = {},          -- my own roll types for rolls open to everyone: { { n = "Transmog", hi = 98 } } (Core/Roll.lua)

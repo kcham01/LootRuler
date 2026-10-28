@@ -156,9 +156,18 @@ srv:tick(22)
 check("the roll closes when the time's up", roll.state == "closed")
 check("and then the bar stops: nothing runs every frame", lead.G.LootRulerMasterFrame._scripts.OnUpdate == nil
   and lead.G.LootRulerMasterFrame:IsShown())
-check("five seconds' warning was given", chat("5 seconds left to roll") ~= nil)
-check("the raid hears the rolls closed, and not yet who won", chat("Rolls closed for " .. roll.link .. ".") ~= nil
-  and chat("Pug wins with 85 (MS)") == nil)
+do
+  -- the last five seconds counted down, one line a second, and then nothing until the loot master confirms the winner
+  local from
+  for i = #srv.chat, 1, -1 do if srv.chat[i].text:find("You have 5 seconds to roll on " .. roll.link .. "...", 1, true) then from = i end end
+  local after = {}
+  for i = (from or #srv.chat) + 1, #srv.chat do if srv.chat[i].from == full(lead) and srv.chat[i].channel ~= "WHISPER" then after[#after + 1] = srv.chat[i].text end end
+  check("the last five seconds are counted down in raid chat", from ~= nil
+    and table.concat(after, " | ") == "[LootRuler] 4... | [LootRuler] 3... | [LootRuler] 2... | [LootRuler] 1...",
+    table.concat(after, " | "))
+  check("and after 1, nothing: not that rolls closed, nor who won", #after == 4 and chat("Rolls closed for " .. roll.link) == nil
+    and chat("Pug wins with 85 (MS)") == nil, table.concat(after, " | "))
+end
 check("raiders' windows say who's highest, and that the loot master confirms it",
   status(ann, SIGNET):find("Rolls closed. Highest: Pug 85 (MS). The loot master confirms the winner.", 1, true) ~= nil, status(ann, SIGNET))
 check("the loot master's window has Confirm, beside rolling it again", found(lead, "Confirm Pug", lead.G.LootRulerMasterFrame)
