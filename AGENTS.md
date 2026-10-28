@@ -449,6 +449,20 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   charms, Karazhan's books...). Add a raid's new non-gear loot there (Forever's too). Loot windows within `Drops.PROFESSION_WAIT` seconds
   of my own Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`), or while `IsFishingLoot()`,
   aren't read. The stand-in has `Server:cast(p, spellID)`, `M.fishing` and `srv.itemInfo`'s `subclass`.
+- **Gargul's awards** (#123; `Drops.gargulAward(id, winner, sender, text)`, called from `UI/ReserveStrip.lua`'s chat handler on
+  `Gargul.END_LINES`' "awarded to" line; setting `recordGargul`, on): the leader's addon records it with `S.award` (SR with a reserve
+  claim, OS if the line says "OS" / "off spec", else MS) on the drop the winner holds or the oldest not given out, then
+  `LR.leaderChanged`. Only from `LR.canRunLoot(sender)`, inside the session's raid, not twice within 2 minutes or right after
+  LootRuler gave it (`Rolls.justGave`). No raid line (Gargul said it). Gargul's real lines (from the owner's raid log) start
+  " Gargul : " (stripped before matching); "I gave [item] to Name-Realm" is an end line too; a winner named without a realm is
+  matched by the name alone when only one member has it. An award with no drop yet (awarded before the loot master looted it)
+  takes the next drop of that item from a loot line (`Drops.lootMessage`, leader only, within 10 minutes). "I gave" (`handed`,
+  `G.rollEndFromChat`'s 4th value) finds the winner's award still to hand over (any time; recorded if there's none, nothing if
+  it's hers already) and sets the drop's holder to them: a trade only its two sides see. "awarded to" again within
+  `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
+  "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
+- **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
+  to start with (now: only while leading reserves, on).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

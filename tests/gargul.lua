@@ -276,6 +276,12 @@ do
   check("\"Stop your rolls!\" ends it", stop == true)
   check("so does the item going to someone", awarded == true and which == 28528)
   check("the countdown doesn't", G.rollEndFromChat("5 seconds to roll") == false)
+  -- as Gargul says them in the game, with its name in front
+  check("with \" Gargul : \" in front: a roll starts", G.rollFromChat(" Gargul : You have 10 seconds to roll on " .. link .. " - /roll for MS or /roll 99 for OS") == 28528)
+  check("and stops", G.rollEndFromChat(" Gargul : Stop your rolls!") == true)
+  local _, given, gto = G.rollEndFromChat(" Gargul : I gave " .. link .. " to Realbradpitt-Nightslayer")
+  check("\"I gave [item] to Name-Realm\" ends it too, with who got it", given == 28528 and gto == "Realbradpitt-Nightslayer")
+  check("someone else saying \"Stop your rolls!\" in the middle of a line doesn't", G.rollEndFromChat("lol Stop your rolls!") == false)
   local _, _, to = G.rollEndFromChat(link .. " was awarded to Ann. Congrats!")
   local _, _, to2 = G.rollEndFromChat(link .. " was awarded to Bob-Faerlina for 30 points. Congrats!")
   check("and says who it went to", to == "Ann" and to2 == "Bob-Faerlina", tostring(to) .. " " .. tostring(to2))

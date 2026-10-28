@@ -229,6 +229,66 @@ local function recordGroupWin(s, key, id, who, q)
   end
 end
 
+--- Gargul gave an item out: its raid chat line "[item] was awarded to Ann. Congrats!" (Core/Gargul.lua reads it). The
+--- leader's LootRuler puts it on the list of loot given out, on the drop Ann has or the oldest not given out yet: her
+--- reserve when she had one on it, off spec when the line says so, else main spec. Only from someone who may run loot,
+--- and not when LootRuler itself gave it to her a moment ago. Settings: recordGargul. Returns whether anything changed.
+--- "I gave [item] to Ann" (handed): Gargul says it once the item is hers, from the loot window or a trade, which only the
+--- two of them see. Her award for it (recorded now if there isn't one) is marked as handed over: it's hers on the Loot tab.
+Drops.GARGUL_REPEAT = 300   -- seconds in which the same "awarded to" line again is the same award (Gargul repeats it)
+function Drops.gargulAward(id, winner, sender, text, handed)
+  local s = LR.Rolls.session()
+  if not s or not LR.db.settings.recordGargul or not LR.isLeader(s) or s.practice or type(id) ~= "number" or type(winner) ~= "string"
+    or not sender or not LR.canRunLoot(U.full(sender)) or not Drops.here(s) then return false end
+  -- (Gargul names someone from another realm with or without it: "Ann", "Ann-Faerlina")
+  local m = LR.inGroup(winner)
+  if not m and not winner:find("-", 1, true) then
+    for _, r in ipairs(LR.roster()) do
+      if U.foldCase(r.name:match("^[^-]+")) == U.foldCase(winner) then
+        if m then m = nil break end                     -- (two with that name: not guessed)
+        m = r
+      end
+    end
+  end
+  local who = m and m.name or U.full(winner)
+  -- her award for it already on the list: for "I gave", the newest one still to hand over (any time tonight); else one
+  -- from the last few minutes, or one LootRuler gave her itself a moment ago
+  local award, hers
+  for i = #(s.won or {}), 1, -1 do
+    local w = s.won[i]
+    if w.i == id and U.samePlayer(w.p, who) then
+      local d = w.d and S.drop(s, w.d)
+      local toHand = not d or not d.h or not U.samePlayer(d.h, who)
+      if (handed and toHand) or (not handed and U.now() - (w.at or 0) < Drops.GARGUL_REPEAT) then award = w break end
+      hers = hers or not toHand
+    end
+  end
+  if not award and (hers and handed or not handed and LR.Rolls.justGave(id, who)) then return false end   -- (she has it already)
+  local changed = false
+  if not award then
+    local drop
+    local from = sender and U.full(sender)
+    for _, d in ipairs(S.openDrops(s, id)) do if d.h and U.samePlayer(d.h, who) then drop = d break end end
+    if not drop and handed then for _, d in ipairs(S.openDrops(s, id)) do if d.h and U.samePlayer(d.h, from) then drop = d break end end end
+    drop = drop or S.openDrops(s, id)[1]
+    local lower = tostring(text or ""):lower()
+    local os = lower:find("%f[%a]os%f[%A]") or lower:find("off[%s%-]?spec")
+    local kind = os and "OS" or S.claims(s, who, id) > 0 and "SR" or "MS"
+    if not S.award(s, id, who, kind, nil, U.now(), drop and drop.k) then return false end
+    award = s.won[#s.won]
+    changed = true
+    LR.print(("Gargul gave %s to %s: it's on the list of loot given out (%s)."):format(LR.itemLink(id), U.short(who),
+      kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec"))
+  end
+  -- handed over: the drop is hers now (it no longer waits to be traded)
+  local d = handed and award.d and S.drop(s, award.d)
+  if d and not (d.h and U.samePlayer(d.h, who)) and S.addDrop(s, { k = d.k, i = d.i, h = who, ht = d.ht }, U.now()) then
+    changed = true
+  end
+  if changed then LR.leaderChanged(s) end
+  return changed
+end
+
 function Drops.lootMessage(line)
   local who, link, n = Drops.parseLoot(line)
   local id = idOf(link)
@@ -263,6 +323,16 @@ function Drops.lootMessage(line)
   local ml = LR.masterLooter()
   local key = newKey(id)
   save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })
+  -- given out before anyone looted it (Gargul awards it, then the loot master loots it to trade over): it's this drop
+  if LR.isLeader(s) then
+    for _, w in ipairs(s.won or {}) do
+      if w.i == id and not w.d and U.now() - (w.at or 0) < 600 then
+        w.d = key
+        LR.leaderChanged(s)
+        return
+      end
+    end
+  end
   recordGroupWin(s, key, id, who, q)
 end
 
