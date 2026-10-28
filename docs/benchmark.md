@@ -45,8 +45,8 @@ Measured on `main` after #135 (everything through "bids not taken"), against the
    longest. The session copy is small (636 characters), and every raider's 10 reserves on different items draw the
    Reserves tab in about 10 ms, bosses open or closed.
 3. **A long night:** 320 items from 64 corpses, every one given out.
-   - A session keeps at most 300 drops (`S.MAX_DROPS`); past that, loot isn't listed for the rest of the night. A real night
-     lists far fewer since #121 (the raid's loot only), but nothing tells the leader when it happens.
+   - A session keeps at most 300 drops (`S.MAX_DROPS`). A real night never comes near it: only the raid's loot is listed
+     (#121), and a session only takes loot inside its own raid, on one lockout (#111), so this is a safety cap, not a limit.
    - A whole copy of the session grows to 7.4 KB (30 parts, about 10 seconds to send). Changes go as small updates (#119),
      but every 25th send, and copies to newcomers and the guild, are whole.
    - Giving out an item costs about 3 ms, late in the night as at the start.
@@ -59,7 +59,6 @@ Measured on `main` after #135 (everything through "bids not taken"), against the
 
 Ideas from it (not done):
 
-- Tell the leader when a session reaches 300 drops (one chat line), or let the counted "everything else" items go first.
 - Redraw the loot master window at most a few times a second during a roll (like `UI.renderSoon`): the longest moment in
   the 390-roll case is the redraw.
 - Unpacking messages is still half of all the work: sending less (smaller whole copies, or fewer of them) is where the

@@ -458,7 +458,7 @@ do
   srv:tick(10)
   local full = LR.Net.encode(snapshot(s))
   say("%d corpses, %d items given out; the session keeps %d drops (most: %d) and %d awards", corpses, given, #s.drops, maxDrops, #s.won)
-  if #s.drops >= maxDrops then say("past %d drops, more loot isn't listed: the Loot tab stops there for the rest of the night", maxDrops) end
+  if #s.drops >= maxDrops then say("(%d drops is a safety cap: a real night lists far fewer)", maxDrops) end
   say("a whole copy of the session at the end: %d characters (%d parts, about %d seconds to send at 800 characters a second)",
     #full, math.ceil(#full / 254), math.ceil(#full / 800))
   say("giving out an item: %.1f ms for the first, %.1f ms for the last (the leader's addon, here)", firstAward, lastAward)
