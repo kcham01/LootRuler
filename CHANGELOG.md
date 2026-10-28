@@ -9,6 +9,10 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 From the owner's in-game screenshots.
 
+- Reserving an item more than once is a roll for each reserve: with "x3" on an item you /roll three times when it's rolled
+  out, and your highest counts. The raid line says so ("x2 rolls twice, best counts"), and the roll window offers the next
+  roll until they're used up ("1 roll left"). Before, more reserves on one item only counted if it dropped again.
+  ([#127](https://github.com/kcham01/LootRuler/pull/127))
 - Only the one holding the loot runs it: with master loot on, the master looter; without it, the raid leader. Assistants
   no longer can (pugs often make everyone one), so nobody else can start rolls or auctions on everyone's screen, or have a
   typed Gargul line ("awarded to", "You have 10 seconds to roll on...") count. Taking over reserves while their leader is

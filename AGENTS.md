@@ -472,6 +472,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `db.ui.bossOpen` "<where>:<raid>:<boss>" -> true, closed to start with; `where` is "reserve" or "reserves"): the Reserve tab's loot list
   (`lootList`, with a session or browsing) and the Reserves tab's soft reserves by item. A search or "Reserved only" opens every
   boss with a match (`force`); the 200-row limit counts only open bosses. Tests that click items open them first ("Open all").
+- **A roll for each reserve** (#127, the owner's rule; `R.rollsFor`, `R.rollsLeft`, `roll.used`, entries' `try`, why "lower"): in an SR roll a player
+  may /roll once for each reserve they have left on the item (`roll.who`'s counts, at most 10); their highest is `roll.rolled` and
+  counts, the others are "lower"; past that, "again". `R.waiting` waits for every roll. Ties still reroll once each. Older raiders'
+  windows count only the first (the loot master's addon decides). Practice players use all their rolls.
 - **Who runs loot** (#128; `LR.canRunLoot`, `LR.groupBoss`, `LR.showsBySelf`, `LR.decline`, `db.ui.declined`; `UI.joinPrompt` in `UI/Setup.lua`):
   `canRunLoot` is the master looter (master loot) or the group leader, nobody else; `groupBoss` (taking over a session) is the
   leader or master looter. Gargul's start / stop lines are checked too (`UI/ReserveStrip.lua`). A first-seen session from the
