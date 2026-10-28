@@ -103,6 +103,24 @@ srv:tick(2)
 check("giving it out", okA and s.won and #s.won == 1 and s.won[1].p == top.p, note)
 check("the award line shows as raid chat", shown("goes to " .. LR.U.short(top.p)) ~= nil)
 Rolls.dismiss()
+-- a pretend player with two reserves on an item rolls twice for it, and their best counts
+do
+  local x = P.players[1]
+  local id
+  for _, i in ipairs(LR.raidOf(s).order) do if not s.hr[i] and not S.byItem(s)[i] then id = i break end end
+  local before = S.reservesOf(s, x.name)
+  S.set(s, x.name, x.class, { id, id }, true, LR.U.now())
+  local r = Rolls.start(id, { link = LR.itemLink(id) })
+  srv:tick(15)
+  local mine = {}
+  for _, e in ipairs(r.entries) do if LR.U.samePlayer(e.p, x.name) then mine[#mine + 1] = e.n end end
+  check("a pretend player with two reserves on it rolls twice; the best counts", r.mode == "SR" and #mine == 2
+    and r.rolled[LR.Roll.key(x.name)].n == math.max(mine[1] or 0, mine[2] or 0), #mine)
+  Rolls.cancel()
+  Rolls.dismiss()
+  S.set(s, x.name, x.class, before, true, LR.U.now())
+  srv:tick(1)
+end
 
 section("a tie")
 P.tie = true

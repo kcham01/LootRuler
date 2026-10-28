@@ -9,6 +9,10 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 From the owner's in-game screenshots.
 
+- Reserving an item more than once is a roll for each reserve: with "x3" on an item you /roll three times when it's rolled
+  out, and your highest counts. The raid line says so ("x2 rolls twice, best counts"), and the roll window offers the next
+  roll until they're used up ("1 roll left"). Before, more reserves on one item only counted if it dropped again.
+  ([#127](https://github.com/kcham01/LootRuler/pull/127))
 - Section titles fit on their gold plate, however long ("Need and Greed (group loot)" ran off it).
   ([#103](https://github.com/kcham01/LootRuler/pull/103))
 - Every item search says what to type inside the box, as the Reserve tab's does ("Search Karazhan"), instead of in a line

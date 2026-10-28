@@ -2017,6 +2017,26 @@ run("item notes", function()
   for id in pairs(LR.db.notes) do LR.setNote(id, nil) end
 end)
 
+run("a roll for each reserve", function()
+  srv:tick(6)                -- (the last message goes)
+  local copy = LR.UI.testRoll({ quiet = true, mode = "SR", mine = 2, reservers = 2 })
+  LR.UI.rollWindows()
+  local fr
+  for _, x in ipairs(LR.UI.rollFrames()) do if x:IsShown() and x.copy == copy then fr = x end end
+  check("two reserves: the window says I roll twice", fr and M.plain(fr.status:GetText()):find("You reserved this 2 times: you roll 2 times, your best counts", 1, true) ~= nil,
+    fr and M.plain(fr.status:GetText()))
+  M.click(fr.dice)
+  srv:tick(0.3)
+  check("after one, it offers the second", fr.dice:IsEnabled() and M.plain(fr.status:GetText()):find("1 roll left (one for each reserve)", 1, true) ~= nil,
+    M.plain(fr.status:GetText()))
+  shot("roll-twice", lead, { fr:GetName() })
+  M.click(fr.dice)
+  srv:tick(0.3)
+  check("after both, my best counts and there are no more", not fr.dice:IsEnabled() and M.plain(fr.status:GetText()):find("Your best:", 1, true) ~= nil)
+  copy.closedByMe = true
+  LR.UI.rollWindows()
+end)
+
 run("thatsmybis wishlists", function()
   LR.UI.go("settings")
   srv:tick(6)                -- (the last message goes)

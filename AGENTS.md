@@ -471,6 +471,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `db.ui.bossOpen` "<where>:<raid>:<boss>" -> true, closed to start with; `where` is "reserve" or "reserves"): the Reserve tab's loot list
   (`lootList`, with a session or browsing) and the Reserves tab's soft reserves by item. A search or "Reserved only" opens every
   boss with a match (`force`); the 200-row limit counts only open bosses. Tests that click items open them first ("Open all").
+- **A roll for each reserve** (#127, the owner's rule; `R.rollsFor`, `R.rollsLeft`, `roll.used`, entries' `try`, why "lower"): in an SR roll a player
+  may /roll once for each reserve they have left on the item (`roll.who`'s counts, at most 10); their highest is `roll.rolled` and
+  counts, the others are "lower"; past that, "again". `R.waiting` waits for every roll. Ties still reroll once each. Older raiders'
+  windows count only the first (the loot master's addon decides). Practice players use all their rolls.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`
