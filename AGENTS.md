@@ -458,8 +458,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   matched by the name alone when only one member has it. An award with no drop yet (awarded before the loot master looted it)
   takes the next drop of that item from a loot line (`Drops.lootMessage`, leader only, within 10 minutes).
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
-  to start with (now: only while leading reserves, on); when Gargul is loaded and shows reserves in a tooltip, no second
-  "soft reserved by" line from LootRuler.
+  to start with (now: only while leading reserves, on).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #122) `Net.lua:195: attempt to index upvalue 'db'` at login: `UPDATE_INSTANCE_INFO` came
     between `ADDON_LOADED` and `PLAYER_LOGIN` (where `LR.loadDB` runs), and `UI/Where.lua` read the session. Every event handler
