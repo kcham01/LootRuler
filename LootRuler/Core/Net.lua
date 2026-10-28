@@ -558,10 +558,17 @@ function LR.setHR(s, id, forWho, note)
   return ok, lost
 end
 function LR.clearHR(s, id) if S.clearHR(s, id, U.now()) then leaderChanged(s) end end
+--- locks or unlocks the reserves; the raid hears it either way (by hand or by itself), with how to swap or reserve
 function LR.setLocked(s, locked)
   if S.setLocked(s, locked, U.now()) then
     leaderChanged(s)
     if locked and LR.Gargul.available() then LR.Gargul.send(s, true) end
+    local ch = not s.pv and LR.groupChannel()
+    if ch then
+      local line = locked and ("Soft reserves are locked now. " .. LR.Whisper.swapHowTo())
+        or ("Soft reserves are open again. " .. LR.Whisper.howTo())
+      for _, l in ipairs(U.chatLines(LR.TAG .. " " .. line)) do LR.say(l, ch) end
+    end
   end
 end
 --- who disenchants; the group hears who it is (or that there's nobody now)

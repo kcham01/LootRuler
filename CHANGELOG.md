@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Locking reserves by hand now tells the raid, like locking by itself does: "Soft reserves are locked now. Want to swap one?
+  Type !lr swap [your item] [new item] in raid chat, or click Ask to swap one in LootRuler." Unlocking says they're open again,
+  with how to reserve. ([#155](https://github.com/kcham01/LootRuler/pull/155))
 - The loot master window's Confirm button is gone: Award (or Give) already said who won. With "Say the winner when I give
   it out" on (as it starts), nothing is said when rolls close, and the award line is the winner. When it isn't the best roll,
   the line says it was the loot master's pick (or the council's choice). ([#154](https://github.com/kcham01/LootRuler/pull/154))
