@@ -191,7 +191,7 @@ local function apply(msg, sender)
     return
   end
   if r > book.editRank and not (msg.c.editRank and r == 0) then return end
-  if B.merge(book, msg.c, r == 0) then LR.changed("book") end
+  if B.merge(book, msg.c, r == 0, U.now()) then LR.changed("book") end
 end
 
 Net.handlers.GB = function(msg, channel, sender)
