@@ -715,8 +715,9 @@ function Rolls.follow(msg, sender)
 end
 
 ---------------------------------------------------------------------- what everyone has on now (gear comparison)
---- what I wear where an item goes (links; none for an empty slot), for my window and for the loot master's: sent once
---- per roll, by whisper (Settings: shareGear). Not for an auction (gold decides).
+--- what I wear where an item goes (links; none for an empty slot), for my own roll window ("You have:"), and for my own
+--- row when it's my roll. Nobody else's addon is told: the loot master sees raiders' gear by inspecting them (below), the
+--- game's word rather than an addon's. Not for an auction (gold decides).
 function Rolls.sendGear(copy)
   copy.gearSent = true
   if copy.mode == "BID" or copy.test then return end
@@ -726,17 +727,14 @@ function Rolls.sendGear(copy)
     if l then links[#links + 1] = l end
   end
   copy.mine = #links > 0 and links or nil
-  if #links == 0 or not LR.db.settings.shareGear then return end
   local mine = Rolls.current
-  if mine and mine.k == copy.k then mine.gear = mine.gear or {} mine.gear[R.key(U.me())] = links return end
-  if copy.by and not U.samePlayer(copy.by, U.me()) then Net.send({ t = "W", k = copy.k, e = links }, "WHISPER", copy.by) end
+  if #links > 0 and mine and mine.k == copy.k then mine.gear = mine.gear or {} mine.gear[R.key(U.me())] = links end
 end
 
--- Raiders without LootRuler (or an older one) don't say what they wear: the loot master's addon looks, with the game's
--- inspect, one player at a time, when they're close enough and not in combat, and never while the loot master's own
--- inspect window is open (Settings: inspectGear). It waits a moment first, for addons that do say.
+-- What raiders wear: the loot master's addon looks, with the game's inspect, one player at a time, when they're close
+-- enough and not in combat, and never while the loot master's own inspect window is open (Settings: inspectGear).
+-- Raiders' addons don't say (older ones whisper it, W: ignored), so it can't be made up.
 local inspectQueue, inspecting = {}, nil
-Rolls.INSPECT_WAIT = 2
 local function nextInspect()
   if inspecting or #inspectQueue == 0 then return end
   if InCombatLockdown() or (InspectFrame and InspectFrame:IsShown()) then C_Timer.After(2, nextInspect) return end
@@ -775,11 +773,8 @@ function Rolls.wantGear(roll, player)
   roll.looked = roll.looked or {}
   if roll.looked[k] or (roll.gear and roll.gear[k]) or U.samePlayer(player, U.me()) then return end
   roll.looked[k] = true
-  C_Timer.After(Rolls.INSPECT_WAIT, function()
-    if roll.gear and roll.gear[k] then return end
-    inspectQueue[#inspectQueue + 1] = { roll = roll, p = player }
-    nextInspect()
-  end)
+  inspectQueue[#inspectQueue + 1] = { roll = roll, p = player }
+  nextInspect()
 end
 --- the game has what they wear
 function Rolls.inspectReady(guid)
@@ -805,20 +800,6 @@ function Rolls.inspectReady(guid)
     changed()
   end
   C_Timer.After(1, nextInspect)
-end
-
--- what a roller wears there, at the loot master's (from their addon)
-Net.handlers.W = function(msg, channel, sender)
-  local roll = Rolls.current
-  if not roll or roll.k ~= msg.k or type(msg.e) ~= "table" or not LR.inGroup(sender) then return end
-  local links = {}
-  for i, l in ipairs(msg.e) do
-    if i > 2 then break end
-    if type(l) == "string" and #l <= 200 and l:find("|Hitem:%d+") then links[#links + 1] = l end
-  end
-  roll.gear = roll.gear or {}
-  roll.gear[R.key(sender)] = #links > 0 and links or nil
-  changed()
 end
 
 ---------------------------------------------------------------------- Gargul's rolls (read from raid chat)

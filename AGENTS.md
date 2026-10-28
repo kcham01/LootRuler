@@ -287,11 +287,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   client restricts `SendMail`, so the organiser presses Send); a post-hook on `SendMail` matches it to the payout filled in,
   and `MAIL_SEND_SUCCESS` counts the gold in the mail as paid. Not done: several auctions at once (the loot master has one
   roll at a time, `Rolls.current`; it needs its own design).
-- **Gear comparison** (`LR.wornIn`, `Rolls.sendGear`, message `W` = { k, e = links }, setting `shareGear`, on): a raider's addon
-  whispers the loot master the links in the item's slots (two for rings, trinkets, one-hands) once per roll; the loot master
-  keeps them as `roll.gear` (only from the group, for the roll on now, links only, two at most). Shown as an icon on the
-  loot master's row and "You have:" in the raider's window. Not for auctions. The mock gives gear with `M.player.links`;
-  the picture renderer now shows links as their names.
+- **Gear comparison** (`LR.wornIn`, `Rolls.sendGear`): since #129 only by inspecting (the owner's choice: an addon's word could be made
+  up). `Rolls.sendGear` fills the raider's own "You have:" (`copy.mine`) and nothing is sent; message `W` from older raiders is
+  ignored (no handler). The loot master keeps `roll.gear` from `Rolls.wantGear` (each roller, queued at once). Shown as an icon on
+  the loot master's row. Not for auctions. The mock gives my own gear with `M.player.links`, a player's inspected gear with `p.links`.
 - **Becoming the master looter** (`UI.masterLooterPrompt`, `LR.announceMasterLooter`, `UI.masterLooterLine`; settings `mlPrompt`, on,
   and `mlAnnounce`, off): on `PARTY_LOOT_METHOD_CHANGED` / `GROUP_ROSTER_UPDATE`, a change to being master looter asks (not in
   combat) or posts. Nothing happens for the first 5 seconds after logging in, so a reload doesn't ask again.
@@ -478,6 +477,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   group shows by itself only when its leader is the group's leader or master looter and I'm not looking at someone else's
   open one; otherwise `UI.joinPrompt` asks (in combat, a chat line). `LR.current`'s fallback skips declined and others' sessions.
   A raider who doesn't run loot no longer says trades in raid chat (an enchant is still noted in their own chat).
+- **Gear by inspection only** (#129): the gear overview (`Overview.ask`) inspects everyone but me; `H` / `I` are neither sent nor answered
+  (older loot masters inspect after their wait), `O.WAIT`, `Rolls.INSPECT_WAIT` and the `shareGear` setting are gone. Practice players'
+  made-up gear counts as inspected.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

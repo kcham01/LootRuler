@@ -927,17 +927,19 @@ local RING = 28510                              -- Spectral Band of Innervation:
 local OLD = "|cff0070dd|Hitem:12345::::::::70:::::|h[Old Ring]|h|r"
 local OLD2 = "|cff0070dd|Hitem:12346::::::::70:::::|h[Other Ring]|h|r"
 ann.M.player.links = { [11] = OLD, [12] = OLD2 }
+ann.links = { [11] = OLD, [12] = OLD2 }        -- (what the game shows when she's inspected)
 srv:openLoot(lead, { { RING, 4 } })
 srv:tick(0.5)
 local gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
 srv:tick(1)
-check("Ann's addon tells the loot master which rings she wears", gr.gear and gr.gear["ann-dreamscythe"] and gr.gear["ann-dreamscythe"][1] == OLD
-  and gr.gear["ann-dreamscythe"][2] == OLD2)
-check("Bob wears none: nothing", not gr.gear["bob-faerlina"])
-check("her own window shows them", frameFor(ann, RING) and frameFor(ann, RING).note:GetText():find("You have:", 1, true) ~= nil)
+check("her own window shows which rings she wears", frameFor(ann, RING) and frameFor(ann, RING).note:GetText():find("You have:", 1, true) ~= nil)
+check("but her addon doesn't tell the loot master: nobody's gear is known before they roll", not (gr.gear and gr.gear["ann-dreamscythe"]))
 srv:willRoll(ann, 30)
 ann.M.click(frameFor(ann, RING).dice)
-srv:tick(0.5)
+srv:tick(4)
+check("Ann rolls: the loot master's addon inspects her, and sees both rings", gr.gear and gr.gear["ann-dreamscythe"]
+  and gr.gear["ann-dreamscythe"][1] == OLD and gr.gear["ann-dreamscythe"][2] == OLD2)
+check("Bob didn't roll: nothing", not gr.gear["bob-faerlina"])
 local shown = false
 for _, x in ipairs(lead.M.findText("Ann", true, lead.G.LootRulerMasterFrame)) do
   local row = x.frame
@@ -949,26 +951,12 @@ pug.links = { [11] = OLD2 }
 local inspectsBefore = srv.inspects or 0
 srv:roll(pug, 1, 100, 12)
 srv:tick(4)
-check("someone without LootRuler: the loot master's addon looks at what he wears", gr.gear["pug-dreamscythe"] and gr.gear["pug-dreamscythe"][1] == OLD2)
-check("only him: Ann's addon told it already", (srv.inspects or 0) == inspectsBefore + 1)
--- what doesn't count: someone outside the group, or another roll
-local stranger = srv:player({ name = "Stranger", class = "MAGE" })
-srv:addonMessage(stranger, "LootRuler", lead.LR.Net.encode({ t = "W", k = gr.k, e = { OLD } }), "WHISPER", full(lead))
-srv:addonMessage(bob, "LootRuler", lead.LR.Net.encode({ t = "W", k = "another", e = { OLD } }), "WHISPER", full(lead))
-srv:addonMessage(bob, "LootRuler", lead.LR.Net.encode({ t = "W", k = gr.k, e = { "not a link", OLD } }), "WHISPER", full(lead))
+check("someone without LootRuler: the same", gr.gear["pug-dreamscythe"] and gr.gear["pug-dreamscythe"][1] == OLD2)
+check("each roller looked at once", (srv.inspects or 0) == inspectsBefore + 1)
+-- an older raider's addon still whispers what it wears: ignored, the game's inspect is what counts
+srv:addonMessage(bob, "LootRuler", lead.LR.Net.encode({ t = "W", k = gr.k, e = { OLD } }), "WHISPER", full(lead))
 srv:tick(0.5)
-check("from outside the group, or for another roll: ignored; and only links are kept",
-  not gr.gear["stranger-dreamscythe"] and #gr.gear["bob-faerlina"] == 1)
-Rolls.cancel()
-srv:tick(0.5)
-Rolls.dismiss()
-ann.LR.db.settings.shareGear = false
-gr = Rolls.start(RING, { link = srv:link(RING), slot = 1 })
-srv:tick(1)
-srv:roll(pug, 1, 100, 13)
-srv:tick(4)
-check("switched off for Ann: Pug is still looked at (he has no addon)", gr.gear["pug-dreamscythe"] ~= nil)
-check("switched off: not told, though her own window still shows it", not (gr.gear and gr.gear["ann-dreamscythe"]) and frameFor(ann, RING).note:GetText():find("You have:", 1, true) ~= nil)
+check("a raider's addon saying what it wears is ignored (it could be made up)", not gr.gear["bob-faerlina"])
 Rolls.cancel()
 srv:tick(0.5)
 Rolls.dismiss()
@@ -996,8 +984,8 @@ srv:tick(0.5)
 Rolls.dismiss()
 pug.links = nil
 srv:closeLoot(lead)
-ann.LR.db.settings.shareGear = true
 ann.M.player.links = nil
+ann.links = nil
 srv:tick(1)
 
 section("becoming the master looter")

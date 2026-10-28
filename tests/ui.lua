@@ -1367,7 +1367,7 @@ run("a bag check", function()
 end)
 
 run("the gear overview", function()
-  ann.M.player.links = { [1] = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", [5] = "|cffa335ee|Hitem:28530::::::::70:::::|h[Brooch]|h|r",
+  ann.links = { [1] = "|cffa335ee|Hitem:28423::::::::70:::::|h[Helm]|h|r", [5] = "|cffa335ee|Hitem:28530::::::::70:::::|h[Brooch]|h|r",
     [16] = "|cffa335ee|Hitem:28525::::::::70:::::|h[Signet]|h|r" }
   pug.links = { [1] = "|cffa335ee|Hitem:28528::::::::70:::::|h[Watch]|h|r" }
   M.player.links = { [3] = "|cffa335ee|Hitem:28529::::::::70:::::|h[Cloak]|h|r" }
@@ -1376,7 +1376,7 @@ run("the gear overview", function()
   LR.UI.show("loot")
   srv:tick(0.3)
   clickText("Raid gear")
-  srv:tick(LR.Overview.WAIT + 6)
+  srv:tick(12)
   check("everyone, with their item level and when it was read", visible("Raid gear") and visible("item level 115") and visible("just now") and visible("(inspected)"))
   shot("raid-gear")
   local annRow = rowFor("Ann")
@@ -1386,7 +1386,7 @@ run("the gear overview", function()
     and visible("Helm") and visible("Nothing in: Neck, Shoulder"))
   shot("raid-gear-player")
   LR.UI.closeAll()
-  ann.M.player.links, pug.links, M.player.links = nil, nil, nil
+  ann.links, pug.links, M.player.links = nil, nil, nil
   LR.endSession(sg)
   srv:tick(1)
   LR.UI.go("reserve")

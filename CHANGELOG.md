@@ -9,6 +9,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 From the owner's in-game screenshots.
 
+- What raiders wear is only ever read by inspecting them, for rolls and for "Raid gear": raiders' LootRuler no longer tells
+  the loot master, so nobody can make it up. The "Show the loot master what I wear" setting is gone; your own roll window
+  still shows what you have in that slot. ([#129](https://github.com/kcham01/LootRuler/pull/129))
 - Only the one holding the loot runs it: with master loot on, the master looter; without it, the raid leader. Assistants
   no longer can (pugs often make everyone one), so nobody else can start rolls or auctions on everyone's screen, or have a
   typed Gargul line ("awarded to", "You have 10 seconds to roll on...") count. Taking over reserves while their leader is

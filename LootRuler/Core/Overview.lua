@@ -1,15 +1,11 @@
--- The gear overview: what everyone in the group wears, in one place. Whoever runs loot asks; every LootRuler in the
--- group answers by whisper with its player's gear (when they share it, Settings: shareGear), and anyone without the
--- addon, or who doesn't answer, is inspected the way the game does it (one at a time, close enough, out of combat;
--- Settings: inspectGear). Each player's gear is kept with when it was read, and how.
+-- The gear overview: what everyone in the group wears, in one place. Whoever runs loot looks: everyone is inspected the
+-- way the game does it (one at a time, close enough, out of combat; Settings: inspectGear), so what's shown is the game's
+-- word, not an addon's. Each player's gear is kept with when it was read, and how.
 --
--- Messages (on top of Core/Net.lua's):
---   H  loot runner -> group    { k }: "what do you wear?"
---   I  raider -> loot runner   { k, e = { [slot] = link } }: the answer, by whisper
--- Older versions don't know them: their players are inspected instead.
+-- Older versions asked the group (H) and raiders' addons answered (I); neither is sent or answered any more, so an
+-- older loot master inspects everyone after its wait.
 local _, LR = ...
 local U, R = LR.U, LR.Roll
-local Net = LR.Net
 
 local O = { data = {} }
 LR.Overview = O
@@ -19,7 +15,6 @@ O.SLOTS = { 1, 2, 3, 15, 5, 9, 10, 6, 7, 8, 11, 12, 13, 14, 16, 17, 18 }
 O.SLOT_NAME = { [1] = "Head", [2] = "Neck", [3] = "Shoulder", [15] = "Back", [5] = "Chest", [9] = "Wrist", [10] = "Hands",
   [6] = "Waist", [7] = "Legs", [8] = "Feet", [11] = "Ring", [12] = "Ring", [13] = "Trinket", [14] = "Trinket",
   [16] = "Main hand", [17] = "Off hand", [18] = "Ranged" }
-O.WAIT = 6                 -- seconds for addons to answer before their players are inspected instead
 local SLOT_OK = {}
 for _, s in ipairs(O.SLOTS) do SLOT_OK[s] = true end
 
@@ -75,27 +70,15 @@ function O.ask()
   O.k = U.me() .. ":gear:" .. U.now()
   O.why = {}
   O.got(U.me(), O.mine(), "self")
-  local ch = LR.groupChannel()
-  if ch then Net.send({ t = "H", k = O.k }, ch) end
   if LR.Practice.on then LR.Practice.answerGear() end
-  local k = O.k
-  -- whoever hasn't answered by then: inspected (players without the addon at once)
-  local function inspect(m)
-    local key = R.key(m.name)
-    if not LR.db.settings.inspectGear then O.why[key] = "off" return end
-    LR.Rolls.inspect(m.name, readUnit(m.name), function(why) O.why[key] = why LR.changed("gear") end)
-  end
+  -- everyone else: inspected, one at a time
   for _, m in ipairs(LR.roster()) do
-    if not U.samePlayer(m.name, U.me()) and not LR.versionOf(m.name) and not LR.Practice.isPretend(m.name) then inspect(m) end
-  end
-  C_Timer.After(O.WAIT, function()
-    if O.k ~= k then return end
-    for _, m in ipairs(LR.roster()) do
-      local d = O.data[R.key(m.name)]
-      if LR.versionOf(m.name) and not U.samePlayer(m.name, U.me()) and not (d and d.at >= U.now() - O.WAIT - 1) then inspect(m) end
+    if not U.samePlayer(m.name, U.me()) and not LR.Practice.isPretend(m.name) then
+      local key = R.key(m.name)
+      if not LR.db.settings.inspectGear then O.why[key] = "off"
+      else LR.Rolls.inspect(m.name, readUnit(m.name), function(why) O.why[key] = why LR.changed("gear") end) end
     end
-    LR.changed("gear")
-  end)
+  end
   LR.changed("gear")
   return true
 end
@@ -125,18 +108,4 @@ function O.age(at)
   return ("%d h ago"):format(math.floor(s / 3600))
 end
 
----------------------------------------------------------------------- answering
-local answered = {}
 
-Net.handlers.H = function(msg, channel, sender)
-  if channel == "WHISPER" or type(msg.k) ~= "string" or #msg.k > 120 then return end
-  if U.samePlayer(sender, U.me()) or not LR.canRunLoot(sender) or answered[msg.k] then return end
-  if not LR.db.settings.shareGear then return end
-  answered[msg.k] = true
-  Net.send({ t = "I", k = msg.k, e = O.mine() }, "WHISPER", sender)
-end
-
-Net.handlers.I = function(msg, channel, sender)
-  if channel ~= "WHISPER" or msg.k ~= O.k or not LR.inGroup(sender) then return end
-  O.got(sender, (O.clean(msg.e)), "addon")
-end

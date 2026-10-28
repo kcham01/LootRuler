@@ -439,7 +439,7 @@ function P.answerGear()
         if list and #list > 0 and math.random() < 0.95 then e[slot] = LR.itemLink(pick(list)) end
       end
       heard(x, "their gear", "sent")
-      LR.Overview.got(x.name, (LR.Overview.clean(e)), "addon")
+      LR.Overview.got(x.name, (LR.Overview.clean(e)), "inspect")
     end)
   end
 end
