@@ -6,6 +6,10 @@
 -- Raiders can pick while the leader is offline or out of the group: their picks are kept and sent as soon
 -- as the leader's addon is heard from again.
 --
+-- A private session (s.pv, LR.startPrivate) is mine alone: I lead it on my screen, but it's never sent, never answers
+-- anyone and never says anything in chat. It only holds what it sees (the loot list, reserves I import). Closing it
+-- forgets it, and joining someone's session (UI.joinPrompt) or opening my own closes it.
+--
 -- Messages (LibSerialize + LibDeflate over AceComm, prefix "LootRuler"):
 --   T  leader -> group / guild    the whole session
 --   U  leader -> group            what changed in it since the copy the group last had: { id, f = that copy's rev, r = the
@@ -174,7 +178,7 @@ function LR.loadDB()
   for id, s in pairs(db.sessions) do
     if not S.valid(s) or s.practice then db.sessions[id] = nil db.mine[id] = nil   -- (a practice raid isn't kept)
     elseif (s.updated or 0) < cutoff then
-      LR.History.archive(s, s.updated or U.now())
+      if not s.pv then LR.History.archive(s, s.updated or U.now()) end      -- (a private one is just forgotten)
       db.sessions[id] = nil db.mine[id] = nil
     end
   end
@@ -443,7 +447,7 @@ local function toGuild(s)
   end)
 end
 function LR.publish(s, now, slow)
-  if not LR.isLeader(s) then return end
+  if not LR.isLeader(s) or s.pv then return end         -- (a private session never leaves this computer)
   if slow and not now and publishWaiting[s.id] then return end           -- (one is on its way: it carries this too)
   publishSeq[s.id] = (publishSeq[s.id] or 0) + 1
   local mine = publishSeq[s.id]
@@ -483,6 +487,7 @@ end
 
 ---------------------------------------------------------------------- what the leader does
 function LR.startSession(raidKey, sr, dupes, guild, name, any)
+  LR.closePrivate()                                      -- (my own session for the raid: the private one isn't needed)
   local now = U.now()
   local s = S.new(U.me(), raidKey, sr, dupes, now, name, any)
   s.guild = guild and true or false
@@ -495,6 +500,36 @@ function LR.startSession(raidKey, sr, dupes, guild, name, any)
   LR.publish(s, true)
   LR.changed("session")
   return s
+end
+
+--- my private session (the one open, or nil): see the top
+function LR.privateSession()
+  for _, s in pairs(db.sessions) do if s.pv and LR.isLeader(s) then return s end end
+end
+--- opens a private session: it only holds what it sees (the loot list from loot lines and Gargul's awards, reserves I
+--- import). Never sent or said anywhere. One at a time: a new one replaces the old.
+function LR.startPrivate(raidKey, sr, dupes, name, any)
+  LR.closePrivate()
+  local now = U.now()
+  local s = S.new(U.me(), raidKey, sr, dupes, now, name, any)
+  s.id = s.id .. ":private"          -- (never the same as a session I open for the raid in the same second)
+  s.pv = true
+  s.guild = false
+  db.sessions[s.id] = s
+  db.current = s.id
+  LR.preload(raidKey)
+  LR.changed("session")
+  return s
+end
+--- closes my private session: everything in it is forgotten (it isn't kept as a past raid)
+function LR.closePrivate()
+  local s = LR.privateSession()
+  if not s then return false end
+  db.sessions[s.id] = nil
+  db.mine[s.id] = nil
+  if db.current == s.id then db.current = nil end
+  LR.changed("session")
+  return true
 end
 
 -- who came: the leader's session notes everyone who's in the group while it runs (the fairness history)
@@ -542,7 +577,7 @@ function LR.setDisenchanter(s, player)
   if not S.setDisenchanter(s, player, U.now()) then return end
   leaderChanged(s)
   local ch = LR.groupChannel()
-  if not ch then return end
+  if not ch or s.pv then return end
   LR.say(LR.TAG .. " " .. (s.de and ("%s is the disenchanter: items nobody wants go to them."):format(U.short(s.de))
     or "Nobody is the disenchanter now."), ch)
 end
@@ -640,7 +675,7 @@ function LR.setLink(s, url)
 end
 function LR.postLink(s)
   local ch = LR.groupChannel()
-  if not s.url or not ch then return false end
+  if not s.url or not ch or s.pv then return false end
   LR.say(("%s Reserve on softres.it: %s"):format(LR.TAG, s.url), ch)
   return true
 end
@@ -658,6 +693,7 @@ function LR.editAward(s, index, player, kind)
   local was = w and w.p
   if not LR.isLeader(s) or not S.editAward(s, index, player, kind, U.now()) then return false end
   leaderChanged(s)
+  if s.pv then return true end                           -- (a private session says nothing)
   local link = LR.itemLink(w.i)
   local line = U.samePlayer(was, w.p) and ("Changed: %s is %s's for %s."):format(link, U.short(w.p), HOW[kind])
     or ("Changed: %s is %s's (%s), not %s's."):format(link, U.short(w.p), HOW[kind], U.short(was))
@@ -718,6 +754,7 @@ end
 --- the leader hands the session to someone in the group with LootRuler (their addon takes it on); nil takes it back
 function LR.handOver(s, player)
   if not LR.isLeader(s) then return false, "Only the reserves' leader can hand them over." end
+  if s.pv then return false, "A private session is only yours: it can't be handed over." end
   if player and not LR.canLead(player) then return false, ("%s's LootRuler can't take the reserves over (it's too old, or not there)."):format(U.short(player)) end
   if not S.handTo(s, player, U.now()) then return false end
   leaderChanged(s)
@@ -766,6 +803,7 @@ end
 
 function LR.endSession(s)
   if s.practice then LR.Practice.stop() return end      -- (ending a practice raid's session ends the practice)
+  if s.pv then if LR.isLeader(s) then LR.closePrivate() end return end   -- (a private one is forgotten, and nobody's told)
   if not LR.isLeader(s) then return end
   LR.History.archive(s, U.now())                -- what it gave out is kept under Past raids (Core/History.lua)
   for _, ch in ipairs(publishTo(s)) do send({ t = "E", id = s.id }, ch) end
@@ -859,6 +897,7 @@ function handlers.U(msg, channel, sender)
 end
 
 function accept(t, channel, sender)
+  t.pv, t.practice = nil, nil       -- (only my own sessions are private or practice: never one that came from someone)
   local known = db.sessions[t.id]
   -- someone else leads it now: what I sent the group as its leader is out of date (if it comes back to me, it goes whole)
   for k in pairs(groupSent) do if k:sub(1, #t.id + 1) == t.id .. "|" then groupSent[k] = nil end end
@@ -927,7 +966,7 @@ function handlers.Q(msg, channel, sender)
   if channel ~= "GUILD" then LR.hello(channel == "WHISPER" and sender or nil) end
   local now = GetTime()
   for _, s in pairs(db.sessions) do
-    if LR.isLeader(s) and (channel ~= "GUILD" or s.guild) then
+    if LR.isLeader(s) and not s.pv and (channel ~= "GUILD" or s.guild) then
       local key = s.id .. sender
       if not queryAnswered[key] or now - queryAnswered[key] > 5 then
         queryAnswered[key] = now
@@ -939,8 +978,8 @@ end
 
 -- a raider's picks, at the leader
 function handlers.P(msg, channel, sender)
-  local s = db.sessions[msg.id]
-  if not s or not LR.isLeader(s) or type(msg.i) ~= "table" then return end
+  local s = type(msg.id) == "string" and db.sessions[msg.id]
+  if not s or not LR.isLeader(s) or s.pv or type(msg.i) ~= "table" then return end
   local items = {}
   for _, id in ipairs(msg.i) do if type(id) == "number" then items[#items + 1] = id end end
   local class = LR.classOf(sender) or (type(msg.c) == "string" and LR.CLASS_BIT[msg.c] and msg.c) or nil

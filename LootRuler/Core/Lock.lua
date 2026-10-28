@@ -46,7 +46,7 @@ end
 --- checks the lock time of the session I lead: warns, or locks. Returns what it did ("warned", "locked") or nil.
 function L.check()
   local s = LR.db and LR.current()
-  if not s or not s.al or not LR.isLeader(s) or s.archived then return nil end
+  if not s or not s.al or not LR.isLeader(s) or s.archived or s.pv then return nil end
   local left = s.al - U.now()
   local ch = LR.groupChannel()
   if left <= 0 then

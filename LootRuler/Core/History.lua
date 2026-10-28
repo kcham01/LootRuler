@@ -21,7 +21,7 @@ local function list()
 end
 
 --- whether there's anything worth keeping: loot given out (a GDKP's sales are too), and not in a practice raid
-local function worth(s) return s and not s.practice and #(s.won or {}) > 0 end
+local function worth(s) return s and not s.practice and not s.pv and #(s.won or {}) > 0 end
 
 --- keeps a session that's ending; returns the entry (nil when there was nothing to keep)
 function H.archive(s, now)
@@ -75,7 +75,7 @@ function H.fairness(since, current)
   end
   local entries = {}
   for _, e in ipairs(list()) do entries[#entries + 1] = e end
-  if current and not current.archived and not current.practice then entries[#entries + 1] = current end
+  if current and not current.archived and not current.practice and not current.pv then entries[#entries + 1] = current end
   for _, e in ipairs(entries) do
     local when = e.ended or e.updated or e.created or 0
     if when >= since then

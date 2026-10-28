@@ -2168,6 +2168,145 @@ section("nobody can fake a win")
   for _, p in ipairs({ lead, ann, bob, dan }) do p.LR.db.settings.autoTrade, p.LR.db.settings.tradeHelp = false, false end
 end)()
 
+section("a private session")
+-- Bob doesn't run loot, and the master looter runs Gargul, not LootRuler. Bob's private session keeps the loot list and the
+-- reserves on his screen only: nothing of it is sent or said. When the master looter opens LootRuler reserves, Bob is asked,
+-- and joining closes his private one.
+;(function()
+  local srv7 = Server.new(".")
+  srv7.itemInfo = srv.itemInfo
+  srv7.where = Server.PLACES.Karazhan
+  local gus = srv7:player({ name = "Gus", class = "ROGUE" })            -- (raid leader and master looter, Gargul, no LootRuler)
+  local bob = srv7:client({ name = "Bob", class = "MAGE" })
+  local zoe = srv7:client({ name = "Zoe", class = "PRIEST" })
+  local mel = srv7:client({ name = "Mel", class = "DRUID" })
+  local pug = srv7:player({ name = "Pug", class = "WARRIOR" })
+  srv7:setGroup({ gus, bob, zoe, mel, pug }, gus, true)
+  srv7:setMasterLooter(gus)
+  srv7:tick(6)
+  -- everything Bob's LootRuler sends (decoded), and every chat line he says
+  local sent = {}
+  local real = srv7.addonMessage
+  srv7.addonMessage = function(self, from, prefix, text, channel, target)
+    if from == bob and prefix == bob.LR.PREFIX then
+      local msg = bob.LR.Net.decode(text)
+      sent[#sent + 1] = (msg and msg.t or "part") .. ":" .. channel
+    end
+    return real(self, from, prefix, text, channel, target)
+  end
+  local function bobSaid() local n = 0 for _, m in ipairs(srv7.chat) do if m.from == full(bob) then n = n + 1 end end return n end
+  local function sessionSends() local n = 0 for _, x in ipairs(sent) do if not x:find("^V:") and not x:find("^Q:") then n = n + 1 end end return n end
+  local saidBefore, historyBefore = bobSaid(), #bob.LR.db.history
+  local pv = bob.LR.startPrivate("Karazhan", 2, true)
+  srv7:tick(3)
+  check("Bob opens a private session: his, and nobody else's addon has it", bob.LR.current() == pv and bob.LR.isLeader(pv) and pv.pv == true
+    and zoe.LR.session(pv.id) == nil and mel.LR.session(pv.id) == nil and zoe.LR.current() == nil)
+  bob.LR.leaderAdd(pv, full(zoe), "PRIEST", 28570)
+  bob.LR.leaderAdd(pv, "Pug", "WARRIOR", 28477)
+  bob.LR.setHR(pv, 28477, "Pug", "")
+  bob.LR.clearHR(pv, 28477)
+  check("he adds reserves to it", bob.LR.Session.claims(pv, full(zoe), 28570) == 1)
+  -- the loot list fills from the game's loot lines, and Gargul's awards from the master looter
+  srv7:lootTo(gus, 28570)
+  srv7:tick(1)
+  check("the loot line puts the drop on his list", #pv.drops == 1 and pv.drops[1].i == 28570 and pv.drops[1].h == full(gus))
+  srv7:chatMessage(pug, srv7:link(28570) .. " was awarded to Pug. Congrats!", "RAID") srv7:tick(1)
+  check("a Gargul line typed by someone who doesn't run loot is ignored", #(pv.won or {}) == 0)
+  srv7:chatMessage(gus, " Gargul : " .. srv7:link(28570) .. " was awarded to Zoe. Congrats!", "RAID") srv7:tick(1)
+  local w = pv.won and pv.won[1]
+  check("Gargul's award from the master looter goes on it: Zoe, her reserve, Gus to trade", w and w.p == full(zoe) and w.k == "SR"
+    and bob.LR.Session.dropState(pv, bob.LR.Session.drop(pv, w.d)) == "toTrade")
+  -- he can change it all, and none of it is said
+  check("changing the award says nothing", bob.LR.editAward(pv, 1, full(zoe), "MS") == true and pv.won[1].k == "MS")
+  bob.LR.setDisenchanter(pv, full(mel))
+  pv.url = "https://softres.it/raid/abcd"
+  check("the softres.it link isn't posted, nor the reserves, nor a reminder", bob.LR.postLink(pv) == false
+    and bob.LR.Whisper.announce(pv) == false and bob.LR.Whisper.remind(pv) == false)
+  check("it can't be handed over", bob.LR.handOver(pv, full(mel)) == false)
+  bob.LR.setAutoLock(pv, bob.LR.U.now() + 90)
+  srv7:tick(120)
+  check("locking by itself says nothing either", bobSaid() == saidBefore)
+  bob.LR.setAutoLock(pv, nil)
+  -- nobody else can use it: whispers and raid chat "!lr" aren't answered, and asking for sessions gets nothing
+  srv7:whisper(pug, bob, "!lr " .. srv7:link(28570))
+  srv7:whisper(zoe, bob, "!lr")
+  srv7:chatMessage(pug, "!lr " .. srv7:link(28477), "RAID")
+  zoe.LR.query()
+  srv7:tick(5)
+  local answered = 0
+  for _, q in ipairs({ pug, zoe }) do for _, m in ipairs(q.inbox) do if m.from == full(bob) then answered = answered + 1 end end end
+  check("whispers, raid chat and questions get no answer from it", answered == 0 and bobSaid() == saidBefore)
+  check("and his addon hasn't heard any of it as reserves", bob.LR.Session.claims(pv, "Pug", 28570) == 0 and zoe.LR.session(pv.id) == nil)
+  -- nothing is rolled out or given from it, even if he runs the loot
+  srv7:setMasterLooter(bob)
+  srv7:tick(1)
+  local roll, why = bob.LR.Rolls.start(28570)
+  local gave, why2 = bob.LR.Rolls.give(28570, full(zoe), "MS")
+  check("as the master looter, he can't roll out or give loot from it", roll == nil and why == bob.LR.Rolls.PRIVATE and gave == false
+    and why2 == bob.LR.Rolls.PRIVATE)
+  srv7:setMasterLooter(gus)
+  srv7:tick(1)
+  check("through all of it, Bob's LootRuler sent nothing about it and said nothing", sessionSends() == 0 and bobSaid() == saidBefore,
+    table.concat(sent, " ") .. " / said " .. (bobSaid() - saidBefore))
+  -- it lasts through a reload
+  local saved = srv7:logout(bob)
+  srv7:login(bob, saved)
+  srv7:tick(8)
+  local again = bob.LR.privateSession()
+  check("after a reload it's still there, still private", again ~= nil and again.id == pv.id and again.pv == true and #again.won == 1
+    and bob.LR.current() == again)
+  pv = again
+  sent = {}
+  -- someone sends a session claiming it's private: it isn't, on anyone's screen but theirs
+  local ms = mel.LR.startSession("Karazhan", 1, true, false)
+  srv7:tick(3)
+  local forged = mel.LR.U.copy(ms)
+  forged.rev, forged.pv, forged.practice = ms.rev + 1, true, true
+  srv7:addonMessage(mel, mel.LR.PREFIX, mel.LR.Net.encode({ t = "T", s = forged }), "RAID")
+  srv7:tick(2)
+  check("a session from someone else is never private or practice", zoe.LR.session(ms.id) and zoe.LR.session(ms.id).pv == nil
+    and zoe.LR.session(ms.id).practice == nil)
+  mel.LR.endSession(ms)
+  srv7:tick(2)
+  -- the master looter opens LootRuler reserves: Bob is asked (it doesn't take over), and joining closes his private one
+  srv7:setMasterLooter(mel)
+  srv7:tick(1)
+  local real2 = mel.LR.startSession("Karazhan", 2, true, false)
+  srv7:tick(3)
+  local sheet = bob.LR.UI.topSheet()
+  check("the master looter's reserves ask Bob first, while his private session is open", bob.LR.current() == pv
+    and sheet and bob.M.plain(sheet.title:GetText()) == "Join their reserves?"
+    and found(bob, "Joining closes your private session", sheet))
+  clickText(bob, "Join", sheet)
+  srv7:tick(1)
+  check("he joins: his private session is closed and forgotten", bob.LR.privateSession() == nil and bob.LR.session(pv.id) == nil
+    and bob.LR.current() and bob.LR.current().id == real2.id)
+  check("it isn't kept as a past raid, or in the award history", #bob.LR.db.history == historyBefore
+    and #bob.LR.UI.awardHistory() == 0)
+  -- opening my own reserves closes it too
+  local pv2 = bob.LR.startPrivate("Karazhan", 2, true)
+  check("a private session can be opened again", bob.LR.privateSession() == pv2)
+  local own = bob.LR.startSession("Karazhan", 2, true, false)
+  check("opening his own reserves closes it", bob.LR.privateSession() == nil and bob.LR.session(pv2.id) == nil and bob.LR.current() == own)
+  bob.LR.endSession(own)
+  -- ending (closing) it forgets it, and nobody hears
+  local pv3 = bob.LR.startPrivate("Karazhan", 2, true)
+  sent = {}
+  bob.LR.endSession(pv3)
+  srv7:tick(2)
+  check("closing it forgets it, and sends nothing", bob.LR.session(pv3.id) == nil and sessionSends() == 0 and #bob.LR.db.history == historyBefore,
+    table.concat(sent, " "))
+  -- a week later, an old private session is dropped, not kept as a past raid
+  local pv4 = bob.LR.startPrivate("Karazhan", 2, true)
+  bob.LR.leaderAdd(pv4, full(zoe), "PRIEST", 28570)
+  bob.LR.Session.award(pv4, 28570, full(zoe), "SR", 50, bob.LR.U.now())
+  pv4.updated = bob.LR.U.now() - 8 * 86400
+  bob.LR.loadDB()
+  check("a week-old private session is dropped on loading, not kept", bob.LR.session(pv4.id) == nil and #bob.LR.db.history == historyBefore)
+  srv7.addonMessage = real
+  for _, p in ipairs({ bob, zoe, mel }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end)()
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end

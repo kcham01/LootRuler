@@ -823,6 +823,7 @@ function S.valid(t)
   end
   if t.boost ~= nil and type(t.boost) ~= "boolean" then return false end
   if t.ow ~= nil and type(t.ow) ~= "boolean" then t.ow = nil end    -- (one reserve win each)
+  if t.pv ~= nil and t.pv ~= true then t.pv = nil end                -- (my private session: Core/Net.lua)
   if t.al ~= nil and type(t.al) ~= "number" then t.al = nil end      -- (when reserves lock by themselves)
   if t.bn ~= nil then t.bn = S.cleanBench(t.bn) end                   -- (the bench: names only)
   -- what an import from softres.it brought (Core/Gargul.lua): players' items, and hard reserves

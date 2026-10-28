@@ -78,6 +78,8 @@ local function session()
   if s and (LR.isLeader(s) or LR.inGroup(s.leader)) then return s end
 end
 Rolls.session = session
+--- why nothing is rolled out or given from a private session (Core/Net.lua): it only holds what it sees
+Rolls.PRIVATE = "Your private session doesn't roll out or give loot. To run the raid's loot, open reserves on the Session tab."
 
 ---------------------------------------------------------------------- chat
 local function chatChannel()
@@ -256,6 +258,7 @@ function Rolls.start(id, opts)
   if cur and cur.state == "open" then return nil, "Finish the roll for " .. U.plain(cur.link) .. " first." end
   if LR.Batch and LR.Batch.current and LR.Batch.current.state == "open" then return nil, "Finish the auction that's on first." end
   local s = session()
+  if s and s.pv then return nil, Rolls.PRIVATE end
   local plan
   if opts.tie then
     plan = { mode = "TIE", who = opts.tie.names, tie = opts.tie.kind, xk = opts.tie.xk }
@@ -602,6 +605,7 @@ function Rolls.give(id, player, kind, opts)
   local cur = Rolls.current
   if cur and cur.state == "open" then return false, "Finish the roll for " .. U.plain(cur.link) .. " first." end
   local s = session()
+  if s and s.pv then return false, Rolls.PRIVATE end
   local roll = R.new(U.me() .. ":" .. U.now() .. ":give", id, { mode = "OPEN" })
   roll.by, roll.link, roll.slot, roll.state, roll.given = U.me(), opts.link or LR.itemLink(id), opts.slot, "closed", true
   roll.drop = opts.drop or (opts.slot and LR.Drops.forSlot(opts.slot)) or nil

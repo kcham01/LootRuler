@@ -169,7 +169,38 @@ local function softresPanel(f, s)
   end)
 end
 
+--- my private session (Core/Net.lua): what it holds, its few settings, and closing it
+local function privateView(f, s)
+  local raid = LR.raidOf(s)
+  f:panel("Your private session", function(p)
+    p:note("Only on your screen: it keeps the raid's loot list (from the game's loot lines and Gargul's awards) and the reserves you bring in. Nothing is sent to anyone or said in chat, and nothing is rolled out from it.")
+    p:kv({
+      { "Raid", raid.name },
+      { "Reserved so far", U.plural(#S.players(s), "player") },
+      { "Loot listed", U.plural(#(s.drops or {}), "item") },
+    })
+    p:gap(6)
+    stepper(p, "Reserves each", s.sr, S.MIN_SR, S.MAX_SR, function(v) LR.configure(s, v, s.dupes) end)
+    p:chips({
+      { tick = true, label = "Same item more than once", on = s.dupes, click = function() LR.configure(s, s.sr, not s.dupes) end,
+        tip = "Lets a player have more than one reserve on the same item (softres.it's \"x2\")." },
+      not raid.custom and { tick = true, label = "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
+        tip = "Lets reserves be on any item, not just " .. raid.name .. "'s loot." } or false,
+    })
+    p:gap(4)
+    p:buttons({ { label = "Close it", click = function()
+      UI.confirm("Close your private session", "Its loot list and reserves are forgotten. Nobody else had them.", "Close it", function() LR.closePrivate() end)
+    end } }, "left")
+    p:note("It closes by itself if you join someone's reserves or open your own.")
+  end)
+  f:panel("softres.it", function(p)
+    p:note(s.sx and "Import again whenever the sheet changes: its reserves are updated to match." or "Bring in the raid's reserves from softres.it, to see who reserved what.")
+    p:buttons({ { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end } }, "left")
+  end)
+end
+
 local function manage(f, s)
+  if s.pv then privateView(f, s) return end
   local raid = LR.raidOf(s)
   if s.gdkp then UI.gdkpPanel(f, s) end          -- GDKP first: in a GDKP raid it's what matters
   if not s.gdkp then softresPanel(f, s) end
@@ -525,6 +556,17 @@ local function newSession(f)
     local list = { { label = "Open reserves", click = function() open(false) end } }
     if not d.gdkp then table.insert(list, 1, { label = "Open and import from softres.it", click = function() open(true) end }) end
     p:buttons(list)
+    -- just for me: not running loot, but keeping track of it (Core/Net.lua)
+    local mine = LR.privateSession()
+    p:gap(4)
+    p:note("Not running loot? A private session keeps the loot list and reserves on your screen only, for this raid. Nothing is sent or said.")
+    p:buttons({ mine and { label = "Back to your private session", click = function() LR.select(mine.id) UI.render() end }
+      or { label = "Private session", click = function()
+        if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
+        local s = LR.startPrivate(d.raid, d.sr, d.dupes, d.name, d.any)
+        UI.toast(("Your private session for %s is open."):format(LR.raidOf(s).name))
+        UI.render()
+      end } }, "left")
   end)
 end
 
@@ -535,7 +577,7 @@ local function others(f, current)
     for _, x in ipairs(list) do
       local b = K.get(p.owner, "item", p.parent)
       K.setItem(b, p.width, LR.raidIcon(x.raid), LR.raidOf(x).name,
-        (LR.isLeader(x) and "Yours" or ("By " .. U.short(x.leader))) .. " - " .. U.plural(x.sr, "reserve") .. " each", "",
+        (x.pv and "Private, only on your screen" or LR.isLeader(x) and "Yours" or ("By " .. U.short(x.leader))) .. " - " .. U.plural(x.sr, "reserve") .. " each", "",
         not LR.isLeader(x) and { text = "x", tip = "Forget this session", click = function() LR.forget(x) end } or nil)
       b:SetScript("OnClick", function() LR.select(x.id) UI.go("reserve") end)
       p:place(b, 36)
@@ -554,10 +596,17 @@ function UI.joinPrompt(t)
   UI.openSheet("Join their reserves?", function(f, h)
     f:text(line .. " Join them to see what's reserved, and to reserve in them?")
     local cur = LR.current()
-    if cur and cur.id ~= t.id then f:note(("You're looking at %s's reserves for %s now."):format(U.short(cur.leader), LR.raidOf(cur).name)) end
+    local mine = LR.privateSession()
+    if mine then f:note("Joining closes your private session: its loot list and reserves are forgotten.", K.GOLD)
+    elseif cur and cur.id ~= t.id then f:note(("You're looking at %s's reserves for %s now."):format(U.short(cur.leader), LR.raidOf(cur).name)) end
     f:gap(6)
     f:buttons({
-      { label = "Join", click = function() h.close() LR.select(t.id) UI.toast(("You're in %s's reserves."):format(U.short(t.leader))) end },
+      { label = "Join", click = function()
+        h.close()
+        LR.closePrivate()                    -- (in someone's reserves now: a private session isn't open alongside)
+        LR.select(t.id)
+        UI.toast(("You're in %s's reserves."):format(U.short(t.leader)))
+      end },
       { label = "Not now", click = function() h.close() LR.decline(t.id) end },
     }, "left")
     f:note("Either way, it's in the list of sessions on the Session tab.")

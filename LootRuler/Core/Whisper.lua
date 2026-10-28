@@ -20,7 +20,7 @@ function W.session(sender)
   for _, s in ipairs(LR.sessions()) do
     -- (a practice raid only hears its pretend players, and they only it)
     local fits = sender == nil or (s.practice and true or false) == (pretend and true or false)
-    if fits and LR.isLeader(s) and not s.ended and (not best or s.created > best.created) then best = s end
+    if fits and LR.isLeader(s) and not s.ended and not s.pv and (not best or s.created > best.created) then best = s end
   end
   return best
 end
@@ -353,7 +353,7 @@ function W.announce(s)
     text = text .. " Hard reserved: " .. table.concat(links, " ")
   end
   local channel = LR.groupChannel()
-  if not channel then return false end
+  if not channel or s.pv then return false end          -- (a private session says nothing)
   for _, line in ipairs(U.chatLines(text, 255)) do chat(line, channel) end
   -- the organiser's branding: their raid's name and message, on a line of its own
   if s.br and (s.br.n or s.br.m) then
@@ -392,6 +392,7 @@ end
 function W.remind(s)
   local channel = LR.groupChannel()
   if not channel then return false, "You're not in a group." end
+  if s.pv then return false, "A private session says nothing in chat." end
   if not open(s) then return false, "Reserves aren't open: nobody can reserve now." end
   local names = W.notReserved(s)
   if #names == 0 then return false, "Everyone in the group has reserved." end

@@ -25,6 +25,19 @@ end
 
 --- the leader's tools for the whole list
 local function leaderTools(f, s)
+  -- a private session (Core/Net.lua): only what I bring in. Nothing here is said or sent.
+  if s.pv then
+    f:panel("Your private session", function(p)
+      p:note("Only you see these reserves. Bring them in from softres.it, or add them by player. Nothing here is sent to anyone or said in chat.")
+      p:buttons({
+        { label = s.sx and "Import from softres.it again" or "Import from softres.it", click = function() UI.importSheet(s) end },
+        { label = "Copy for Gargul", click = function()
+          UI.copyBox("Copy for Gargul", "Press Ctrl+C, then paste it into Gargul's soft-reserve importer (/gl sr).", LR.Gargul.export(s))
+        end },
+      }, "left")
+    end)
+    return
+  end
   swapRequests(f, s)
   local gargul = LR.Gargul.available()
   f:panel("Raid leader", function(p)

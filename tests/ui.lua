@@ -2457,6 +2457,53 @@ run("someone else's reserves don't take over", function()
   ann.LR.UI.win:Hide()
 end)
 
+run("a private session", function()
+  -- Ann doesn't run loot: a private session keeps the loot list and reserves on her screen only
+  ann.LR.UI.closeAll()
+  ann.LR.UI.draft.raid = "Karazhan"
+  ann.LR.UI.show("session")
+  srv:tick(0.3)
+  check("the Session tab offers a private session", visible("Not running loot? A private session", ann))
+  clickText("Private session", nil, ann)
+  local pv = ann.LR.privateSession()
+  check("it opens, only on her screen", pv ~= nil and ann.LR.current() == pv and lead.LR.session(pv.id) == nil
+    and visible("Your private session", ann) and visible("Private: Karazhan", ann))
+  ann.LR.leaderAdd(pv, Server.full(bob), "MAGE", 28570)
+  ann.LR.leaderAdd(pv, "Pug", "WARRIOR", 28477)
+  ann.LR.UI.render()
+  srv:tick(0.3)
+  shot("private-session", ann)
+  ann.LR.UI.go("reserves")
+  srv:tick(0.3)
+  check("its Reserves tab has no buttons that post or remind", visible("Only you see these reserves", ann)
+    and not visible("Post in raid chat", ann) and not visible("Remind who hasn't reserved", ann))
+  -- the raid leader opens reserves: Ann is asked, and joining closes her private session
+  local mine = LR.startSession("Karazhan", 2, true, false)
+  srv:tick(2)
+  check("the leader's reserves ask first, saying her private session closes", ann.LR.current() == pv
+    and visible("Join their reserves?", ann) and visible("Joining closes your private session", ann))
+  shot("join-closes-private", ann)
+  clickText("Join", nil, ann)
+  srv:tick(0.5)
+  check("she joins: the private session is gone", ann.LR.privateSession() == nil and ann.LR.session(pv.id) == nil
+    and ann.LR.current() and ann.LR.current().id == mine.id)
+  LR.endSession(mine)
+  srv:tick(2)
+  -- closing it forgets it
+  ann.LR.UI.show("session")
+  srv:tick(0.3)
+  clickText("Private session", nil, ann)
+  check("a new one opens", ann.LR.privateSession() ~= nil)
+  local histBefore = #ann.LR.db.history
+  clickText("Close it", nil, ann)
+  check("closing asks first", visible("Close your private session", ann))
+  clickText("Close it", nil, ann)
+  srv:tick(0.3)
+  check("then it's forgotten, not kept as a past raid", ann.LR.privateSession() == nil and #ann.LR.db.history == histBefore)
+  check("no Lua errors", #ann.M.errors == 0, table.concat(ann.M.errors, " | "))
+  ann.LR.UI.win:Hide()
+end)
+
 run("a raider forgets a session", function()
   local fs = LR.startSession("Karazhan", 2, true, false)
   srv:tick(2)

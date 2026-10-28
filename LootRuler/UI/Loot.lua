@@ -276,7 +276,7 @@ end
 function UI.awardHistory()
   local out, seen = {}, {}
   local function add(e)
-    if not e or e.practice or seen[e.id] then return end
+    if not e or e.practice or e.pv or seen[e.id] then return end
     seen[e.id] = true
     for _, w in ipairs(e.won or {}) do out[#out + 1] = { w = w, s = e, at = w.at or e.ended or e.created or 0 } end
   end
@@ -359,7 +359,7 @@ function UI.lootView(f, s)
   for _, d in ipairs(s.drops or {}) do
     if LR.minorLoot(s, d.i) then minor[#minor + 1] = d else drops[#drops + 1] = d end
   end
-  local runner = LR.canRunLoot()
+  local runner = LR.canRunLoot() and not s.pv          -- (nothing is rolled out from a private session)
   local leader = LR.isLeader(s)
   local given, toRoll = 0, 0
   for _, d in ipairs(drops) do
@@ -377,7 +377,7 @@ function UI.lootView(f, s)
   if s.won and #s.won > 0 then
     f:buttons({
       { label = "Export", click = function() UI.exportSheet(s) end },
-      (runner or leader) and { label = "Post in raid chat", disabled = LR.groupChannel() == nil, click = function()
+      (runner or leader) and not s.pv and { label = "Post in raid chat", disabled = LR.groupChannel() == nil, click = function()
         for _, line in ipairs(LR.Export.chat(s)) do LR.say(line, LR.groupChannel()) end
         UI.toast("Posted who won what.")
       end } or nil,

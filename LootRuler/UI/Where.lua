@@ -12,7 +12,7 @@ local asked = {}      -- session id .. ":" .. instance -> true: asked already
 --- the open session I lead (not a practice one), or nil
 local function mine()
   local s = LR.current()
-  if s and LR.isLeader(s) and not s.ended and not s.practice then return s end
+  if s and LR.isLeader(s) and not s.ended and not s.practice and not s.pv then return s end
 end
 
 --- when my lockout for the instance I'm in ends (a time), or nil when I'm not saved to it
