@@ -449,6 +449,14 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   charms, Karazhan's books...). Add a raid's new non-gear loot there (Forever's too). Loot windows within `Drops.PROFESSION_WAIT` seconds
   of my own Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`), or while `IsFishingLoot()`,
   aren't read. The stand-in has `Server:cast(p, spellID)`, `M.fishing` and `srv.itemInfo`'s `subclass`.
+- **Gargul's awards** (#123; `Drops.gargulAward(id, winner, sender, text)`, called from `UI/ReserveStrip.lua`'s chat handler on
+  `Gargul.END_LINES`' "awarded to" line; setting `recordGargul`, on): the leader's addon records it with `S.award` (SR with a reserve
+  claim, OS if the line says "OS" / "off spec", else MS) on the drop the winner holds or the oldest not given out, then
+  `LR.leaderChanged`. Only from `LR.canRunLoot(sender)`, inside the session's raid, not twice within 2 minutes or right after
+  LootRuler gave it (`Rolls.justGave`). No raid line (Gargul said it). Gargul's exact wording is only assumed (English).
+- **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
+  to start with (now: only while leading reserves, on); when Gargul is loaded and shows reserves in a tooltip, no second
+  "soft reserved by" line from LootRuler.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #122) `Net.lua:195: attempt to index upvalue 'db'` at login: `UPDATE_INSTANCE_INFO` came
     between `ADDON_LOADED` and `PLAYER_LOGIN` (where `LR.loadDB` runs), and `UI/Where.lua` read the session. Every event handler

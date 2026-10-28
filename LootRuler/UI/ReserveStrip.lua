@@ -123,7 +123,11 @@ events:SetScript("OnEvent", function(_, event, text, sender)
     return
   end
   local stop, endedId, winner = G.rollEndFromChat(text)
-  if stop then ended(endedId, winner) return end
+  if stop then
+    ended(endedId, winner)
+    if endedId and winner then LR.Drops.gargulAward(endedId, winner, sender, text) end     -- (on the list of loot given out)
+    return
+  end
   local id, link, secs = G.rollFromChat(text)
   if not id then return end
   local roll = G.startRoll(id, link, secs, GetTime())

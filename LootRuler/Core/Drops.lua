@@ -229,6 +229,33 @@ local function recordGroupWin(s, key, id, who, q)
   end
 end
 
+--- Gargul gave an item out: its raid chat line "[item] was awarded to Ann. Congrats!" (Core/Gargul.lua reads it). The
+--- leader's LootRuler puts it on the list of loot given out, on the drop Ann has or the oldest not given out yet: her
+--- reserve when she had one on it, off spec when the line says so, else main spec. Only from someone who may run loot,
+--- and not when LootRuler itself gave it to her a moment ago. Settings: recordGargul. Returns whether it was recorded.
+function Drops.gargulAward(id, winner, sender, text)
+  local s = LR.Rolls.session()
+  if not s or not LR.db.settings.recordGargul or not LR.isLeader(s) or s.practice or type(id) ~= "number" or type(winner) ~= "string"
+    or not sender or not LR.canRunLoot(U.full(sender)) or not Drops.here(s) then return false end
+  local m = LR.inGroup(winner)
+  local who = m and m.name or U.full(winner)
+  if LR.Rolls.justGave(id, who) then return false end
+  for _, w in ipairs(s.won or {}) do
+    if w.i == id and U.samePlayer(w.p, who) and U.now() - (w.at or 0) < 120 then return false end    -- (already on the list)
+  end
+  local drop
+  for _, d in ipairs(S.openDrops(s, id)) do if d.h and U.samePlayer(d.h, who) then drop = d break end end
+  drop = drop or S.openDrops(s, id)[1]
+  local lower = tostring(text or ""):lower()
+  local os = lower:find("%f[%a]os%f[%A]") or lower:find("off[%s%-]?spec")
+  local kind = os and "OS" or S.claims(s, who, id) > 0 and "SR" or "MS"
+  if not S.award(s, id, who, kind, nil, U.now(), drop and drop.k) then return false end
+  LR.leaderChanged(s)
+  LR.print(("Gargul gave %s to %s: it's on the list of loot given out (%s)."):format(LR.itemLink(id), U.short(who),
+    kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec"))
+  return true
+end
+
 function Drops.lootMessage(line)
   local who, link, n = Drops.parseLoot(line)
   local id = idOf(link)

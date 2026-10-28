@@ -1794,6 +1794,51 @@ do
   for _, p in ipairs({ rl, zoe, mel }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("loot given out with Gargul")
+-- the master looter runs Gargul, not LootRuler: its "awarded to" line in raid chat puts the item on the leader's list of
+-- loot given out
+do
+  local srv6 = Server.new(".")
+  srv6.itemInfo = srv.itemInfo
+  srv6.where = Server.PLACES.Karazhan
+  local rl = srv6:client({ name = "Rhea", class = "PALADIN" })
+  local zoe = srv6:client({ name = "Zoe", class = "PRIEST" })
+  local gus = srv6:player({ name = "Gus", class = "ROGUE" })            -- (Gargul, no LootRuler)
+  local pug = srv6:player({ name = "Pug", class = "WARRIOR" })
+  srv6:setGroup({ rl, zoe, gus, pug }, rl, true)
+  srv6:setMasterLooter(gus)
+  srv6:tick(6)
+  local ks = rl.LR.startSession("Karazhan", 2, true, false)
+  rl.LR.leaderAdd(ks, full(zoe), "PRIEST", 28570)
+  srv6:tick(2)
+  local function wonBy(id) for _, w in ipairs(ks.won or {}) do if w.i == id then return w end end end
+  local function says(p, text, channel) srv6:chatMessage(p, text, channel or "RAID_WARNING") srv6:tick(1) end
+  srv6:lootTo(gus, 28570)                    -- Gus keeps the cloak to give out
+  srv6:tick(1)
+  says(gus, "You have 20 seconds to roll on " .. srv6:link(28570))
+  says(gus, srv6:link(28570) .. " was awarded to Zoe. Congrats!")
+  local w = wonBy(28570)
+  check("Gargul's line puts it on the list of loot given out: to Zoe, her reserve, on the drop Gus has", w and w.p == full(zoe)
+    and w.k == "SR" and w.d and rl.LR.Session.drop(ks, w.d).h == full(gus))
+  check("so the Loot tab shows Gus has to trade it to her", rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, w.d)) == "toTrade",
+    rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, w.d)))
+  check("raiders see it too", zoe.LR.current().won and #zoe.LR.current().won == 1)
+  says(gus, srv6:link(28570) .. " was awarded to Zoe. Congrats!")
+  check("said twice, it's on the list once", #ks.won == 1)
+  -- off spec, when the line says so; nobody's reserve: main spec
+  says(gus, srv6:link(28453) .. " was awarded to Pug (OS). Congrats!")
+  check("off spec when Gargul says so", wonBy(28453) and wonBy(28453).k == "OS" and wonBy(28453).p == full(pug))
+  says(gus, srv6:link(28477) .. " was awarded to Pug. Congrats!", "RAID")
+  check("else main spec", wonBy(28477) and wonBy(28477).k == "MS")
+  -- someone who can't run loot can't put things on the list by typing the line
+  says(pug, srv6:link(28454) .. " was awarded to Pug. Congrats!", "RAID")
+  check("only from someone who may run loot", wonBy(28454) == nil)
+  rl.LR.db.settings.recordGargul = false
+  says(gus, srv6:link(28454) .. " was awarded to Pug. Congrats!")
+  check("it can be switched off", wonBy(28454) == nil)
+  for _, p in ipairs({ rl, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 section("trades out of a group are said nearby")
 -- its own little world: the loot master on their own (the raid's over), trading with a raider
 local srv2 = Server.new(".")
