@@ -43,6 +43,8 @@ function UI.dropLine(s, d)
   if state == "given" and w.de then return "Disenchanted by " .. who(w.p, s) end
   if state == "given" then return "Won by " .. who(w.p, s) .. " (" .. how(w) .. ")" end
   if state == "toTrade" then
+    -- (a trade is only seen by the two in it: when whoever has it hasn't got LootRuler, it can't be followed, so just the winner)
+    if not LR.versionOf(d.h) then return "Won by " .. who(w.p, s) .. " (" .. how(w) .. ")" end
     return "Won by " .. who(w.p, s) .. " (" .. how(w) .. "); " .. U.short(d.h) .. " has it to trade" .. (trade and (", " .. trade) or "")
   end
   if rolling(d.i) and state ~= "looted" then return "|cffffd100Being rolled for now|r" end
