@@ -11,6 +11,9 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
 
 - Fixed: a broken message from the raid leader's LootRuler could show a Lua error on a raider's screen. It's ignored now.
   ([#136](https://github.com/kcham01/LootRuler/pull/136))
+- The loot master's window lists each player's best roll once, with how many it was the best of ("SR (best of 2)"), and one
+  line counts the lower rolls, instead of a row for every roll. With lots of doubled reserves on one item it redraws about
+  three times faster. ([#137](https://github.com/kcham01/LootRuler/pull/137))
 
 ### Easier on the eye (27 October 2026)
 
