@@ -147,7 +147,8 @@ the mock (and to `tests/wow/server.lua` if it involves other players), never loo
 
 Start here in a new session; rewrite this section at the end of each piece of work.
 
-- **Open pull requests** are stacked, each built on the one before, so they merge in order (one per feature).
+- **Open pull requests:** none (everything up to #146 is merged). When several are open they're stacked, each built on the one
+  before, so they merge in order (one per feature).
 - **Decided for the guild features:** officer ranks (picked by the guild master) edit priority lists; a
   player who gets an item they had priority on comes off that item's list; boosted roll points are earned
   per raid attended. Both live in a "guild book" shared over the guild channel.
@@ -473,7 +474,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
   "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
-  to start with (now: only while leading reserves, on).
+  to start with (now: only while leading reserves, on; #144 built it by mistake and was closed); a private session button
+  (forgotten when it ends, kept out of award history); opening trades only from a click (`autoTrade` and `tradeHelp` are off
+  to start with, which the owner says is enough for now).
 - **Award history** (#125; `UI.awardHistory()`, `historyView` in `UI/Loot.lua`; `db.ui.lootPage` "raid" / "history", `db.ui.historyOpen`
   date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
   session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`

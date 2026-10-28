@@ -5,10 +5,6 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
-- A countdown in raid chat for the last five seconds of a roll: "You have 5 seconds to roll on [item]...", "4...", "3...",
-  "2...", "1...". Then nothing until the loot master confirms the winner, which is the next line (it no longer says
-  "Rolls closed" first). Settings, "Rolling out loot": "Count down the last 5 seconds" (on).
-  ([#146](https://github.com/kcham01/LootRuler/pull/146))
 ### Stress test (28 October 2026)
 
 Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`).
@@ -25,13 +21,16 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
   and not at all while everyone from the guild who's online is in the raid; several auctions at once send their items'
   links only now and then. Raiders' LootRuler does about half the work while items are rolled out and auctioned.
   ([#140](https://github.com/kcham01/LootRuler/pull/140))
-- The loot master confirms who won before the raid hears it: when rolls close, raid chat says "Rolls closed for [item]."
-  only, and a Confirm button beside rolling it again says "[item]: Ann wins with 88 (MS)." (or that it was the loot master's
-  pick). Raiders' windows wait for it too. Settings, "Rolling out loot": switch it off to say the winner as rolls close.
+- The loot master confirms who won before the raid hears it: when rolls close, raid chat says nothing more, and a Confirm
+  button beside rolling it again says "[item]: Ann wins with 88 (MS)." (or that it was the loot master's pick). Raiders' windows wait for it too. Settings, "Rolling out loot": switch it off to say the winner as rolls close.
   ([#142](https://github.com/kcham01/LootRuler/pull/142))
 - GDKP: bid any amount from the auction window. "Bid an amount" opens a box for the gold, and the bid is typed in raid chat
   like the window's two buttons (too little, and you're told the least that counts). With several auctions at once, pick
   the item, then the amount. ([#143](https://github.com/kcham01/LootRuler/pull/143))
+- A countdown in raid chat for the last five seconds of a roll: "You have 5 seconds to roll on [item]...", "4...", "3...",
+  "2...", "1...". Then nothing until the loot master confirms the winner, which is the next line (it no longer says
+  "Rolls closed" first). Settings, "Rolling out loot": "Count down the last 5 seconds" (on).
+  ([#146](https://github.com/kcham01/LootRuler/pull/146))
 
 ### Easier on the eye (27 October 2026)
 
