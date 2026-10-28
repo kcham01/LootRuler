@@ -269,23 +269,87 @@ function UI.historySheet()
   end, { full = true })
 end
 
-local function pastRaids(f)
+---------------------------------------------------------------------- award history, by date
+--- every award in the session on now (not a practice one) and in past raids: { w, s = its session, at }, newest first
+function UI.awardHistory()
+  local out, seen = {}, {}
+  local function add(e)
+    if not e or e.practice or seen[e.id] then return end
+    seen[e.id] = true
+    for _, w in ipairs(e.won or {}) do out[#out + 1] = { w = w, s = e, at = w.at or e.ended or e.created or 0 } end
+  end
+  add(LR.current())
+  for _, e in ipairs(LR.History.all()) do add(e) end
+  table.sort(out, function(a, b) return a.at > b.at end)
+  return out
+end
+
+--- which dates are open (saved, per character): "2026-10-28" -> true / false; the newest is open until it's closed
+local function openDays()
+  if type(LR.db.ui.historyOpen) ~= "table" then LR.db.ui.historyOpen = {} end
+  return LR.db.ui.historyOpen
+end
+
+--- the Loot tab's "Award history": a date for each day something was given out, newest first, that opens to its items
+local function historyView(f)
+  local all = UI.awardHistory()
+  f:note(("Everything given out in your raids, by date. Kept on this character for your last %d raids."):format(LR.History.MAX))
   local n = #LR.History.all()
-  if n > 0 then
-    f:gap(4)
-    f:buttons({
-      { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end },
-      { label = "Who got what, over time", click = function() UI.fairSheet() end },
-    }, "left")
+  f:buttons({
+    { label = "Export", click = function() UI.exportManySheet() end },
+    { label = "Who got what, over time", click = function() UI.fairSheet() end },
+    n > 0 and { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end } or nil,
+  }, "left")
+  f:gap(4)
+  if #all == 0 then f:note("Nothing given out yet. Once items are won, they're listed here under the day they were given out.") return end
+  local days, byDay = {}, {}
+  for _, x in ipairs(all) do
+    local day = date("%Y-%m-%d", x.at)
+    if not byDay[day] then byDay[day] = {} days[#days + 1] = day end
+    table.insert(byDay[day], x)
+  end
+  local open = openDays()
+  for i, day in ipairs(days) do
+    local list = byDay[day]
+    local raids, seen = {}, {}
+    for _, x in ipairs(list) do
+      local name = LR.raidOf(x.s).name
+      if not seen[name] then seen[name] = true raids[#raids + 1] = name end
+    end
+    local isOpen = open[day]
+    if isOpen == nil then isOpen = i == 1 end
+    f:fold(date("%A, %B %d", list[1].at), ("%s: %s"):format(U.plural(#list, "item"), table.concat(raids, ", ")), isOpen,
+      function() open[day] = not isOpen UI.render() end,
+      function(p)
+        for _, x in ipairs(list) do
+          local w = x.w
+          local b = K.get(p.owner, "item", p.parent)
+          K.setItem(b, p.width, LR.itemIcon(w.i), LR.coloredName(w.i),
+            ("Won by %s (%s) - %s, %s"):format(who(w.p, x.s), how(w), LR.raidOf(x.s).name, date("%H:%M", x.at)),
+            U.samePlayer(w.p, U.me()) and "|cff1eff00Yours|r" or "")
+          b:SetScript("OnEnter", function(self) UI.itemTooltip(self, nil, w.i) end)
+          b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+          b:SetScript("OnClick", function() UI.modifiedClick(LR.itemLink(w.i)) end)
+          p:place(b, 36)
+          p:gap(2)
+        end
+      end)
   end
 end
 
 function UI.lootView(f, s)
+  -- this raid's loot, or the award history (kept per character)
+  if LR.db.ui.lootPage ~= "history" then LR.db.ui.lootPage = "raid" end
+  f:chips({
+    { label = "This raid", on = LR.db.ui.lootPage == "raid", click = function() LR.db.ui.lootPage = "raid" UI.render() end },
+    { label = "Award history", on = LR.db.ui.lootPage == "history", click = function() LR.db.ui.lootPage = "history" UI.render() end },
+  })
+  f:gap(4)
+  if LR.db.ui.lootPage == "history" then historyView(f) return end
   if not s then
     f:panel("The raid's loot", function(p)
       p:text("Everything that drops is listed here once soft reserves are open: who reserved it, who won it and who has it. The raid leader opens reserves on the Session tab.")
     end)
-    pastRaids(f)
     return
   end
   -- the loot to roll for, and everything else that dropped (counted: LR.minorLoot)
@@ -427,5 +491,4 @@ function UI.lootView(f, s)
       f:gap(2)
     end
   end
-  pastRaids(f)
 end

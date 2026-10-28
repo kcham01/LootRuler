@@ -449,6 +449,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   charms, Karazhan's books...). Add a raid's new non-gear loot there (Forever's too). Loot windows within `Drops.PROFESSION_WAIT` seconds
   of my own Disenchant, Prospecting, gathering, Skinning or Pick Pocket / Lock (`UNIT_SPELLCAST_SUCCEEDED`), or while `IsFishingLoot()`,
   aren't read. The stand-in has `Server:cast(p, spellID)`, `M.fishing` and `srv.itemInfo`'s `subclass`.
+- **Award history** (#125; `UI.awardHistory()`, `historyView` in `UI/Loot.lua`; `db.ui.lootPage` "raid" / "history", `db.ui.historyOpen`
+  date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
+  session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`
+  opens that page. Private sessions (when built) stay out: they're forgotten when ended (the owner's choice).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #122) `Net.lua:195: attempt to index upvalue 'db'` at login: `UPDATE_INSTANCE_INFO` came
     between `ADDON_LOADED` and `PLAYER_LOGIN` (where `LR.loadDB` runs), and `UI/Where.lua` read the session. Every event handler
