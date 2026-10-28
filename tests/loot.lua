@@ -2016,6 +2016,91 @@ for _, p in ipairs({ solo, kim, raider }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end
 
+section("nobody can fake a win")
+;(function()
+  -- every way a raider (with LootRuler, or without) might try to be put down as the winner of an item they didn't win.
+  -- Only the game's /roll results, and what the loot runner's own LootRuler decides, may make a winner.
+  local LR = lead.LR
+  local Rl = LR.Rolls
+  if Rl.current then Rl.cancel() Rl.dismiss() end
+  srv:setGroup({ lead, ann, bob, dan, pug }, lead, true)
+  srv:setMasterLooter(lead)
+  srv:enter({ lead, ann, bob, dan, pug }, Server.PLACES.Karazhan)
+  srv:tick(2)
+  local s = LR.startSession("Karazhan", 2, true)
+  s.won = s.won or {}
+  srv:tick(3)
+  local item
+  for _, r in ipairs(LR.RAIDS) do
+    if r.key == "Karazhan" then
+      for _, b in ipairs(r.bosses) do
+        for _, id in ipairs(b.items) do
+          if not item and DATA.ITEMS[id] and DATA.ITEMS[id][2] == 4 and #(LR.Session.byItem(s)[id] or {}) == 0 and not s.hr[id] then
+            local taken = false
+            for _, w in ipairs(s.won) do if w.i == id then taken = true end end
+            if not taken then item = id end
+          end
+        end
+      end
+    end
+  end
+  local link = srv:link(item)
+  local function wins(p) local n = 0 for _, w in ipairs(s.won or {}) do if w.i == item and LR.U.samePlayer(w.p, full(p)) then n = n + 1 end end return n end
+  local wonBefore = #s.won
+  -- before any roll: messages a raider's addon could send, by raid and by whisper
+  local fakeX = { t = "X", k = "Dan:fake", e = "awarded", p = full(dan), kd = "MS", n = 100, id = item, sid = s.id }
+  dan.LR.Net.send(fakeX, "RAID")
+  dan.LR.Net.send(fakeX, "WHISPER", full(lead))
+  local copy = LR.U.copy(s)
+  copy.rev = s.rev + 50
+  copy.won = copy.won or {}
+  copy.won[#copy.won + 1] = { i = item, p = full(dan), k = "MS", at = LR.U.now() }
+  dan.LR.Net.send({ t = "T", s = copy }, "RAID")
+  dan.LR.Net.send({ t = "U", id = s.id, f = s.rev, r = s.rev + 51, c = { won = { s = { [#s.won + 1] = { i = item, p = full(dan), k = "MS", at = 1 } } } } }, "RAID")
+  dan.LR.Net.send({ t = "D", sid = s.id, d = { { k = "fake:1", i = item, h = full(dan), at = LR.U.now() } } }, "WHISPER", full(lead))
+  srv:tick(2)
+  -- Gargul's lines, typed in raid chat by a raider with LootRuler and by one without
+  for _, who in ipairs({ dan, pug }) do
+    srv:chatMessage(who, (" Gargul : %s was awarded to %s. Congrats!"):format(link, who.name), "RAID")
+    srv:chatMessage(who, (" Gargul : I gave %s to %s"):format(link, full(who)), "RAID")
+  end
+  srv:tick(2)
+  check("a raider's messages (an award, a session copy with their win, its changes, a drop) make no winner",
+    wins(dan) == 0 and #s.won == wonBefore and #(dan.LR.current().won or {}) == wonBefore)
+  check("Gargul's award lines typed by raiders (with LootRuler or without) make no winner", wins(dan) == 0 and wins(pug) == 0)
+  check("and the leader's session is as it was", #s.won == wonBefore and LR.Session.drop(s, "fake:1") == nil)
+  -- a real roll: everyone may roll; tricks by Dan and Pug
+  local roll = Rl.start(item, { link = link, secs = 20 })
+  srv:tick(0.5)
+  check("the roll is open to everyone", roll and roll.mode == "OPEN" and roll.state == "open")
+  srv:chatMessage(dan, "Dan rolls 100 (1-100)", "RAID")              -- (typed, not the game's)
+  srv:roll(dan, 100, 100, 100)                                       -- (a roll that can only be 100)
+  srv:roll(pug, 1, 1000, 999)                                         -- (a bigger range)
+  srv:roll(dan, 1, 100, 12)
+  srv:roll(dan, 1, 100, 100)                                         -- (a second roll, once the first was low)
+  srv:roll(ann, 1, 100, 80)
+  srv:roll(bob, 1, 99, 95)                                           -- (off spec)
+  dan.LR.Net.send({ t = "N", k = roll.k, p = full(ann) }, "WHISPER", full(lead))       -- (a pass, for someone else)
+  dan.LR.Net.send({ t = "X", k = roll.k, e = "closed", p = full(dan), n = 100, kd = "MS" }, "RAID")
+  dan.LR.Net.send({ t = "R", k = roll.k, id = item, m = "OPEN", e = "closed", top = { full(dan), 100 } }, "RAID")
+  srv:tick(1)
+  local top = LR.Roll.result(roll)
+  check("typed roll lines, a roll that can only be 100, a bigger range and a second roll don't count: Ann's 80 is best",
+    top and top.p == full(ann) and top.n == 80, top and (top.p .. " " .. top.n))
+  check("Dan's first roll is his", roll.rolled[LR.Roll.key(full(dan))] and roll.rolled[LR.Roll.key(full(dan))].n == 12)
+  check("nobody can pass for Ann, or close the roll for the loot master", not roll.passed[LR.Roll.key(full(ann))] and roll.state == "open")
+  srv:tick(25)
+  srv:roll(pug, 1, 100, 100)                                         -- (after it closed)
+  srv:tick(1)
+  check("a roll after it closed doesn't count", LR.Roll.result(roll).p == full(ann))
+  Rl.award(LR.Roll.result(roll).p)
+  srv:tick(2)
+  check("the winner on the list is the one who won", wins(ann) == 1 and wins(dan) == 0 and wins(pug) == 0 and #s.won == wonBefore + 1)
+  check("and raiders' copies agree", ann.LR.current().won[#ann.LR.current().won].p == full(ann)
+    and dan.LR.current().won[#dan.LR.current().won].p == full(ann))
+  Rl.dismiss()
+end)()
+
 section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
