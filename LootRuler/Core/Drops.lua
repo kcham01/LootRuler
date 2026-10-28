@@ -237,7 +237,16 @@ function Drops.gargulAward(id, winner, sender, text)
   local s = LR.Rolls.session()
   if not s or not LR.db.settings.recordGargul or not LR.isLeader(s) or s.practice or type(id) ~= "number" or type(winner) ~= "string"
     or not sender or not LR.canRunLoot(U.full(sender)) or not Drops.here(s) then return false end
+  -- (Gargul names someone from another realm with or without it: "Ann", "Ann-Faerlina")
   local m = LR.inGroup(winner)
+  if not m and not winner:find("-", 1, true) then
+    for _, r in ipairs(LR.roster()) do
+      if U.foldCase(r.name:match("^[^-]+")) == U.foldCase(winner) then
+        if m then m = nil break end                     -- (two with that name: not guessed)
+        m = r
+      end
+    end
+  end
   local who = m and m.name or U.full(winner)
   if LR.Rolls.justGave(id, who) then return false end
   for _, w in ipairs(s.won or {}) do
@@ -290,6 +299,16 @@ function Drops.lootMessage(line)
   local ml = LR.masterLooter()
   local key = newKey(id)
   save(s, { { k = key, i = id, b = LR.dropsFrom(s.raid, id)[1] or "", at = U.now(), by = ml, h = who, ht = U.now(), n = n > 1 and n or nil } })
+  -- given out before anyone looted it (Gargul awards it, then the loot master loots it to trade over): it's this drop
+  if LR.isLeader(s) then
+    for _, w in ipairs(s.won or {}) do
+      if w.i == id and not w.d and U.now() - (w.at or 0) < 600 then
+        w.d = key
+        LR.leaderChanged(s)
+        return
+      end
+    end
+  end
   recordGroupWin(s, key, id, who, q)
 end
 

@@ -35,7 +35,10 @@ From the owner's in-game screenshots.
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
 - Loot rolled out with Gargul goes on the Loot tab as given out. When Gargul says in raid chat who an item was awarded to,
   the leader's LootRuler records it: their reserve if they had one on it, off spec if Gargul's line says so, else main
-  spec. It can be switched off (Settings, "Giving out and trading"). ([#123](https://github.com/kcham01/LootRuler/pull/123))
+  spec. "I gave [item] to Name" counts too, and an item awarded before anyone looted it is matched to the drop when the loot
+  master loots it. It can be switched off (Settings, "Giving out and trading"). ([#123](https://github.com/kcham01/LootRuler/pull/123))
+- Fixed: Gargul's "Stop your rolls!" didn't close LootRuler's roll windows. Gargul puts its name in front of its lines
+  (" Gargul : Stop your rolls!"), which LootRuler now reads. ([#123](https://github.com/kcham01/LootRuler/pull/123))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
   about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
 - The Loot tab only lists the raid's loot: gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns,

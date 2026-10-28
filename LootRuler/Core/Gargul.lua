@@ -496,15 +496,17 @@ end
 -- When Gargul rolls an item out, it says so in raid chat. LootRuler reads that line with its own pattern (nothing of
 -- Gargul's is used) so raiders see who reserved the item (UI/ReserveStrip.lua). The roll is over when someone
 -- loots the item, another roll starts, or its time is up.
--- Gargul's lines (English): "You have 20 seconds to roll on [item]" starts a roll; "Stop your rolls!" or
--- "[item] was awarded to Ann. Congrats!" ends it. Each start pattern captures { seconds, link } in the order named.
+-- Gargul's lines (English), each starting " Gargul : " in the game: "You have 20 seconds to roll on [item]" starts a roll;
+-- "Stop your rolls!", "[item] was awarded to Ann. Congrats!" or "I gave [item] to Ann-Realm" ends it. Each start pattern
+-- captures { seconds, link } in the order named; end patterns capture the link and who got it, when they say.
 local LINK = "(|c%x+|Hitem:.-|h|r)"
 G.ROLL_LINES = { { "You have (%d+) seconds to roll on " .. LINK, "secs", "link" } }
-G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to ([^%s%.]+).-Congrats!" }
+G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to ([^%s%.]+).-Congrats!", "^I gave " .. LINK .. " to ([^%s%.]+)" }
+local function withoutName(text) return (tostring(text or ""):gsub("^%s*Gargul%s*:%s*", "")) end   -- (" Gargul : ...")
 
 --- a raid chat line: the item, its link and the seconds when it's Gargul starting a roll, else nil
 function G.rollFromChat(text)
-  text = tostring(text or "")
+  text = withoutName(text)
   for _, line in ipairs(G.ROLL_LINES) do
     local a, b = text:match(line[1])
     if a then
@@ -516,7 +518,7 @@ function G.rollFromChat(text)
 end
 --- a raid chat line that ends Gargul's roll: true, the item when the line names one, and who it went to
 function G.rollEndFromChat(text)
-  text = tostring(text or "")
+  text = withoutName(text)
   for _, pattern in ipairs(G.END_LINES) do
     local s, e, link, winner = text:find(pattern)
     if s then return true, link and tonumber(link:match("item:(%d+)")), winner end

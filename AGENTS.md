@@ -453,7 +453,10 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Gargul.END_LINES`' "awarded to" line; setting `recordGargul`, on): the leader's addon records it with `S.award` (SR with a reserve
   claim, OS if the line says "OS" / "off spec", else MS) on the drop the winner holds or the oldest not given out, then
   `LR.leaderChanged`. Only from `LR.canRunLoot(sender)`, inside the session's raid, not twice within 2 minutes or right after
-  LootRuler gave it (`Rolls.justGave`). No raid line (Gargul said it). Gargul's exact wording is only assumed (English).
+  LootRuler gave it (`Rolls.justGave`). No raid line (Gargul said it). Gargul's real lines (from the owner's raid log) start
+  " Gargul : " (stripped before matching); "I gave [item] to Name-Realm" is an end line too; a winner named without a realm is
+  matched by the name alone when only one member has it. An award with no drop yet (awarded before the loot master looted it)
+  takes the next drop of that item from a loot line (`Drops.lootMessage`, leader only, within 10 minutes).
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
   to start with (now: only while leading reserves, on); when Gargul is loaded and shows reserves in a tooltip, no second
   "soft reserved by" line from LootRuler.
