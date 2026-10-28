@@ -566,7 +566,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   refused (`HANDING`): the new leader's copy wins, so they'd be lost. The softres.it import takes the game's class for someone in the
   group, and `handlers.A` keeps the class the leader has, so copies match. A claim is noted for a raider when our leader is away (or
   the copy is at least `S.EPOCH` past ours) and the sender runs it from in the group; for a leader, when the copy says it carried on
-  from us, comes from the group, and changed hands after our last change (or is `S.EPOCH` past ours). Following asks the new leader
+  from us and comes from the group (`Net.wentOnFromUs`: changed hands after our last change, or its leader is one we never took
+  it from, or it's past ours). Following asks the new leader
   for their latest copy (the kept one may be a change old). The loot master's own copy, with drops the leader hasn't taken yet
   (`Drops` `save`), is marked half a version behind, so the leader's next copy always replaces it and nothing only it had stays.
   A copy whose leader our copy lists in `was`, older than ours, is never taken (whoever sends it: everything since would be lost)

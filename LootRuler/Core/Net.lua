@@ -891,6 +891,15 @@ local queryAnswered = {}
 local handlers = {}
 Net.handlers = handlers          -- Core/Rolls.lua adds the messages for rolling out loot
 
+--- ours (I lead it), and a copy says it went on from me while I was away: one that changed hands after my last change, one
+--- whose leader I never took it from (I just never heard: I made a change or two since, maybe), or one past mine. Only ever
+--- asks the player (claims): LootRuler can't check it.
+function Net.wentOnFromUs(known, t)
+  if not S.ledBy(t, U.me()) then return false end
+  if type(t.nl) == "number" and t.nl >= (known.updated or 0) then return true end
+  return not S.ledBy(known, t.leader) or t.rev > known.rev
+end
+
 -- a session from its leader (a whole copy, T; or one put together from what changed, U)
 local accept
 function handlers.T(msg, channel, sender)
@@ -906,7 +915,7 @@ function handlers.T(msg, channel, sender)
       -- ours, and someone in the group says it went on from us while we were away (LR.tellStale): ask the raid leader and
       -- master looter, and the player decides (Session tab), as LootRuler can't check it
       if known and LR.isLeader(known) and not known.pv and not U.samePlayer(t.leader, U.me()) and S.ledBy(t, U.me()) and LR.inGroup(sender)
-        and ((type(t.nl) == "number" and t.nl >= (known.updated or 0)) or t.rev >= known.rev + S.EPOCH) then
+        and Net.wentOnFromUs(known, t) then
         LR.askWho(known)
         LR.noteClaim(known, t, sender)
       end
@@ -998,7 +1007,7 @@ function accept(t, channel, sender)
       -- (ours: only one that changed hands after our copy's last change, as an old copy or a fork from before isn't a
       -- take-over. Someone else's: our leader is away, and whoever sends it runs it from in the group.)
       local claimed = U.samePlayer(t.leader, sender) and (
-        (LR.isLeader(known) and S.ledBy(t, known.leader) and LR.inGroup(sender) and (later or t.rev >= known.rev + S.EPOCH))
+        (LR.isLeader(known) and LR.inGroup(sender) and Net.wentOnFromUs(known, t))
         or (not LR.isLeader(known) and LR.inGroup(sender) and (LR.leaderGone(known) or t.rev >= known.rev + S.EPOCH)))
       -- (a copy at least one change of hands past ours: it has changed hands since, whoever we last heard from)
       if claimed then

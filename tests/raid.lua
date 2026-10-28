@@ -1245,6 +1245,43 @@ for _, case in ipairs({ { ml = false }, { ml = true }, { ml = false, left = true
   for _, p in ipairs({ l6, a6, b6 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("a leader back after a change of their own, with nobody to settle who runs it (found by tools/chaos.lua)")
+do
+  local srv7 = Server.new(".")
+  srv7.where = Server.PLACES.Karazhan
+  local l7 = srv7:client({ name = "Lia", class = "PALADIN" })
+  local a7 = srv7:client({ name = "Amy", class = "PRIEST" })
+  local b7 = srv7:client({ name = "Ben", class = "MAGE" })
+  local p7 = srv7:player({ name = "Pip", class = "WARRIOR" })
+  srv7:tick(6)
+  srv7:setGroup({ l7, a7, b7, p7 }, l7, true)
+  srv7:tick(2)
+  local s7 = l7.LR.startSession("Karazhan", 2, true, false)
+  srv7:tick(3)
+  -- Lia leaves the group; Amy, the master looter, takes over; Pip (no LootRuler) leads the group and loots
+  srv7:leaveGroup(l7)
+  srv7:setMasterLooter(a7)
+  srv7:tick(2)
+  a7.LR.takeOver(a7.LR.session(s7.id))
+  srv7:tick(3)
+  srv7:setGroup({ p7, a7, b7 }, p7, true)
+  srv7:setMasterLooter(p7)
+  srv7:tick(2)
+  -- Lia, still out of the group, changes a few things (more than Amy has since); then comes back
+  for i = 1, 8 do l7.LR.setLocked(l7.LR.session(s7.id), i % 2 == 1) end
+  check("(Lia's copy is now fewer than a hand-over's jump behind Amy's)", l7.LR.session(s7.id).rev + l7.LR.Session.EPOCH > a7.LR.session(s7.id).rev)
+  srv7:setGroup({ p7, a7, b7, l7 }, p7, true)
+  srv7:tick(30)
+  check("Amy still runs them, and Ben follows her", a7.LR.isLeader(a7.LR.session(s7.id)) and b7.LR.session(s7.id).leader == full(a7))
+  check("Lia is asked whether to let Amy run them", l7.LR.claim(s7.id) ~= nil and l7.LR.claim(s7.id).leader == full(a7))
+  l7.LR.followClaim(s7.id)
+  srv7:tick(5)
+  local leaders = 0
+  for _, p in ipairs({ l7, a7, b7 }) do if p.LR.isLeader(p.LR.session(s7.id)) then leaders = leaders + 1 end end
+  check("she lets Amy: one leader", leaders == 1 and l7.LR.session(s7.id).leader == full(a7))
+  for _, p in ipairs({ l7, a7, b7 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)
