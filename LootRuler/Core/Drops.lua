@@ -574,10 +574,7 @@ end
 function Drops.tradeChannel(partner)
   if IsInGroup() then return LR.canRunLoot() and LR.groupChannel() or nil end
   if LR.Practice.on then return nil end
-  for _, s in pairs(LR.db.sessions) do
-    if not s.ended and not s.practice and LR.isLeader(s) then return "SAY" end
-  end
-  if partner and LR.History.owing(partner) then return "SAY" end
+  return "SAY"               -- (only when "Say my trades nearby" is on: Drops.tradeDone)
 end
 
 --- a trade line said nearby. The game lets an addon /say outside a dungeon or raid only on a click, so there it waits

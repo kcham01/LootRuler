@@ -1962,7 +1962,11 @@ local function trade(a, b, copper)
   srv2:tick(1)
 end
 trade(solo, kim, 20000)
-check("with no reserves of mine, nothing is said", #solo.LR.UI.sayWaiting() == 0 and not said("Kim traded me"))
+check("off to start with: nothing is said", solo.LR.db.settings.tradeSay == false and #solo.LR.UI.sayWaiting() == 0 and not said("Kim traded me"))
+solo.LR.db.settings.tradeSay = true
+trade(solo, kim, 25000)
+check("switched on, any trade out of a group is said nearby, reserves or not", #solo.LR.UI.sayWaiting() == 1)
+solo.M.click(solo.G.LootRulerSay.no)
 solo.LR.startSession("Karazhan", 2, true, false)
 srv2:tick(1)
 trade(solo, kim, 30000)
@@ -1998,7 +2002,11 @@ solo.M.click(box.no)
 solo.LR.db.settings.tradeAnnounce = true
 -- a raider who doesn't run loot says nothing
 trade(raider, kim, 80000)
-check("a raider with no reserves of their own says nothing", raider.G.LootRulerSay == nil or not raider.G.LootRulerSay:IsShown())
+check("a raider who hasn't switched it on says nothing", raider.G.LootRulerSay == nil or not raider.G.LootRulerSay:IsShown())
+raider.LR.db.settings.tradeSay = true
+trade(raider, kim, 85000)
+check("switched on, theirs is said nearby too", raider.G.LootRulerSay and raider.G.LootRulerSay:IsShown())
+raider.M.click(raider.G.LootRulerSay.no)
 -- in a group, the group hears it, as before
 srv2:setGroup({ solo, kim }, solo, false)
 srv2:tick(6)

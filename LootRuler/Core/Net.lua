@@ -82,7 +82,7 @@ LR.DEFAULTS = {
   tradeHelp = false,       -- won items go into trades with their winners
   tradeAnnounce = true,    -- when I'm running loot, the raid hears what I trade and to whom
   raidPrompt = true,       -- going into a different raid (or a new lockout) with a session open asks to start a new one (UI/Where.lua)
-  tradeSay = true,         -- ...and out of a group, it's said nearby (/s; Drops.sayNearby)
+  tradeSay = false,        -- ...and out of a group, it's said nearby (/s; Drops.sayNearby), when this is switched on
   tradeTimers = false,     -- a bar for each item I hold to roll out or trade, with the time left (UI/Timers.lua)
   tradeWarn = true,        -- items I'm holding: told when 15 and 5 minutes are left to trade them (Core/Drops.lua)
   announceLoot = true,     -- the loot master opens a corpse: its epics, and anything reserved, go in raid chat (Core/Drops.lua)
@@ -153,6 +153,9 @@ function LR.loadDB()
   db.ui = type(db.ui) == "table" and db.ui or {}
   if fresh then db.ui.toured = false end            -- (a new player: the welcome tour, the first time they open it)
   db.settings = LR.checkSettings(db.settings)
+  -- (saying trades nearby used to be on to start with, and only while leading reserves; now it's any trade out of a group,
+  -- so it's switched off once for everyone, to be ticked again by whoever wants it)
+  if not db.ui.sayNearbyOff then db.settings.tradeSay = false db.ui.sayNearbyOff = true end
   -- settings saved under a name (UI/Welcome.lua): checked the same way
   db.profiles = type(db.profiles) == "table" and db.profiles or {}
   for name, set in pairs(db.profiles) do
