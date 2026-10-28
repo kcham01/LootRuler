@@ -464,6 +464,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
   to start with (now: only while leading reserves, on).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
+  - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
+    for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`
+    hooks both, once per item (`tooltip.lrItem`, cleared on `OnTooltipCleared`). The stand-in's tooltips now run `OnTooltipSetItem`
+    for `SetHyperlink`, `SetBagItem` and `SetLootItem` and post-calls only with `M.tooltipPostCalls`. With Gargul loaded, game
+    tooltips leave out LootRuler's "soft reserved by" line (`UI.tooltipLines(s, id, gameTip)`).
   - (fixed, owner's in-game test, #122) `Net.lua:195: attempt to index upvalue 'db'` at login: `UPDATE_INSTANCE_INFO` came
     between `ADDON_LOADED` and `PLAYER_LOGIN` (where `LR.loadDB` runs), and `UI/Where.lua` read the session. Every event handler
     that reads saved data returns while `LR.db` is nil. The stand-in fires `o.early` (event names) in that gap; `tests/raid.lua`

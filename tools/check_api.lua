@@ -69,7 +69,8 @@ local MIXIN = { SetBackdrop = true, SetBackdropColor = true, SetBackdropBorderCo
 
 -- GameTooltip's own methods aren't in the generated documentation; these are ones Blizzard's code calls on tooltips
 local TOOLTIP_OK = { SetOwner = true, SetHyperlink = true, AddLine = true, AddDoubleLine = true, ClearLines = true, NumLines = true,
-  SetSpellByID = true, SetInventoryItem = true, SetMinimumWidth = true, SetText = true }
+  SetSpellByID = true, SetInventoryItem = true, SetMinimumWidth = true, SetText = true,
+  SetBagItem = true, SetLootItem = true, GetItem = true }   -- (Classic/ContainerFrame_Shared.lua, Classic/LootFrame.lua, PTRFeedback)
 local failures = 0
 package.path = "./tests/?.lua;./tests/wow/?.lua;" .. package.path
 local M = require("mock")
