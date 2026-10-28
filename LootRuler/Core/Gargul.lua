@@ -516,12 +516,13 @@ function G.rollFromChat(text)
     end
   end
 end
---- a raid chat line that ends Gargul's roll: true, the item when the line names one, and who it went to
+--- a raid chat line that ends Gargul's roll: true, the item when the line names one, who it went to, and whether it says
+--- the item was handed over ("I gave [item] to Ann": a trade, or straight from the loot window)
 function G.rollEndFromChat(text)
   text = withoutName(text)
-  for _, pattern in ipairs(G.END_LINES) do
+  for i, pattern in ipairs(G.END_LINES) do
     local s, e, link, winner = text:find(pattern)
-    if s then return true, link and tonumber(link:match("item:(%d+)")), winner end
+    if s then return true, link and tonumber(link:match("item:(%d+)")), winner, i == 3 end
   end
   return false
 end

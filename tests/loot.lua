@@ -1839,6 +1839,20 @@ do
   srv6:tick(1)
   check("when Gus loots it, the award is that drop: his to trade to Bob", wonBy(29760).d ~= nil and #ks.drops == 2
     and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(29760).d)) == "toTrade")
+  -- the trade, later in the night: only Gus and Bob see it, but Gargul says so
+  srv6:tick(900)
+  says(gus, "I gave " .. srv6:link(29760) .. " to " .. full(bob))
+  check("traded later: Gargul's \"I gave\" marks it handed over, on the same award", #ks.won == 2
+    and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(29760).d)) == "given" and rl.LR.Session.drop(ks, wonBy(29760).d).h == full(bob))
+  -- given straight from the loot window: the game's loot line says who got it
+  says(gus, srv6:link(28477) .. " was awarded to Zoe. Congrats!")
+  srv6:lootTo(zoe, 28477)
+  srv6:tick(1)
+  check("given from the loot window: hers, nothing left to trade", wonBy(28477) and wonBy(28477).d
+    and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(28477).d)) == "given")
+  says(gus, "I gave " .. srv6:link(28477) .. " to " .. full(zoe))
+  check("and Gargul saying so after changes nothing", #ks.won == 3, #ks.won)
+  rl.LR.unaward(ks, #ks.won)
   says(gus, "I gave " .. srv6:link(28454) .. " to " .. full(pug))
   check("\"I gave [item] to Pug\" counts on its own too", wonBy(28454) and wonBy(28454).p == full(pug))
   rl.LR.unaward(ks, #ks.won)
