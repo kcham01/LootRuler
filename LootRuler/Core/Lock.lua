@@ -51,8 +51,7 @@ function L.check()
   local ch = LR.groupChannel()
   if left <= 0 then
     LR.setAutoLock(s, nil)
-    if not s.locked then LR.setLocked(s, true) end
-    if ch then LR.say(LR.TAG .. " Soft reserves are locked now.", ch) end
+    if not s.locked then LR.setLocked(s, true) end          -- (the raid hears it from LR.setLocked)
     return "locked"
   end
   local k = s.id .. ":" .. s.al

@@ -397,6 +397,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   (DE for `de`), gold spent, raids attended, last win. Attendance is `s.att` (`S.saw`, `S.cleanAtt`, `S.MAX_ATT`): the leader's session notes
   everyone in the group when it starts and on each roster change; past raids keep it (and a GDKP's `gk.seen` counts too). Older versions
   ignore `att`.
+- **Locking says so** (#155; `LR.setLocked`, `Whisper.swapHowTo`): locking or unlocking, by hand or by `Lock.check`, is one raid line (none
+  for a private session): locked comes with how to ask for a swap, unlocked with how to reserve.
 - **Reserve swap requests** (`Core/Swap.lua`; `Swap.ask`, `allow`, `deny`, `pending`, `request`, `Swap.list` (the leader's, in memory),
   `Swap.mine` (a raider's own, until it's answered); message `S` = { id, f, n }; feature bit `FEATURE_SWAP` 4; `!lr swap [old] [new]` or
   `!lr swap old for new`; `UI.swapSheet` on a locked Reserve tab, "Swap requests" panel on the leader's Reserves tab): only while

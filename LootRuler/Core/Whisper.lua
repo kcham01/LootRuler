@@ -335,6 +335,13 @@ function W.howTo()
   end
   return "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon."
 end
+--- how to ask for a swap once reserves are locked (players without LootRuler; with it, "Ask to swap one" on the Reserve tab)
+function W.swapHowTo()
+  if LR.db and LR.db.settings.raidCommands then
+    return "Want to swap one? Type !lr swap [your item] [new item] in raid chat, or click Ask to swap one in LootRuler."
+  end
+  return "Want to swap one? Whisper me !lr swap [your item] [new item], or click Ask to swap one in LootRuler."
+end
 function W.postHowTo()
   local channel = LR.groupChannel()
   if not channel then return false end
