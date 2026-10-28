@@ -184,12 +184,28 @@ function R.options(roll, player)
 end
 
 --- how many rolls a player may make in this roll: one for each reserve they have left on the item (SR), else one
+local whoCounts = setmetatable({}, { __mode = "k" })   -- roll.who -> { n = its length, name -> reserves } (asked on every roll)
 function R.rollsFor(roll, player)
-  if roll.mode ~= "SR" then return 1 end
-  for _, w in ipairs(roll.who) do
-    if type(w) == "table" and U.samePlayer(w[1], player) then return math.max(1, math.min(10, tonumber(w[2]) or 1)) end
+  if roll.mode ~= "SR" or type(roll.who) ~= "table" then return 1 end
+  if #roll.who <= 8 then                     -- (a few reservers: quicker to look through them)
+    for _, w in ipairs(roll.who) do
+      if type(w) == "table" and U.samePlayer(w[1], player) then return math.max(1, math.min(10, tonumber(w[2]) or 1)) end
+    end
+    return 1
   end
-  return 1
+  local c = whoCounts[roll.who]
+  if not c or c.n ~= #roll.who then
+    c = { n = #roll.who, by = {} }
+    for _, w in ipairs(roll.who) do
+      local name = type(w) == "table" and U.full(w[1])
+      if name then
+        local k = U.foldCase(name)
+        if c.by[k] == nil then c.by[k] = math.max(1, math.min(10, tonumber(w[2]) or 1)) end
+      end
+    end
+    whoCounts[roll.who] = c
+  end
+  return c.by[U.foldCase(U.full(player) or "")] or 1
 end
 --- how many of their rolls a player still has (0 once they've rolled them all)
 function R.rollsLeft(roll, player)
