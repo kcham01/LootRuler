@@ -2057,6 +2057,16 @@ section("nobody can fake a win")
     end
   end
   local link = srv:link(item)
+  -- every trade switch on, and the item in the loot master's bags: still nothing may open a trade, put it in one, or
+  -- change anyone's settings
+  for _, p in ipairs({ lead, ann, bob, dan }) do p.LR.db.settings.autoTrade, p.LR.db.settings.tradeHelp = true, true end
+  srv:giveItem(lead, item)
+  local settingsBefore = {}
+  for _, p in ipairs({ lead, ann, bob, dan }) do settingsBefore[p] = LR.U.copy(p.LR.db.settings) end
+  local opened, used = 0, 0
+  local initiate, use = lead.G.InitiateTrade, lead.G.C_Container.UseContainerItem
+  lead.G.InitiateTrade = function(...) opened = opened + 1 return initiate(...) end
+  lead.G.C_Container.UseContainerItem = function(...) used = used + 1 return use(...) end
   local function wins(p) local n = 0 for _, w in ipairs(s.won or {}) do if w.i == item and LR.U.samePlayer(w.p, full(p)) then n = n + 1 end end return n end
   local wonBefore = #s.won
   -- before any roll: messages a raider's addon could send, by raid and by whisper
@@ -2082,7 +2092,9 @@ section("nobody can fake a win")
   check("Gargul's award lines typed by raiders (with LootRuler or without) make no winner", wins(dan) == 0 and wins(pug) == 0)
   check("and the leader's session is as it was", #s.won == wonBefore and LR.Session.drop(s, "fake:1") == nil)
   -- a real roll: everyone may roll; tricks by Dan and Pug
-  local roll = Rl.start(item, { link = link, secs = 20 })
+  -- (the loot master holds the item: once it's won, a trade opens with the winner and the item goes in)
+  LR.Session.addDrop(s, { k = "held:1", i = item, b = "", at = LR.U.now(), h = full(lead), ht = LR.U.now() }, LR.U.now())
+  local roll = Rl.start(item, { link = link, secs = 20, drop = "held:1" })
   srv:tick(0.5)
   check("the roll is open to everyone", roll and roll.mode == "OPEN" and roll.state == "open")
   srv:chatMessage(dan, "Dan rolls 100 (1-100)", "RAID")              -- (typed, not the game's)
@@ -2101,6 +2113,11 @@ section("nobody can fake a win")
     top and top.p == full(ann) and top.n == 80, top and (top.p .. " " .. top.n))
   check("Dan's first roll is his", roll.rolled[LR.Roll.key(full(dan))] and roll.rolled[LR.Roll.key(full(dan))].n == 12)
   check("nobody can pass for Ann, or close the roll for the loot master", not roll.passed[LR.Roll.key(full(ann))] and roll.state == "open")
+  -- Dan, who won nothing, opens a trade with the loot master
+  srv:openTrade(dan, lead)
+  srv:tick(1)
+  check("a trade from someone who won nothing gets nothing put in it", used == 0)
+  srv:cancelTrade(dan)
   srv:tick(25)
   srv:roll(pug, 1, 100, 100)                                         -- (after it closed)
   srv:tick(1)
@@ -2117,7 +2134,29 @@ section("nobody can fake a win")
   check("the winner on the list is the one who won", wins(ann) == 1 and wins(dan) == 0 and wins(pug) == 0 and #s.won == wonBefore + 1)
   check("and raiders' copies agree", ann.LR.current().won[#ann.LR.current().won].p == full(ann)
     and dan.LR.current().won[#dan.LR.current().won].p == full(ann))
+  check("the winner's trade opens and gets the item", opened == 1 and lead.trading == ann and used == 1, opened .. " " .. used)
+  srv:cancelTrade(lead)
+  srv:openTrade(dan, lead)
+  srv:tick(1)
+  check("Dan's trade, though the loot master holds it, gets nothing", used == 1)
+  srv:cancelTrade(dan)
+  -- a pug tries every !lr command, with nonsense after it, by whisper and in raid chat
+  for _, cmd in ipairs({ "", "remove", "clear", "swap", "points", "prio", "vote", "bid", "max", "pot", "list", "help", "give", "trade", "award" }) do
+    for _, arg in ipairs({ "", " Dan", " " .. link, " 999999", " #2 50", " Dan " .. link, (" x"):rep(80) }) do
+      srv:whisper(pug, lead, ("!lr " .. cmd .. arg):sub(1, 255))
+      srv:chatMessage(pug, ("!lr " .. cmd .. arg):sub(1, 255), "RAID")
+    end
+  end
+  srv:tick(40)                -- (every one is answered by whisper: they queue behind each other)
+  local same = true
+  for _, p in ipairs({ lead, ann, bob, dan }) do
+    for k, v in pairs(settingsBefore[p]) do if type(v) ~= "table" and p.LR.db.settings[k] ~= v then same = false end end
+  end
+  check("none of it opened a trade, put an item in one, or changed anyone's settings", opened == 1 and used == 1 and same, opened .. " " .. used)
+  check("nor made anyone a winner", wins(dan) == 0 and wins(pug) == 0 and #s.won == wonBefore + 1)
   Rl.dismiss()
+  lead.G.InitiateTrade, lead.G.C_Container.UseContainerItem = initiate, use
+  for _, p in ipairs({ lead, ann, bob, dan }) do p.LR.db.settings.autoTrade, p.LR.db.settings.tradeHelp = false, false end
 end)()
 
 section("no errors")
