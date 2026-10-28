@@ -232,12 +232,46 @@ local function tick(roll, mine)
     if left <= -LEEWAY then close(roll) return end
     -- an SR or tie roll is over as soon as everyone who may roll has rolled or passed
     local waiting = R.waiting(roll)
+    if waiting and #waiting > 0 then Rolls.tellAway(roll, waiting) end
     if waiting and #waiting == 0 and #roll.who > 0 then
       if not roll.allIn then roll.allIn = now() end
       if now() - roll.allIn >= LEEWAY then close(roll) return end
     end
   end
   C_Timer.After(0.25, function() tick(roll, mine) end)
+end
+
+--- who a roll waits for but is away: key -> "offline" or "left" (out of the group). The roll still waits for them: what to
+--- do is the loot master's call (wait, or Close now), so this only says so.
+function Rolls.away(roll, waiting)
+  local out = {}
+  waiting = waiting or R.waiting(roll)
+  if not waiting or not (IsInGroup() or LR.Practice.on) then return out end
+  for _, name in ipairs(waiting) do
+    local m = LR.inGroup(name)
+    if not m then out[R.key(name)] = "left" elseif not m.online then out[R.key(name)] = "offline" end
+  end
+  return out
+end
+--- tells the loot master, once each time, when someone the roll waits for goes offline or leaves the group
+function Rolls.tellAway(roll, waiting)
+  local away = Rolls.away(roll, waiting)
+  roll.toldAway = roll.toldAway or {}
+  local any = false
+  for _, name in ipairs(waiting) do
+    local k = R.key(name)
+    local why = away[k]
+    if why and roll.toldAway[k] ~= why then
+      roll.toldAway[k] = why
+      any = true
+      LR.print(("%s, who reserved %s, %s. The roll waits for them until time runs out: wait, or click Close now."):format(
+        U.short(name), roll.link or "this item", why == "left" and "has left the group" or "is offline"))
+    elseif not why and roll.toldAway[k] then
+      roll.toldAway[k] = nil      -- (back: told again if they go again)
+      any = true
+    end
+  end
+  if any then LR.changed("roll") end
 end
 
 local function startTicking(roll)

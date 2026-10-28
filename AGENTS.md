@@ -539,6 +539,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   master's bags: the winner's trade opens and gets the item, someone else's gets nothing, and a pug's every `!lr` command
   changes no setting. `tools/stress.lua` checks the same under its broken messages, and sends every `!lr` command with
   nonsense ("1b"). **Test everything:** a new feature, setting or command gets into both.
+- **A reserver away while a roll waits for them** (#152, the owner's call: the players decide, not the addon; `Rolls.away(roll, waiting)`,
+  `Rolls.tellAway`, `roll.toldAway`): the roll still waits for every reserver until time runs out. The loot master's window lists
+  anyone away first ("Bob (offline)", "(left the group)") with a gold line to wait or Close now, and their chat is told once each time
+  someone goes (checked in the roll's tick; the window also redraws on roster changes). Someone back can still roll. Raiders' screens
+  don't change. Not in the practice raid (pretend players can't go offline). A loot master who disconnects: the roll is just rolled
+  again (decided).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

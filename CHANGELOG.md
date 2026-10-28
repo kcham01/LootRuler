@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- When a reserved item's roll is waiting for someone who has gone offline or left the group, the loot master's window
+  says so ("Bob (offline)") and their chat is told once. The roll still waits until time runs out: wait for them, or click
+  Close now. Someone who comes back can still roll. ([#152](https://github.com/kcham01/LootRuler/pull/152))
 - Trades are no longer said nearby (/s) when you're out of a group. The game only lets an addon talk in /s after a click,
   so it needed a "Say it" button every time; that button and its setting are gone. In a group, trades are said in the
   group's chat as before. ([#151](https://github.com/kcham01/LootRuler/pull/151))
