@@ -55,15 +55,15 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 9. **Only the group can reserve** (on to start with): players outside the group are told to ask for an invite first. You can still add reserves for anyone, and imports still come in. Switch it off on the Session tab to let guild members reserve before the raid forms.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/new-session.png" alt="Opening reserves" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/hard-reserve.png" alt="Hard reserving an item" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/extra-reserves.png" alt="Extra reserves for some players" width="32%">
+  <img src="docs/screens/new-session.png" alt="Opening reserves" width="32%">
+  <img src="docs/screens/hard-reserve.png" alt="Hard reserving an item" width="32%">
+  <img src="docs/screens/extra-reserves.png" alt="Extra reserves for some players" width="32%">
 </p>
 
 **One reserve win each** (Session tab): once a player wins one of their reserves, their other reserves stop counting, so loot goes further. The raid is told when it happens.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/auto-lock.png" alt="Reserves that lock by themselves" width="49%">
+  <img src="docs/screens/auto-lock.png" alt="Reserves that lock by themselves" width="49%">
 </p>
 
 **Swapping a reserve after they're locked:** a raider asks (Reserve tab, "Ask to swap one", or whisper `!lr swap [old] [new]`), the leader allows or refuses it on the Reserves tab, and the raider is told by whisper.
@@ -81,7 +81,7 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/raid-setup.png" alt="Raid setup from a sign-up list" width="49%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/brand.png" alt="Your raid's name, message and icon" width="49%">
+  <img src="docs/screens/brand.png" alt="Your raid's name, message and icon" width="49%">
 </p>
 
 **Bag checks** (Loot tab, or `/lr bags`): pick some items (a flask, a key, an attunement item) and ask the group. Everyone with LootRuler answers with how many they carry, in bags and bank. The report shows who has none, and who can't be asked (no LootRuler). One click names who's missing what in raid chat. Answering can be switched off in Settings.
