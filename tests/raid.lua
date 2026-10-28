@@ -1038,6 +1038,147 @@ do
     table.concat(rl.M.errors, " | "))
 end
 
+section("changes go only onto the copy they were made from (found by tools/chaos.lua)")
+do
+  local srv4 = Server.new(".")
+  srv4.where = Server.PLACES.Karazhan
+  local l4 = srv4:client({ name = "Lia", class = "PALADIN" })
+  local a4 = srv4:client({ name = "Amy", class = "PRIEST" })
+  local b4 = srv4:client({ name = "Ben", class = "MAGE" })
+  srv4:tick(6)
+  srv4:setGroup({ l4, a4, b4 }, l4, true)
+  srv4:tick(2)
+  local s4 = l4.LR.startSession("Karazhan", 2, true, false)
+  srv4:tick(3)
+  for i = 1, 3 do l4.LR.setLocked(s4, i % 2 == 1) srv4:tick(1) end
+  -- Lia adds Pug's reserve; Ben gets the whole copy by whisper before the group hears it; Lia takes it back
+  l4.LR.leaderAdd(s4, "Pug-Dreamscythe", "WARRIOR", 28528)
+  b4.LR.Net.send({ t = "Q" }, "WHISPER", full(l4))
+  srv4:tick(0.2, 0.05)
+  check("Ben's copy has Pug's reserve, one change ahead of the group", #b4.LR.Session.reservesOf(b4.LR.session(s4.id), "Pug-Dreamscythe") == 1)
+  l4.LR.leaderRemove(s4, "Pug-Dreamscythe", 28528)
+  srv4:tick(20)
+  local bc = b4.LR.session(s4.id)
+  check("the group's changes (from the copy before) aren't put onto Ben's: he catches up whole, without Pug's reserve",
+    bc.rev == s4.rev and #b4.LR.Session.reservesOf(bc, "Pug-Dreamscythe") == 0 and l4.LR.Session.same(bc.res, s4.res))
+  check("Amy, who took the changes, agrees", l4.LR.Session.same(a4.LR.session(s4.id).res, s4.res))
+end
+
+section("away when the reserves changed hands (found by tools/chaos.lua)")
+do
+  local srv3 = Server.new(".")
+  srv3.where = Server.PLACES.Karazhan
+  local l3 = srv3:client({ name = "Lia", class = "PALADIN" })
+  local a3 = srv3:client({ name = "Amy", class = "PRIEST" })
+  local b3 = srv3:client({ name = "Ben", class = "MAGE" })
+  local d3 = srv3:client({ name = "Dax", class = "ROGUE" })
+  srv3:tick(6)
+  srv3:setGroup({ l3, a3, b3, d3 }, l3, true)
+  srv3:tick(2)
+  local s3 = l3.LR.startSession("Karazhan", 2, true, false)
+  srv3:tick(3)
+  -- Ben is out of the group while Lia hands the reserves to Amy
+  srv3:leaveGroup(b3)
+  srv3:tick(1)
+  l3.LR.handOver(l3.LR.session(s3.id), full(a3))
+  srv3:tick(5)
+  check("Amy runs them now, Lia follows", a3.LR.isLeader(a3.LR.session(s3.id)) and l3.LR.session(s3.id).leader == full(a3))
+  srv3:setGroup({ l3, a3, b3, d3 }, l3, true)
+  srv3:tick(30)
+  check("Ben comes back: his LootRuler asks Lia, who passed them on, and follows Amy", b3.LR.session(s3.id).leader == full(a3)
+    and b3.LR.session(s3.id).rev == a3.LR.session(s3.id).rev)
+  b3.LR.reserve(b3.LR.session(s3.id), 28528)
+  srv3:tick(4)
+  check("his reserves reach Amy", #a3.LR.Session.reservesOf(a3.LR.session(s3.id), full(b3)) == 1)
+  -- Dax, who isn't Lia, can't pass on a copy that names someone else
+  local forged = d3.LR.U.copy(d3.LR.session(s3.id))
+  forged.leader, forged.rev, forged.was = full(d3), forged.rev + 50, { full(l3), full(a3) }
+  local LibSerialize, LibDeflate = d3.G.LibStub("LibSerialize"), d3.G.LibStub("LibDeflate")
+  local function sendAs(p, msg, to)
+    local text = LibDeflate:EncodeForWoWAddonChannel(LibDeflate:CompressDeflate(LibSerialize:Serialize(msg)))
+    local pos = 1
+    while pos <= #text do
+      local chunk = text:sub(pos, pos + 253)
+      local mark = #text <= 255 and "" or (pos == 1 and "\001" or (pos + 254 > #text and "\003" or "\002"))
+      srv3:addonMessage(p, "LootRuler", mark .. chunk, to and "WHISPER" or "RAID", to)
+      pos = pos + 254
+    end
+  end
+  sendAs(d3, { t = "T", v = 1, s = forged }, full(b3))
+  local fake = d3.LR.U.copy(a3.LR.session(s3.id))
+  fake.leader, fake.rev, fake.was = full(d3), fake.rev + 60, { full(a3) }
+  sendAs(d3, { t = "T", v = 1, s = fake })
+  srv3:tick(3)
+  check("a raider's copy naming himself, passed on, is ignored by everyone", b3.LR.session(s3.id).leader == full(a3)
+    and l3.LR.session(s3.id).leader == full(a3) and a3.LR.isLeader(a3.LR.session(s3.id)))
+  -- Amy makes changes and drops before they go out; Lia, the raid leader, takes over; Amy comes back
+  local as = a3.LR.session(s3.id)
+  a3.LR.setLocked(as, true) a3.LR.setLocked(as, false) a3.LR.setLocked(as, true)
+  local saved = srv3:logout(a3)
+  srv3:tick(3)
+  check("Lia's copy is older than Amy's last change", l3.LR.session(s3.id).rev < saved.sessions[s3.id].rev)
+  check("Lia (the raid leader) takes over while Amy is away", l3.LR.takeOver(l3.LR.session(s3.id)))
+  srv3:tick(2)
+  srv3:login(a3, saved)
+  srv3:tick(30)
+  local leaders = 0
+  for _, p in ipairs({ l3, a3, b3, d3 }) do if p.LR.isLeader(p.LR.session(s3.id)) then leaders = leaders + 1 end end
+  check("Amy comes back: she follows Lia (it changed hands after her last change), so one leader", leaders == 1
+    and a3.LR.session(s3.id).leader == full(l3) and b3.LR.session(s3.id).leader == full(l3))
+  check("and is told", (function() for _, line in ipairs(a3.M.chat) do if line:find("taken over while you were away", 1, true) then return true end end end)())
+  for _, p in ipairs({ l3, a3, b3, d3 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
+section("a take-over nobody here can confirm: the player decides (found by tools/chaos.lua)")
+do
+  local srv5 = Server.new(".")
+  srv5.where = Server.PLACES.Karazhan
+  local l5 = srv5:client({ name = "Lia", class = "PALADIN" })
+  local f5 = srv5:client({ name = "Fay", class = "PRIEST" })
+  local c5 = srv5:client({ name = "Cal", class = "MAGE" })
+  local p5 = srv5:player({ name = "Pip", class = "WARRIOR" })
+  srv5:tick(6)
+  srv5:setGroup({ l5, f5, c5, p5 }, l5, true)
+  srv5:tick(2)
+  local s5 = l5.LR.startSession("Karazhan", 2, true, false)
+  srv5:tick(3)
+  -- Cal is offline; Lia goes offline too; Fay, the master looter, takes over
+  local calDB = srv5:logout(c5)
+  local liaDB = srv5:logout(l5)
+  srv5:setMasterLooter(f5)
+  srv5:tick(2)
+  check("Fay, the master looter, takes over while Lia is away", f5.LR.takeOver(f5.LR.session(s5.id)))
+  srv5:tick(2)
+  -- Pip (no LootRuler) is master looter now; Cal comes back: nobody he trusts can confirm Fay's take-over
+  srv5:setMasterLooter(p5)
+  srv5:login(c5, calDB)
+  srv5:tick(30)
+  local cc = c5.LR.session(s5.id)
+  check("Cal's LootRuler doesn't take Fay's word on its own", cc.leader == full(l5))
+  check("he's told, and the Session tab asks him", c5.LR.claim(s5.id) ~= nil
+    and (function() for _, line in ipairs(c5.M.chat) do if line:find("Fay says they run the soft reserves now", 1, true) then return true end end end)())
+  c5.LR.UI.show("session")
+  srv5:tick(0.3)
+  check("with a button to follow Fay", #c5.M.findText("Follow Fay", true) > 0 and #c5.M.findText("can't confirm it", false) > 0)
+  c5.M.click(c5.M.findText("Follow Fay", true)[1].clickable)
+  srv5:tick(3)
+  check("he follows her, and his reserves go to her", c5.LR.session(s5.id).leader == full(f5) and c5.LR.claim(s5.id) == nil)
+  c5.LR.reserve(c5.LR.session(s5.id), 28528)
+  srv5:tick(3)
+  check("and reach her", #f5.LR.Session.reservesOf(f5.LR.session(s5.id), full(c5)) == 1)
+  -- Lia comes back: her copy says she leads it; nobody who leads the group or is master looter can say otherwise
+  srv5:login(l5, liaDB)
+  srv5:tick(30)
+  check("Lia is asked whether to let Fay run them", l5.LR.claim(s5.id) ~= nil and l5.LR.isLeader(l5.LR.session(s5.id)))
+  l5.LR.followClaim(s5.id)
+  srv5:tick(3)
+  local leaders = 0
+  for _, p in ipairs({ l5, f5, c5 }) do if p.LR.isLeader(p.LR.session(s5.id)) then leaders = leaders + 1 end end
+  check("she lets Fay: one leader, everyone follows Fay", leaders == 1 and l5.LR.session(s5.id).leader == full(f5))
+  for _, p in ipairs({ l5, f5, c5 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+  c5.LR.UI.win:Hide()
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

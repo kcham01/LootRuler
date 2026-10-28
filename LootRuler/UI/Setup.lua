@@ -199,8 +199,34 @@ local function privateView(f, s)
   end)
 end
 
+--- someone says they run these reserves now, and LootRuler couldn't confirm it: the player decides
+local function claimPanel(f, s)
+  local c = LR.claim(s.id)
+  if not c then return end
+  local who = U.short(c.leader)
+  if LR.isLeader(s) then
+    f:panel("Taken over while you were away?", function(p)
+      p:note(("%s says they took these reserves over from you while you were away. LootRuler can't confirm it (nobody who leads the group or is its master looter has said so). If they did, let them run them; if not, keep running them yourself."):format(who), K.GOLD)
+      p:buttons({
+        { label = "Let " .. who .. " run them", click = function() LR.followClaim(s.id) UI.toast(who .. " runs the reserves now.") end },
+        { label = "Keep running them", click = function() LR.dropClaim(s.id) end },
+      }, "left")
+    end)
+  else
+    f:panel("Someone else runs these now?", function(p)
+      p:note(("%s says they run these reserves now. LootRuler can't confirm it: %s, who ran them, isn't here to say so. If %s does run them, follow them, so your reserves go to them."):format(
+        who, U.short(c.was), who), K.GOLD)
+      p:buttons({
+        { label = "Follow " .. who, click = function() LR.followClaim(s.id) UI.toast("You follow " .. who .. "'s reserves now.") end },
+        { label = "Not now", click = function() LR.dropClaim(s.id) end },
+      }, "left")
+    end)
+  end
+end
+
 local function manage(f, s)
   if s.pv then privateView(f, s) return end
+  claimPanel(f, s)
   local raid = LR.raidOf(s)
   if s.gdkp then UI.gdkpPanel(f, s) end          -- GDKP first: in a GDKP raid it's what matters
   if not s.gdkp then softresPanel(f, s) end
@@ -618,6 +644,7 @@ function UI.sessionView(f, s)
     manage(f, s)
   else
     if s then
+      claimPanel(f, s)
       if LR.leaderGone(s) then
         f:panel("Nobody's running the reserves", function(p)
           local gone = LR.inGroup(s.leader) and "is offline" or "has left the group"

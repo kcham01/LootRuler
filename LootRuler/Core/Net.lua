@@ -870,7 +870,15 @@ Net.handlers = handlers          -- Core/Rolls.lua adds the messages for rolling
 local accept
 function handlers.T(msg, channel, sender)
   local t = msg.s
-  if not S.valid(t) or not U.samePlayer(t.leader, sender) then return end
+  if not S.valid(t) then return end
+  if not U.samePlayer(t.leader, sender) then
+    -- a copy passed on by someone who isn't its leader counts only from the leader our copy names (it says they passed
+    -- it on: we were away), or from whoever leads the group or is its master looter while that leader is gone (LR.askWho)
+    local known = db.sessions[t.id]
+    local relay = known and not U.samePlayer(known.leader, t.leader)
+      and ((U.samePlayer(sender, known.leader) and S.ledBy(t, sender)) or LR.groupBoss(sender))
+    if not relay then return end
+  end
   accept(t, channel, sender)
 end
 
@@ -881,11 +889,23 @@ function handlers.U(msg, channel, sender)
   if type(msg.id) ~= "string" or type(msg.f) ~= "number" or type(msg.r) ~= "number" or type(msg.c) ~= "table" then return end
   local known = db.sessions[msg.id]
   if known and (LR.isLeader(known) or known.rev >= msg.r) then return end
-  -- (from someone who isn't its leader to us: a new leader, maybe. Their whole copy is checked like any.)
-  if not known or not U.samePlayer(known.leader, sender) or known.rev < msg.f or msg.c.leader or msg.c.id then
+  -- (from someone who isn't its leader to us: a new leader, maybe. Their whole copy is checked like any. And changes
+  -- only go onto the very copy they were made from: put onto a newer one, something added and taken back in between
+  -- would stay in ours for good.)
+  if not known or not U.samePlayer(known.leader, sender) or known.rev ~= msg.f or msg.c.leader or msg.c.id then
     if not askedWhole[msg.id] or GetTime() - askedWhole[msg.id] > 10 then
       askedWhole[msg.id] = GetTime()
       send({ t = "Q" }, "WHISPER", sender)
+      -- still behind a while later (the answer was held back, or lost): ask once more, so a copy never stays behind
+      -- just because nothing else changed since
+      local id, r = msg.id, msg.r
+      C_Timer.After(12, function()
+        local k = db and db.sessions[id]
+        if k and not LR.isLeader(k) and k.rev < r and U.samePlayer(k.leader, sender) then
+          askedWhole[id] = GetTime()
+          send({ t = "Q" }, "WHISPER", sender)
+        end
+      end)
     end
     return
   end
@@ -899,21 +919,42 @@ end
 function accept(t, channel, sender)
   t.pv, t.practice = nil, nil       -- (only my own sessions are private or practice: never one that came from someone)
   local known = db.sessions[t.id]
+  local claim = LR.claim(t.id)
   -- someone else leads it now: what I sent the group as its leader is out of date (if it comes back to me, it goes whole)
   for k in pairs(groupSent) do if k:sub(1, #t.id + 1) == t.id .. "|" then groupSent[k] = nil end end
   local tookOurs = false
   if known and not U.samePlayer(known.leader, t.leader) then
     -- a new leader: only if it was handed to them, or they lead or assist the group and took it over while its
     -- leader was gone (or it was ours, and we were away). Anyone else claiming it is ignored.
-    if not S.newLeaderOk(known, t.leader, LR.leaderGone(known), LR.groupBoss(sender), LR.isLeader(known), S.ledBy(t, U.me()), t.rev > known.rev) then return end
+    local vouched = U.samePlayer(sender, known.leader) and S.ledBy(t, sender)
+    local later = type(t.nl) == "number" and t.nl >= (known.updated or 0)
+    if not S.newLeaderOk(known, t.leader, LR.leaderGone(known), LR.groupBoss(sender), LR.isLeader(known), S.ledBy(t, U.me()), t.rev > known.rev,
+      vouched, later) then
+      -- someone else leads it now, by their copy: ask the leader we know (or, when they're gone or it's us, whoever leads
+      -- the group or is its master looter) for theirs. Their word on who it went to counts; nobody else's does.
+      LR.askWho(known)
+      -- a copy that says it carried on from our leader, when nobody we trust can say so (our leader is away, or it's us):
+      -- the player decides (Session tab), as LootRuler can't check it
+      -- (ours: only one that changed hands after our copy's last change, as an old copy or a fork from before isn't a
+      -- take-over. Someone else's: our leader is away, and whoever sends it runs it from in the group.)
+      local claimed = U.samePlayer(t.leader, sender) and (
+        (LR.isLeader(known) and S.ledBy(t, known.leader) and LR.inGroup(sender) and (later or t.rev >= known.rev + S.EPOCH))
+        or (not LR.isLeader(known) and LR.inGroup(sender) and (LR.leaderGone(known) or t.rev >= known.rev + S.EPOCH)))
+      -- (a copy at least one change of hands past ours: it has changed hands since, whoever we last heard from)
+      if claimed then
+        LR.noteClaim(known, t, sender)
+      end
+      return
+    end
     tookOurs = LR.isLeader(known)
-    if tookOurs then LR.print(("%s runs the soft reserves now: they were taken over while you were away."):format(U.short(sender))) end
+    if tookOurs then LR.print(("%s runs the soft reserves now: they were taken over while you were away."):format(U.short(t.leader))) end
   elseif LR.isLeader(known) then return                     -- ours: we're the one that knows best
   elseif known and known.rev >= t.rev then
     LR.sendPicks(known, true)                               -- the leader is there: anything still waiting goes now
     return
   end
   local first = not known
+  if claim and known and not U.samePlayer(known.leader, t.leader) then LR.dropClaim(t.id) end   -- (settled: a new leader we trust)
   local shown = first and LR.current()           -- (what I'm looking at before this one came)
   t.guild = t.guild or channel == "GUILD"
   db.sessions[t.id] = t
@@ -928,6 +969,9 @@ function accept(t, channel, sender)
   end
   -- handed to me: my addon takes it on
   if t.next and U.samePlayer(t.next, U.me()) then LR.adopt(t) end
+  -- it was ours, and we came back to find someone else runs it: the group hears it from us once, so anyone whose copy
+  -- still names us (away when it changed hands, too) follows the new leader on our word
+  if tookOurs and not LR.isLeader(t) and LR.groupChannel() then sendSession(t, LR.groupChannel()) end
   if first then
     LR.preload(t.raid)
     -- a new session from someone in our group: the group's leader's or master looter's shows by itself, unless I'm
@@ -957,9 +1001,69 @@ function handlers.E(msg, channel, sender)
   LR.changed("session")
 end
 
+--- copies naming a new leader that LootRuler couldn't confirm (session id -> { t, from, leader }): shown on the Session tab
+--- for the player to follow (or, for its leader, to let them run it). Kept in memory only.
+local claims = {}
+function LR.claim(id) return claims[id] end
+function LR.noteClaim(known, t, sender)
+  local c = claims[known.id]
+  local told = c and U.samePlayer(c.leader, t.leader)
+  claims[known.id] = { t = U.copy(t), from = sender, leader = t.leader, was = known.leader }
+  if told then return end
+  if LR.isLeader(known) then
+    LR.print(("%s says they took the soft reserves over from you while you were away. To let them run them, see the Session tab (/lr)."):format(U.short(t.leader)))
+  else
+    LR.print(("%s says they run the soft reserves now (%s, who ran them, is away and can't confirm it). To follow %s, see the Session tab (/lr)."):format(
+      U.short(t.leader), U.short(known.leader), U.short(t.leader)))
+  end
+  LR.changed("session")
+end
+--- the player follows a claim (or, as its leader, lets the one claiming it run it): their copy replaces ours
+function LR.followClaim(id)
+  local c = claims[id]
+  local known = db.sessions[id]
+  claims[id] = nil
+  if not c or not known or not S.valid(c.t) then return false end
+  known.next = c.leader                                  -- (taken as handed to them: the player said so)
+  accept(c.t, "WHISPER", c.from)
+  -- the copy we kept may be a change or two old by now: ask them for theirs
+  if not LR.isLeader(db.sessions[id]) then send({ t = "Q" }, "WHISPER", c.leader) end
+  return not LR.isLeader(db.sessions[id])
+end
+--- the player keeps things as they are
+function LR.dropClaim(id) claims[id] = nil LR.changed("session") end
+
+--- our copy of a session names a leader who isn't leading it any more (a new leader's copy came): ask the leader we know
+--- for theirs, by whisper (it says who they passed it to), or the group's leader and master looter when they're gone.
+--- At most every 10 seconds for each session.
+local askedWho = {}
+function LR.askWho(known)
+  local now = GetTime()
+  if askedWho[known.id] and now - askedWho[known.id] < 10 then return end
+  askedWho[known.id] = now
+  local ask = {}
+  local m = LR.inGroup(known.leader)
+  if m and m.online and not LR.isLeader(known) then ask[1] = known.leader
+  else
+    for _, x in ipairs(LR.roster()) do if x.online and LR.groupBoss(x.name) and not U.samePlayer(x.name, U.me()) then ask[#ask + 1] = x.name end end
+  end
+  for _, who in ipairs(ask) do send({ t = "Q", id = known.id }, "WHISPER", who) end
+end
+
 -- someone asks which sessions are open: leaders answer (once every few seconds per channel), and everyone
--- in the group says they have the addon
+-- in the group says they have the addon. Asked about one session (id: the asker's copy names a leader who isn't
+-- leading it now), anyone who has it sends their copy: the asker decides whether to believe it.
 function handlers.Q(msg, channel, sender)
+  if type(msg.id) == "string" and channel == "WHISPER" then
+    local s = db.sessions[msg.id]
+    if s and not s.pv and not s.practice and not LR.isLeader(s) then
+      local key = s.id .. sender .. "who"
+      if not queryAnswered[key] or GetTime() - queryAnswered[key] > 5 then
+        queryAnswered[key] = GetTime()
+        sendSession(s, "WHISPER", sender)
+      end
+    end
+  end
   -- the session goes to the one asking, by whisper: the rest of the raid or guild has it already (every version takes
   -- a session from its leader by whisper). Versions are still said to the group, once in a while: one message each
   -- instead of a whisper to every newcomer.
@@ -1003,7 +1107,8 @@ function handlers.A(msg, channel, sender)
   local before = db.mine[s.id] and db.mine[s.id].i or {}
   db.mine[s.id] = { i = U.copy(msg.i), dirty = false }
   -- keep our copy of the session in step until the next full copy arrives
-  if #msg.i > 0 then s.res[U.me()] = { c = LR.myClass(), i = U.copy(msg.i) } else s.res[U.me()] = nil end
+  -- (the class as the leader has it, so our copy matches theirs)
+  if #msg.i > 0 then s.res[U.me()] = { c = (s.res[U.me()] and s.res[U.me()].c) or LR.myClass(), i = U.copy(msg.i) } else s.res[U.me()] = nil end
   if not msg.ok then
     local why = S.WHY[msg.why] or "The leader didn't accept that."
     LR.print(("%s turned down your reserves: %s%s"):format(U.short(s.leader), why, msg.item and (" (" .. LR.itemLink(msg.item) .. ")") or ""))

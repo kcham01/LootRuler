@@ -5,6 +5,15 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Fixes from whole raids played at random (`tools/chaos.lua`), all about the reserves changing hands while someone's away:
+  a raider who was offline or out of the group when they were handed on (or taken over) now catches up, where before they stayed
+  on the old leader for good and their reserves went nowhere; a leader who comes back to find the reserves taken over now
+  follows the new leader, instead of both running them; a raider's copy could keep a reserve that was taken back (changes
+  put onto the wrong copy), and that's fixed too. When nobody who leads the group or is its master looter can confirm a
+  take-over, the Session tab says who claims it and lets you follow them (or, as the old leader, let them run it). While the
+  reserves are being handed on, changes wait ("try again in a moment"), so none are lost. A loot master who isn't the
+  leader no longer keeps a drop the leader never took (say, the master looter changed just then).
+  ([#159](https://github.com/kcham01/LootRuler/pull/159))
 - Fixes from a fuzz test (random and broken input everywhere, `tools/fuzz.lua`): a raid chat line with a very long word
   could run past the game's 255 characters; a guild book could be thrown away at login after linking an alt to a blank name
   or bringing in a priority list of more than 100 players (now the list keeps the first 100, and a damaged book keeps every

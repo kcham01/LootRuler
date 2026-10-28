@@ -89,10 +89,11 @@ local function save(s, list)
   else
     local ch = LR.groupChannel()
     if ch then Net.send({ t = "D", sid = s.id, d = list }, ch) end
-    -- our copy shows it at once; the leader's next copy settles it (so ours mustn't look newer than that)
+    -- our copy shows it at once; the leader's next copy settles it. Ours is marked half a version behind (it has something
+    -- the leader may not take): their next copy, whole or as changes, then replaces it, and nothing only we have stays.
     local rev = s.rev
     for _, d in ipairs(list) do S.addDrop(s, d, s.updated) end
-    s.rev = rev
+    s.rev = rev % 1 == 0 and rev - 0.5 or rev
     LR.changed("session")
   end
 end

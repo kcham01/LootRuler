@@ -429,7 +429,8 @@ function G.importInto(s, text, roster)
   for _, x in ipairs(list) do
     local e, player = x.e, x.player
     seen[player] = true
-    local class = classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
+    -- the game's word on someone in the group first (a sheet's class can be wrong), then the sheet's, then what we had
+    local class = LR.classOf(player) or classes[U.lower(e.class)] or (s.res[player] and s.res[player].c)
     local before = s.sx[player] or {}
     local mine = U.copy(S.reservesOf(s, player))
     local used, gone = usedOrNot(s, player, before)
