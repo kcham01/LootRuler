@@ -320,6 +320,16 @@ check("Bob's reserves weren't touched", #lead.LR.Session.reservesOf(s, "Bob-Faer
 srv:addonMessage(bob, "LootRuler", "not a real message", "RAID")
 srv:tick(1)
 check("nonsense is ignored", #lead.M.errors == 0, table.concat(lead.M.errors, " | "))
+-- broken answers from the leader (tools/stress.lua found the first): wrong types where names and lists go
+for _, bad in ipairs({ { to = 5 }, { to = {} }, { i = { "x", {} } }, { i = 7 }, { id = 3 }, { item = "nope" }, { why = {} } }) do
+  local msg = { t = "A", id = s.id, to = full(ann), ok = false, why = "LOCKED", item = SIGNET, i = { SIGNET } }
+  for k, v in pairs(bad) do msg[k] = v end
+  srv:addonMessage(lead, "LootRuler", lead.LR.Net.encode(msg), "WHISPER", full(ann))
+end
+srv:tick(1)
+check("a broken answer from the leader is ignored, without an error", #ann.M.errors == 0, table.concat(ann.M.errors, " | "))
+check("and doesn't change what I picked", same(ann.LR.db.mine[s.id] and ann.LR.db.mine[s.id].i or {}, lead.LR.Session.reservesOf(s, full(ann))))
+check("names that aren't text are no one", ann.LR.U.full(5) == nil and ann.LR.U.full({}) == nil and not ann.LR.U.samePlayer(5, full(ann)))
 
 section("no chatter")
 local sent = 0

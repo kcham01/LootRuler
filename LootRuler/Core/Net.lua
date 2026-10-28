@@ -947,9 +947,11 @@ end
 
 -- the leader's answer to my picks
 function handlers.A(msg, channel, sender)
-  if msg.to and not U.samePlayer(msg.to, U.me()) then return end
-  local s = db.sessions[msg.id]
-  if not s or not U.samePlayer(s.leader, sender) or type(msg.i) ~= "table" then return end
+  if msg.to ~= nil and (type(msg.to) ~= "string" or not U.samePlayer(msg.to, U.me())) then return end
+  local s = type(msg.id) == "string" and db.sessions[msg.id]
+  if not s or not U.samePlayer(s.leader, sender) or type(msg.i) ~= "table" or #msg.i > S.MAX_SR + S.MAX_EXTRA then return end
+  for _, id in ipairs(msg.i) do if type(id) ~= "number" then return end end
+  if msg.item ~= nil and type(msg.item) ~= "number" then msg.item = nil end
   local before = db.mine[s.id] and db.mine[s.id].i or {}
   db.mine[s.id] = { i = U.copy(msg.i), dirty = false }
   -- keep our copy of the session in step until the next full copy arrives
