@@ -343,8 +343,29 @@ section("saved data is checked")
 local junk = srv:client({ name = "Old", class = "WARRIOR", guild = G, rank = 3 },
   { guilds = { [G] = { guild = G, points = "lots" }, Other = 5, [7] = {} } })
 srv:tick(1)
-check("a broken book is thrown away (and the guild's comes back)", type(junk.LR.db.guilds[G]) ~= "table" or junk.LR.db.guilds[G].points ~= "lots")
+check("a broken book is mended (and the guild's comes back)", type(junk.LR.db.guilds[G]) == "table" and junk.LR.db.guilds[G].points ~= "lots"
+  and junk.LR.Book.validBook(junk.LR.db.guilds[G]))
 check("so is anything else that isn't a book", junk.LR.db.guilds.Other == nil and junk.LR.db.guilds[7] == nil)
+-- one bad entry costs only that entry: the guild's points and lists stay
+local mixed = srv:client({ name = "Mixed", class = "WARRIOR", guild = G, rank = 3 },
+  { guilds = { [G] = { guild = G, editRank = 1, et = 0, boost = { on = true, perRaid = 15, t = 5 },
+    points = { ["Ann-Dreamscythe"] = { n = 40, t = 1 }, ["Bad-Dreamscythe"] = { n = "x", t = 1 } },
+    prio = { [28528] = { list = { { p = "Ann-Dreamscythe", n = 1 } }, t = 1 }, [28530] = "broken" },
+    alts = { ["Annalt-Dreamscythe"] = { m = "Ann-Dreamscythe", t = 1 }, ["Odd-Dreamscythe"] = { t = 1 } } } } })
+srv:tick(1)
+local mb = mixed.LR.db.guilds[G]
+check("a book with a few bad entries keeps every good one", mb and mb.points["Ann-Dreamscythe"] and mb.points["Ann-Dreamscythe"].n == 40
+  and mb.points["Bad-Dreamscythe"] == nil and mb.prio[28528] and mb.prio[28530] == nil
+  and mb.alts["Annalt-Dreamscythe"] and mb.alts["Odd-Dreamscythe"] == nil and mb.boost.perRaid == 15 and mixed.LR.Book.validBook(mb))
+-- a priority list longer than a copy may carry is cut to the first 100, so the book stays shareable
+do
+  local big = {}
+  for i = 1, 140 do big[i] = { p = "P" .. i .. "-Dreamscythe", n = i } end
+  local bk = mixed.LR.Book.new(G)
+  mixed.LR.Book.setPrio(bk, 28528, big, 10)
+  check("a priority list keeps at most 100 players", #bk.prio[28528].list == 100 and mixed.LR.Book.validBook(bk))
+  check("an alt can't be linked to nobody", mixed.LR.Book.setAlt(bk, "Annalt", "", 11) == nil and mixed.LR.Book.validBook(bk))
+end
 
 section("the bench")
 do

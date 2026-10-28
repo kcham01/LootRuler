@@ -168,7 +168,8 @@ function LR.loadDB()
   -- guild books: checked like a message from another player
   db.guilds = type(db.guilds) == "table" and db.guilds or {}
   for g, book in pairs(db.guilds) do
-    if type(g) ~= "string" or not LR.Book.validBook(book) then db.guilds[g] = nil end
+    if type(g) ~= "string" then db.guilds[g] = nil
+    elseif not LR.Book.validBook(book) then db.guilds[g] = LR.Book.repair(book, g) end      -- (keeps every good entry)
   end
   -- past raids: checked like a session from someone else
   db.history = type(db.history) == "table" and U.filter(db.history, function(e) return LR.History.valid(e) end) or {}

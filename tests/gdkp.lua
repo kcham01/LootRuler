@@ -637,6 +637,24 @@ section("no errors")
 local longest = 0
 for _, m in ipairs(srv.chat) do longest = math.max(longest, #m.text) end
 check("every chat line fits", longest <= 255, longest)
+
+section("odd values (found by tools/fuzz.lua)")
+do
+  local LS = lead.LR.Session
+  local plain = LS.new(full(lead), "Karazhan", 2, true, 100)
+  check("GDKP changes on a session that isn't GDKP are refused, not errors", G.setOut(plain, "Ann", true, 101) == false
+    and G.setBonus(plain, "Ann", 5, 101) == false and G.setRole(plain, "Ann", "tank", 101) == false and G.paid(plain, "Ann", 5, 101) == false)
+  local g = LS.new(full(lead), "Karazhan", 2, true, 100)
+  G.set(g, true, 101)
+  check("a blank name is refused everywhere", G.setOut(g, "", true, 102) == false and G.setBonus(g, "", 5, 102) == false
+    and G.setRole(g, "", "tank", 102) == false and G.setFixed(g, "", 5, 102) == false and G.paid(g, "", 5, 102) == false)
+  check("a payment that isn't a number of gold is refused", G.paid(g, "Ann", 0 / 0, 102) == false and G.paid(g, "Ann", math.huge, 102) == false)
+  check("and the session is still valid", LS.valid(lead.LR.U.copy(g)))
+  -- times the game can't show come out blank, not as an error
+  local U = lead.LR.U
+  check("U.clock: a real time, and blank for one the game can't show", U.clock(1800000000) ~= "" and U.clock(1e308) == "" and U.clock(0 / 0) == ""
+    and U.clock(-5) == "" and U.clock("x") == "")
+end
 for _, p in ipairs({ lead, ann, bob, dan, old }) do
   check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
 end

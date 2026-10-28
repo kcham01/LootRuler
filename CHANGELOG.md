@@ -5,6 +5,11 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Fixes from a fuzz test (random and broken input everywhere, `tools/fuzz.lua`): a raid chat line with a very long word
+  could run past the game's 255 characters; a guild book could be thrown away at login after linking an alt to a blank name
+  or bringing in a priority list of more than 100 players (now the list keeps the first 100, and a damaged book keeps every
+  good entry); a hard reserve or GDKP log from an odd copy could show a Lua error on a raider's screen; item numbers the
+  game can't have are refused. ([#158](https://github.com/kcham01/LootRuler/pull/158))
 - Locking reserves by hand now tells the raid, like locking by itself does: "Soft reserves are locked now. Want to swap one?
   Type !lr swap [your item] [new item] in raid chat, or click Ask to swap one in LootRuler." Unlocking says they're open again,
   with how to reserve. ([#155](https://github.com/kcham01/LootRuler/pull/155))

@@ -103,6 +103,24 @@ function U.chatLines(text, max)
     atoms[#atoms + 1] = { text:sub(a, b), sp = #atoms == 0 or before:match("%s") ~= nil or a == 1 }
     i = b + 1
   end
+  -- a word longer than a whole line (no space to break at) is cut, not in the middle of a letter or a colour code
+  local cutAtoms = {}
+  for _, at in ipairs(atoms) do
+    local w = at[1]
+    if #w <= max or w:find("^|c%x%x%x%x%x%x%x%x|H") then cutAtoms[#cutAtoms + 1] = at else
+      local first = true
+      while #w > max do
+        local cut = max
+        while cut > 1 and (w:byte(cut + 1) or 0) >= 0x80 and (w:byte(cut + 1) or 0) < 0xC0 do cut = cut - 1 end
+        local bar = w:sub(1, cut):find("|[^|]*$")
+        if bar and cut - bar < 10 and bar > 1 then cut = bar - 1 end
+        cutAtoms[#cutAtoms + 1] = { w:sub(1, cut), sp = first and at.sp or false }
+        w, first = w:sub(cut + 1), false
+      end
+      if w ~= "" then cutAtoms[#cutAtoms + 1] = { w, sp = false } end
+    end
+  end
+  atoms = cutAtoms
   local lines, line = {}, ""
   for _, at in ipairs(atoms) do
     local piece = (line ~= "" and at.sp) and (" " .. at[1]) or at[1]
@@ -234,6 +252,11 @@ end
 function U.classText(text, token) local r, g, b = U.classColor(token) return U.color(text, r, g, b) end
 
 function U.now() return GetServerTime and GetServerTime() or time() end
+--- a time as the game shows it ("20:15", "Oct 28"), or "" when it isn't one it can show (a broken copy's field)
+function U.clock(t, format)
+  if type(t) ~= "number" or t ~= t or t <= 0 or t >= 2 ^ 31 then return "" end
+  return date(format or "%H:%M", t) or ""
+end
 
 ---------------------------------------------------------------------- JSON
 -- Enough JSON for Gargul imports and softres.it exports: objects, arrays, strings, numbers, booleans, null.

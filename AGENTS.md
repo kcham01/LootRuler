@@ -24,7 +24,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
 | `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
-| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `gen_loot.py`, `art.mjs` |
+| `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `fuzz.lua` (random and broken input into every rule and parser, checking what they promise), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
 | `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (what LootRuler protects against), `screens/` (the owner's in-game screenshots, used in the README; retake or swap back to a `results/shots` picture when that screen changes) |
 
@@ -116,6 +116,7 @@ lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromi
 lua5.1 tools/coverage.lua                                   # functions no test reaches: build/coverage.txt
 lua5.1 tools/bench.lua                                      # a 40-player raid, measured: build/bench.txt (about a minute)
 lua5.1 tools/stress.lua                                     # past an ordinary night: build/stress.txt (about a minute)
+lua5.1 tools/fuzz.lua [rounds]                              # random and broken input everywhere: build/fuzz.txt (a few minutes at 300)
 ```
 
 `tools/bench.lua` plays a raid night for 40 players (30 with LootRuler) in the stand-in and writes, moment by moment, the
@@ -541,6 +542,14 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   master's bags: the winner's trade opens and gets the item, someone else's gets nothing, and a pug's every `!lr` command
   changes no setting. `tools/stress.lua` checks the same under its broken messages, and sends every `!lr` command with
   nonsense ("1b"). **Test everything:** a new feature, setting or command gets into both.
+- **The fuzz test** (#158, `tools/fuzz.lua`): thousands of random changes to sessions (checking limits, doubles, hard reserves, and that
+  `S.diff`/`S.patch` and the whole copy rebuild it exactly), broken sessions that `S.valid` lets through used every way and drawn on a
+  raider's every tab, odd item numbers, rolls, GDKP splits, every parser, random `!lr` lines and guild book merges. What it found and
+  fixed: chat lines over 255 with a long word (`U.chatLines` cuts it), blank names in setters, item numbers past the game's
+  (`LR.MAX_ITEM_ID`), a hard reserve without its text fields (`S.valid` fills them), lock and log times the game can't show
+  (`S.okTime`, `U.clock`), and the guild book: an alt linked to nobody or a priority list over 100 made the officer's own book
+  fail its check, and a book that failed was thrown away at login; now `B.repair` keeps every good entry. Run it after anything
+  that changes the rules or reads text, with `tools/stress.lua`.
 - **A reserver away while a roll waits for them** (#152, the owner's call: the players decide, not the addon; `Rolls.away(roll, waiting)`,
   `Rolls.tellAway`, `roll.toldAway`): the roll still waits for every reserver until time runs out. The loot master's window lists
   anyone away first ("Bob (offline)", "(left the group)") with a gold line to wait or Close now, and their chat is told once each time

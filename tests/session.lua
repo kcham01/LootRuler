@@ -373,6 +373,41 @@ do
   check("and so are too many", S.patch(old, { drops = { s = huge } }) == nil)
 end
 
+-- found by tools/fuzz.lua
+do
+  -- a raid chat line never runs past 255 characters, even with a word longer than that
+  for _, text in ipairs({ ("x"):rep(600), "You haven't reserved \"" .. ("y"):rep(253) .. "\".", ("é"):rep(300), "ab |cffff0000" .. ("z"):rep(260) .. "|r cd" }) do
+    local out, longest, whole = U.chatLines(text, 255), 0, true
+    for _, l in ipairs(out) do
+      longest = math.max(longest, #l)
+      local b = l:byte(1)
+      if b and b >= 0x80 and b < 0xC0 then whole = false end         -- (a letter cut in two)
+    end
+    check("a long word is cut into lines of 255 at most, never in the middle of a letter (" .. #text .. ")", longest <= 255 and whole and #out > 1, longest)
+  end
+  check("ordinary lines still break between words", #U.chatLines(("word "):rep(120), 255) == 3)
+  -- item numbers the game can't have
+  local s = S.new("Lead-Dreamscythe", "Karazhan", 3, true, 100, nil, true)
+  for _, id in ipairs({ 1e308, 2 ^ 53, 2147483648, 0 / 0, math.huge, -1, 2.5 }) do
+    check("item " .. tostring(id) .. " can't be reserved, even with any item allowed", not LR.allowedItem(s, id) and not S.add(s, "Ann-Dreamscythe", "MAGE", id, false, 101))
+  end
+  check("a real item can", S.add(s, "Ann-Dreamscythe", "MAGE", 28528, false, 102))
+  -- a copy whose hard reserve has no "for" or note: they're text everywhere it's shown
+  local c = U.copy(s)
+  c.hr[28530] = {}
+  c.hr[28529] = { f = 5, n = {} }
+  check("a hard reserve without who it's for or a note is kept, with both as text", S.valid(c) and c.hr[28530].f == "" and c.hr[28530].n == ""
+    and c.hr[28529].f == "" and c.hr[28529].n == "")
+  -- a lock time the game can't show is dropped
+  local d = U.copy(s)
+  d.al = 1e308
+  check("a lock time far out of range is dropped", S.valid(d) and d.al == nil)
+  check("and can't be set", not S.setAutoLock(s, 0 / 0, 103) and not S.setAutoLock(s, 1e308, 103) and S.setAutoLock(s, 2000000000, 103))
+  -- names that aren't names
+  check("extra reserves, +1s: a blank name is refused", not S.setExtra(s, "", 2, 104) and not S.setPlusOnes(s, "", 2, 104)
+    and not S.adjustPlusOne(s, "", 1, 104) and S.valid(U.copy(s)))
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)
