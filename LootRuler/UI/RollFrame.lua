@@ -82,7 +82,9 @@ function UI.rollStatus(copy)
   if copy.state == "cancelled" then return "Called off." end
   local highest = top and ((tied and "Tied at " or "Highest: ") .. (tied and (top.n .. " (" .. R.names(tied, 3) .. ")") or (who(top) .. " " .. top.n .. " (" .. R.label(copy, top) .. ")"))) or nil
   if mine then
-    local line = ("You rolled %d (%s)."):format(mine.n, R.label(copy, mine))
+    local left = copy.state == "open" and R.rollsLeft(copy, me()) or 0
+    local line = (R.rollsFor(copy, me()) > 1 and "Your best: %d (%s)." or "You rolled %d (%s)."):format(mine.n, R.label(copy, mine))
+    if left > 0 then line = line .. (" |cffffd100%s left (one for each reserve).|r"):format(U.plural(left, "roll")) end
     if top and top == mine and not tied then return line .. " |cff1eff00That's the highest.|r" end
     return line .. (highest and (" " .. highest .. ".") or "")
   end
@@ -90,7 +92,9 @@ function UI.rollStatus(copy)
   if copy.mode == "SR" then
     if R.inList(copy.who, me()) then
       local others = U.filter(copy.who, function(w) return not U.samePlayer(R.nameOf(w), me()) end)
-      return "|cffffd100You reserved this.|r " .. (#others > 0 and ("Also reserved by " .. R.names(others, 3) .. ".") or "Nobody else did.")
+      local n = R.rollsFor(copy, me())
+      return "|cffffd100You reserved this" .. (n > 1 and (" " .. n .. " times: you roll " .. n .. " times, your best counts") or "") .. ".|r "
+        .. (#others > 0 and ("Also reserved by " .. R.names(others, 3) .. ".") or "Nobody else did.")
     end
     return "Reserved by " .. R.names(copy.who, 4) .. ": only they roll."
   end
@@ -119,7 +123,7 @@ local function buttonsFor(copy)
   local opts = R.options(copy, me())
   local can = {}
   for _, k in ipairs(opts) do can[k] = true end
-  local rolledAlready = copy.rolled[R.key(me())] ~= nil or copy.passedByMe or copy.state ~= "open"
+  local rolledAlready = R.rollsLeft(copy, me()) == 0 or copy.passedByMe or copy.state ~= "open"
   local dice = (can.SR and "SR") or (can.MS and "MS") or (copy.mode == "TIE" and copy.tie ~= "OS" and can[copy.tie] and copy.tie) or false
   local coin = can.OS and "OS" or false
   local boost = can.BR and "BR" or false
@@ -542,7 +546,8 @@ local function fill(f, copy)
   else
     f.dice.tip = "/roll" .. (srMine and ": only players who reserved it roll." or " (1-100).")
   end
-  if copy.rolled[R.key(me())] then f.dice.tip = "You've rolled." f.coin.tip = "You've rolled." f.boost.tip = "You've rolled." end
+  if R.rollsLeft(copy, me()) == 0 and copy.rolled[R.key(me())] then f.dice.tip = "You've rolled." f.coin.tip = "You've rolled." f.boost.tip = "You've rolled."
+  elseif copy.rolled[R.key(me())] then f.dice.tip = ("Roll again: %s left, and your best counts."):format(U.plural(R.rollsLeft(copy, me()), "roll")) end
   f.status:SetText(UI.rollStatus(copy))
   underneath(f, copy)
 end
@@ -598,7 +603,7 @@ UI.ROLL_SIZES = { { 0.8, "Small" }, { 1, "Normal" }, { 1.15, "Big" }, { 1.3, "Bi
 function UI.afterMyRoll(copy)
   if not LR.db.settings.rollCloseAfter then return end
   C_Timer.After(1.5, function()
-    if copy.rolled[R.key(me())] or copy.passedByMe or copy.myRoll then
+    if (copy.rolled[R.key(me())] and R.rollsLeft(copy, me()) == 0) or copy.passedByMe or (copy.myRoll and R.rollsFor(copy, me()) == 1) then
       copy.closedByMe = true
       UI.rollWindows()
     end
@@ -784,7 +789,7 @@ function UI.testRoll(opts)
   local who, classes = {}, nil
   if opts.mode == "SR" then
     who, classes = UI.pretendPlayers(opts.reservers or 3)
-    if opts.mine then table.insert(who, 1, { U.me(), 1 }) end
+    if opts.mine then table.insert(who, 1, { U.me(), type(opts.mine) == "number" and opts.mine or 1 }) end   -- (mine: how many reserves)
   end
   local mode = opts.mode or "OPEN"
   local copy = R.new(k, id, { mode = mode, who = who, xk = mode == "OPEN" and R.checkKinds(LR.db.settings.rollKinds) or nil })
