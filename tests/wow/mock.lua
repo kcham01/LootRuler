@@ -166,6 +166,7 @@ local SCRIPTS = {
   OnMouseWheel = 1, OnDragStart = 1, OnDragStop = 1, OnTextChanged = 1, OnEnterPressed = 1, OnEscapePressed = 1,
   OnEditFocusGained = 1, OnEditFocusLost = 1, OnSizeChanged = 1, OnValueChanged = 1, OnKeyDown = 1, OnVerticalScroll = 1,
   OnScrollRangeChanged = 1, PostClick = 1, PreClick = 1, OnDoubleClick = 1, OnTabPressed = 1, OnChar = 1,
+  OnTooltipSetItem = 1, OnTooltipCleared = 1,
 }
 function Frame:SetScript(name, fn)
   if not SCRIPTS[name] then fail("unknown script " .. tostring(name)) end
@@ -182,6 +183,7 @@ function Frame:HasScript(name)
   if name == "OnTextChanged" or name == "OnEnterPressed" or name == "OnEscapePressed" or name == "OnEditFocusGained" or name == "OnEditFocusLost" then return self._type == "EditBox" end
   if name == "OnValueChanged" then return self._type == "Slider" end
   if name == "OnVerticalScroll" or name == "OnScrollRangeChanged" then return self._type == "ScrollFrame" end
+  if name == "OnTooltipSetItem" or name == "OnTooltipCleared" then return self._type == "GameTooltip" end
   return SCRIPTS[name] ~= nil
 end
 -- events the TBC client doesn't have (later expansions' ones): registering one is an error in the game, so here too
@@ -350,17 +352,33 @@ local function linkLines(l)
   if M.describeLink then return M.describeLink(l) or { { "link " .. tostring(l) } } end
   return { { "link " .. tostring(l) } }
 end
-function GameTooltipM:SetOwner(o) self._owner = o self._lines = {} self._minW = 0 end
-function GameTooltipM:SetHyperlink(l)
+local function cleared(self)
+  self._item = nil
+  if self._scripts.OnTooltipCleared then self._scripts.OnTooltipCleared(self) end
+end
+function GameTooltipM:SetOwner(o) self._owner = o self._lines = {} self._minW = 0 cleared(self) end
+-- an item on the tooltip: as in the TBC client, OnTooltipSetItem runs (the bags, the loot window, links). Its tooltip data
+-- post-calls (TooltipDataProcessor) don't run for these: M.tooltipPostCalls = true makes them run too, as later clients do.
+local function setItem(self, l)
+  cleared(self)
+  if not l then self._lines = {} return end
   self._lines = linkLines(l)
-  -- the game runs tooltip post-calls (TooltipDataProcessor) with the item's data
+  self._item = l
+  if self._scripts.OnTooltipSetItem then self._scripts.OnTooltipSetItem(self) end
   local id = tonumber(tostring(l):match("item:(%d+)"))
-  if id then for _, fn in ipairs(M.tooltipCalls or {}) do fn(self, { type = 0, id = id }) end end
+  if id and M.tooltipPostCalls then for _, fn in ipairs(M.tooltipCalls or {}) do fn(self, { type = 0, id = id }) end end
+end
+function GameTooltipM:SetHyperlink(l) setItem(self, l) end
+function GameTooltipM:SetBagItem(bag, slot) setItem(self, M.bagLink and M.bagLink(bag, slot)) end
+function GameTooltipM:SetLootItem(slot) setItem(self, M.lootLink and M.lootLink(slot)) end
+function GameTooltipM:GetItem()
+  if not self._item then return nil end
+  return tostring(self._item):match("%[(.-)%]") or "", self._item
 end
 function GameTooltipM:SetText(t, r, g, b) self._lines = { { t, r or 1, g or 0.82, b or 0 } } end
 function GameTooltipM:AddLine(t, r, g, b) table.insert(self._lines, { t, r or 1, g or 0.82, b or 0 }) end
 function GameTooltipM:AddDoubleLine(a, b) table.insert(self._lines, { a .. "    " .. b, 1, 1, 1 }) end
-function GameTooltipM:ClearLines() self._lines = {} end
+function GameTooltipM:ClearLines() self._lines = {} cleared(self) end
 function GameTooltipM:SetSpellByID(id) self._lines = { { "spell " .. id, 1, 1, 1 } } end
 -- a named tooltip made from GameTooltipTemplate has its lines as <name>TextLeft1, 2, ... like the game's
 function GameTooltipM:NumLines()
@@ -1051,6 +1069,11 @@ function M.env(player)
     M.fire("START_LOOT_ROLL", rollID, 60)
   end
   M.tooltipCalls = {}
+  M.bagLink = function(bag, slot)
+    local info = G.C_Container and G.C_Container.GetContainerItemInfo and G.C_Container.GetContainerItemInfo(bag, slot)
+    return info and info.hyperlink
+  end
+  M.lootLink = function(slot) return G.GetLootSlotLink(slot) end
   G.TooltipDataProcessor = { AllTypes = "ALL", AddTooltipPostCall = function(kind, fn) table.insert(M.tooltipCalls, fn) end }
   G.GetTradeTargetItemLink = function() return nil end
   G.GetPlayerTradeMoney = function() return 0 end

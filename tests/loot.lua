@@ -749,6 +749,31 @@ check("and who it went to", tooltipHas(dan, "LootRuler: given to Ann"))
 dan.LR.db.settings.tooltipInfo = false
 check("which can be turned off", not tooltipHas(dan, "LootRuler:"))
 dan.LR.db.settings.tooltipInfo = true
+;(function()                                 -- (its own function: this file is at Lua's limit of locals)
+  local tip = dan.G.GameTooltip
+  local function lines(text) local n = 0 for _, l in ipairs(tip._lines) do if tostring(l[1]):find(text, 1, true) then n = n + 1 end end return n end
+  -- the TBC client's own tooltips: an item in the bags, and on the boss's loot window
+  dan.bags[1] = { id = WATCH, link = srv:link(WATCH) }
+  tip:SetOwner(dan.G.UIParent)
+  tip:SetBagItem(0, 1)
+  check("an item in the bags says who reserved it", lines("LootRuler: soft reserved by") == 1)
+  srv:openLoot(dan, { { WATCH, 4 } })
+  tip:SetOwner(dan.G.UIParent)
+  tip:SetLootItem(1)
+  check("so does one on the boss's loot window", lines("LootRuler: soft reserved by") == 1)
+  srv:closeLoot(dan)
+  dan.bags[1] = nil
+  -- a client that runs both ways of building tooltips gets the lines once
+  dan.M.tooltipPostCalls = true
+  tooltipHas(dan, "x")
+  check("both ways at once: the lines go on once", lines("LootRuler: soft reserved by") == 1 and lines("LootRuler: given to Ann") == 1)
+  dan.M.tooltipPostCalls = nil
+  -- with Gargul loaded, it shows the reserves in tooltips itself: LootRuler doesn't add a second line
+  dan.G.Gargul = {}
+  tooltipHas(dan, "x")
+  check("with Gargul loaded, the reserves are left to it", lines("LootRuler: soft reserved by") == 0 and lines("LootRuler: given to Ann") == 1)
+  dan.G.Gargul = nil
+end)()
 
 section("shortcut keys")
 local function holding(p, ctrl, alt, shift)

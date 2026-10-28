@@ -35,6 +35,9 @@ From the owner's in-game screenshots.
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
   about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
+- Fixed: who reserved an item didn't show in its tooltip in your bags or on a boss's loot window, only in LootRuler's own
+  windows. With Gargul loaded, LootRuler leaves the reserves in tooltips to Gargul, so they aren't shown twice.
+  ([#124](https://github.com/kcham01/LootRuler/pull/124))
 - The Loot tab only lists the raid's loot: gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns,
   designs), and a short list of other raid loot: Mark of the Illidari, Heart of Darkness, Black Temple's epic gems, Nether
   Vortex, Vashj's Vial Remnant, Black Sack of Gems, the Amani Charms, Amani Hex Stick, Mojo, Soul Essence and Karazhan's
