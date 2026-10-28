@@ -271,6 +271,9 @@ do
   check("with anything in front of it", G.rollFromChat("{rt1} You have 15 seconds to roll on " .. link) == 28528)
   check("other raid chat isn't a roll", G.rollFromChat("Roll for " .. link) == nil and G.rollFromChat("You have 20 seconds to roll on it") == nil
     and G.rollFromChat(nil) == nil)
+  check("LootRuler's own countdown isn't Gargul's roll, though it reads like one",
+    G.rollFromChat("[LootRuler] You have 5 seconds to roll on " .. link .. "...") == nil
+    and G.rollEndFromChat("[LootRuler] " .. link .. " was awarded to Ann. Congrats!") == nil)
   local stop = G.rollEndFromChat("Stop your rolls!")
   local awarded, which = G.rollEndFromChat(link .. " was awarded to Ann. Congrats!")
   check("\"Stop your rolls!\" ends it", stop == true)

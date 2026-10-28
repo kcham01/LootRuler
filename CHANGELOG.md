@@ -5,6 +5,10 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- A countdown in raid chat for the last five seconds of a roll: "You have 5 seconds to roll on [item]...", "4...", "3...",
+  "2...", "1...". Then nothing until the loot master confirms the winner, which is the next line (it no longer says
+  "Rolls closed" first). Settings, "Rolling out loot": "Count down the last 5 seconds" (on).
+  ([#146](https://github.com/kcham01/LootRuler/pull/146))
 ### Stress test (28 October 2026)
 
 Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`).

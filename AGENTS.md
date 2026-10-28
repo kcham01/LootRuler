@@ -513,8 +513,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   every `Net.GUILD_EVERY` (30) seconds, and none while `Guild.onlineOutside()` is empty (someone who logs in asks with `Q`).
   A batch's `Z` carries item links (`l`) in its first send and every 10th (`LINKS_EVERY`); raiders only read them when they
   first see the batch, and make links from item numbers otherwise.
+- **The countdown** (#146, the owner's wording; setting `rollCountdown`, on): the tick says "You have 5 seconds to roll on [item]...",
+  then "4..." to "1..." (`roll.counted`, reset by `Rolls.extend`); auctions keep their final call and "5 seconds left to bid". With
+  `confirmWinner` nothing is said at close: the confirm line is the next one. `Gargul.fromLootRuler(text)`: lines starting
+  `LR.TAG` are never read as Gargul's (the countdown reads like Gargul's start line).
 - **Confirming the winner** (#142, the owner's idea; setting `confirmWinner`, on; `Rolls.confirm(player)`): a roll with one winner closes
-  with "Rolls closed for [item]." and `X` carrying `cw` (raiders' copies: `copy.confirm = "wait"`, their window says the loot master
+  silently (since #146; it said "Rolls closed for [item]." before) and `X` carries `cw` (raiders' copies: `copy.confirm = "wait"`, their window says the loot master
   confirms it); the master window's "Confirm Ann" (in the row with rolling it again) says the winner, or "(the loot master's pick)" /
   "(the council's choice)", and sends `X` with `cf` (`copy.confirm = "confirmed"`). Ties, nobody rolling and auctions are said at
   once as before. Older versions ignore `cw` / `cf`.

@@ -215,7 +215,15 @@ local function tick(roll, mine)
       say(top and ("Final call for %s: %s by %s. %d seconds."):format(roll.link, LR.Gdkp.gold(top.n), U.short(top.p), FINAL_CALL)
         or ("Final call for %s: no bids yet, from %s. %d seconds."):format(roll.link, LR.Gdkp.gold(roll.min), FINAL_CALL), true)
     end
-    if not roll.warned and roll.secs >= 10 and left <= 5.05 and left > 0 then
+    if roll.mode ~= "BID" and LR.db.settings.rollCountdown then
+      -- the last five seconds counted down in raid chat: "You have 5 seconds to roll on [item]...", "4...", ... "1..."
+      local n = math.ceil(left - 0.05)
+      if left > 5.05 then roll.counted = nil
+      elseif roll.secs >= 10 and n >= 1 and n <= 5 and n < (roll.counted or 6) then
+        roll.counted = n
+        say(n == 5 and ("You have 5 seconds to roll on %s..."):format(roll.link) or (n .. "..."))
+      end
+    elseif not roll.warned and roll.secs >= 10 and left <= 5.05 and left > 0 then
       roll.warned = true
       say((roll.mode == "BID" and "5 seconds left to bid on %s." or "5 seconds left to roll for %s."):format(roll.link))
     end
@@ -328,7 +336,7 @@ function Rolls.extend(seconds)
   if not roll or roll.state ~= "open" then return false end
   roll.ends = math.max(roll.ends, now()) + (seconds or 10)
   roll.secs = roll.secs + (seconds or 10)
-  roll.warned = false
+  roll.warned, roll.counted = false, nil
   roll.allIn = nil
   sendGroup(wire(roll))
   Rolls.follow(wire(roll), U.me())
@@ -363,7 +371,8 @@ close = function(roll)
   local wait = top and not tied and LR.db.settings.confirmWinner or nil
   sendGroup({ t = "X", k = roll.k, e = "closed", p = top and not tied and top.p or nil, n = top and top.n, kd = top and top.kind, cw = wait })
   Rolls.ended(roll.k, "closed", top and not tied and top.p or nil, top and top.n, top and top.kind, wait and "wait" or nil)
-  say(wait and ("Rolls closed for %s."):format(roll.link) or resultText(roll, roll.link))
+  -- (waiting for the loot master: nothing is said until they confirm it, so the winner is the next line after the countdown)
+  if not wait then say(resultText(roll, roll.link)) end
   if tied then roll.tied = tied end
   ticking = ticking + 1
   changed()
