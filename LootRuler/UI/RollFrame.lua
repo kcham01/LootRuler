@@ -73,6 +73,16 @@ function UI.rollStatus(copy)
   end
   if copy.state == "closed" then
     if tied then return ("Tied at %d: %s. The loot master decides."):format(top.n, R.names(tied)) end
+    -- the loot master says who won when they confirm it
+    if copy.confirm == "wait" and top then
+      return ("Rolls closed. Highest: %s %d (%s). The loot master confirms the winner."):format(who(top), top.n, R.label(copy, top))
+    end
+    if copy.confirm == "confirmed" and copy.winner then
+      local e = copy.rolled[R.key(copy.winner)]
+      local n, label = copy.winN or (e and e.n), e and R.label(copy, e) or (R.LABEL[copy.winKind] or copy.winKind or "")
+      if U.samePlayer(copy.winner, me()) then return ("|cff1eff00You win with %s (%s).|r"):format(tostring(n), label) end
+      return ("%s wins with %s (%s)."):format(U.short(copy.winner), tostring(n), label)
+    end
     if top then
       if U.samePlayer(top.p, me()) then return ("|cff1eff00You win with %d (%s).|r"):format(top.n, R.label(copy, top)) end
       return ("%s wins with %d (%s)."):format(U.short(top.p), top.n, R.label(copy, top))

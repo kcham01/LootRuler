@@ -151,6 +151,7 @@ function UI.settingsView(f)
     end
     p:chips(keys, { gap = 2 })
     p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
+    toggle(p, "confirmWinner", "Say the winner when I confirm it", "When rolls close, the raid hears \"Rolls closed\" only; who won is said when you click Confirm in the loot master window, so you can check the rolls first. Off: the winner is said as soon as rolls close.")
     toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
     toggle(p, "announceLoot", "Post the loot in raid chat", "When you open a corpse with master loot, each epic item, and anything reserved, is posted in raid chat once, with who reserved it (or who it's hard reserved for).")
     toggle(p, "inspectGear", "See what raiders without LootRuler wear", "When they roll, LootRuler looks at what they wear in that slot with the game's inspect (when they're close, and not in combat), and shows it beside their roll.")
