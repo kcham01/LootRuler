@@ -459,7 +459,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   takes the next drop of that item from a loot line (`Drops.lootMessage`, leader only, within 10 minutes). "I gave" (`handed`,
   `G.rollEndFromChat`'s 4th value) finds the winner's award still to hand over (any time; recorded if there's none, nothing if
   it's hers already) and sets the drop's holder to them: a trade only its two sides see. "awarded to" again within
-  `Drops.GARGUL_REPEAT` seconds is the same award.
+  `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
+  "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
 - **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
   to start with (now: only while leading reserves, on).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):

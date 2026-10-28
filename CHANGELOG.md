@@ -38,6 +38,9 @@ From the owner's in-game screenshots.
   spec. Both ways of handing it over are followed: given straight from the loot window (the game's loot line says who got
   it), or looted by the loot master and traded over later, which only the two of them see, so Gargul's "I gave [item] to
   Name" marks it handed over. It can be switched off (Settings, "Giving out and trading"). ([#123](https://github.com/kcham01/LootRuler/pull/123))
+- When the one holding a won item doesn't have LootRuler, the Loot tab just says who won it ("Won by Ann"), not that it's
+  still to trade: a trade is only seen by the two in it, so LootRuler can't tell when it happens.
+  ([#123](https://github.com/kcham01/LootRuler/pull/123))
 - Fixed: Gargul's "Stop your rolls!" didn't close LootRuler's roll windows. Gargul puts its name in front of its lines
   (" Gargul : Stop your rolls!"), which LootRuler now reads. ([#123](https://github.com/kcham01/LootRuler/pull/123))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler

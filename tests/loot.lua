@@ -1839,6 +1839,9 @@ do
   srv6:tick(1)
   check("when Gus loots it, the award is that drop: his to trade to Bob", wonBy(29760).d ~= nil and #ks.drops == 2
     and rl.LR.Session.dropState(ks, rl.LR.Session.drop(ks, wonBy(29760).d)) == "toTrade")
+  local line = rl.M.plain(rl.LR.UI.dropLine(ks, rl.LR.Session.drop(ks, wonBy(29760).d)))
+  check("the Loot tab just says who won it: Gus has no LootRuler, so his trade can't be seen", line:find("^Won by Bob") ~= nil
+    and not line:find("to trade", 1, true), line)
   -- the trade, later in the night: only Gus and Bob see it, but Gargul says so
   srv6:tick(900)
   says(gus, "I gave " .. srv6:link(29760) .. " to " .. full(bob))
