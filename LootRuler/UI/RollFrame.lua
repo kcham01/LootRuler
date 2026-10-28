@@ -706,7 +706,7 @@ function UI.rollEnded(copy) UI.rollWindows() end
 function UI.rollFrames() return frames end
 
 LR.onChange(function(what)
-  if what == "rolls" and LR.db then UI.rollWindows() end
+  if what == "rolls" and LR.db then UI.atMostEvery("rolls", UI.REDRAW_GAP, UI.rollWindows) end
 end)
 
 -- made-up players for pretend rolls (the Test tab), with their classes

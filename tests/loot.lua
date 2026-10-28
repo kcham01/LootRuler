@@ -1172,6 +1172,7 @@ check("her button rolls 1-98, and it counts as Transmog", roll.rolled["ann-dream
   and roll.rolled["ann-dreamscythe"].hi == 98)
 check("so does a /roll 98 typed by someone without the addon", roll.rolled["pug-dreamscythe"] and roll.rolled["pug-dreamscythe"].kind == "X1")
 check("and she can't roll again", not frameFor(ann, TALISMAN).extras[1]:IsEnabled())
+srv:tick(0.3)            -- (roll windows redraw at most every UI.REDRAW_GAP seconds while rolls come in)
 check("raiders see it by its name", status(ann, TALISMAN):find("Pug 90 (Transmog)", 1, true) ~= nil, status(ann, TALISMAN))
 srv:tick(22)
 check("the result says Transmog", chat("Pug wins with 90 (Transmog)") ~= nil)
