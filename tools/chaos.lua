@@ -391,6 +391,13 @@ for r = 1, RAIDS do
     chatSeen = #srv.chat
   end
 
+  -- (a copy being handed on to the very player who runs it is never right)
+  local function handedToSelf(when)
+    for _, p in ipairs(withAddon) do
+      local c = online(p) and p.LR.session(sid)
+      if c and c.next and p.LR.U.samePlayer(c.next, c.leader) then problem("%s's copy is being handed on to its own leader, %s (after %s)", p.name, c.leader, when) end
+    end
+  end
   local function settle()
     totals.settles = totals.settles + 1
     -- everyone back, the roll on now finished, and time for messages to arrive
@@ -408,14 +415,25 @@ for r = 1, RAIDS do
     -- anyone asked on their Session tab whether someone else runs the reserves now says yes, as players would
     local decided = false
     for _, p in ipairs(withAddon) do
-      -- (a player picks once or twice a night, not every time someone says so: following both sides of a fork back
+      -- (a player picks a few times a night, not every time someone says so: following both sides of a fork back
       -- and forth isn't something people do)
       p.followed = p.followed or 0
-      if online(p) and p.LR.claim(sid) and p.followed < 2 then
+      if online(p) and p.LR.claim(sid) and p.followed < 5 then
         p.LR.followClaim(sid) p.followed = p.followed + 1 decided = true totals.claims = (totals.claims or 0) + 1
       end
     end
     if decided then srv:tick(40, 0.5) end
+    handedToSelf("the settle's follows")
+    -- (a change at the very end, like reserves locking by themselves, needs its moment to go out too: wait until the
+    -- copies in the group stop changing)
+    for _ = 1, 6 do
+      local before = {}
+      for _, p in ipairs(withAddon) do local c = online(p) and p.LR.session(sid) before[p] = c and c.rev end
+      srv:tick(10, 0.5)
+      local still = true
+      for _, p in ipairs(withAddon) do local c = online(p) and p.LR.session(sid) if before[p] ~= (c and c.rev) then still = false end end
+      if still then break end
+    end
     errorsCheck()
     local h = {}
     for _, p in ipairs(holder()) do if inG(p) then h[#h + 1] = p end end
@@ -468,6 +486,7 @@ for r = 1, RAIDS do
     if not ok then problem("the chaos script itself failed on %s: %s", a[2], tostring(err)) end
     srv:tick(pick({ 0.1, 0.3, 0.5, 1, 2, 4 }), 0.1)
     errorsCheck()
+    handedToSelf(a[2])
     totals.steps = totals.steps + 1
     if i % 30 == 0 then settle() end
   end

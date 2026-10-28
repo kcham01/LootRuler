@@ -1179,6 +1179,53 @@ do
   c5.LR.UI.win:Hide()
 end
 
+section("an old leader back while the one who took over is away (found by tools/chaos.lua)")
+for _, mlHasIt in ipairs({ false, true }) do
+  local srv6 = Server.new(".")
+  srv6.where = Server.PLACES.Karazhan
+  local l6 = srv6:client({ name = "Lia", class = "PALADIN" })
+  local a6 = srv6:client({ name = "Amy", class = "PRIEST" })
+  local b6 = srv6:client({ name = "Ben", class = "MAGE" })
+  local p6 = srv6:player({ name = "Pip", class = "WARRIOR" })
+  srv6:tick(6)
+  srv6:setGroup({ l6, a6, b6, p6 }, l6, true)
+  srv6:tick(2)
+  local s6 = l6.LR.startSession("Karazhan", 2, true, false)
+  srv6:tick(3)
+  -- Lia goes offline; Amy, the master looter, takes over; then Amy is away too
+  local liaDB = srv6:logout(l6)
+  srv6:setMasterLooter(a6)
+  srv6:tick(2)
+  a6.LR.takeOver(a6.LR.session(s6.id))
+  srv6:tick(3)
+  check("Ben follows Amy", b6.LR.session(s6.id).leader == full(a6))
+  srv6:setMasterLooter(mlHasIt and b6 or p6)
+  local amyDB = srv6:logout(a6)
+  srv6:tick(2)
+  -- Lia comes back with her copy from before, and changes something
+  srv6:login(l6, liaDB)
+  srv6:tick(3)
+  l6.LR.setLocked(l6.LR.session(s6.id), true)
+  srv6:tick(30)
+  check("Ben isn't asked to follow Lia: his copy says she ran it before Amy", b6.LR.claim(s6.id) == nil and b6.LR.session(s6.id).leader == full(a6))
+  if mlHasIt then
+    check("Ben, the master looter, tells Lia, and she follows Amy", l6.LR.session(s6.id).leader == full(a6) and not l6.LR.isLeader(l6.LR.session(s6.id)))
+  else
+    check("Ben tells Lia; as he doesn't run the group, she's asked whether to let Amy run them", l6.LR.claim(s6.id) ~= nil
+      and l6.LR.claim(s6.id).leader == full(a6) and l6.LR.isLeader(l6.LR.session(s6.id)))
+    l6.LR.followClaim(s6.id)
+    srv6:tick(3)
+    check("she lets Amy", l6.LR.session(s6.id).leader == full(a6))
+  end
+  srv6:login(a6, amyDB)
+  srv6:tick(30)
+  local leaders = 0
+  for _, p in ipairs({ l6, a6, b6 }) do if p.LR.isLeader(p.LR.session(s6.id)) then leaders = leaders + 1 end end
+  check("Amy comes back: one leader, the same copy everywhere", leaders == 1 and a6.LR.isLeader(a6.LR.session(s6.id))
+    and l6.LR.session(s6.id).rev == a6.LR.session(s6.id).rev and b6.LR.session(s6.id).rev == a6.LR.session(s6.id).rev)
+  for _, p in ipairs({ l6, a6, b6 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

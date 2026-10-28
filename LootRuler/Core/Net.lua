@@ -345,7 +345,21 @@ local NEWEST_OUT_MAX = 30                      -- (seconds: one that never says 
 local function sendNewest(name, build, channel, target)
   if not channel or LR.Practice.on then return end
   local key = name .. "|" .. channel .. "|" .. (target or "")
-  if newestOut[key] and GetTime() - newestOut[key] < NEWEST_OUT_MAX then newestNext[key] = build return end
+  if newestOut[key] and GetTime() - newestOut[key] < NEWEST_OUT_MAX then
+    -- (waits for the one going out; if that never says it's done, it goes anyway once that one is too old to wait for)
+    if not newestNext[key] then
+      local started = newestOut[key]
+      C_Timer.After(NEWEST_OUT_MAX - (GetTime() - started) + 0.1, function()
+        if newestOut[key] == started and newestNext[key] then
+          local nxt = newestNext[key]
+          newestOut[key], newestNext[key] = nil, nil
+          sendNewest(name, nxt, channel, target)
+        end
+      end)
+    end
+    newestNext[key] = build
+    return
+  end
   newestOut[key], newestNext[key] = GetTime(), nil
   Net:SendCommMessage(LR.PREFIX, encode(build()), channel, target, "NORMAL", function(_, sent, total)
     if sent < total then return end
@@ -439,6 +453,7 @@ local function toGuild(s)
     if LR.isLeader(s) and db.sessions[s.id] == s and s.guild and IsInGuild() then sendGuild(s) end
   end)
 end
+local groupHas = {}
 function LR.publish(s, now, slow)
   if not LR.isLeader(s) or s.pv then return end         -- (a private session never leaves this computer)
   if slow and not now and publishWaiting[s.id] then return end           -- (one is on its way: it carries this too)
@@ -449,11 +464,19 @@ function LR.publish(s, now, slow)
     if publishSeq[s.id] ~= mine then return end
     publishWaiting[s.id] = nil
     for _, ch in ipairs(publishTo(s)) do
-      if ch == "GUILD" then toGuild(s) else sendSession(s, ch) end
+      if ch == "GUILD" then toGuild(s) else sendSession(s, ch) if ch ~= "GUILD" then groupHas[s.id] = s.rev end end
     end
   end
   if now then go() else C_Timer.After(slow and SLOW_PUBLISH or 0.5, go) end
 end
+-- a change made with no group to send it to (say, reserves locking by themselves while logging in): it goes as soon as
+-- there is one. groupHas: session id -> the version last sent to the group.
+LR.onChange(function(what)
+  if what ~= "roster" or not db or not LR.groupChannel() then return end
+  for _, s in pairs(db.sessions) do
+    if LR.isLeader(s) and not s.pv and not s.ended and not s.archived and (groupHas[s.id] or 0) ~= s.rev then LR.publish(s, nil, true) end
+  end
+end)
 
 --- asks for open sessions
 function LR.query()
@@ -877,7 +900,16 @@ function handlers.T(msg, channel, sender)
     local known = db.sessions[t.id]
     local relay = known and not U.samePlayer(known.leader, t.leader)
       and ((U.samePlayer(sender, known.leader) and S.ledBy(t, sender)) or LR.groupBoss(sender))
-    if not relay then return end
+    if not relay then
+      -- ours, and someone in the group says it went on from us while we were away (LR.tellStale): ask the raid leader and
+      -- master looter, and the player decides (Session tab), as LootRuler can't check it
+      if known and LR.isLeader(known) and not known.pv and not U.samePlayer(t.leader, U.me()) and S.ledBy(t, U.me()) and LR.inGroup(sender)
+        and ((type(t.nl) == "number" and t.nl >= (known.updated or 0)) or t.rev >= known.rev + S.EPOCH) then
+        LR.askWho(known)
+        LR.noteClaim(known, t, sender)
+      end
+      return
+    end
   end
   accept(t, channel, sender)
 end
@@ -885,6 +917,36 @@ end
 -- what changed in a session, from its leader: put in to our copy. A copy that isn't the one the changes are from (missed
 -- one, or just came) asks the leader for the whole session (Q, by whisper: answered with T), once in a while at most.
 local askedWhole = {}
+--- our copy is behind one that exists (the sender's, at version r): ask the sender for the whole copy, by whisper, at most
+--- every 10 seconds; if that has to wait, ask as soon as it may; and look again after each answer, so a copy never
+--- stays behind just because nothing else changed since. Gives up after a few tries (the leader may be gone).
+local catching = {}
+function LR.catchUp(id, sender, r)
+  local c = catching[id]
+  if c then c.r, c.from = math.max(c.r, r), sender else c = { r = r, from = sender, n = 0 } catching[id] = c end
+  local function ask()
+    askedWhole[id] = GetTime()
+    c.n = c.n + 1
+    send({ t = "Q" }, "WHISPER", c.from)
+  end
+  local function done()
+    local k = db and db.sessions[id]
+    return catching[id] ~= c or c.n >= 4 or (k and (LR.isLeader(k) or (k.rev >= c.r and U.samePlayer(k.leader, c.from))))
+  end
+  -- now, when we may
+  if not askedWhole[id] or GetTime() - askedWhole[id] > 10 then ask() end
+  if c.timer then return end
+  local function later()
+    c.timer = nil
+    if done() then if catching[id] == c then catching[id] = nil end return end
+    local wait = askedWhole[id] and (askedWhole[id] + 10 - GetTime()) or 0
+    if wait <= 0 then ask() wait = 12 end
+    c.timer = true
+    C_Timer.After(wait + 0.1, later)
+  end
+  c.timer = true
+  C_Timer.After(math.max(0.1, (askedWhole[id] or 0) + 12 - GetTime()), later)
+end
 function handlers.U(msg, channel, sender)
   if type(msg.id) ~= "string" or type(msg.f) ~= "number" or type(msg.r) ~= "number" or type(msg.c) ~= "table" then return end
   local known = db.sessions[msg.id]
@@ -893,20 +955,7 @@ function handlers.U(msg, channel, sender)
   -- only go onto the very copy they were made from: put onto a newer one, something added and taken back in between
   -- would stay in ours for good.)
   if not known or not U.samePlayer(known.leader, sender) or known.rev ~= msg.f or msg.c.leader or msg.c.id then
-    if not askedWhole[msg.id] or GetTime() - askedWhole[msg.id] > 10 then
-      askedWhole[msg.id] = GetTime()
-      send({ t = "Q" }, "WHISPER", sender)
-      -- still behind a while later (the answer was held back, or lost): ask once more, so a copy never stays behind
-      -- just because nothing else changed since
-      local id, r = msg.id, msg.r
-      C_Timer.After(12, function()
-        local k = db and db.sessions[id]
-        if k and not LR.isLeader(k) and k.rev < r and U.samePlayer(k.leader, sender) then
-          askedWhole[id] = GetTime()
-          send({ t = "Q" }, "WHISPER", sender)
-        end
-      end)
-    end
+    LR.catchUp(msg.id, sender, msg.r)
     return
   end
   local t = S.patch(known, msg.c)
@@ -923,6 +972,12 @@ function accept(t, channel, sender)
   -- someone else leads it now: what I sent the group as its leader is out of date (if it comes back to me, it goes whole)
   for k in pairs(groupSent) do if k:sub(1, #t.id + 1) == t.id .. "|" then groupSent[k] = nil end end
   local tookOurs = false
+  if known and not U.samePlayer(known.leader, t.leader) and S.ledBy(known, t.leader) and t.rev < known.rev then
+    -- a copy from before it went on from someone who ran it then (they were away when it changed hands): never a change
+    -- of hands, whoever they are now, as everything since would be lost. The sender hears ours.
+    LR.tellStale(known, sender)
+    return
+  end
   if known and not U.samePlayer(known.leader, t.leader) then
     -- a new leader: only if it was handed to them, or they lead or assist the group and took it over while its
     -- leader was gone (or it was ours, and we were away). Anyone else claiming it is ignored.
@@ -1004,7 +1059,11 @@ end
 --- copies naming a new leader that LootRuler couldn't confirm (session id -> { t, from, leader }): shown on the Session tab
 --- for the player to follow (or, for its leader, to let them run it). Kept in memory only.
 local claims = {}
-function LR.claim(id) return claims[id] end
+function LR.claim(id)
+  local c, k = claims[id], db and db.sessions[id]
+  if c and (not k or U.samePlayer(c.leader, k.leader)) then claims[id] = nil return nil end   -- (settled already)
+  return c
+end
 function LR.noteClaim(known, t, sender)
   local c = claims[known.id]
   local told = c and U.samePlayer(c.leader, t.leader)
@@ -1024,6 +1083,7 @@ function LR.followClaim(id)
   local known = db.sessions[id]
   claims[id] = nil
   if not c or not known or not S.valid(c.t) then return false end
+  if U.samePlayer(c.leader, known.leader) then LR.changed("session") return not LR.isLeader(known) end   -- (already so)
   known.next = c.leader                                  -- (taken as handed to them: the player said so)
   accept(c.t, "WHISPER", c.from)
   -- the copy we kept may be a change or two old by now: ask them for theirs
@@ -1037,6 +1097,16 @@ function LR.dropClaim(id) claims[id] = nil LR.changed("session") end
 --- for theirs, by whisper (it says who they passed it to), or the group's leader and master looter when they're gone.
 --- At most every 10 seconds for each session.
 local askedWho = {}
+--- someone our copy says led it before sent theirs, from before it changed hands: they hear ours (by whisper, at most every
+--- 30 seconds), so they can follow on. Ours counts for them if it's from someone they trust (handlers.T); else they decide.
+local toldStale = {}
+function LR.tellStale(known, who)
+  if known.pv or known.practice then return end
+  local key = known.id .. "|" .. U.full(who)
+  if toldStale[key] and GetTime() - toldStale[key] < 30 then return end
+  toldStale[key] = GetTime()
+  sendSession(known, "WHISPER", who)
+end
 function LR.askWho(known)
   local now = GetTime()
   if askedWho[known.id] and now - askedWho[known.id] < 10 then return end

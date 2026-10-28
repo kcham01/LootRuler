@@ -429,7 +429,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Net.everyoneTakesChanges`): the leader keeps a copy of what it last sent each group channel (`groupSent`) and sends the changes
   when everyone in the group with LootRuler has bit 8; a whole `T` goes first, to the guild, by whisper, from a new leader or one
   handing it on, and every `SESSION_FULL_EVERY` sends. A raider whose copy isn't exactly `f` (or who hasn't got it, or hears it from someone who isn't its leader) asks the sender by
-  whispered `Q` (answered with `T`), at most every 10 seconds, and once more 12 seconds later if still behind. Changes are never
+  whispered `Q` (answered with `T`), at most every 10 seconds (`LR.catchUp`: asked as soon as it may if it has to wait, and looked at
+  again after each answer, up to four tries, until the copy has caught up). Changes are never
   put onto a newer copy than `f` (#159): something added and taken back in between would stay in it for good. The patched
   copy goes through `S.valid` and the same path as `T` (`accept`).
 - **From the owner's list** (#110, #113-#118): "Open a trade with the winner" off to start with; button rows wrap (`Flow:buttons`;
@@ -568,6 +569,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   from us, comes from the group, and changed hands after our last change (or is `S.EPOCH` past ours). Following asks the new leader
   for their latest copy (the kept one may be a change old). The loot master's own copy, with drops the leader hasn't taken yet
   (`Drops` `save`), is marked half a version behind, so the leader's next copy always replaces it and nothing only it had stays.
+  A copy whose leader our copy lists in `was`, older than ours, is never taken (whoever sends it: everything since would be lost)
+  and its sender is whispered ours (`LR.tellStale`, every 30 seconds at most); a leader told so by someone who isn't the raid
+  leader or master looter gets the Session tab's choice (`handlers.T`). A claim that our copy already settled disappears
+  (`LR.claim`). A change with no group to send it to (a lock at login) goes when the group is known (`groupHas`, slowly).
+  `tools/chaos.lua`'s settle waits until copies stop changing, and checks no copy is handed on to its own leader.
 - **A reserver away while a roll waits for them** (#152, the owner's call: the players decide, not the addon; `Rolls.away(roll, waiting)`,
   `Rolls.tellAway`, `roll.toldAway`): the roll still waits for every reserver until time runs out. The loot master's window lists
   anyone away first ("Bob (offline)", "(left the group)") with a gold line to wait or Close now, and their chat is told once each time
