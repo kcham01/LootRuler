@@ -105,7 +105,10 @@ local howTo
 local function howToRoll(roll, link, secs)
   local t = U.plural(secs, "second")
   if roll.mode == "SR" then
-    return ("%s is soft reserved by %s: only they roll (/roll). %s."):format(link, R.names(roll.who, 6), t)
+    local more = false
+    for _, w in ipairs(roll.who) do if type(w) == "table" and (w[2] or 1) > 1 then more = true end end
+    return ("%s is soft reserved by %s: only they roll (/roll%s). %s."):format(link, R.names(roll.who, 6),
+      more and "; x2 rolls twice, best counts" or "", t)
   elseif roll.mode == "TIE" then
     local _, hi = R.kind(roll, roll.tie)
     return ("Tie for %s: %s roll again (%s). %s."):format(link, R.names(roll.who, 6), (hi or 100) < 100 and ("/roll " .. hi) or "/roll", t)

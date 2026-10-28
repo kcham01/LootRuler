@@ -726,6 +726,29 @@ do
   check("stopping them twice changes nothing", not R.ban(b2, BOB))
   local made = R.resolve(b2, { [R.key(BOB)] = { p = BOB, g = 2000, at = 1 }, [R.key(CARA)] = { p = CARA, g = 150, at = 2 } })
   check("a max bid of theirs isn't used, anyone else's is", b2.top.p == CARA and #made >= 1)
+-- one roll for each reserve left on the item: the best counts
+do
+  local r = R.new("multi", WATCH, { mode = "SR", who = { { ANN, 3 }, { BOB, 1 } } })
+  check("three reserves are three rolls; one is one", R.rollsFor(r, ANN) == 3 and R.rollsFor(r, BOB) == 1 and R.rollsLeft(r, ANN) == 3)
+  R.add(r, ANN, 20, 1, 100)
+  local second = R.add(r, ANN, 70, 1, 100)
+  local third = R.add(r, ANN, 40, 1, 100)
+  check("each roll is numbered; the best counts and the others are lower", second.try == 2 and r.rolled[R.key(ANN)] == second
+    and third.kind == nil and third.why == "lower" and R.rollsLeft(r, ANN) == 0)
+  check("the first one, beaten, no longer counts", r.entries[1].kind == nil and r.entries[1].why == "lower")
+  local fourth = R.add(r, ANN, 99, 1, 100)
+  check("a fourth roll doesn't count", fourth.kind == nil and fourth.why == "again" and r.rolled[R.key(ANN)].n == 70)
+  check("Bob still has his roll to make", #R.waiting(r) == 1 and R.waiting(r)[1] == BOB)
+  local bob = R.add(r, BOB, 70, 1, 100)
+  check("his one roll", bob.kind == "SR" and R.add(r, BOB, 90, 1, 100).why == "again")
+  local top, tied = R.result(r)
+  check("Ann's best and Bob's tie: they roll again", tied and #tied == 2, tied and table.concat(tied, ","))
+  check("nobody's waiting", #R.waiting(r) == 0)
+  local good = R.standings(r)
+  check("the standings count each player once", #good == 2)
+  local open = R.new("open", WATCH, { mode = "OPEN" })
+  R.add(open, ANN, 50, 1, 100)
+  check("a roll open to everyone is still one roll each", R.add(open, ANN, 90, 1, 100).why == "again")
 end
 
 print(("passed %d"):format(passed))

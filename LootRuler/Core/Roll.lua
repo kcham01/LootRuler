@@ -14,7 +14,8 @@
 --   PR    on the guild's priority list (the session uses them): the best priority here gets it; when several
 --         share it, just they roll (/roll, 1-100), and one alone gets it with no roll (who: names, n: the
 --         priority)
--- Each player's first roll that counts is the one that counts.
+-- Each player's first roll that counts is the one that counts, but in an SR roll each reserve they still have on the item
+-- is a roll: with three reserves left on it they may /roll three times, and their highest counts (R.rollsFor).
 --
 -- Extra roll types (the loot master's own, Settings: rollKinds): a roll open to everyone can have up to
 -- R.MAX_EXTRA more, each a /roll 1-hi with a name ("Transmog", /roll 98). They rank after off spec, in the order
@@ -38,6 +39,7 @@ R.MAX_BID = 1000000
 R.WHY = {
   late = "after the roll closed",
   again = "rolled again",
+  lower = "not their best roll",
   range = "wrong roll",
   notReserved = "didn't reserve it",
   notTied = "wasn't in the tie",
@@ -181,6 +183,20 @@ function R.options(roll, player)
   return {}
 end
 
+--- how many rolls a player may make in this roll: one for each reserve they have left on the item (SR), else one
+function R.rollsFor(roll, player)
+  if roll.mode ~= "SR" then return 1 end
+  for _, w in ipairs(roll.who) do
+    if type(w) == "table" and U.samePlayer(w[1], player) then return math.max(1, math.min(10, tonumber(w[2]) or 1)) end
+  end
+  return 1
+end
+--- how many of their rolls a player still has (0 once they've rolled them all)
+function R.rollsLeft(roll, player)
+  roll.used = roll.used or {}
+  return math.max(0, R.rollsFor(roll, player) - (roll.used[key(player)] or 0))
+end
+
 --- what a roll of lo-hi counts as for this player, or nil and why not
 local function kindOf(roll, player, lo, hi)
   if roll.mode == "BID" then return nil, "auction" end
@@ -199,10 +215,23 @@ end
 function R.add(roll, player, n, lo, hi, late)
   local e = { p = U.full(player), n = n, lo = lo, hi = hi, seq = #roll.entries + 1 }
   local kind, why = kindOf(roll, player, lo, hi)
+  local k = key(player)
+  roll.used = roll.used or {}
   if late then why, kind = "late", nil
-  elseif kind and roll.rolled[key(player)] then why, kind = "again", nil end
+  elseif kind and R.rollsLeft(roll, player) == 0 then why, kind = "again", nil end
   e.kind, e.why = kind, kind and nil or why
-  if kind then roll.rolled[key(player)] = e end
+  if kind then
+    roll.used[k] = (roll.used[k] or 0) + 1
+    if R.rollsFor(roll, player) > 1 then e.try = roll.used[k] end            -- (roll 2 of 3)
+    -- one of several: only their best counts; the others stay in the list as lower
+    local best = roll.rolled[k]
+    if best and best.n >= n then
+      e.kind, e.why = nil, "lower"
+    else
+      if best then best.kind, best.why = nil, "lower" end
+      roll.rolled[k] = e
+    end
+  end
   table.insert(roll.entries, e)
   return e
 end
@@ -354,7 +383,7 @@ function R.waiting(roll)
   local out = {}
   for _, w in ipairs(roll.who) do
     local name = type(w) == "table" and w[1] or w
-    if not roll.rolled[key(name)] and not roll.passed[key(name)] then out[#out + 1] = name end
+    if R.rollsLeft(roll, name) > 0 and not roll.passed[key(name)] then out[#out + 1] = name end
   end
   return out
 end
