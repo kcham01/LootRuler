@@ -28,6 +28,9 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
 - GDKP: bid any amount from the auction window. "Bid an amount" opens a box for the gold, and the bid is typed in raid chat
   like the window's two buttons (too little, and you're told the least that counts). With several auctions at once, pick
   the item, then the amount. ([#143](https://github.com/kcham01/LootRuler/pull/143))
+- "Say my trades nearby when I'm not in a group" is off to start with, and when you switch it on, any trade you make out of a
+  group is said nearby (/s), not just while you lead reserves. In a group, only the group hears it, as before. It's switched
+  off once for everyone who had it from before: tick it again if you want it. ([#144](https://github.com/kcham01/LootRuler/pull/144))
 
 ### Easier on the eye (27 October 2026)
 

@@ -433,7 +433,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   warnings `Lock.WARN`, a mark already passed when it was set isn't said late); the bench (`s.bn`, `S.setBench`, `S.cleanBench`,
   `Guild.raidMembers(s)` adds the guild's benched players, `Guild.onlineOutside`, `UI.benchSheet`).
 - **Trades out of a group** (`Drops.tradeChannel`, `Drops.sayNearby`, `UI.sayPrompt` in `UI/Say.lua`, `LR.sayNow`): with no group, the
-  trade line goes to SAY when I lead a session that hasn't ended (or a past GDKP owes this player). The game blocks addon /say
+  trade line goes to SAY when `tradeSay` is on (off to start with since #144, and switched off once on load for saved files from
+  before, `db.ui.sayNearbyOff`), for any trade. The game blocks addon /say
   outside instances unless a click started it, so there the lines wait on a "Say it" box (said with `LR.sayNow`, not the
   ChatThrottleLib queue); inside one (`IsInInstance`) they're said straight away. The stand-in enforces this: `M.click` sets
   `M.hardware`, the test server errors on SAY / YELL without it unless `p.instance` is set.
@@ -472,8 +473,6 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   it's hers already) and sets the drop's holder to them: a trade only its two sides see. "awarded to" again within
   `Drops.GARGUL_REPEAT` seconds is the same award. A "toTrade" drop whose holder has no LootRuler (`LR.versionOf`) shows only
   "Won by ..." on the Loot tab (`UI.dropLine`): the owner's choice, as such a trade can't be followed.
-- **On hold, from the owner** (say go before building): trade lines said nearby any time out of a group, with `tradeSay` off
-  to start with (now: only while leading reserves, on).
 - **Award history** (#125; `UI.awardHistory()`, `historyView` in `UI/Loot.lua`; `db.ui.lootPage` "raid" / "history", `db.ui.historyOpen`
   date -> open, the newest open until closed): the Loot tab's chips switch between this raid and every award of past raids and the
   session on now (not practice), grouped by local date in `Flow:fold`s. Export, fairness and Past raids moved there; `/lr history`
