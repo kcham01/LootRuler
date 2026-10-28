@@ -26,7 +26,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
-| `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (what LootRuler protects against) |
+| `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (what LootRuler protects against), `screens/` (the owner's in-game screenshots, used in the README; retake or swap back to a `results/shots` picture when that screen changes) |
 
 ## Working rules
 

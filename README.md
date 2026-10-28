@@ -15,9 +15,9 @@
 # LootRuler
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve.png" alt="Reserving" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserves.png" alt="Everyone's reserves" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/session.png" alt="Running the session" width="32%">
+  <img src="docs/screens/reserve.png" alt="Reserving" width="32%">
+  <img src="docs/screens/reserves.png" alt="Everyone's reserves" width="32%">
+  <img src="docs/screens/session.png" alt="Running the session" width="32%">
 </p>
 
 **Raid loot, run inside World of Warcraft**, for the **TBC Anniversary** realms. No website, no spreadsheet, no copying names out of Discord. Only the person running loot needs the addon: everyone else can type in raid chat, whisper, or `/roll`.
@@ -141,8 +141,9 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
 When it's time to hand out loot, LootRuler pops up a roll window for everyone, like the game's own Need/Greed window, and it knows who reserved what.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-master.png" alt="The loot master's panel and window" width="70%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/roll-windows.png" alt="Roll windows" width="28%">
+  <img src="docs/screens/loot-master.png" alt="The loot master's window: everyone's rolls, best first" width="34%">
+  <img src="docs/screens/confirm-winner.png" alt="Confirming the winner, beside rolling it again" width="31%">
+  <img src="docs/screens/roll-window.png" alt="A roll window, with the best rolls so far" width="31%">
 </p>
 
 - **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. The raid hears it too, once per corpse: each epic, and anything reserved, with who reserved it. Click one to roll it out, or **Roll them all out** to put every item up one after another. **Ctrl+Alt+click** any item (in your bags, the loot window or a chat link), or type `/lr roll` and an item link. (The shortcut can be changed to Alt+click, Gargul's, on the Settings tab.)
@@ -195,12 +196,16 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/master-looter.png" alt="Becoming the master looter" width="32%">
 </p>
 
+<p align="center">
+  <img src="docs/screens/trade-warning.png" alt="Warned in the middle of the screen before the 2 hours to trade run out" width="70%">
+</p>
+
 **Who reserved it, while it's rolled for:** a small strip above the roll window lists everyone who reserved the item, every name in full and in class colours, and goes when the roll ends. It works for Gargul's rolls too: LootRuler reads Gargul's line in raid chat ("You have 20 seconds to roll on ..."), so raiders with LootRuler see the reserves whoever runs the roll. Raiders who don't have Gargul also get a roll window for Gargul's roll, like LootRuler's own: its dice and coin just /roll for Gargul to count, it shows everyone's rolls, and it says who Gargul gave the item to. When Gargul says who an item was awarded to, the leader's LootRuler puts it on the Loot tab as given out (their reserve if they had one on it, off spec if Gargul's line says so), and Gargul's "I gave [item] to ..." marks it handed over. Gargul's lines only count from whoever runs loot, so nobody can type them to fake a roll or an award. Each of these can be turned off (Settings tab).
 
 **Your reserves where you see items:** the game's own loot window and need/greed windows glow on items you reserved, and every item tooltip (bags, chat links, loot windows) says who reserved it and who it went to. With Gargul loaded, tooltips leave the reserves to Gargul, so they aren't listed twice. The loot window also marks every reserved item (SR, or HR) with who reserved it, for everyone.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve-strip.png" alt="Everyone who reserved the item, above the roll window" width="49%">
+  <img src="docs/screens/reserve-strip.png" alt="Everyone who reserved the item, above the roll window" width="49%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-window-reserves.png" alt="Reserved items marked in the game's loot window" width="40%">
 </p>
 
@@ -215,9 +220,9 @@ The **Loot** tab lists the raid's loot as it drops, boss by boss, for the whole 
 **Only the raid's loot is listed:** gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns, designs), and a short list of other raid loot: Mark of the Illidari, Heart of Darkness, Black Temple's epic gems, Nether Vortex, Vashj's Vial Remnant, Black Sack of Gems, the Amani Charms, Amani Hex Stick, Mojo, Soul Essence and Karazhan's library books. Things like Nether Vortexes are counted at the bottom ("Everything else that dropped": how many, and who looted them) and are never announced or held to roll out. Cloth, trade goods, other gems, potions and gold are left out, and so is anything from a profession (disenchanting, gathering, skinning, fishing). A session only takes loot from inside its own raid: going into a different raid, or into its raid on a new lockout, asks whether to start a new session there.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-tab.png" alt="The Loot tab" width="32%">
+  <img src="docs/screens/loot-tab.png" alt="The Loot tab" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/change-award.png" alt="Changing an award" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/new-raid.png" alt="Going into a different raid" width="32%">
+  <img src="docs/screens/new-raid.png" alt="Going into a different raid" width="32%">
 </p>
 
 - **Roll now or at the end.** The loot master can roll an item out as soon as it drops, or give it to themselves, keep going, and roll it out from the Loot tab later. The game lets you trade raid loot for 2 hours after you loot it, so the list shows how long is left.
@@ -290,7 +295,7 @@ Turn on **GDKP auctions** for a session (Session tab) and every item is auctione
 Guild members get a **Guild** tab: things that last between raids, kept by the officers and shared with everyone in the guild who has LootRuler. Nothing here shows up for pugs, and nothing is used until an officer turns it on.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/guild.png" alt="The Guild tab" width="40%">
+  <img src="docs/screens/guild.png" alt="The Guild tab" width="40%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/boosted-roll.png" alt="A roll window with a boosted roll" width="40%">
 </p>
 
@@ -316,7 +321,7 @@ Also on the tab: pretend LootRuler and Gargul rolls with as many made-up reserve
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/practice-start.png" alt="Starting a practice raid" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/practice-roll.png" alt="A roll in the practice raid" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/test-tab.png" alt="The Test tab" width="32%">
+  <img src="docs/screens/test-tab.png" alt="The Test tab" width="32%">
 </p>
 
 ## Settings and getting started
@@ -330,13 +335,14 @@ Whoever runs loot needs LootRuler: the master looter, or the raid leader without
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/tour.png" alt="The welcome tour" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/settings.png" alt="The Settings tab" width="32%">
+  <img src="docs/screens/settings.png" alt="The Settings tab" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/versions.png" alt="Who has LootRuler" width="32%">
 </p>
 
 ## Every screen
 
-The pictures are drawn by the tests on every build, from the addon's own code, in a stand-in for the game.
+The pictures here are drawn by the tests on every build, from the addon's own code, in a stand-in for the game, so they always show
+the latest version. Some pictures further up are screenshots from the game itself (`docs/screens`).
 
 <details>
 <summary>Show all 124 screens</summary>
