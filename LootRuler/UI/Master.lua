@@ -368,15 +368,6 @@ function UI.masterDraw()
       f:note("Nobody to give it to? Pick a disenchanter on the Session tab and it's one click.")
     end
     local more = {}
-    -- confirm who won: the raid hears it (beside rolling it again)
-    if LR.db.settings.confirmWinner and pick and roll.mode ~= "BID" and not noRoll(roll) and roll.rolled[R.key(pick)] then
-      local done = roll.confirmed and U.samePlayer(roll.confirmed, pick)
-      more[#more + 1] = { label = done and ("Confirmed: " .. U.short(pick)) or ("Confirm " .. U.short(pick)), disabled = done or nil,
-        tip = "Tells the raid who won. Then give it out.", click = function()
-          local ok, why = Rolls.confirm(pick)
-          if not ok then UI.toast(why) end
-        end }
-    end
     if roll.mode == "SR" or roll.mode == "HR" or roll.mode == "TIE" or roll.mode == "PR" then
       more[#more + 1] = { label = noRoll(roll) and "Roll it out anyway" or "Let everyone roll", click = function() Rolls.again("OPEN") end }
     elseif roll.mode == "BID" then

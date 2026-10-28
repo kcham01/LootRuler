@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- The loot master window's Confirm button is gone: Award (or Give) already said who won. With "Say the winner when I give
+  it out" on (as it starts), nothing is said when rolls close, and the award line is the winner. When it isn't the best roll,
+  the line says it was the loot master's pick (or the council's choice). ([#154](https://github.com/kcham01/LootRuler/pull/154))
 - When a reserved item's roll is waiting for someone who has gone offline or left the group, the loot master's window
   says so ("Bob (offline)") and their chat is told once. The roll still waits until time runs out: wait for them, or click
   Close now. Someone who comes back can still roll. ([#152](https://github.com/kcham01/LootRuler/pull/152))
@@ -36,9 +39,9 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
   and not at all while everyone from the guild who's online is in the raid; several auctions at once send their items'
   links only now and then. Raiders' LootRuler does about half the work while items are rolled out and auctioned.
   ([#140](https://github.com/kcham01/LootRuler/pull/140))
-- The loot master confirms who won before the raid hears it: when rolls close, raid chat says nothing more, and a Confirm
-  button beside rolling it again says "[item]: Ann wins with 88 (MS)." (or that it was the loot master's pick). Raiders' windows wait for it too. Settings, "Rolling out loot": switch it off to say the winner as rolls close.
-  ([#142](https://github.com/kcham01/LootRuler/pull/142))
+- The loot master checks who won before the raid hears it: when rolls close, raid chat says nothing more until the item is
+  given out (a Confirm button at first; since #154, Award or Give says it). Raiders' windows wait for it too. Settings,
+  "Rolling out loot": switch it off to say the winner as rolls close. ([#142](https://github.com/kcham01/LootRuler/pull/142))
 - GDKP: bid any amount from the auction window. "Bid an amount" opens a box for the gold, and the bid is typed in raid chat
   like the window's two buttons (too little, and you're told the least that counts). With several auctions at once, pick
   the item, then the amount. ([#143](https://github.com/kcham01/LootRuler/pull/143))

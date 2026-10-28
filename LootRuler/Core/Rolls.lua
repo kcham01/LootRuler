@@ -403,36 +403,16 @@ close = function(roll)
     return
   end
   local top, tied = R.result(roll)
-  -- one winner: the raid hears who once the loot master confirms it (Rolls.confirm), when they want that (cw: raiders'
+  -- one winner: the raid hears who when the loot master gives it out (Rolls.award), when they want that (cw: raiders'
   -- windows wait for it too; older versions show the highest roll as before)
   local wait = top and not tied and LR.db.settings.confirmWinner or nil
   sendGroup({ t = "X", k = roll.k, e = "closed", p = top and not tied and top.p or nil, n = top and top.n, kd = top and top.kind, cw = wait })
   Rolls.ended(roll.k, "closed", top and not tied and top.p or nil, top and top.n, top and top.kind, wait and "wait" or nil)
-  -- (waiting for the loot master: nothing is said until they confirm it, so the winner is the next line after the countdown)
+  -- (waiting for the loot master: nothing is said until they give it out, so the winner is the next line after the countdown)
   if not wait then say(resultText(roll, roll.link)) end
   if tied then roll.tied = tied end
   ticking = ticking + 1
   changed()
-end
-
---- the loot master confirms who won the roll that's closed (the best roll, or the one they picked): the raid hears it, and
---- raiders' windows say it. Returns true, or false and why not.
-function Rolls.confirm(player)
-  local roll = Rolls.current
-  if not roll or roll.state ~= "closed" or roll.mode == "BID" then return false, "There's no closed roll to confirm." end
-  local e = player and roll.rolled[R.key(player)]
-  if not e or not e.kind then return false, "Pick someone whose roll counts." end
-  local top = R.result(roll)
-  local why = ""
-  if not (top and U.samePlayer(top.p, e.p)) then
-    why = LR.Council.on(session()) and " (the council's choice)" or " (the loot master's pick)"
-  end
-  say(("%s: %s wins with %d (%s)%s."):format(roll.link, U.short(e.p), e.n, R.label(roll, e), why))
-  roll.confirmed = e.p
-  sendGroup({ t = "X", k = roll.k, e = "closed", p = e.p, n = e.n, kd = e.kind, cf = true })
-  Rolls.ended(roll.k, "closed", e.p, e.n, e.kind, "confirmed")
-  changed()
-  return true
 end
 
 --- closes the roll now (rolls already made count)
@@ -612,7 +592,14 @@ function Rolls.award(player, kind, n, de)
   elseif roll.given then
     line = ("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
       kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec")
-  else line = ("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or "")) end
+  else
+    line = ("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))
+    -- not the best roll: the raid hears it was picked, so nobody thinks the rolls were read wrong
+    local top, tied = R.result(roll)
+    if n and roll.mode ~= "HR" and not tied and top and not U.samePlayer(top.p, player) then
+      line = line:sub(1, -2) .. (LR.Council.on(s) and " (the council's choice)." or " (the loot master's pick).")
+    end
+  end
   say(line)
   toGuild(line)
   -- one reserve win each: their first win on a reserve, and they have others that stop counting now
