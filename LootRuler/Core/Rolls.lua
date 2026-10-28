@@ -762,7 +762,7 @@ function Rolls.follow(msg, sender)
   copy.ends = now() + math.min(120, math.max(0, msg.left))
   copy.state = "open"
   copy.seenAt = now()
-  if not copy.hidden and not copy.gearSent then Rolls.sendGear(copy) end
+  if not copy.hidden and not copy.gearRead then Rolls.readMyGear(copy) end
   if not copy.hidden and LR.UI and LR.UI.rollWindow then LR.UI.rollWindow(copy) end
   if not copy.hidden and LR.AutoRoll then LR.AutoRoll.consider(copy) end      -- my own rules (Core/AutoRoll.lua)
   LR.changed("rolls")
@@ -772,8 +772,8 @@ end
 --- what I wear where an item goes (links; none for an empty slot), for my own roll window ("You have:"), and for my own
 --- row when it's my roll. Nobody else's addon is told: the loot master sees raiders' gear by inspecting them (below), the
 --- game's word rather than an addon's. Not for an auction (gold decides).
-function Rolls.sendGear(copy)
-  copy.gearSent = true
+function Rolls.readMyGear(copy)
+  copy.gearRead = true
   if copy.mode == "BID" or copy.test then return end
   local links = {}
   for _, slot in ipairs(LR.wornIn(copy.id)) do

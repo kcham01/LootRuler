@@ -733,8 +733,8 @@ pug.links = { [5] = CHEST, [4] = "|cffffffff|Hitem:45::::::::70:::::|h[Shirt]|h|
 ann.M.player.links = { [1] = "|cffa335ee|Hitem:28733::::::::70:::::|h[Made up]|h|r" }   -- (her addon would say this: never asked)
 lead.LR.db.settings.inspectGear = true
 local O = lead.LR.Overview
-check("only someone running loot looks", not bob.LR.Overview.ask())
-check("the loot runner looks", O.ask())
+check("only someone running loot looks", not bob.LR.Overview.inspectAll())
+check("the loot runner looks", O.inspectAll())
 srv:tick(12)
 local function gearOf(p) return O.data[lead.LR.Roll.key(full(p))] end
 check("everyone is inspected: the game's word, not their addon's", gearOf(ann) and gearOf(ann).how == "inspect" and gearOf(ann).slots[1] == HEAD

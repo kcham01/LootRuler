@@ -199,7 +199,7 @@ check("the pretend players answer a bag check", answers == #P.players + 1 and sh
 check("everyone in the report has counts", (function() for _, r in ipairs(LR.Bags.report(bc)) do if not r.counts then return false end end return true end)())
 
 section("the gear overview")
-check("asking for everyone's gear", LR.Overview.ask())
+check("asking for everyone's gear", LR.Overview.inspectAll())
 srv:tick(4)
 local withGear = 0
 for _, x in ipairs(P.players) do if LR.Overview.data[LR.Roll.key(x.name)] then withGear = withGear + 1 end end

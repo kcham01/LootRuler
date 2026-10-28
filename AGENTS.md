@@ -147,8 +147,8 @@ the mock (and to `tests/wow/server.lua` if it involves other players), never loo
 
 Start here in a new session; rewrite this section at the end of each piece of work.
 
-- **Open pull requests:** #147 (Tidy, notes only) and #148 (Private, built on it). When several are open they're stacked, each
-  built on the one before, so they merge in order (one per feature).
+- **Open pull requests:** see GitHub. When several are open they're stacked, each built on the one before, so they merge in
+  order (one per feature).
 - **Decided for the guild features:** officer ranks (picked by the guild master) edit priority lists; a
   player who gets an item they had priority on comes off that item's list; boosted roll points are earned
   per raid attended. Both live in a "guild book" shared over the guild channel.
@@ -202,8 +202,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   runs out. Other languages aren't read yet. The game's loot window gets "SR"/"HR" on the icon and the names under
   the item's name (as many as fit). Switches: `reserveStrip`, `lootTags`. The test server now has the game's class colours.
 - **A new leader for a session** (`S.handTo`, `S.newLeader`, `S.newLeaderOk`; `LR.handOver`, `LR.takeOver`, `LR.passOn`, `LR.adopt`):
-  the leader hands it on (`s.next`; that player's addon takes it), or the raid leader / an assistant takes it over
-  while its leader is out of the group or offline. Same id, so everything stays; `s.was` lists who led it. A raider's
+  the leader hands it on (`s.next`; that player's addon takes it), or the raid leader / the master looter (never an assistant, since #128) takes it
+  over while its leader is out of the group or offline. Same id, so everything stays; `s.was` lists who led it. A raider's
   addon now only accepts a copy naming a different leader by those rules (before, any sender could claim a session
   with a higher rev), and a session's own leader yields only to a newer copy. Messages carry `fl` (what the
   sender's addon can do; 1 = can take a session) so only able players are offered (`LR.canLead`). Older versions
@@ -299,8 +299,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   client restricts `SendMail`, so the organiser presses Send); a post-hook on `SendMail` matches it to the payout filled in,
   and `MAIL_SEND_SUCCESS` counts the gold in the mail as paid. Not done: several auctions at once (the loot master has one
   roll at a time, `Rolls.current`; it needs its own design).
-- **Gear comparison** (`LR.wornIn`, `Rolls.sendGear`): since #129 only by inspecting (the owner's choice: an addon's word could be made
-  up). `Rolls.sendGear` fills the raider's own "You have:" (`copy.mine`) and nothing is sent; message `W` from older raiders is
+- **Gear comparison** (`LR.wornIn`, `Rolls.readMyGear`): since #129 only by inspecting (the owner's choice: an addon's word could be made
+  up). `Rolls.readMyGear` fills the raider's own "You have:" (`copy.mine`) and nothing is sent; message `W` from older raiders is
   ignored (no handler). The loot master keeps `roll.gear` from `Rolls.wantGear` (each roller, queued at once). Shown as an icon on
   the loot master's row. Not for auctions. The mock gives my own gear with `M.player.links`, a player's inspected gear with `p.links`.
 - **Becoming the master looter** (`UI.masterLooterPrompt`, `LR.announceMasterLooter`, `UI.masterLooterLine`; settings `mlPrompt`, on,
@@ -318,8 +318,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   the game's red error (`UI_ERROR_MESSAGE`, matched against GlobalStrings read by name) or the item still being in the slot
   `Rolls.HANDOUT_WAIT` seconds later takes the award back. `LOOT_SLOT_CLEARED` for that slot means it went. The test server
   refuses handouts with `srv.bagsFull[player]` or `srv.lostHandout`.
-- **Gear of raiders without LootRuler** (`Rolls.wantGear`, `Rolls.inspectReady`, setting `inspectGear`, on): each roller with no gear
-  after `Rolls.INSPECT_WAIT` seconds is queued; one `NotifyInspect` at a time (in range, `CanInspect`, not in combat, not while the
+- **Raiders' gear, by inspecting** (`Rolls.wantGear`, `Rolls.inspectReady`, setting `inspectGear`, on): each roller but me is queued
+  (with or without LootRuler: no addon is ever asked); one `NotifyInspect` at a time (in range, `CanInspect`, not in combat, not while the
   game's `InspectFrame` is open), read on `INSPECT_READY` into `roll.gear`, then `ClearInspectPlayer`. The test server has inspect
   (`srv.inspects` counts them; `q.links` is a player's gear).
 - **Changing an award** (`S.editAward`, `LR.editAward`, `UI.editAwardSheet`; click a given item on the Loot tab): the leader changes `w.p`
@@ -377,11 +377,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   items, counted in bags and bank (`C_Item.GetItemCount(id, true)`; the test server has `p.bank`). Only from someone who may run loot,
   each check answered once. The report lists players without LootRuler (`why = "none"`) and, after `Bags.WAIT` seconds, those who
   didn't answer (`"silent"`). The practice raid's pretend players answer.
-- **The gear overview** (`Core/Overview.lua`, `UI/Gear.lua` (not `UI/Overview.lua`, which is the Reserves screen); `Overview.ask`, `got`,
-  `list`, `level`, `age`, `clean`, `mine`, `SLOTS`; messages `H` (asked) and `I` (gear, by whisper); Loot tab "Raid gear", `/lr gear`): answered
-  when `shareGear` is on; players without LootRuler, and those who don't answer within `Overview.WAIT` seconds, are inspected through the
-  roll inspect queue, now general (`Rolls.inspect(player, read, failed)`), when `inspectGear` is on. Answers are checked (item links in real
-  slots only). Item level from `C_Item.GetItemInfo(link)` (the test server takes links now). Pretend players send gear from the loot lists.
+- **The gear overview** (`Core/Overview.lua`, `UI/Gear.lua` (not `UI/Overview.lua`, which is the Reserves screen); `Overview.inspectAll`, `got`,
+  `list`, `level`, `age`, `clean`, `mine`, `SLOTS`; Loot tab "Raid gear", `/lr gear`): **inspection only, never another player's addon**
+  (the owner's rule). Everyone but me goes through the roll inspect queue (`Rolls.inspect(player, read, failed)`) when `inspectGear` is
+  on; my own is read from my character. Item links in real slots only. Item level from `C_Item.GetItemInfo(link)`. Pretend players'
+  made-up gear counts as inspected. Messages `H` and `I` (older versions) are neither sent nor answered.
 - **Organiser branding** (`s.br` = { n, m, i }; `S.okBrand`, `S.setBrand`, `S.brandIcon`, `S.BRAND_ICONS` (game icon paths, by place);
   `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid's name"): shown in the window's header (icon and name),
   as a note on raiders' Reserve tab, after `Whisper.announce`'s line, in the "opened soft reserves" note and the batch window's title.
@@ -504,7 +504,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   group shows by itself only when its leader is the group's leader or master looter and I'm not looking at someone else's
   open one; otherwise `UI.joinPrompt` asks (in combat, a chat line). `LR.current`'s fallback skips declined and others' sessions.
   A raider who doesn't run loot no longer says trades in raid chat (an enchant is still noted in their own chat).
-- **Gear by inspection only** (#129): the gear overview (`Overview.ask`) inspects everyone but me; `H` / `I` are neither sent nor answered
+- **Gear by inspection only** (#129): the gear overview (`Overview.inspectAll`) inspects everyone but me; `H` / `I` are neither sent nor answered
   (older loot masters inspect after their wait), `O.WAIT`, `Rolls.INSPECT_WAIT` and the `shareGear` setting are gone. Practice players'
   made-up gear counts as inspected.
 - **Guild book times capped** (#130; `B.merge(book, c, fromGM, now)`, `B.AHEAD` = 3600): a change's time is taken as at most now + an hour

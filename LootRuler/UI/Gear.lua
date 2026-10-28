@@ -7,7 +7,7 @@ local O = LR.Overview
 
 local open                 -- the overview sheet's handle, while it's open (redrawn as gear comes in)
 
-local WHY = { far = "too far away to inspect", gone = "can't be inspected now", silent = "didn't answer", off = "inspecting is switched off in Settings" }
+local WHY = { far = "too far away to inspect", gone = "can't be inspected now", silent = "the inspect didn't come back", off = "inspecting is switched off in Settings" }
 
 --- one player's gear, slot by slot
 local function playerSheet(name)
@@ -41,13 +41,13 @@ end
 --- everyone in the group
 function UI.gearSheet(ask)
   if ask ~= false then
-    local ok, why = O.ask()
+    local ok, why = O.inspectAll()
     if not ok then UI.toast(why) end
   end
   UI.show()
   UI.openSheet("Raid gear", function(f, h)
     open = h
-    f:note("What everyone wears, best item level first. Players with LootRuler send theirs; anyone else is inspected when they're close.")
+    f:note("What everyone wears, best item level first, read with the game's own inspect: one player at a time, when they're close and out of combat.")
     for _, r in ipairs(O.list()) do
       local sub
       if r.d and r.items == 0 then
@@ -56,7 +56,7 @@ function UI.gearSheet(ask)
         sub = ("%s, %s, %s%s"):format(r.level and ("item level " .. r.level) or "item level unknown", U.plural(r.items, "item"), O.age(r.d.at),
           r.d.how == "inspect" and " (inspected)" or "")
       else
-        sub = "|cff9d9d9d" .. (r.why and ("Not read: " .. WHY[r.why]) or "Asking...") .. "|r"
+        sub = "|cff9d9d9d" .. (r.why and ("Not read: " .. WHY[r.why]) or "Waiting to inspect...") .. "|r"
       end
       local b = K.get(f.owner, "item", f.parent)
       K.setItem(b, f.width, LR.LOGO, U.classText(U.short(r.name), r.class or LR.classOf(r.name)), sub, r.level and ("|cffffd100" .. r.level .. "|r") or "",
@@ -65,8 +65,8 @@ function UI.gearSheet(ask)
       f:gap(2)
     end
     f:gap(6)
-    f:buttons({ { label = "Ask again", click = function()
-      local ok, why = O.ask()
+    f:buttons({ { label = "Inspect again", click = function()
+      local ok, why = O.inspectAll()
       if not ok then UI.toast(why) end
       h.redraw(true)
     end } }, "left")
