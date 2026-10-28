@@ -177,17 +177,42 @@ function UI.reserveRow(f, s, id, key, picks)
   return b
 end
 
---- the loot of one or more raids, boss by boss. With a session the rows reserve; without, they only show.
+---------------------------------------------------------------------- bosses that open and close
+--- which bosses are open (saved, per character): "<where>:<raid>:<boss>" -> true. Closed to start with.
+local function bossesOpen()
+  if type(LR.db.ui.bossOpen) ~= "table" then LR.db.ui.bossOpen = {} end
+  return LR.db.ui.bossOpen
+end
+--- one boss's items as a section that opens and closes (`where` keeps each tab's apart); `force` opens it (a search)
+function UI.bossFold(f, where, key, name, what, fill, force)
+  local open, k = bossesOpen(), where .. ":" .. key .. ":" .. name
+  f:fold(name, what, force or open[k] == true, function() open[k] = not open[k] or nil UI.render() end, fill)
+end
+--- whether a boss's section is open
+function UI.bossIsOpen(where, key, name) return bossesOpen()[where .. ":" .. key .. ":" .. name] == true end
+--- "Open all" / "Close all" for these bosses: { { key, name }, ... }
+function UI.bossChips(f, where, list)
+  local open = bossesOpen()
+  f:chips({
+    { label = "Open all", click = function() for _, b in ipairs(list) do open[where .. ":" .. b[1] .. ":" .. b[2]] = true end UI.render() end,
+      tip = "Opens every boss below." },
+    { label = "Close all", click = function() for _, b in ipairs(list) do open[where .. ":" .. b[1] .. ":" .. b[2]] = nil end UI.render() end,
+      tip = "Closes every boss, so you see just their names." },
+  })
+end
+
+--- the loot of one or more raids, boss by boss, each opening and closing (searching or "Reserved only" opens the bosses
+--- with a match). With a session the rows reserve; without, they only show.
 local function lootList(f, keys, s)
   local myClass = LR.myClass()
   local faction = UnitFactionGroup("player")
   local q = U.lower(U.trim(UI.q))
   local byItem = s and S.byItem(s) or {}
   local picks = s and LR.myPicks(s) or {}
-  local shown, more = 0, 0
+  local force = q ~= "" or (s and UI.reservedOnly)
+  local found, sections = 0, {}
   for _, key in ipairs(keys) do
     local raid = LR.raid(key)
-    local raidHead = #keys > 1
     for _, boss in ipairs(raid.bosses) do
       local ids = {}
       for _, id in ipairs(boss.items) do
@@ -197,28 +222,31 @@ local function lootList(f, keys, s)
         if ok and not matches(q, id, boss) then ok = false end
         if ok then ids[#ids + 1] = id end
       end
-      if #ids > 0 and shown >= LIMIT then more = more + #ids ids = {} end
-      if #ids > 0 then
-        if raidHead then
-          f:text(raid.name, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
-          raidHead = false
-        end
-        local h = K.get(f.owner, "head", f.parent)
-        h.text:SetText(boss.name)
-        h.right:SetText(U.plural(#ids, "item"))
-        h:SetWidth(f.width)
-        f:place(h, 22)
-        f:gap(4)
-        for _, id in ipairs(ids) do
-          UI.reserveRow(f, s, id, key, picks)
-          shown = shown + 1
-        end
-        f:gap(6)
-      end
+      if #ids > 0 then sections[#sections + 1] = { key = key, raid = raid, boss = boss, ids = ids } found = found + #ids end
+    end
+  end
+  if found == 0 then f:note(q ~= "" and "Nothing matches your search." or "Nothing to show with these filters.") return end
+  if not force then UI.bossChips(f, "reserve", U.map(sections, function(x) return { x.key, x.boss.name } end)) end
+  local shown, more, lastRaid = 0, 0, nil
+  for _, x in ipairs(sections) do
+    if #keys > 1 and x.raid ~= lastRaid then
+      f:text(x.raid.name, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
+      lastRaid = x.raid
+    end
+    local mine = 0
+    for _, id in ipairs(x.ids) do if U.indexOf(picks, id) then mine = mine + 1 end end
+    local what = U.plural(#x.ids, "item") .. (mine > 0 and (", " .. mine .. " reserved by you") or "")
+    local open = force or UI.bossIsOpen("reserve", x.key, x.boss.name)
+    if open and shown >= LIMIT then
+      more = more + #x.ids
+    else
+      UI.bossFold(f, "reserve", x.key, x.boss.name, what, function(p)
+        for _, id in ipairs(x.ids) do UI.reserveRow(p, s, id, x.key, picks) end
+      end, force)
+      if open then shown = shown + #x.ids end
     end
   end
   if more > 0 then f:note(("...and %d more. Search to narrow it down."):format(more), K.GOLD) end
-  if shown == 0 then f:note(q ~= "" and "Nothing matches your search." or "Nothing to show with these filters.") end
 end
 
 --- looking through any raid's loot without a session

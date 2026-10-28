@@ -35,6 +35,9 @@ From the owner's in-game screenshots.
   ([#115](https://github.com/kcham01/LootRuler/pull/115))
 - Fixed: an error when logging in or reloading ("Net.lua:195: attempt to index upvalue 'db'"), when the game told LootRuler
   about raid lockouts, the group or the guild before it had read its saved data. ([#122](https://github.com/kcham01/LootRuler/pull/122))
+- Bosses open and close on the Reserve and Reserves tabs, like the Settings sections: each shows its name and how many items
+  (and, on the Reserves tab, how many reserves) until you click it, with "Open all" and "Close all". Searching, or "Reserved
+  only", opens every boss with a match. LootRuler remembers which ones you opened. ([#126](https://github.com/kcham01/LootRuler/pull/126))
 - The Loot tab only lists the raid's loot: gear (and tier tokens), mounts, recipes (plans, schematics, formulas, patterns,
   designs), and a short list of other raid loot: Mark of the Illidari, Heart of Darkness, Black Temple's epic gems, Nether
   Vortex, Vashj's Vial Remnant, Black Sack of Gems, the Amani Charms, Amani Hex Stick, Mojo, Soul Essence and Karazhan's
