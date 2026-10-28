@@ -126,7 +126,7 @@ function U.realm()
   return r
 end
 function U.full(name)
-  if not name or name == "" then return nil end
+  if type(name) ~= "string" or name == "" then return nil end      -- (anything else: a broken message's field)
   if name:find("-", 1, true) then return name end
   return name .. "-" .. U.realm()
 end
