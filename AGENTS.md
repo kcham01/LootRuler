@@ -513,6 +513,13 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   every `Net.GUILD_EVERY` (30) seconds, and none while `Guild.onlineOutside()` is empty (someone who logs in asks with `Q`).
   A batch's `Z` carries item links (`l`) in its first send and every 10th (`LINKS_EVERY`); raiders only read them when they
   first see the batch, and make links from item numbers otherwise.
+- **Confirming the winner** (#142, the owner's idea; setting `confirmWinner`, on; `Rolls.confirm(player)`): a roll with one winner closes
+  with "Rolls closed for [item]." and `X` carrying `cw` (raiders' copies: `copy.confirm = "wait"`, their window says the loot master
+  confirms it); the master window's "Confirm Ann" (in the row with rolling it again) says the winner, or "(the loot master's pick)" /
+  "(the council's choice)", and sends `X` with `cf` (`copy.confirm = "confirmed"`). Ties, nobody rolling and auctions are said at
+  once as before. Older versions ignore `cw` / `cf`.
+- **No faking a win** (#141): `tests/loot.lua`, "nobody can fake a win", tries every way a raider might be recorded as a winner.
+  A new way to record a winner gets a check there.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

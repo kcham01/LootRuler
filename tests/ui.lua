@@ -544,7 +544,19 @@ run("rolling out loot", function()
   check("Ann is picked to get it", #M.findText("Give to Ann", true, G.LootRulerMasterFrame) > 0)
   check("and the loot master sees the cloak she wears now", roll.gear and roll.gear["ann-dreamscythe"] ~= nil)
   check("and what Pug wears, though he has no LootRuler", roll.gear and roll.gear["pug-dreamscythe"] ~= nil)
+  check("a Confirm button beside rolling it again: the raid hasn't heard who won yet", #M.findText("Confirm Ann", true, G.LootRulerMasterFrame) > 0
+    and #M.findText("Let everyone roll", true, G.LootRulerMasterFrame) > 0)
   shot("loot-master", lead, { "LootStandIn", "LootRulerLootPanel", "LootRulerMasterFrame" })
+  local annWin
+  for _, f in ipairs(ann.LR.UI.rollFrames()) do if f:IsShown() then annWin = f end end
+  check("Ann's window waits for the loot master to confirm", annWin and M.plain(annWin.status:GetText()):find("The loot master confirms the winner", 1, true) ~= nil,
+    annWin and M.plain(annWin.status:GetText()))
+  M.click(M.findText("Confirm Ann", true, G.LootRulerMasterFrame)[1].clickable)
+  srv:tick(1)
+  check("confirmed: the button says so", #M.findText("Confirmed: Ann", true, G.LootRulerMasterFrame) > 0)
+  check("and Ann's window says she won", annWin and M.plain(annWin.status:GetText()):find("You win with 88", 1, true) ~= nil,
+    annWin and M.plain(annWin.status:GetText()))
+  shot("confirm-winner", lead, { "LootRulerMasterFrame" })
   M.click(M.findText("Give to Ann", true, G.LootRulerMasterFrame)[1].clickable)
   srv:tick(1)
   check("given to Ann", srv.given and srv.given[1].id == 28529 and s.won and s.won[1].p == "Ann-Dreamscythe" and s.won[1].k == "SR")

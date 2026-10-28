@@ -21,6 +21,10 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
   and not at all while everyone from the guild who's online is in the raid; several auctions at once send their items'
   links only now and then. Raiders' LootRuler does about half the work while items are rolled out and auctioned.
   ([#140](https://github.com/kcham01/LootRuler/pull/140))
+- The loot master confirms who won before the raid hears it: when rolls close, raid chat says "Rolls closed for [item]."
+  only, and a Confirm button beside rolling it again says "[item]: Ann wins with 88 (MS)." (or that it was the loot master's
+  pick). Raiders' windows wait for it too. Settings, "Rolling out loot": switch it off to say the winner as rolls close.
+  ([#142](https://github.com/kcham01/LootRuler/pull/142))
 
 ### Easier on the eye (27 October 2026)
 

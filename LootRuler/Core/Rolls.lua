@@ -358,12 +358,35 @@ close = function(roll)
     return
   end
   local top, tied = R.result(roll)
-  sendGroup({ t = "X", k = roll.k, e = "closed", p = top and not tied and top.p or nil, n = top and top.n, kd = top and top.kind })
-  Rolls.ended(roll.k, "closed", top and not tied and top.p or nil, top and top.n, top and top.kind)
-  say(resultText(roll, roll.link))
+  -- one winner: the raid hears who once the loot master confirms it (Rolls.confirm), when they want that (cw: raiders'
+  -- windows wait for it too; older versions show the highest roll as before)
+  local wait = top and not tied and LR.db.settings.confirmWinner or nil
+  sendGroup({ t = "X", k = roll.k, e = "closed", p = top and not tied and top.p or nil, n = top and top.n, kd = top and top.kind, cw = wait })
+  Rolls.ended(roll.k, "closed", top and not tied and top.p or nil, top and top.n, top and top.kind, wait and "wait" or nil)
+  say(wait and ("Rolls closed for %s."):format(roll.link) or resultText(roll, roll.link))
   if tied then roll.tied = tied end
   ticking = ticking + 1
   changed()
+end
+
+--- the loot master confirms who won the roll that's closed (the best roll, or the one they picked): the raid hears it, and
+--- raiders' windows say it. Returns true, or false and why not.
+function Rolls.confirm(player)
+  local roll = Rolls.current
+  if not roll or roll.state ~= "closed" or roll.mode == "BID" then return false, "There's no closed roll to confirm." end
+  local e = player and roll.rolled[R.key(player)]
+  if not e or not e.kind then return false, "Pick someone whose roll counts." end
+  local top = R.result(roll)
+  local why = ""
+  if not (top and U.samePlayer(top.p, e.p)) then
+    why = LR.Council.on(session()) and " (the council's choice)" or " (the loot master's pick)"
+  end
+  say(("%s: %s wins with %d (%s)%s."):format(roll.link, U.short(e.p), e.n, R.label(roll, e), why))
+  roll.confirmed = e.p
+  sendGroup({ t = "X", k = roll.k, e = "closed", p = e.p, n = e.n, kd = e.kind, cf = true })
+  Rolls.ended(roll.k, "closed", e.p, e.n, e.kind, "confirmed")
+  changed()
+  return true
 end
 
 --- closes the roll now (rolls already made count)
@@ -854,12 +877,14 @@ function Rolls.gargulEnded(id, winner)
 end
 
 --- a roll is over (from the loot master, or ourselves)
-function Rolls.ended(k, how, winner, n, kind)
+function Rolls.ended(k, how, winner, n, kind, confirm)
   local copy = Rolls.seen[k]
   if not copy then return end
   copy.state = how
   copy.winner = winner
   copy.winN, copy.winKind = n, kind
+  -- confirm: "wait" (the loot master says who won when they confirm it) or "confirmed"
+  if confirm == "wait" then copy.confirm = copy.confirm or "wait" elseif confirm == "confirmed" then copy.confirm = "confirmed" end
   copy.endedAt = now()
   if how == "closed" and not copy.closedAt then copy.closedAt = now() end
   if LR.UI and LR.UI.rollEnded then LR.UI.rollEnded(copy) end
@@ -1204,7 +1229,7 @@ Net.handlers.X = function(msg, channel, sender)
   local winner = type(msg.p) == "string" and msg.p or nil
   local kind = R.KINDS[msg.kd] and msg.kd or (msg.kd == "HR" and "HR" or nil)      -- (BID: a sale)
   if copy and U.samePlayer(copy.by, sender) and (msg.e == "closed" or msg.e == "cancelled" or msg.e == "awarded") then
-    Rolls.ended(msg.k, msg.e, winner, tonumber(msg.n), kind)
+    Rolls.ended(msg.k, msg.e, winner, tonumber(msg.n), kind, msg.cf == true and "confirmed" or msg.cw == true and "wait" or nil)
   end
   -- the leader of the soft reserves records loot given out by the loot master (and takes back one that's undone)
   if msg.e == "awarded" and winner and kind and fromLooter(sender) then
