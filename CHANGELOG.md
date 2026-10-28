@@ -14,6 +14,9 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
 - The loot master's window lists each player's best roll once, with how many it was the best of ("SR (best of 2)"), and one
   line counts the lower rolls, instead of a row for every roll. With lots of doubled reserves on one item it redraws about
   three times faster. ([#137](https://github.com/kcham01/LootRuler/pull/137))
+- Roll windows and the loot master's window redraw at most four times a second while rolls or bids pour in, instead of
+  on every one. Rolling out loot in a 40-player raid is about a third less work for everyone's LootRuler.
+  ([#139](https://github.com/kcham01/LootRuler/pull/139))
 
 ### Easier on the eye (27 October 2026)
 

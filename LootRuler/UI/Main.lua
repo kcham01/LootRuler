@@ -243,6 +243,18 @@ function UI.renderSoon()
   renderSoon = true
   C_Timer.After(0.2, function() renderSoon = false UI.render() end)
 end
+
+--- runs fn now, unless it ran less than gap seconds ago: then once more when the gap is up, however many asked meanwhile.
+--- For windows a burst of rolls or bids redraws (each /roll is a change): the first shows at once, the last never waits long.
+UI.REDRAW_GAP = 0.25           -- (seconds: a quarter of a second between redraws of roll windows while rolls pour in)
+local lastRun, pending = {}, {}
+function UI.atMostEvery(key, gap, fn)
+  if pending[key] then return end
+  local since = GetTime() - (lastRun[key] or -math.huge)
+  if since >= gap then lastRun[key] = GetTime() fn() return end
+  pending[key] = true
+  C_Timer.After(gap - since, function() pending[key] = nil lastRun[key] = GetTime() fn() end)
+end
 LR.onChange(function(what)
   -- rolls are the roll windows' business (UI/RollFrame.lua, UI/Master.lua), but the Loot tab says what's being rolled for
   if what == "roll" or what == "rolls" or what == "loot" then

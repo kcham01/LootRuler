@@ -2062,6 +2062,23 @@ run("item notes", function()
   for id in pairs(LR.db.notes) do LR.setNote(id, nil) end
 end)
 
+run("a burst of rolls redraws the windows a few times, not once a roll", function()
+  local draws, rollDraws = 0, 0
+  local masterDraw, rollWindows = LR.UI.masterDraw, LR.UI.rollWindows
+  LR.UI.masterDraw = function(...) draws = draws + 1 return masterDraw(...) end
+  LR.UI.rollWindows = function(...) rollDraws = rollDraws + 1 return rollWindows(...) end
+  srv:tick(1)
+  draws, rollDraws = 0, 0
+  for _ = 1, 40 do LR.changed("roll") LR.changed("rolls") srv:tick(0.05, 0.05) end
+  srv:tick(1)
+  check("40 rolls in two seconds redraw the loot master window about once a quarter second", draws >= 2 and draws <= 10, draws)
+  check("and roll windows the same", rollDraws >= 2 and rollDraws <= 10, rollDraws)
+  draws = 0
+  LR.changed("roll")
+  check("one on its own still shows at once", draws == 1, draws)
+  LR.UI.masterDraw, LR.UI.rollWindows = masterDraw, rollWindows
+end)
+
 run("a roll for each reserve", function()
   srv:tick(6)                -- (the last message goes)
   local copy = LR.UI.testRoll({ quiet = true, mode = "SR", mine = 2, reservers = 2 })

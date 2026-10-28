@@ -553,7 +553,8 @@ end
 
 LR.onChange(function(what)
   if not LR.db then return end
-  if what == "roll" then UI.masterDraw() UI.lootPanel()
+  -- (a roll changes with every /roll: forty in two seconds redraw a few times, not forty)
+  if what == "roll" then UI.atMostEvery("master", UI.REDRAW_GAP, function() UI.masterDraw() UI.lootPanel() end)
   elseif what == "loot" or what == "session" or what == "roster" then UI.lootPanel() if what == "loot" and master and master:IsShown() then UI.masterDraw() end end
 end)
 
