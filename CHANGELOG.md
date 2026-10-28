@@ -5,6 +5,13 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+### Stress test (28 October 2026)
+
+Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`).
+
+- Fixed: a broken message from the raid leader's LootRuler could show a Lua error on a raider's screen. It's ignored now.
+  ([#136](https://github.com/kcham01/LootRuler/pull/136))
+
 ### Easier on the eye (27 October 2026)
 
 From the owner's in-game screenshots.
