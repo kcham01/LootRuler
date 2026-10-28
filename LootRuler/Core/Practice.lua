@@ -320,6 +320,13 @@ local function answerRoll(roll)
           n = math.random(lo, math.max(lo, hi - 1))
         end
         after(wait, function() if roll.state == "open" then P.roll(x, n, lo, hi) end end)
+        -- one roll for each reserve they have left on it (not in a tie made on purpose)
+        if not tie then
+          for j = 2, R.rollsFor(roll, x.name) do
+            local m = math.random(lo, hi)
+            after(wait + j * 0.7, function() if roll.state == "open" then P.roll(x, m, lo, hi) end end)
+          end
+        end
       end
     end
   end
