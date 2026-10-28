@@ -53,10 +53,13 @@ function B.bidText(n, g, strict) return ("%s#%d %d"):format(strict and "bid " or
 
 ---------------------------------------------------------------------- the loot master's batch
 
-local function wire(batch)
+-- (the items' links are only read when a raider first sees the batch, and they're most of its size: they go in the first
+-- one and every LINKS_EVERY-th after it, for anyone who joins late; the rest carry the item numbers, which make links too)
+local LINKS_EVERY = 10
+local function wire(batch, links)
   local it = {}
   for i, item in ipairs(batch.items) do
-    it[i] = { id = item.id, l = item.link, mn = item.min, inc = item.inc, tb = item.top and { item.top.p, item.top.n } or nil }
+    it[i] = { id = item.id, l = links and item.link or nil, mn = item.min, inc = item.inc, tb = item.top and { item.top.p, item.top.n } or nil }
   end
   local nb = batch.items[1] and LR.Rolls.noBidList(batch.items[1])
   return { t = "Z", k = batch.k, e = batch.state, left = math.max(0, batch.ends - now()), s = batch.secs, sb = batch.strict or nil, it = it, nb = nb }
@@ -69,9 +72,12 @@ local function publish(batch, soon)
   local mine = sendSeq
   local function go()
     if mine ~= sendSeq then return end
-    B.follow(wire(batch), U.me())
+    B.follow(wire(batch, true), U.me())
     -- (the newest only: one still waiting to go is made again when it goes, with the time left as it is then)
-    Net.sendNewest("Z:" .. batch.k, function() return wire(batch) end, LR.groupChannel())
+    Net.sendNewest("Z:" .. batch.k, function()
+      batch.sent = (batch.sent or 0) + 1
+      return wire(batch, batch.sent % LINKS_EVERY == 1)
+    end, LR.groupChannel())
   end
   if soon then C_Timer.After(0.3, go) else go() end
 end

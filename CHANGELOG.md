@@ -17,6 +17,10 @@ Found by pushing LootRuler well past an ordinary raid night (`tools/stress.lua`)
 - Roll windows and the loot master's window redraw at most four times a second while rolls or bids pour in, instead of
   on every one. Rolling out loot in a 40-player raid is about a third less work for everyone's LootRuler.
   ([#139](https://github.com/kcham01/LootRuler/pull/139))
+- LootRuler sends less while loot is given out: the guild hears changes at most every 30 seconds during a raid (it was 5),
+  and not at all while everyone from the guild who's online is in the raid; several auctions at once send their items'
+  links only now and then. Raiders' LootRuler does about half the work while items are rolled out and auctioned.
+  ([#140](https://github.com/kcham01/LootRuler/pull/140))
 
 ### Easier on the eye (27 October 2026)
 

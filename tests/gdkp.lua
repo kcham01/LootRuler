@@ -461,6 +461,16 @@ check("and what isn't one", Bt.parse("300") == nil and Bt.parse("#9 300", false,
 local potBatch, wonBefore = G.pot(s), #s.won
 srv:openLoot(lead, { { SIGNET, 4 }, { BROOCH, 4 }, { WATCH, 4 } })
 srv:tick(0.5)
+srv.zLinks = {}                  -- (each batch message the loot master sends: whether it carried the items' links)
+do
+  local addonMessage = srv.addonMessage
+  srv.addonMessage = function(self, from, prefix, text, channel, target)
+    local m = from == lead and channel == "RAID" and lead.LR.Net.decode(text)
+    if m and m.t == "Z" then srv.zLinks[#srv.zLinks + 1] = m.it[1].l ~= nil end
+    return addonMessage(self, from, prefix, text, channel, target)
+  end
+  srv.restoreAddonMessage = function() srv.addonMessage = addonMessage end
+end
 local batch = Bt.start(Bt.candidates(), 30)
 srv:tick(1)
 check("three items up at once, from the loot window", batch and #batch.items == 3 and batch.items[2].id == BROOCH and batch.items[2].min == 500)
@@ -481,6 +491,10 @@ srv:tick(1)
 check("too little: Dan is told the lowest", whisperTo(dan, "The lowest bid on #1 now is") ~= nil)
 local acopy = ann.LR.Batch.open()
 check("Ann's window shows who's highest", acopy.items[1].top and acopy.items[1].top.p == full(pug) and acopy.items[2].top.n == 575)
+srv.restoreAddonMessage()
+check("the batch went out several times, with the items' links only in the first", #srv.zLinks >= 3 and srv.zLinks[1] == true
+  and srv.zLinks[2] == false and srv.zLinks[#srv.zLinks] == false, table.concat(lead.LR.U.map(srv.zLinks, tostring), ","))
+check("and raiders' windows keep the links", acopy.items[2].link and acopy.items[2].link:find("Hitem:" .. BROOCH, 1, true) ~= nil)
 ann.LR.Batch.myMax(acopy, 1, 50)
 srv:tick(1)
 check("a max from her window goes to the loot master's addon, which answers", whisperTo(ann, "A max bid on #1 has to be at least the lowest bid now") ~= nil)

@@ -57,12 +57,31 @@ Measured on `main` after #135 (everything through "bids not taken"), against the
 4. **Chat floods:** 600 raid chat lines during an auction (a third of them bids) sold the item right, with 3 lines from the
    leader. Gargul's roll lines typed by a raider (not the loot runner) opened no roll windows (#128).
 
-Ideas from it (not done):
+Two ideas from it were then done, asked for by the owner:
 
-- Redraw the loot master window at most a few times a second during a roll (like `UI.renderSoon`): the longest moment in
-  the 390-roll case is the redraw.
-- Unpacking messages is still half of all the work: sending less (smaller whole copies, or fewer of them) is where the
-  next big saving is.
+- **Redraw** (#139): roll windows and the loot master window redraw at most every `UI.REDRAW_GAP` (0.25) seconds while rolls
+  or bids pour in (`UI.atMostEvery`), instead of on every one.
+- **Less** (#140): in a group, the guild's copy of the session goes at most every 30 seconds (was 5), and not at all while
+  every guild member who's online is in the group; a batch of auctions carries its items' links in its first message and
+  every 10th after it, not in every one.
+
+The same night after each (Lua instructions; "raider" is each raider's LootRuler; messages are the leader's):
+
+| Moment | Leader: #138 → Redraw → Less | Raider: #138 → Redraw → Less | Leader's messages: #138 → Less |
+| --- | --- | --- | --- |
+| A boss dies (1 roll) | 2.7M → 2.0M → **1.2M** | 511k → 423k → **245k** | 13 → 5 |
+| Rolling out 4 more | 10.0M → 6.4M → **4.8M** | 2.1M → 1.4M → **1.0M** | 34 → 16 |
+| A GDKP auction (25 bids) | 1.9M → 1.9M → **1.0M** | 528k → 531k → **311k** | 16 → 6 |
+| Five auctions at once (40 bids) | 5.3M → 5.3M → **4.0M** | 2.7M → 2.7M → **1.6M** | 79 (14 KB) → 53 (10 KB) |
+| Reserving | 7.1M → 7.2M → 6.8M | 299k → 299k → 223k | 65 → 61 |
+| Lock and post | 432k → 434k → 86k | 93k → 94k → 17k | 5 → 1 |
+
+In this night every guild member is in the raid, so no guild copies go at all; on a real guild night with members online
+outside the raid, they still go, at most every 30 seconds. The stress test's 390-roll case went from 1.9 s of the loot
+master's work (after #137) to 1.0 s (after #139).
+
+Still to look at: unpacking messages is still the biggest share of a raider's work; whole session copies to newcomers and
+every 25th send are the largest messages left.
 
 ## Only what changed (#119)
 

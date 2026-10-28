@@ -417,10 +417,17 @@ end
 
 --- the leader sends the session out (once, shortly after a burst of changes). slow: a change nobody needs to see at once
 --- (who's in a GDKP's pot): it goes out within SLOW_PUBLISH seconds, or with the next change, whichever is first.
---- In a group, the guild's copy (for guild members not in the group) goes out at most every GUILD_EVERY seconds.
+--- In a group, the guild's copy is for guild members who aren't in it: it goes out at most every GUILD_EVERY seconds, and
+--- not at all while every guild member online is in the group (they have the group's copy; one who logs in asks for it).
 local publishSeq, publishWaiting, guildSent, guildWaiting = {}, {}, {}, {}
-local SLOW_PUBLISH, GUILD_EVERY = 10, 5
+local SLOW_PUBLISH, GUILD_EVERY = 10, 30
+Net.GUILD_EVERY = GUILD_EVERY
+local function guildOutside()
+  if (GetNumGuildMembers() or 0) == 0 then return true end    -- (the guild list isn't known yet: someone may be outside)
+  return #LR.Guild.onlineOutside() > 0
+end
 local function sendGuild(s)
+  if IsInGroup() and not guildOutside() then return end
   guildSent[s.id] = GetTime()
   sendSession(s, "GUILD")
 end

@@ -507,6 +507,12 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   (#136: `handlers.A` checks its fields; `U.full` takes only text, so a name that isn't text is nobody everywhere) and a slow
   loot master window with many rolls on one item (#137: lower rolls on reserves aren't rows, "(best of N)" on the best;
   `R.rollsFor` keeps counts per `roll.who` above 8 reservers). Ideas not done are listed there.
+- **Redraw and Less** (#139, #140, asked for by the owner after the stress test): `UI.atMostEvery(key, gap, fn)` runs a redraw
+  at once, then at most once per `UI.REDRAW_GAP` while changes pour in (roll windows on "rolls", the loot master window on
+  "roll"); tests that read a roll window right after a roll wait a moment. In a group the guild's session copy goes at most
+  every `Net.GUILD_EVERY` (30) seconds, and none while `Guild.onlineOutside()` is empty (someone who logs in asks with `Q`).
+  A batch's `Z` carries item links (`l`) in its first send and every 10th (`LINKS_EVERY`); raiders only read them when they
+  first see the batch, and make links from item numbers otherwise.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`
