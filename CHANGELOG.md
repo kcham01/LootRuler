@@ -9,6 +9,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 From the owner's in-game screenshots.
 
+- The guild book can't be locked by a change stamped far in the future (a wrong or tampered clock): a change more than an
+  hour ahead counts as made an hour from now, so the next real change still replaces it.
+  ([#130](https://github.com/kcham01/LootRuler/pull/130))
 - What raiders wear is only ever read by inspecting them, for rolls and for "Raid gear": raiders' LootRuler no longer tells
   the loot master, so nobody can make it up. The "Show the loot master what I wear" setting is gone; your own roll window
   still shows what you have in that slot. ([#129](https://github.com/kcham01/LootRuler/pull/129))

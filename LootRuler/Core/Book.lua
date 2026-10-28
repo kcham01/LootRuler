@@ -230,40 +230,44 @@ function B.validBook(book)
 end
 
 --- merges a change (or a whole book) into a book, entry by entry, the newer one winning. fromGM: the sender is
---- the guild master (only they change who may edit). Returns whether anything changed.
-function B.merge(book, c, fromGM)
+--- the guild master (only they change who may edit). now: the server's time; a change stamped more than B.AHEAD seconds
+--- later than that counts as made then, so one from a wrong or tampered clock can't stay newest for ever. (Edits a
+--- second apart are stamped a little ahead to keep their order: that's within it.) Returns whether anything changed.
+B.AHEAD = 3600
+function B.merge(book, c, fromGM, now)
+  local function at(t) return now and math.min(t, now + B.AHEAD) or t end
   local changed = false
   for p, e in pairs(c.points or {}) do
     p = U.full(p)
     local mine = book.points[p]
-    if not mine or e.t > mine.t then book.points[p] = { n = math.max(0, math.min(B.MAX_POINTS, math.floor(e.n))), t = e.t } changed = true end
+    if not mine or at(e.t) > mine.t then book.points[p] = { n = math.max(0, math.min(B.MAX_POINTS, math.floor(e.n))), t = at(e.t) } changed = true end
   end
   book.alts = book.alts or {}
   for a, e in pairs(c.alts or {}) do
     a = U.full(a)
     local mine = book.alts[a]
-    if not mine or e.t > mine.t then
+    if not mine or at(e.t) > mine.t then
       -- (never an alt of itself)
-      book.alts[a] = { m = (e.m ~= "" and not U.samePlayer(e.m, a)) and U.full(e.m) or "", t = e.t }
+      book.alts[a] = { m = (e.m ~= "" and not U.samePlayer(e.m, a)) and U.full(e.m) or "", t = at(e.t) }
       changed = true
     end
   end
   for id, e in pairs(c.prio or {}) do
     local mine = book.prio[id]
-    if not mine or e.t > mine.t then
+    if not mine or at(e.t) > mine.t then
       local list = {}
       for _, x in ipairs(e.list) do list[#list + 1] = { p = U.full(x.p), n = math.max(1, math.floor(x.n)), note = type(x.note) == "string" and x.note:sub(1, 60) or nil } end
-      book.prio[id] = { list = list, t = e.t }
+      book.prio[id] = { list = list, t = at(e.t) }
       changed = true
     end
   end
-  if c.boost and c.boost.t > (book.boost.t or 0) then
+  if c.boost and at(c.boost.t) > (book.boost.t or 0) then
     local per = math.floor(tonumber(c.boost.perRaid) or B.DEFAULT_PER_RAID)
-    book.boost = { on = c.boost.on == true, perRaid = math.max(1, math.min(100, per)), t = c.boost.t }
+    book.boost = { on = c.boost.on == true, perRaid = math.max(1, math.min(100, per)), t = at(c.boost.t) }
     changed = true
   end
-  if fromGM and c.editRank and c.et > (book.et or 0) then
-    book.editRank, book.et = math.max(0, math.floor(c.editRank)), c.et
+  if fromGM and c.editRank and at(c.et) > (book.et or 0) then
+    book.editRank, book.et = math.max(0, math.floor(c.editRank)), at(c.et)
     changed = true
   end
   return changed

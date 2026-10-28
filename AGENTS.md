@@ -484,6 +484,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Gear by inspection only** (#129): the gear overview (`Overview.ask`) inspects everyone but me; `H` / `I` are neither sent nor answered
   (older loot masters inspect after their wait), `O.WAIT`, `Rolls.INSPECT_WAIT` and the `shareGear` setting are gone. Practice players'
   made-up gear counts as inspected.
+- **Guild book times capped** (#130; `B.merge(book, c, fromGM, now)`, `B.AHEAD` = 3600): a change's time is taken as at most now + an hour
+  (edits in the same second are stamped a little ahead, and clocks differ a little), so a far-future stamp can't make an entry
+  unchangeable. `Guild.lua` passes the server's time.
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`
     for those, not tooltip data post-calls (`TooltipDataProcessor`), which the stand-in had run for every link. `UI/Highlight.lua`

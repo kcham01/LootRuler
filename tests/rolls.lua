@@ -263,6 +263,18 @@ B.setPoints(other, ANN, 0, 40)
 check("points taken away spread too", B.merge(book, { points = { [ANN] = other.points[ANN] } }) and B.points(book, ANN) == 0)
 check("only the guild master changes who may edit", not B.merge(book, { editRank = 4, et = 50 }) and book.editRank == 1
   and B.merge(book, { editRank = 2, et = 50 }, true) and book.editRank == 2)
+-- a change stamped in the future (a wrong or tampered clock) counts as made now, so a later real change still wins
+do
+  local fb = B.new("Night Watch")
+  local A = B.AHEAD
+  check("a change from far in the future counts as made an hour from now at most", B.merge(fb, { points = { [BOB] = { n = 99, t = 1e9 } } }, false, 1000)
+    and B.points(fb, BOB) == 99 and fb.points[BOB].t == 1000 + A)
+  check("so a change made after that still wins", B.merge(fb, { points = { [BOB] = { n = 20, t = 1001 + A } } }, false, 1001 + A) and B.points(fb, BOB) == 20)
+  check("a change a second ahead (two edits in a second) keeps its time", B.merge(fb, { points = { [ANN] = { n = 3, t = 5001 } } }, false, 5000)
+    and fb.points[ANN].t == 5001)
+  check("the same for priority lists and boosted rolls", B.merge(fb, { prio = { [WATCH] = { list = { { p = ANN, n = 1 } }, t = 1e9 } },
+    boost = { on = true, perRaid = 5, t = 1e9 } }, false, 2000) and fb.prio[WATCH].t == 2000 + A and fb.boost.t == 2000 + A)
+end
 check("an older change of who may edit doesn't count", not B.merge(book, { editRank = 0, et = 49 }, true) and book.editRank == 2)
 check("boosted rolls switched off spreads", B.merge(book, { boost = { on = false, perRaid = 10, t = 60 } }) and not book.boost.on)
 check("nonsense isn't a change", not B.valid("x") and not B.valid({ points = { [ANN] = { n = "many", t = 1 } } })
