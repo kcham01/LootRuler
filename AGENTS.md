@@ -386,7 +386,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   Gargul or mailed, `W.session(sender)` keeps real whispers out of it, ending it ends the practice. Only out of a group; joining
   one ends it. Pretend players act through the real entry points (`Whisper.handle`, `Rolls.onRoll` with `RANDOM_ROLL_RESULT`,
   `Rolls.onChat`, `Net.handlers.N`), answering each roll once (`Practice.react` on "roll" changes); reservers never pass;
-  `Practice.tie` makes the next roll a tie. **Every new feature adds itself to the practice raid** (so it can be tried in the game).
+  `Practice.tie` makes the next roll a tie. `Practice.askSwap` (a pretend player whispers a swap, while locked), `Practice.leave` (one
+  with reserves leaves the group, into `Practice.gone`; they don't roll) and `Practice.comeBack` (the Test tab's "The raiders:" buttons,
+  the owner's ask). **Every new feature adds itself to the practice raid** (so it can be tried in the game).
 - **Pot rules** (`s.gk.rules` = { { n, pct, g, to = names } }, at most `Gdkp.MAX_RULES`; `Gdkp.addRule`, `editRule`, `removeRule`,
   `ruleTo`, `ruleText`; `LR.gdkpAddRule` and friends; `UI.potRulesSheet`): the organiser's own cuts, paid after the cut, bonuses and
   role cuts, before the even split, scaled down to what's left. `split.rules`, `split.ruleTotals`, `row.ruleCut`, `row.ruleNames`;
@@ -626,7 +628,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Rolls.tellAway`, `roll.toldAway`): the roll still waits for every reserver until time runs out. The loot master's window lists
   anyone away first ("Bob (offline)", "(left the group)") with a gold line to wait or Close now, and their chat is told once each time
   someone goes (checked in the roll's tick; the window also redraws on roster changes). Someone back can still roll. Raiders' screens
-  don't change. Not in the practice raid (pretend players can't go offline). A loot master who disconnects: the roll is just rolled
+  don't change. In the practice raid, a pretend player who left the group (Test tab, "A raider leaves") is listed the same way. A loot master who disconnects: the roll is just rolled
   again (decided).
 - **Known issues and notes from the owner's testing** (add to this list; fix in a later session):
   - (fixed, owner's in-game test, #124) Reserves weren't in bag or loot window tooltips: the TBC client runs `OnTooltipSetItem`

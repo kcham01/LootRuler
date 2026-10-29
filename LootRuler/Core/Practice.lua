@@ -9,6 +9,7 @@ local U, S, R = LR.U, LR.Session, LR.Roll
 
 local P = LR.Practice           -- (Init.lua makes it, off, so earlier files can ask)
 P.players, P.byKey = {}, {}
+P.gone = {}            -- pretend players who left the group (P.leave), latest last: they can come back (P.comeBack)
 
 -- the made-up players (also the Test tab's pretend roll windows)
 P.PEOPLE = { { "Arthas", "PALADIN" }, { "Jaina", "MAGE" }, { "Thrall", "SHAMAN" }, { "Sylvanas", "HUNTER" }, { "Øyvind", "WARRIOR" },
@@ -88,7 +89,7 @@ function P.start(opts)
   opts = opts or {}
   local raid = LR.raid(opts.raid) and opts.raid or "Karazhan"
   P.prev = LR.db.current
-  P.players, P.byKey = {}, {}
+  P.players, P.byKey, P.gone = {}, {}, {}
   for i = 1, math.max(P.MIN, math.min(opts.players or 8, P.MAX)) do
     local x = { name = U.full(P.PEOPLE[i][1]), class = P.PEOPLE[i][2] }
     P.players[i] = x
@@ -139,7 +140,7 @@ function P.stop(why)
     if LR.db.current == P.sid then LR.db.current = P.prev and LR.db.sessions[P.prev] and P.prev or nil end
   end
   P.on, P.sid, P.prev, P.book, P.tie = false, nil, nil, nil, false
-  P.players, P.byKey = {}, {}
+  P.players, P.byKey, P.gone = {}, {}, {}
   gen = gen + 1
   reacted = {}
   LR.print(why or "the practice raid is over: it's forgotten.")
@@ -237,7 +238,9 @@ function P.drop(count)
     end
   end
   -- and something to count, not roll for (the Loot tab's "Everything else that dropped")
-  local x = P.COUNTED[math.random(#P.COUNTED)]
+  -- (one this raid counts rather than lists: Primal Nether is on the list of loot in some raids)
+  local counted = U.filter(P.COUNTED, function(c) return LR.minorLoot(s, c[1]) end)
+  local x = #counted > 0 and counted[math.random(#counted)] or P.COUNTED[1]
   local who = P.on and P.roster()[math.random(#P.roster())]
   S.addDrop(s, { k = LR.Drops.newKey(x[1]), i = x[1], b = boss and boss.name or "", at = now, by = U.me(), src = "practice",
     h = who and who.name or U.me(), ht = now, n = x[2] }, now)
@@ -272,7 +275,7 @@ local function rollers(roll)
   local out = {}
   for _, w in ipairs(roll.who or {}) do
     local x = P.byKey[R.key(type(w) == "table" and w[1] or w)]
-    if x then out[#out + 1] = x end
+    if x and U.indexOf(P.players, x) then out[#out + 1] = x end      -- (not one who left the group: they can't roll)
   end
   return out
 end
@@ -477,6 +480,58 @@ function P.react()
   end
 end
 
+---------------------------------------------------------------------- swaps and players leaving (to try them on purpose)
+--- a pretend player's swap request: one of their reserves for another of the raid's items (nil if they have none)
+local function swapText(s, x)
+  local mine = S.reservesOf(s, x.name)
+  if #mine == 0 then return nil end
+  local items = {}
+  for _, id in ipairs(LR.raidOf(s).order or {}) do if not s.hr[id] and not U.indexOf(mine, id) then items[#items + 1] = id end end
+  if #items == 0 then return nil end
+  return ("!lr swap %s %s"):format(LR.itemLink(mine[math.random(1, #mine)]), LR.itemLink(pick(items)))
+end
+
+--- a pretend player with a reserve asks to swap it for another item, by whisper, as a player without the addon would.
+--- Only while the reserves are locked (that's when swaps are asked for). Returns the player, or nil and why not
+function P.askSwap()
+  local s = P.session()
+  if not s then return nil, "There's no practice raid on." end
+  if not s.locked then return nil, "Lock the reserves first (Reserved tab): a swap is asked for once they're locked." end
+  for _, x in ipairs(shuffled(P.players)) do
+    local text = swapText(s, x)
+    if text then after(0.5, function() P.whisper(x, text) end) return x end
+  end
+  return nil, "Nobody has a reserve to swap yet: have them reserve first."
+end
+
+--- a pretend player leaves the group (one with reserves, when anyone has some): their reserves stay, as a real player's
+--- would, so clearing them (Reserved tab) and rolls that wait for them can be tried. Returns the player, or nil and why not
+function P.leave()
+  local s = P.session()
+  if not s then return nil, "There's no practice raid on." end
+  if #P.players <= 1 then return nil, "Only one pretend player is left." end
+  local from = {}
+  for i, x in ipairs(P.players) do if #S.reservesOf(s, x.name) > 0 then from[#from + 1] = i end end
+  if #from == 0 then for i = 1, #P.players do from[i] = i end end
+  local x = table.remove(P.players, from[math.random(1, #from)])
+  P.gone[#P.gone + 1] = x
+  print(("|cff66bbffPractice|r |cffffff00%s has left the raid group.|r"):format(U.short(x.name)))
+  LR.rosterChanged()
+  LR.changed("roster")
+  return x
+end
+
+--- the last pretend player who left joins the group again. Returns them, or nil when nobody has left
+function P.comeBack()
+  local x = P.on and table.remove(P.gone)
+  if not x then return nil end
+  P.players[#P.players + 1] = x
+  print(("|cff66bbffPractice|r |cffffff00%s has joined the raid group.|r"):format(U.short(x.name)))
+  LR.rosterChanged()
+  LR.changed("roster")
+  return x
+end
+
 -- reserves locked: one pretend player asks to swap a reserve, by whisper, as a player without the addon would
 local swapAsked
 LR.onChange(function(what)
@@ -486,16 +541,8 @@ LR.onChange(function(what)
   if swapAsked == s.id then return end
   swapAsked = s.id
   for _, x in ipairs(shuffled(P.players)) do
-    local mine = S.reservesOf(s, x.name)
-    if #mine > 0 then
-      local items = {}
-      for _, id in ipairs(LR.raidOf(s).order or {}) do if not s.hr[id] and not U.indexOf(mine, id) then items[#items + 1] = id end end
-      if #items > 0 then
-        local text = ("!lr swap %s %s"):format(LR.itemLink(mine[1]), LR.itemLink(pick(items)))
-        after(1.5, function() P.whisper(x, text) end)
-        return
-      end
-    end
+    local text = swapText(s, x)
+    if text then after(1.5, function() P.whisper(x, text) end) return end
   end
 end)
 
