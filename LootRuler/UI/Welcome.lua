@@ -7,8 +7,8 @@ local UI = LR.UI
 
 UI.TOUR = {
   { "Welcome to LootRuler", "It runs raid loot inside the game: soft reserves, rolling items out, the raid's loot list and trades. Only whoever runs the loot needs it: everyone else can whisper and /roll." },
-  { "Reserving", "The Reserve tab: pick your items once the raid leader has opened soft reserves. Players without LootRuler type !reserve and an item link in raid chat." },
-  { "Running the raid", "The Session tab: open soft reserves (the raid, and how many each), bring in softres.it, set up the raid and hand it over. The Reserves tab shows who reserved what." },
+  { "Reserving", "The My reserves tab: pick your items once the raid leader has opened soft reserves. Players without LootRuler type !reserve and an item link in raid chat." },
+  { "Running the raid", "The Session tab: open soft reserves (the raid, and how many each), bring in softres.it, set up the raid and hand it over. The All reserves tab shows who reserved what." },
   { "Loot", "As master looter, click an item in the list beside the loot window to roll it out. Everyone gets a roll window, and you click Give. The Loot tab lists every drop and what's still to trade." },
   { "Make it yours", "The Settings tab has every option, from roll windows to loot rules. /lr help lists the commands, and /lr tour shows this again." },
 }
@@ -24,9 +24,10 @@ function UI.tour(page)
     f:gap(6)
     f:note(("%d of %d"):format(page, #UI.TOUR))
     local list = {}
-    if page > 1 then list[#list + 1] = { label = "Back", click = function() h.close() UI.tour(page - 1) end } end
-    if page < #UI.TOUR then list[#list + 1] = { label = "Next", click = function() h.close() UI.tour(page + 1) end } end
-    list[#list + 1] = { label = page < #UI.TOUR and "Skip" or "Done", click = function() h.close() end }
+    if page < #UI.TOUR then list[#list + 1] = { label = "Skip", style = "quiet", click = function() h.close() end } end
+    if page > 1 then list[#list + 1] = { label = "Back", style = "quiet", click = function() h.close() UI.tour(page - 1) end } end
+    if page < #UI.TOUR then list[#list + 1] = { label = "Next", click = function() h.close() UI.tour(page + 1) end }
+    else list[#list + 1] = { label = "Done", click = function() h.close() end } end
     f:buttons(list)
   end)
 end
@@ -40,6 +41,7 @@ end
 -- what each version brought, newest first (for players updating; a new player gets the tour instead)
 UI.WHATS_NEW = {
   { "1.0.0-beta", {
+    "A new layout: one main button on each screen, the rest quieter or under More. The tabs are My reserves and All reserves.",
     "Roll windows list everyone's rolls, show your item notes and the guild's wishlists, and what you wear in that slot.",
     "Roll types of your own, like Transmog (/roll 98).",
     "Trade timers: a bar for each item you hold, with the time left to trade it.",
