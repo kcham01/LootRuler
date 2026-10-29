@@ -223,7 +223,23 @@ function UI.autoLockSheet(s)
   end)
 end
 
---- softres.it: importing (the first thing many raids do), and its link. It stands out: it's where a pug starts
+--- handing the reserves over (or taking them back while it's waiting): the button
+local function handOverButton(s)
+  if s.next then
+    return { label = "Take it back", click = function() LR.handOver(s, nil) end,
+      tip = ("Waiting for %s's LootRuler to take the reserves over. Click to keep running them."):format(U.short(s.next)) }
+  end
+  return { label = "Hand over the reserves", click = function()
+    UI.pickLeader("Who runs the reserves now?", function(name)
+      local ok, why = LR.handOver(s, name)
+      if not ok and why then UI.toast(why) end
+    end)
+  end, tip = "Leaving, or letting someone else run the reserves? Everything reserved and given out stays, and the raid is told who to whisper." }
+end
+UI.handOverButton = handOverButton
+
+--- softres.it, and the session's big buttons (the owner's layout): importing, telling the raid how to reserve,
+--- handing over and ending, all at the top
 local function softresPanel(f, s)
   f:hot("softres.it", function(p)
     local fromSheet = s.sx and #U.keys(s.sx) or 0
@@ -231,11 +247,19 @@ local function softresPanel(f, s)
       or "The raid reserved on softres.it? Bring the sheet in, with the raid's link to post.", K.TEXT)
     p:buttons({
       { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end },
-      s.url and { label = "Post the link in raid chat", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
-        if LR.postLink(s) then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
-      end } or nil,
+      { label = "Tell the raid how to reserve", disabled = LR.groupChannel() == nil, click = function()
+        if LR.Whisper.postHowTo() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+      end, tip = "Posts: \"" .. LR.Whisper.howTo() .. "\"" },
+      handOverButton(s),
+      { label = "End session", click = function() UI.endSessionAsk(s) end },
     }, "left")
-    if s.url then p:note(s.url) end
+    if s.next then p:note(("Waiting for %s's LootRuler to take the reserves over. It does as soon as it hears from yours."):format(U.short(s.next)), K.GOLD) end
+    if s.url then
+      p:inline(s.url, { { "Post the link in raid chat", function()
+        if not LR.groupChannel() then UI.toast("You're not in a group.") return end
+        if LR.postLink(s) then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+      end } })
+    end
   end)
 end
 
@@ -258,7 +282,12 @@ local function privateView(f, s)
   f:hot("softres.it", function(p)
     p:note(s.sx and "Import again whenever the sheet changes: its reserves are updated to match."
       or "Bring in the raid's reserves from softres.it, to see who reserved what.", K.TEXT)
-    p:buttons({ { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end } }, "left")
+    p:buttons({
+      { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end },
+      { label = "End session", click = function()
+        UI.confirm("End your private session", "Its loot list and reserves are forgotten. Nobody else had them.", "End session", function() LR.closePrivate() end)
+      end },
+    }, "left")
   end)
   f:panel("Your private session", function(p)
     p:row("Reserves each", function(r) stepper(r, nil, s.sr, S.MIN_SR, S.MAX_SR, function(v) LR.configure(s, v, s.dupes) end) end)
@@ -272,9 +301,6 @@ local function privateView(f, s)
     end)
     p:note("It keeps the raid's loot list (from the game's loot lines and Gargul's awards) and the reserves you bring in. Nothing is rolled out from it. It closes by itself if you join someone's reserves or open your own.")
   end)
-  f:buttons({ { label = "Close it", style = "link", danger = true, click = function()
-    UI.confirm("Close your private session", "Its loot list and reserves are forgotten. Nobody else had them.", "Close it", function() LR.closePrivate() end)
-  end } }, "left")
 end
 
 --- someone says they run these reserves now, and LootRuler couldn't confirm it: the player decides
@@ -596,31 +622,17 @@ local function manage(f, s)
     }, "left")
   end)
 
-  fold(f, "handOver", "Hand over the reserves", s.next and ("waiting for " .. U.short(s.next)) or "when you leave, or someone else runs them", function(p)
-    if s.next then
-      p:note(("Waiting for %s's LootRuler to take the reserves over. It does as soon as it hears from yours."):format(U.short(s.next)), K.GOLD)
-      p:buttons({ { label = "Take it back", style = "quiet", click = function() LR.handOver(s, nil) end } }, "left")
-    else
-      p:note("Leaving, or letting someone else run the reserves? Hand them over: everything reserved and given out stays, and the raid is told who to whisper.")
-      p:buttons({ { label = "Hand the reserves over", style = "quiet", click = function()
-        UI.pickLeader("Who runs the reserves now?", function(name)
-          local ok, why = LR.handOver(s, name)
-          if not ok and why then UI.toast(why) end
-        end)
-      end } }, "left")
-    end
-  end)
-
   f:gap(4)
   f:buttons({
     LR.canSetUp() and { label = "Raid setup", style = "quiet", click = function() UI.lineupSheet() end,
       tip = "Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups." } or nil,
-    not s.gdkp and { label = "Tell the raid how to reserve", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
-      if LR.Whisper.postHowTo() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
-    end, tip = "Posts: \"" .. LR.Whisper.howTo() .. "\"" } or nil,
     s.gdkp and { label = "Import from softres.it", style = "quiet", click = function() importSheet(s) end } or nil,
   }, "left")
-  f:buttons({ { label = "End this session", style = "link", danger = true, click = function() endSession(s) end } }, "left")
+  -- (a GDKP has no softres.it box at the top: its handing over and ending are here)
+  if s.gdkp then
+    f:buttons({ handOverButton(s), { label = "End session", click = function() endSession(s) end } }, "left")
+    if s.next then f:note(("Waiting for %s's LootRuler to take the reserves over."):format(U.short(s.next)), K.GOLD) end
+  end
 end
 
 --- the raid I'm in now (its key), if LootRuler knows it

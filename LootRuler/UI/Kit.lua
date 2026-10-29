@@ -215,7 +215,7 @@ end, function(b)
   b.text:SetTextColor(0.91, 0.89, 0.82)
 end)
 
--- a link: words only, for rare or risky actions (End this session, Change, Lift). `danger` makes it red
+-- a link: words only, for rare or risky actions (Call off, Change, Lift). `danger` makes it red
 K.define("link", function()
   local b = CreateFrame("Button", nil, UIParent)
   b.text = fs(b, "GameFontNormalSmall")

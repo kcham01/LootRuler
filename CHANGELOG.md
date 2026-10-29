@@ -9,10 +9,11 @@ it becomes 1.0.0. Each line links the pull request it came from.
   each screen, quieter buttons for the rest and plain links for rare or risky ones; content first, with the main actions
   pinned under the list and the rarer ones under "More..."; rules, state and actions apart; shorter explanations.
   - The tabs are called **My reserves** and **All reserves**.
-  - **Session tab** (leader): softres.it first, standing out; then "This raid's rules" (how loot goes, reserves each, what
+  - **Session tab** (leader): softres.it first, standing out, with four red buttons: import, tell the raid how to
+    reserve, hand the reserves over, and "End session"; then "This raid's rules" (how loot goes, reserves each, what
     can be reserved, who can, locking) and "Who gets what" (hard reserves, extra reserves, the disenchanter, the loot
-    council), each row's choices lined up; the raid's name, handing over, +1s and boosted rolls fold away. "End this
-    session" is a red link. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
+    council), each row's choices lined up; the raid's name, +1s and boosted rolls fold away. A private session's top box
+    has "End session" too. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
   - **Opening reserves**: the raid you're in is picked; softres.it or LootRuler side by side; raid setup and a private
     session as plain buttons. Other options are on the Session tab once it's open.
   - **First screen** (nothing open): running loot (import or open reserves) or just raiding, which says a raider can import
