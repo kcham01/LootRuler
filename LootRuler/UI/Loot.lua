@@ -67,6 +67,8 @@ local function badge(s, d)
   return ""
 end
 
+UI.rollingNow = rolling
+
 --- rolls a drop out (the loot master)
 local function rollOut(s, d)
   local slot
@@ -76,6 +78,7 @@ local function rollOut(s, d)
   if not roll then UI.toast(why) return end
   UI.masterDraw()
 end
+UI.rollOut = rollOut
 
 local function dropRow(f, s, d, runner, leader)
   local state = S.dropState(s, d)

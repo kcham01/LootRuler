@@ -10,7 +10,7 @@ local brand                   -- the branding being typed (Your raid's name), fo
 
 local function stepper(p, label, value, minV, maxV, onChange)
   p:chips({
-    { label = label, plain = true },
+    label and { label = label, plain = true } or false,
     { label = "-", on = false, width = 24, click = function() if value > minV then onChange(value - 1) end end },
     { label = tostring(value), on = true, width = 32, click = function() end },
     { label = "+", on = false, width = 24, click = function() if value < maxV then onChange(value + 1) end end },
@@ -153,21 +153,32 @@ function UI.autoLockSheet(s)
   end)
 end
 
---- softres.it: importing (the first thing many raids do), and its link
+--- softres.it: importing (the first thing many raids do), and its link. It stands out: it's where a pug starts
 local function softresPanel(f, s)
-  f:panel("softres.it", function(p)
-    p:note(s.sx and "Import again whenever the sheet changes: its reserves are updated to match, and reserves made in LootRuler stay."
-      or "Reserves made on softres.it come in here, with the raid's link to post.")
-    local list = { { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end } }
-    if s.url then
-      list[2] = { label = "Post the softres.it link", disabled = LR.groupChannel() == nil, click = function()
+  f:hot("softres.it", function(p)
+    local fromSheet = s.sx and #U.keys(s.sx) or 0
+    p:note(fromSheet > 0 and ("%s's reserves came from the sheet. Import again whenever it changes: those are updated to match, and reserves made in LootRuler stay."):format(U.plural(fromSheet, "player"))
+      or "The raid reserved on softres.it? Bring the sheet in, with the raid's link to post.", K.TEXT)
+    p:buttons({
+      { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end },
+      s.url and { label = "Post the link in raid chat", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
         if LR.postLink(s) then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
-      end }
-    end
-    p:buttons(list, "left")
+      end } or nil,
+    }, "left")
     if s.url then p:note(s.url) end
   end)
 end
+
+--- the Session tab's sections that open and close (kept per character): key -> true
+local function sessionFolds()
+  if type(LR.db.ui.sessionOpen) ~= "table" then LR.db.ui.sessionOpen = {} end
+  return LR.db.ui.sessionOpen
+end
+local function fold(f, key, title, what, fill)
+  local open = sessionFolds()
+  f:fold(title, what, open[key] == true, function() open[key] = not open[key] or nil UI.render() end, fill)
+end
+UI.sessionFold = fold
 
 --- my private session (Core/Net.lua): what it holds, its few settings, and closing it
 local function privateView(f, s)
@@ -224,100 +235,234 @@ local function claimPanel(f, s)
   end
 end
 
+--- ending a session: asks first, and says what's still to do (gold owed, the raid's points)
+local function endSession(s)
+  local raid = LR.raidOf(s)
+  local text = "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)"
+  -- GDKP: ending it loses who owes what, so not while gold is still owed (unless they mean it)
+  local owing = LR.Gdkp.unsettled(s)
+  if #owing > 0 then
+    UI.openSheet("Gold is still owed", function(sf, h)
+      sf:text(("%s aren't settled yet:"):format(U.plural(#owing, "player")))
+      for i, x in ipairs(owing) do
+        if i > 8 then sf:note(("...and %d more."):format(#owing - 8)) break end
+        sf:note(x[2] > 0 and ("%s: you give them %s"):format(U.short(x[1]), LR.Gdkp.gold(x[2]))
+          or ("%s: they give you %s"):format(U.short(x[1]), LR.Gdkp.gold(-x[2])), x[2] > 0 and K.GOLD or { 1, 0.35, 0.29 })
+      end
+      sf:note("You can end it anyway: it's kept under Past raids (Loot tab), where you can finish the payouts, and trades with them still count for two weeks. Or keep it open: it stays for a week, even after you log out.")
+      sf:gap(6)
+      sf:buttons({
+        { label = "Keep it open", style = "quiet", click = function() h.close() end },
+        { label = "Payouts", style = "quiet", click = function() h.close() UI.payoutSheet(s) end },
+        { label = "End it", click = function() h.close() LR.endSession(s) end },
+      })
+    end)
+    return
+  end
+  if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers(s) > 0 then
+    -- the end of a raid is when its points are usually given
+    UI.openSheet("End the session", function(sf, h)
+      sf:text(text)
+      sf:note(("This raid's points haven't been given yet (%d each for %s from the guild)."):format(LR.book().boost.perRaid,
+        U.plural(#LR.Guild.raidMembers(s), "player")), K.GOLD)
+      sf:gap(6)
+      sf:buttons({
+        { label = "Cancel", style = "quiet", click = function() h.close() end },
+        { label = "End it", style = "quiet", click = function() h.close() LR.endSession(s) end },
+        { label = "Give points and end", click = function()
+          h.close()
+          local ok, why = LR.Guild.raidPoints(s)
+          if not ok then UI.refused(why) end
+          LR.endSession(s)
+        end },
+      })
+    end)
+    return
+  end
+  UI.confirm("End the session", text, "End it", function() LR.endSession(s) end)
+end
+UI.endSessionAsk = endSession
+
+--- the loot council (Core/Council.lua): who's on it
+local function councilPickSheet(s)
+  UI.openSheet("Loot council", function(f, h)
+    f:note("The council votes on who gets each item, from the players who roll for it. The loot master sees the votes and hands it over. Votes stay between the council and the loot master. Council members without LootRuler whisper you \"!reserve vote Name\".")
+    local list, seen = {}, {}
+    for _, m in ipairs(LR.roster()) do list[#list + 1] = { name = U.full(m.name), class = m.class } seen[U.full(m.name):lower()] = true end
+    for _, n in ipairs(s.lc or {}) do if not seen[n:lower()] then list[#list + 1] = { name = n } end end
+    table.sort(list, function(a, b) return a.name < b.name end)
+    local chips = {}
+    for _, m in ipairs(list) do
+      local on = LR.Council.isMember(s, m.name)
+      chips[#chips + 1] = { tick = true, label = U.short(m.name), on = on, click = function()
+        local names = {}
+        for _, n in ipairs(s.lc or {}) do if not U.samePlayer(n, m.name) then names[#names + 1] = n end end
+        if not on then names[#names + 1] = m.name end
+        LR.setCouncil(s, names)
+        h.redraw(true)
+      end }
+    end
+    if #chips > 0 then f:chips(chips, { gap = 2 }) else f:note("Nobody in the group yet.") end
+    f:note(LR.Council.on(s) and ("On: %s on the council."):format(U.plural(#s.lc, "player")) or "Off: nobody on the council, so rolls decide.",
+      LR.Council.on(s) and K.GREEN or nil)
+    f:buttons({ { label = "Done", click = function() h.close() end } })
+  end)
+end
+UI.councilPickSheet = councilPickSheet
+
+--- "How loot goes": reserves, GDKP, or the guild's priority lists (first, or only)
+local function lootModes(p, s)
+  local prio = s.prio or UI.prioAvailable()
+  local mode = s.gdkp and "gdkp" or s.prio or "res"
+  local function pick(m)
+    if m == mode then return end
+    local function go()
+      if m == "gdkp" then LR.setGdkp(s, true) return end
+      if s.gdkp then LR.setGdkp(s, false) end
+      LR.setSessionPrio(s, m ~= "res" and m or nil)
+    end
+    if m == "gdkp" and next(s.res) then
+      UI.confirm("GDKP auctions", "Every item is auctioned for gold instead: reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Auction", go)
+    elseif m == "only" and next(s.res) then
+      UI.confirm("Priority lists only", "Reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Switch", go)
+    else go() end
+  end
+  p:chips({
+    { label = "Reserves and rolls", on = mode == "res", click = function() pick("res") end, tip = "Soft and hard reserves, then everyone rolls." },
+    { label = "GDKP auction", on = mode == "gdkp", click = function() pick("gdkp") end,
+      tip = "Items are auctioned for gold: raiders bid by typing an amount in raid chat. The gold goes in a pot that's split between everyone at the end." },
+    prio and { label = "Priority lists first", on = mode == "both", click = function() pick("both") end, tip = UI.PRIO_MODES[2][3] } or false,
+    prio and { label = "Priority lists only", on = mode == "only", click = function() pick("only") end, tip = UI.PRIO_MODES[3][3] } or false,
+  }, { gap = 2 })
+end
+
+--- the rules, set once before the pull
+local function rulesPanel(f, s)
+  local raid = LR.raidOf(s)
+  local reserving = not s.gdkp and s.prio ~= "only"
+  f:panel("This raid's rules", function(p)
+    p:row("How loot goes", function(r) lootModes(r, s) end)
+    if not reserving then return end
+    p:row("Reserves each", function(r)
+      stepper(r, nil, s.sr, S.MIN_SR, S.MAX_SR, function(v)
+        local cut = 0
+        for _, pl in ipairs(S.players(s)) do if #pl.items > v then cut = cut + 1 end end
+        local function go() local ok, why = LR.configure(s, v, s.dupes) if not ok then UI.refused(why) end end
+        if cut > 0 then
+          UI.confirm("Fewer reserves", ("%s already reserved more than %d: their last reserves go."):format(U.plural(cut, "player"), v), "Lower it", go)
+        else go() end
+      end)
+    end)
+    p:row("Reserving", function(r)
+      r:chips({
+        { tick = true, label = "Same item more than once", on = s.dupes, click = function()
+          local doubled = 0
+          for _, pl in ipairs(S.players(s)) do
+            local seen = {}
+            for _, id in ipairs(pl.items) do if seen[id] then doubled = doubled + 1 break end seen[id] = true end
+          end
+          local function go() LR.configure(s, s.sr, not s.dupes) end
+          if s.dupes and doubled > 0 then
+            UI.confirm("One per item", ("%s put more than one reserve on the same item: the extra ones go."):format(U.plural(doubled, "player")), "Switch it off", go)
+          else go() end
+        end, tip = "Lets a player put more than one of their reserves on the same item (softres.it's \"x2\")." },
+        not raid.custom and { tick = true, label = "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
+          tip = "Lets people reserve any item, not just " .. raid.name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
+        { tick = true, label = "One reserve win each", on = s.ow, click = function() LR.setOneWin(s, not s.ow) end,
+          tip = "Once a player wins one of their reserves, their other reserves stop counting for the rest of the session, so loot goes further. The raid is told when it happens." },
+        { tick = true, label = "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
+          tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the All reserves tab." },
+        UI.boostOn() and { tick = true, label = "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
+          tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
+      }, { gap = 2 })
+    end)
+    p:row("Who can reserve", function(r)
+      r:chips({
+        { tick = true, label = "Only the group", on = s.go, click = function() LR.setGroupOnly(s, not s.go) end,
+          tip = "Players outside the group can't reserve for themselves (they're told to ask for an invite). You can still add reserves for anyone, and imports still come in. Switch it off to let guild members reserve before the raid forms." },
+        { tick = true, label = "Share with my guild", on = s.guild, click = function()
+          if not IsInGuild() then UI.toast("You're not in a guild.") return end
+          LR.setGuild(s, not s.guild)
+        end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group\"." },
+      }, { gap = 2 })
+    end)
+    p:row("Locking", function(r)
+      if s.locked then
+        r:inline("|cffff5a4aLocked now.|r", { { "Unlock", function() LR.setLocked(s, false) end } })
+        return
+      end
+      r:chips({ { tick = true, label = s.al and ("Lock by itself at " .. LR.Lock.clock(s.al)) or "Lock by itself", on = s.al ~= nil, click = function()
+        if s.al then LR.setAutoLock(s, nil) else UI.autoLockSheet(s) end
+      end, tip = "Pick when reserves lock. The raid is told 5, 2 and 1 minute before, and when they lock." } }, { gap = 2 })
+      if s.al then r:buttons({ { label = "Change the time", style = "link", click = function() UI.autoLockSheet(s) end } }, "left") end
+    end)
+  end)
+end
+
+--- who gets what, before anyone rolls: hard reserves, extra reserves, the disenchanter, the council
+local function whoGetsWhat(f, s)
+  f:panel("Who gets what", function(p)
+    local hr = U.keys(s.hr)
+    p:row("Hard reserves", function(r)
+      for _, id in ipairs(hr) do
+        local h = s.hr[id]
+        local b = K.get(r.owner, "item", r.parent)
+        K.setItem(b, r.width, LR.itemIcon(id), LR.coloredName(id), (h.f ~= "" and ("For " .. h.f) or "For nobody in particular") .. (h.n ~= "" and ("  -  " .. h.n) or ""), "",
+          { text = "Lift", width = 36, tip = "Lift the hard reserve", click = function() LR.clearHR(s, id) end })
+        b:SetScript("OnClick", function() hardReserveSheet(s, id) end)
+        b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        r:place(b, 36)
+        r:gap(3)
+      end
+      if #hr == 0 then r:note("None. A hard reserved item can't be soft reserved; you can say who it's for.") end
+      r:buttons({ { label = "Add a hard reserve", style = "quiet", click = function()
+        UI.pickItem(s, "Hard reserve an item", function(id) hardReserveSheet(s, id) end)
+      end } }, "left")
+    end)
+    if not s.gdkp and s.prio ~= "only" then
+      p:row("Extra reserves", function(r)
+        local list = {}
+        for name, n in pairs(s.xr or {}) do list[#list + 1] = { name, n } end
+        table.sort(list, function(a, b) return a[1] < b[1] end)
+        r:inline(#list == 0 and "|cff9d9d9dEveryone gets the same.|r"
+          or table.concat(U.map(list, function(x) return U.classText(U.short(x[1]), LR.classOf(x[1])) .. " +" .. x[2] end), ", "),
+          { { #list == 0 and "Give extra reserves" or "Change", function() UI.extraSheet(s) end } })
+      end)
+    end
+    p:row("Disenchanter", function(r)
+      r:inline(s.de and U.classText(U.short(s.de), LR.classOf(s.de)) or "|cff9d9d9dNobody yet.|r", {
+        { s.de and "Change" or "Pick a disenchanter", function() UI.pickPlayer("Who disenchants?", function(name) LR.setDisenchanter(s, name) end) end },
+        s.de and { "Nobody", function() LR.setDisenchanter(s, nil) end } or false,
+      })
+    end)
+    if not s.gdkp then
+      p:row("Loot council", function(r)
+        local on = LR.Council.on(s)
+        r:inline(on and table.concat(U.map(s.lc, U.short), ", ") or "|cff9d9d9dOff: rolls decide.|r", { { on and "Change" or "Pick a council", function() councilPickSheet(s) end } })
+      end)
+    end
+  end)
+end
+
 local function manage(f, s)
   if s.pv then privateView(f, s) return end
   claimPanel(f, s)
   local raid = LR.raidOf(s)
-  if s.gdkp then UI.gdkpPanel(f, s) end          -- GDKP first: in a GDKP raid it's what matters
-  if not s.gdkp then softresPanel(f, s) end
-  f:panel("Your session", function(p)
-    p:kv({
-      { "Raid", raid.name },
-      { "Reserved so far", U.plural(#S.players(s), "player") },
-      { "Shared with", (LR.groupChannel() and "your group" or "nobody yet (no group)") .. (s.guild and " and your guild" or "") },
-    })
-    p:gap(6)
-    stepper(p, "Reserves each", s.sr, S.MIN_SR, S.MAX_SR, function(v)
-      local cut = 0
-      for _, pl in ipairs(S.players(s)) do if #pl.items > v then cut = cut + 1 end end
-      local function go() local ok, why = LR.configure(s, v, s.dupes) if not ok then UI.refused(why) end end
-      if cut > 0 then
-        UI.confirm("Fewer reserves", ("%s already reserved more than %d: their last reserves go."):format(U.plural(cut, "player"), v), "Lower it", go)
-      else go() end
-    end)
-    p:chips({
-      { tick = true, label = "Same item more than once", on = s.dupes, click = function()
-        local doubled = 0
-        for _, pl in ipairs(S.players(s)) do
-          local seen = {}
-          for _, id in ipairs(pl.items) do if seen[id] then doubled = doubled + 1 break end seen[id] = true end
-        end
-        local function go() LR.configure(s, s.sr, not s.dupes) end
-        if s.dupes and doubled > 0 then
-          UI.confirm("One per item", ("%s put more than one reserve on the same item: the extra ones go."):format(U.plural(doubled, "player")), "Switch it off", go)
-        else go() end
-      end, tip = "Lets a player put more than one of their reserves on the same item (softres.it's \"x2\")." },
-      { tick = true, label = "Only the group can reserve", on = s.go, click = function() LR.setGroupOnly(s, not s.go) end,
-        tip = "Players outside the group can't reserve for themselves (they're told to ask for an invite). You can still add reserves for anyone, and imports still come in. Switch it off to let guild members reserve before the raid forms." },
-      { tick = true, label = "Share with my guild", on = s.guild, click = function()
-        if not IsInGuild() then UI.toast("You're not in a guild.") return end
-        LR.setGuild(s, not s.guild)
-      end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group can reserve\"." },
-      not LR.raidOf(s).custom and { tick = true, label = "Any item", on = s.any, click = function() LR.setAny(s, not s.any) end,
-        tip = "Lets people reserve any item, not just " .. LR.raidOf(s).name .. "'s loot: for loot LootRuler's lists don't have yet. Reserves already made stay either way." } or false,
-      { tick = true, label = "One reserve win each", on = s.ow, click = function() LR.setOneWin(s, not s.ow) end,
-        tip = "Once a player wins one of their reserves, their other reserves stop counting for the rest of the session, so loot goes further. The raid is told when it happens." },
-      { tick = true, label = "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
-        tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserves tab (by player)." },
-      { tick = true, label = "GDKP auctions", on = s.gdkp, click = function()
-        if not s.gdkp and next(s.res) then
-          UI.confirm("GDKP auctions", "Every item is auctioned for gold instead: reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Auction", function() LR.setGdkp(s, true) end)
-        else LR.setGdkp(s, not s.gdkp) end
-      end, tip = "Items are auctioned for gold: raiders bid by typing an amount in raid chat. The gold goes in a pot that's split between everyone at the end." },
-      UI.boostOn() and { tick = true, label = "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
-        tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
-      { tick = true, label = "Locked", on = s.locked, click = function() LR.setLocked(s, not s.locked) end,
-        tip = "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
-      not s.locked and { tick = true, label = "Lock by itself", on = s.al ~= nil, click = function()
-        if s.al then LR.setAutoLock(s, nil) else UI.autoLockSheet(s) end
-      end, tip = "Pick when reserves lock. The raid is told 5, 2 and 1 minute before, and when they lock." } or false,
-    })
-    if s.al and not s.locked then
-      local mins = math.max(1, math.ceil((s.al - U.now()) / 60))
-      p:note(("Reserves lock by themselves at %s (in %s). The raid is told 5, 2 and 1 minute before."):format(LR.Lock.clock(s.al), U.plural(mins, "minute")), K.GOLD)
-    end
-  end)
-
-  f:panel("Hard reserves", function(p)
-    local hr = U.keys(s.hr)
-    if #hr == 0 then p:note("Nothing is hard reserved. A hard reserved item can't be soft reserved; you can say who it's for.") end
-    for _, id in ipairs(hr) do
-      local h = s.hr[id]
-      local b = K.get(p.owner, "item", p.parent)
-      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), (h.f ~= "" and ("For " .. h.f) or "For nobody in particular") .. (h.n ~= "" and ("  -  " .. h.n) or ""), "",
-        { text = "x", tip = "Lift the hard reserve", click = function() LR.clearHR(s, id) end })
-      b:SetScript("OnClick", function() hardReserveSheet(s, id) end)
-      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
-      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      p:place(b, 36)
-      p:gap(3)
-    end
-    p:gap(2)
-    p:buttons({ { label = "Add a hard reserve", click = function()
-      UI.pickItem(s, "Hard reserve an item", function(id) hardReserveSheet(s, id) end)
-    end } }, "left")
-  end)
+  -- a GDKP raid: the auctions and the pot are what matter (UI/Gdkp.lua), then the rules
+  if s.gdkp then UI.gdkpView(f, s) else softresPanel(f, s) end
+  rulesPanel(f, s)
+  whoGetsWhat(f, s)
 
   if s.plusOne then
-    f:panel("+1s", function(p)
-      p:note("Everyone's +1s are on the Reserves tab (by player). Bring them in from Gargul, or copy them out for it.")
+    fold(f, "plusOne", "+1s", "everyone's are on the All reserves tab", function(p)
       p:buttons({
-        { label = "Bring in from Gargul", click = function()
+        { label = "Bring in from Gargul", style = "quiet", click = function()
           UI.countsSheet({ title = "+1s from Gargul", gargul = "plusOnes", max = 99,
             note = "Paste Gargul's +1 export (\"Name,+1s\" lines; Gargul: /gl po, Export), or read it straight from Gargul if it's loaded. Each player's +1s are set to these.",
             apply = function(list) UI.toast(("+1s for %s are in."):format(U.plural(LR.importPlusOnes(s, list), "player"))) end })
         end },
-        { label = "Copy out", click = function()
+        { label = "Copy out", style = "quiet", click = function()
           local list = {}
           local names = {}
           for _, m in ipairs(LR.roster()) do names[U.full(m.name)] = true end
@@ -331,22 +476,28 @@ local function manage(f, s)
     end)
   end
 
-  if not s.gdkp and s.prio ~= "only" then
-    f:panel("Extra reserves", function(p)
-      local list = {}
-      for name, n in pairs(s.xr or {}) do list[#list + 1] = { name, n } end
-      table.sort(list, function(a, b) return a[1] < b[1] end)
-      if #list == 0 then
-        p:note("Everyone gets the same. Give tanks and healers (or anyone) extra reserves here.")
+  if s.boost and UI.boostOn() then
+    local bench = s.bn or {}
+    local given = LR.Guild.pointsGiven(s)
+    fold(f, "boost", "Boosted rolls and the bench", (given and "points given" or "points not given yet") .. (#bench > 0 and (", " .. #bench .. " on the bench") or ""), function(p)
+      local book = LR.book()
+      p:note(("Guild members with points can roll 1 to 100 plus their points on main spec. Each raid is worth %d points."):format(book.boost.perRaid))
+      if LR.canEditBook() then
+        p:buttons({ { label = given and "Give raid points again" or "Give raid points", style = "quiet", click = function() UI.giveRaidPoints(s) end } }, "left")
+        p:note(given and "You've given this raid its points." or "Everyone from the guild in the group gets them, and the bench. You can also give them when you end the session.")
       else
-        p:text(table.concat(U.map(list, function(x) return U.classText(U.short(x[1]), LR.classOf(x[1])) .. " +" .. x[2] end), ", "))
+        p:note("An officer gives the raid its points (Guild tab).")
       end
-      p:buttons({ { label = "Give extra reserves", click = function() UI.extraSheet(s) end } }, "left")
+      -- the bench: players who came but sat out get the raid's points too, and count as there
+      p:text("The bench", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+      p:note(#bench > 0 and ("%s: %s."):format(U.plural(#bench, "player"), table.concat(U.map(bench, U.short), ", "))
+        or "Nobody. Players on the bench get the raid's points too, and count as there in the fairness history.")
+      p:buttons({ { label = #bench > 0 and "Change the bench" or "Bench players", style = "quiet", click = function() UI.benchSheet(s) end } }, "left")
     end)
   end
 
   -- the organiser's branding: a name, a message and an icon raiders see (Core/Session.lua)
-  f:panel("Your raid's name", function(p)
+  fold(f, "brand", "Your raid's name", s.br and s.br.n or "raiders see it in their window", function(p)
     p:note("Name your raid and add a short message (where to sign up, your rules). Raiders with LootRuler see it in their window, and the raid hears it when you post the reserves. It's kept for your next session.")
     brand = brand and brand.sid == s.id and brand or { sid = s.id, n = s.br and s.br.n or "", m = s.br and s.br.m or "", i = s.br and s.br.i }
     local function box(label, key, max, width)
@@ -375,17 +526,17 @@ local function manage(f, s)
         LR.setBrand(s, { n = brand.n, m = brand.m, i = brand.i })
         UI.toast(s.br and "Saved: raiders see it now." or "Nothing to save.")
       end },
-      s.br and { label = "Clear", click = function() LR.setBrand(s, nil) brand = nil end } or nil,
+      s.br and { label = "Clear", style = "quiet", click = function() LR.setBrand(s, nil) brand = nil end } or nil,
     }, "left")
   end)
 
-  f:panel("Hand over", function(p)
+  fold(f, "handOver", "Hand over the reserves", s.next and ("waiting for " .. U.short(s.next)) or "when you leave, or someone else runs them", function(p)
     if s.next then
       p:note(("Waiting for %s's LootRuler to take the reserves over. It does as soon as it hears from yours."):format(U.short(s.next)), K.GOLD)
-      p:buttons({ { label = "Take it back", click = function() LR.handOver(s, nil) end } }, "left")
+      p:buttons({ { label = "Take it back", style = "quiet", click = function() LR.handOver(s, nil) end } }, "left")
     else
       p:note("Leaving, or letting someone else run the reserves? Hand them over: everything reserved and given out stays, and the raid is told who to whisper.")
-      p:buttons({ { label = "Hand the reserves over", click = function()
+      p:buttons({ { label = "Hand the reserves over", style = "quiet", click = function()
         UI.pickLeader("Who runs the reserves now?", function(name)
           local ok, why = LR.handOver(s, name)
           if not ok and why then UI.toast(why) end
@@ -394,129 +545,16 @@ local function manage(f, s)
     end
   end)
 
-  -- the loot council (Core/Council.lua): who's on it
-  if not s.gdkp then
-    f:panel("Loot council", function(p)
-      p:note("Pick a council and they vote on who gets each item, from the players who roll for it. The loot master sees the votes and hands it over. Votes stay between the council and the loot master. Council members without LootRuler whisper you \"!lr vote Name\".")
-      local list, seen = {}, {}
-      for _, m in ipairs(LR.roster()) do list[#list + 1] = { name = U.full(m.name), class = m.class } seen[U.full(m.name):lower()] = true end
-      for _, n in ipairs(s.lc or {}) do if not seen[n:lower()] then list[#list + 1] = { name = n } end end
-      table.sort(list, function(a, b) return a.name < b.name end)
-      local chips = {}
-      for _, m in ipairs(list) do
-        local on = LR.Council.isMember(s, m.name)
-        chips[#chips + 1] = { tick = true, label = U.short(m.name), on = on, click = function()
-          local names = {}
-          for _, n in ipairs(s.lc or {}) do if not U.samePlayer(n, m.name) then names[#names + 1] = n end end
-          if not on then names[#names + 1] = m.name end
-          LR.setCouncil(s, names)
-        end }
-      end
-      if #chips > 0 then p:chips(chips, { gap = 2 }) else p:note("Nobody in the group yet.") end
-      p:note(LR.Council.on(s) and ("On: %s on the council."):format(U.plural(#s.lc, "player")) or "Off: nobody on the council, so rolls decide.",
-        LR.Council.on(s) and K.GREEN or nil)
-    end)
-  end
-
-  f:panel("Disenchanter", function(p)
-    if s.de then
-      p:text(U.classText(U.short(s.de), LR.classOf(s.de)) .. " disenchants what nobody wants: the loot master's window has a Disenchant button.")
-    else
-      p:note("Nobody yet. Pick who disenchants items nobody wants, and the loot master's window gets a one-click Disenchant button.")
-    end
-    p:buttons({
-      { label = s.de and "Someone else" or "Pick a disenchanter", click = function() UI.pickPlayer("Who disenchants?", function(name) LR.setDisenchanter(s, name) end) end },
-      s.de and { label = "Nobody", click = function() LR.setDisenchanter(s, nil) end } or nil,
-    }, "left")
-  end)
-
-  if not s.gdkp and (s.prio or UI.prioAvailable()) then
-    f:panel("Priority lists", function(p)
-      p:chips(UI.prioChips(s.prio, function(mode)
-        if mode == "only" and next(s.res) then
-          UI.confirm("Priority lists only", "Reserves stop counting (they're kept, in case you switch back), and nobody can reserve.", "Switch", function() LR.setSessionPrio(s, mode) end)
-        else LR.setSessionPrio(s, mode) end
-      end), { gap = 4 })
-      for _, m in ipairs(UI.PRIO_MODES) do if m[1] == s.prio then p:note(m[3]) end end
-      if s.prio then p:note("The lists are the guild's (Guild tab). Whoever gets an item comes off its list. Raiders without the addon can whisper you \"!lr prio\".") end
-    end)
-  end
-
-  if s.boost and UI.boostOn() then
-    f:panel("Boosted rolls", function(p)
-      local book = LR.book()
-      p:note(("Guild members with points can roll 1 to 100 plus their points on main spec. Each raid is worth %d points."):format(book.boost.perRaid))
-      if LR.canEditBook() then
-        local given = LR.Guild.pointsGiven(s)
-        p:buttons({ { label = given and "Give raid points again" or "Give raid points", click = function() UI.giveRaidPoints(s) end } }, "left")
-        p:note(given and "You've given this raid its points." or "Everyone from the guild in the group gets them, and the bench. You can also give them when you end the session.")
-      else
-        p:note("An officer gives the raid its points (Guild tab).")
-      end
-      -- the bench: players who came but sat out get the raid's points too, and count as there
-      local bench = s.bn or {}
-      p:text("The bench", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
-      p:note(#bench > 0 and ("%s: %s."):format(U.plural(#bench, "player"), table.concat(U.map(bench, U.short), ", "))
-        or "Nobody. Players on the bench get the raid's points too, and count as there in the fairness history.")
-      p:buttons({ { label = #bench > 0 and "Change the bench" or "Bench players", click = function() UI.benchSheet(s) end } }, "left")
-    end)
-  end
-
-  f:panel("More", function(p)
-    p:buttons({
-      { label = "Tell the raid how to SR without the addon", disabled = LR.groupChannel() == nil, click = function()
-        if LR.Whisper.postHowTo() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
-      end },
-    }, "left")
-    p:note("Posts: \"" .. LR.Whisper.howTo() .. "\"")
-    if s.gdkp then p:buttons({ { label = "Import from softres.it", click = function() importSheet(s) end } }, "left") end
-    p:buttons({
-      { label = "End session", click = function()
-        local text = "Everyone's reserves for " .. raid.name .. " are cleared, for you and for every raider's addon. (Gargul keeps what you sent it.)"
-        -- GDKP: ending it loses who owes what, so not while gold is still owed (unless they mean it)
-        local owing = LR.Gdkp.unsettled(s)
-        if #owing > 0 then
-          UI.openSheet("Gold is still owed", function(sf, h)
-            sf:text(("%s aren't settled yet:"):format(U.plural(#owing, "player")))
-            for i, x in ipairs(owing) do
-              if i > 8 then sf:note(("...and %d more."):format(#owing - 8)) break end
-              sf:note(x[2] > 0 and ("%s: you give them %s"):format(U.short(x[1]), LR.Gdkp.gold(x[2]))
-                or ("%s: they give you %s"):format(U.short(x[1]), LR.Gdkp.gold(-x[2])), x[2] > 0 and K.GOLD or { 1, 0.35, 0.29 })
-            end
-            sf:note("You can end it anyway: it's kept under Past raids (Loot tab), where you can finish the payouts, and trades with them still count for two weeks. Or keep it open: it stays for a week, even after you log out.")
-            sf:gap(6)
-            sf:buttons({
-              { label = "Keep it open", click = function() h.close() end },
-              { label = "Payouts", click = function() h.close() UI.payoutSheet(s) end },
-              { label = "End it", click = function() h.close() LR.endSession(s) end },
-            })
-          end)
-          return
-        end
-        if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers(s) > 0 then
-          -- the end of a raid is when its points are usually given
-          UI.openSheet("End the session", function(sf, h)
-            sf:text(text)
-            sf:note(("This raid's points haven't been given yet (%d each for %s from the guild)."):format(LR.book().boost.perRaid,
-              U.plural(#LR.Guild.raidMembers(s), "player")), K.GOLD)
-            sf:gap(6)
-            sf:buttons({
-              { label = "Cancel", click = function() h.close() end },
-              { label = "End it", click = function() h.close() LR.endSession(s) end },
-              { label = "Give points and end", click = function()
-                h.close()
-                local ok, why = LR.Guild.raidPoints(s)
-                if not ok then UI.refused(why) end
-                LR.endSession(s)
-              end },
-            })
-          end)
-          return
-        end
-        UI.confirm("End the session", text, "End it", function() LR.endSession(s) end)
-      end },
-    }, "left")
-  end)
+  f:gap(4)
+  f:buttons({
+    LR.canSetUp() and { label = "Raid setup", style = "quiet", click = function() UI.lineupSheet() end,
+      tip = "Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups." } or nil,
+    not s.gdkp and { label = "Tell the raid how to reserve", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
+      if LR.Whisper.postHowTo() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
+    end, tip = "Posts: \"" .. LR.Whisper.howTo() .. "\"" } or nil,
+    s.gdkp and { label = "Import from softres.it", style = "quiet", click = function() importSheet(s) end } or nil,
+  }, "left")
+  f:buttons({ { label = "End this session", style = "link", danger = true, click = function() endSession(s) end } }, "left")
 end
 
 local function newSession(f)

@@ -132,7 +132,11 @@ K.define("panel", function()
   f.title:SetJustifyH("CENTER")
   f.title:SetPoint("TOP", f.plate, "TOP", 0, -13)
   return f
-end, function(f) f.title:SetText("") K.fitPlate(f) end)
+end, function(f)
+  f.title:SetText("") K.fitPlate(f)
+  f:SetBackdropColor(1, 1, 1, 1)                          -- (a hot panel's colours, back to the usual)
+  f:SetBackdropBorderColor(0.72, 0.56, 0.24, 1)
+end)
 
 --- sizes a panel's title plate to its title (hidden with no title)
 function K.fitPlate(f)
@@ -717,6 +721,43 @@ function Flow:row(label, fill, opts)
   local inner = K.flow(self.owner, self.parent, self.x + lw, self.y, self.width - lw)
   fill(inner)
   self.y = max(inner.y, self.y + lh + 10)
+  return self
+end
+
+--- a short line of text with links after it on the same line ("Ann +1, Bob +1   Change"); links = { { label, click, danger } }.
+--- Text too long for one line wraps, and the links go under it
+function Flow:inline(text, links)
+  local l = K.get(self.owner, "label", self.parent)
+  l.text:SetFontObject("GameFontHighlightSmall")
+  l.text:SetJustifyV("MIDDLE")
+  l.text:SetWordWrap(false)
+  l.text:SetText(text or "")
+  local tw = l.text:GetStringWidth() + 2
+  local made, total = {}, 0
+  for _, c in ipairs(links or {}) do if c then
+    local b = K.button(self.owner, self.parent, "link", c[1], nil, nil, c[3])
+    b:SetScript("OnClick", c[2])
+    made[#made + 1] = b
+    total = total + b:GetWidth() + 12
+  end end
+  if tw + total <= self.width then
+    l:SetSize(tw, 20) l.text:SetWidth(tw)
+    l:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x, -self.y)
+    local x = self.x + tw + 12
+    for _, b in ipairs(made) do b:SetPoint("TOPLEFT", self.parent, "TOPLEFT", x, -self.y) x = x + b:GetWidth() + 12 end
+    self.y = self.y + 22
+  else
+    l.text:SetWordWrap(true)
+    l.text:SetJustifyV("TOP")
+    l:SetWidth(self.width) l.text:SetWidth(self.width)
+    local h = l.text:GetStringHeight() + 2
+    l:SetHeight(h)
+    l:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x, -self.y)
+    self.y = self.y + h + 2
+    local x = self.x
+    for _, b in ipairs(made) do b:SetPoint("TOPLEFT", self.parent, "TOPLEFT", x, -self.y) x = x + b:GetWidth() + 12 end
+    self.y = self.y + (#made > 0 and 22 or 2)
+  end
   return self
 end
 

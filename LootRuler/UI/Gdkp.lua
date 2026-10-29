@@ -389,91 +389,136 @@ function UI.rolesSheet(s)
   end, { full = true })
 end
 
---- the GDKP panel on the Session tab
-function UI.gdkpPanel(f, s)
+--- the GDKP part of the Session tab: the pot in one line, what's sold and what's still to auction, the rules and cuts
+--- folded, and the organiser's main actions pinned at the bottom
+function UI.gdkpView(f, s)
   local leader = LR.isLeader(s)
-  f:panel("GDKP auctions", function(p)
-    local gk = s.gk
-    local split = G.split(s)
-    if leader then
-      p:note("Every item is auctioned: raiders bid by typing an amount in raid chat (or with their roll window). The highest bid when time is up buys it, and the gold goes in the pot.")
-      local function chips(label, key, values, fmt)
-        local list = { { plain = true, label = label } }
+  local gk = s.gk
+  local split = G.split(s)
+  local line = ("|cffffffff%s|r in the pot - %s each for %d, after a %d%% cut - bids from %s, +%s"):format(G.gold(split.pot), G.gold(split.share),
+    #split.players, gk.cut, G.gold(gk.min), G.gold(gk.inc))
+  f:strip(line, "warn")
+  local mine = split.rows[U.me()]
+  if not leader and mine then f:note(LR.Pot.line(s, U.me()), K.GOLD) end
+  -- bidders the organiser stopped taking bids from (right-click one in the loot master window): in sight while it lasts
+  if leader and gk.nb and #gk.nb > 0 then
+    local list = { { plain = true, label = "Bids not taken from:" } }
+    for _, name in ipairs(gk.nb) do
+      list[#list + 1] = { label = U.short(name) .. "  x", tip = "Take their bids again.", click = function()
+        local ok, why = LR.Rolls.noBidsFrom(name, false)
+        if not ok and why then UI.toast(why) end
+      end }
+    end
+    f:chips(list, { gap = 6 })
+  end
+
+  -- sold: who bought it, and whether they've paid
+  local sales = G.sales(s)
+  f:heading("Sold", U.plural(#sales, "item"))
+  if #sales == 0 then f:note("Nothing yet.") end
+  for _, x in ipairs(sales) do
+    local row = split.rows[x.p]
+    local owes = row and row.owed < -0.01 and not U.samePlayer(x.p, s.leader)
+    local b = K.get(f.owner, "item", f.parent)
+    K.setItem(b, f.width, LR.itemIcon(x.i), LR.coloredName(x.i), U.classText(U.short(x.p), LR.classOf(x.p)) .. "  -  "
+      .. (owes and ("|cffff8a6aowes " .. G.gold(-row.owed) .. "|r") or "|cff1eff00paid|r"), "|cffffffff" .. G.gold(x.g) .. "|r")
+    b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, x.i) end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f:place(b, 36)
+    f:gap(2)
+  end
+
+  -- still to auction: what dropped and hasn't sold (the loot master auctions it from here, or the Loot tab)
+  local runner = LR.canRunLoot()
+  local left = {}
+  for _, d in ipairs(s.drops or {}) do
+    local state = LR.Session.dropState(s, d)
+    if not LR.minorLoot(s, d.i) and (state == "corpse" or state == "held") then left[#left + 1] = d end
+  end
+  if #left > 0 then
+    f:gap(4)
+    f:heading("Still to auction", U.plural(#left, "item"))
+    for _, d in ipairs(left) do
+      local state = LR.Session.dropState(s, d)
+      local start = G.minFor(s, d.i)
+      local b = K.get(f.owner, "item", f.parent)
+      local where = state ~= "held" and "On the corpse" or U.samePlayer(d.h, U.me()) and "In your bags" or (U.short(d.h) .. " has it")
+      K.setItem(b, f.width, LR.itemIcon(d.i), LR.coloredName(d.i), where .. " - starts at " .. G.gold(start) .. (gk.prices[d.i] and " (your price)" or ""), "",
+        runner and not UI.rollingNow(d.i) and { text = "Auction", width = 62, click = function() UI.rollOut(s, d) end } or nil)
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, d.i) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      f:place(b, 36)
+      f:gap(2)
+    end
+  end
+  f:gap(6)
+  if not leader then return end
+
+  -- the rules, folded: set once
+  local roleCuts = {}
+  for _, r in ipairs(G.ROLES) do roleCuts[#roleCuts + 1] = r[3] .. " " .. ((gk.rp and gk.rp[r[1]]) or 0) .. "%" end
+  UI.sessionFold(f, "gdkpRules", "Auction rules", ("start %s - raise %s - cut %d%%%s"):format(G.gold(gk.min), G.gold(gk.inc), gk.cut, gk.strict and " - bids say \"bid\"" or ""), function(p)
+    local function chips(label, key, values, fmt)
+      p:row(label, function(r)
+        local list = {}
         for _, v in ipairs(values) do
           list[#list + 1] = { label = fmt(v), on = gk[key] == v, click = function() LR.gdkpOption(s, key, v) end }
         end
-        p:chips(list, { gap = 2 })
-      end
-      chips("Bids start at:", "min", { 50, 100, 250, 500, 1000 }, G.gold)
-      chips("Raise by at least:", "inc", { 10, 25, 50, 100 }, G.gold)
-      chips("Your cut:", "cut", { 0, 5, 10, 15, 20 }, function(v) return v .. "%" end)
-      for _, r in ipairs(G.ROLES) do
-        local list = { { plain = true, label = r[2] .. " each get:" } }
-        for _, v in ipairs({ 0, 1, 2, 3, 5 }) do
-          list[#list + 1] = { label = v .. "%", on = ((gk.rp and gk.rp[r[1]]) or 0) == v, click = function() LR.gdkpRoleCut(s, r[1], v) end }
-        end
-        p:chips(list, { gap = 2 })
-      end
-      p:chips({ { tick = true, label = "Bids start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
+        r:chips(list, { gap = 2 })
+      end)
+    end
+    chips("Bids start at", "min", { 50, 100, 250, 500, 1000 }, G.gold)
+    chips("Raise by at least", "inc", { 10, 25, 50, 100 }, G.gold)
+    chips("Your cut", "cut", { 0, 5, 10, 15, 20 }, function(v) return v .. "%" end)
+    p:row("Bids", function(r)
+      r:chips({ { tick = true, label = "Start with \"bid\"", on = gk.strict, click = function() LR.gdkpStrict(s, not gk.strict) end,
         tip = "Only \"bid 150\" counts, not just \"150\": someone saying \"500\" in raid chat doesn't bid by accident." } }, { gap = 2 })
-      -- bidders the organiser stopped taking bids from (right-click one in the loot master window)
-      if gk.nb and #gk.nb > 0 then
-        local list = { { plain = true, label = "Bids not taken from:" } }
-        for _, name in ipairs(gk.nb) do
-          list[#list + 1] = { label = U.short(name) .. "  x", tip = "Take their bids again.", click = function()
-            local ok, why = LR.Rolls.noBidsFrom(name, false)
-            if not ok and why then UI.toast(why) end
-          end }
-        end
-        p:chips(list, { gap = 2 })
-      end
-      p:gap(4)
-    end
-    p:kv({
-      { "Pot", G.gold(split.pot) .. "  (" .. U.plural(#G.sales(s), "item") .. " sold)" },
-      { "Split " .. #split.players .. " ways", G.gold(split.share) .. " each, after a " .. gk.cut .. "% cut" },
-    })
-    local mine = split.rows[U.me()]
-    if not leader and mine then
-      p:gap(2)
-      p:text(LR.Pot.line(s, U.me()), { font = "GameFontHighlightSmall", color = K.GOLD })
-    end
+    end)
     -- items that start higher than the rest
     local priced = {}
     for id in pairs(gk.prices) do priced[#priced + 1] = id end
     table.sort(priced)
-    for _, id in ipairs(priced) do
-      local b = K.get(p.owner, "item", p.parent)
-      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), "Bids start at " .. G.gold(gk.prices[id]), "",
-        leader and { text = "x", tip = "Back to the usual start", click = function() LR.gdkpPrice(s, id, nil) end } or nil)
-      p:place(b, 36)
-      p:gap(2)
-    end
-    if leader then
-      p:gap(4)
-      p:buttons({
-        { label = "Payouts", click = function() UI.payoutSheet(s) end },
-        { label = "Tanks and healers", click = function() UI.rolesSheet(s) end },
-      }, "left")
-      p:buttons({
-        { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), click = function() UI.potRulesSheet(s) end },
-        { label = "Gold in or out", click = function() UI.goldInOutSheet(s) end },
-      }, "left")
-      p:buttons({
-        { label = "Ledger", click = function() UI.ledgerSheet(s) end },
-        { label = "Auction several at once", click = function() UI.batchSheet() end },
-      }, "left")
-      p:buttons({
-        { label = ("Sales (%d)"):format(#G.sales(s)), click = function() UI.salesSheet(s) end },
-        { label = "Starting bids in and out", click = function() UI.pricesSheet(s) end },
-      }, "left")
-      p:buttons({
-        { label = "A starting bid for an item", click = function()
-          UI.pickAnyItem("Which item starts higher (or lower)?", function(id)
-            goldSheet("Bids for " .. LR.itemName(id) .. " start at", nil, G.minFor(s, id), function(g) LR.gdkpPrice(s, id, g) end)
-          end)
-        end },
-      }, "left")
-    end
+    p:row("Own starting bids", function(r)
+      for _, id in ipairs(priced) do
+        local b = K.get(r.owner, "item", r.parent)
+        K.setItem(b, r.width, LR.itemIcon(id), LR.coloredName(id), "Bids start at " .. G.gold(gk.prices[id]), "",
+          { text = "x", tip = "Back to the usual start", click = function() LR.gdkpPrice(s, id, nil) end })
+        r:place(b, 36)
+        r:gap(2)
+      end
+      r:buttons({ { label = "A starting bid for an item", style = "quiet", click = function()
+        UI.pickAnyItem("Which item starts higher (or lower)?", function(id)
+          goldSheet("Bids for " .. LR.itemName(id) .. " start at", nil, G.minFor(s, id), function(g) LR.gdkpPrice(s, id, g) end)
+        end)
+      end } }, "left")
+    end)
   end)
+  UI.sessionFold(f, "gdkpCuts", "Cuts", table.concat(roleCuts, " - ") .. (" - pot rules: %s"):format(gk.rules and #gk.rules > 0 and #gk.rules or "none"), function(p)
+    for _, r in ipairs(G.ROLES) do
+      p:row(r[2] .. " each get", function(row)
+        local list = {}
+        for _, v in ipairs({ 0, 1, 2, 3, 5 }) do
+          list[#list + 1] = { label = v .. "%", on = ((gk.rp and gk.rp[r[1]]) or 0) == v, click = function() LR.gdkpRoleCut(s, r[1], v) end }
+        end
+        row:chips(list, { gap = 2 })
+      end)
+    end
+    p:buttons({
+      { label = "Tanks and healers", style = "quiet", click = function() UI.rolesSheet(s) end },
+      { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), style = "quiet", click = function() UI.potRulesSheet(s) end },
+    }, "left")
+  end)
+
+  UI.pin({
+    { label = "Payouts", click = function() UI.payoutSheet(s) end },
+    { label = "Auction several", style = "quiet", click = function() UI.batchSheet() end },
+    { label = "Ledger", style = "quiet", click = function() UI.ledgerSheet(s) end },
+  }, {
+    { label = ("Sales (%d)"):format(#sales), click = function() UI.salesSheet(s) end },
+    { label = "Gold in or out", click = function() UI.goldInOutSheet(s) end },
+    { label = "Starting bids in and out", click = function() UI.pricesSheet(s) end },
+    { label = "Tanks and healers", click = function() UI.rolesSheet(s) end },
+    { label = ("Pot rules (%d)"):format(gk.rules and #gk.rules or 0), click = function() UI.potRulesSheet(s) end },
+  })
 end
+UI.gdkpPanel = UI.gdkpView
