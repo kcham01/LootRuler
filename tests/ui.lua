@@ -1180,7 +1180,8 @@ run("GDKP", function()
     if x[1] == 28525 then
       local fr
       for _, f in ipairs(bob.LR.UI.rollFrames()) do if f:IsShown() and f.copy and f.copy.id == 28525 then fr = f end end
-      check("an auction's roll window: the bids to click, and the highest", fr and fr.dice.label:GetText() == "310g" and fr.status:GetText():find("Highest bid: Ann-Dreamscythe, 300g", 1, true))
+      check("an auction's roll window: the highest bid, big, and the bid to click", fr and fr.bid:GetText() == "Bid 310g" and fr.price:GetText() == "300g"
+        and fr.priceBy:GetText():find("highest, by", 1, true) and fr.priceBy:GetText():find("Ann", 1, true))
       check("and what's up next", fr.note:GetText():find("Next:", 1, true) ~= nil)
       shot("auction-window", bob, { fr:GetName() })
       LR.UI.showMaster()
@@ -1345,7 +1346,8 @@ run("bidding ahead", function()
   srv:tick(1)
   local fr
   for _, x in ipairs(ann.LR.UI.rollFrames()) do if x:IsShown() and x.copy and x.copy.id == 28525 then fr = x end end
-  check("an auction with more to come: Ann's window offers to bid ahead", fr and fr.extras[2]:IsShown() and M.plain(fr.extras[2].text:GetText()) == "Bid ahead")
+  check("an auction with more to come: Ann's window offers to bid ahead", fr and fr.extras[3]:IsShown() and M.plain(fr.extras[3].text:GetText()) == "Bid ahead")
+  check("and a max bid, beside any amount", fr.extras[2]:IsShown() and M.plain(fr.extras[2].text:GetText()) == "Max bid")
   shot("bid-ahead-window", ann, { fr and fr:GetName() or "LootRulerRollFrame1" })
   -- any amount: a box for the gold, typed in raid chat like the window's two bids
   check("and to bid any amount", fr.extras[1]:IsShown() and M.plain(fr.extras[1].text:GetText()) == "Bid an amount")
@@ -1371,7 +1373,7 @@ run("bidding ahead", function()
   check("her amount is typed in raid chat and counts", cur and cur.top and cur.top.p == "Ann-Dreamscythe" and cur.top.n == 777)
   ann.LR.UI.win:Hide()
   srv:tick(0.5)
-  ann.M.click(fr.extras[2])
+  ann.M.click(fr.extras[3])
   srv:tick(0.3)
   check("it lists what's coming up", visible("Bid ahead", ann) and visible("Brooch of Unquenchable Fury", ann) and visible("Moroes' Lucky Pocket Watch", ann)
     and visible("No bid ahead yet", ann))
@@ -1785,10 +1787,14 @@ run("max bids", function()
   local fr
   for _, f in ipairs(bob.LR.UI.rollFrames()) do if f:IsShown() and f.copy and f.copy.id == 28525 then fr = f end end
   bob.G.IsShiftKeyDown = function() return true end
-  bob.M.click(fr.dice)
+  bob.M.click(fr.bid)
   bob.G.IsShiftKeyDown = function() return false end
   srv:tick(0.3)
   check("shift-click a bid: a max bid", visible("Max bid for", bob) and visible("Nobody else sees it.", bob))
+  bob.LR.UI.closeAll()
+  bob.M.click(fr.extras[2])
+  srv:tick(0.3)
+  check("or its own button", visible("Max bid for", bob) and visible("Nobody else sees it.", bob))
   fr:Hide() shot("max-bid", bob) fr:Show()        -- (the roll window sits over the sheet in the picture)
   local box
   local function walkEdits(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() then box = c end walkEdits(c) end end

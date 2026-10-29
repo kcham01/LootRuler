@@ -14,6 +14,7 @@ local U, K, R = LR.U, LR.K, LR.Roll
 local UI = LR.UI
 
 local W, H = 256, 98
+local BID_W = 300             -- an auction's window: wider, for its price and three buttons in a row
 local BAR = 140               -- the timer bar's width (it stops short of the coin)
 local MAX = 4
 local HIDE_AFTER = 8          -- a finished roll's window goes this long after it's over
@@ -51,10 +52,9 @@ local function bidStatus(copy)
   if copy.state == "closed" then return "Nobody bid." end
   if copy.state == "cancelled" then return "Called off." end
   local max = copy.myMax and (" Your max: " .. G.gold(copy.myMax) .. ".") or ""
-  if top and U.samePlayer(top.p, me()) then return ("|cff1eff00You have the highest bid: %s.|r%s"):format(G.gold(top.n), max) end
-  local how = copy.strict and "Type \"bid\" and an amount in raid chat, or click." or "Type a bid in raid chat, or click."
-  if top then return ("Highest bid: %s, %s. %s%s"):format(U.short(top.p), G.gold(top.n), how, max) end
-  return ("Bids start at %s. %s"):format(G.gold(copy.min or 0), how)
+  if top and U.samePlayer(top.p, me()) then return ("|cff1eff00You have the highest bid.|r Nobody's bid more yet.%s"):format(max) end
+  local how = copy.strict and "Or type \"bid\" and an amount in raid chat." or "Or type an amount in raid chat."
+  return how .. max
 end
 
 --- the line under the timer, for a raider's copy of a roll
@@ -254,21 +254,6 @@ local function makeFrame(i)
   f.boost:SetPoint("RIGHT", f.dice, "LEFT", -2, 0)
   for _, b in ipairs({ f.dice, f.coin, f.boost }) do
     b:SetScript("OnClick", function(self)
-      if f.copy and self.kind == "BID" then
-        -- shift-click: a max bid instead (LootRuler bids for me, up to it)
-        if IsShiftKeyDown() then
-          local copy = f.copy
-          UI.show()
-          UI.goldSheet("Max bid for " .. U.plain(copy.link), "LootRuler bids for you, as little as it takes to keep you on top, up to this. Nobody else sees it.",
-            copy.myMax or self.amount, function(g)
-              local ok, why = LR.Rolls.myMax(copy, g)
-              if not ok then UI.toast(why) end
-            end)
-          return
-        end
-        LR.Rolls.bid(f.copy, self.amount)
-        return
-      end
       if f.copy and self.kind then
         if IsShiftKeyDown() and self ~= f.boost then UI.alwaysDo(f.copy, self.kind == "OS" and "OS" or "MS") end
         LR.Rolls.roll(f.copy, self.kind)
@@ -280,8 +265,7 @@ local function makeFrame(i)
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       GameTooltip:SetText(self.tipTitle or "", 1, 1, 1)
       if self.tip then GameTooltip:AddLine(self.tip, 1, 0.82, 0, true) end
-      if self ~= f.boost and self.kind ~= "BID" then GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true) end
-      if self.kind == "BID" then GameTooltip:AddLine("Shift-click: a max bid (LootRuler bids for you, up to it).", 0.5, 0.8, 1, true) end
+      if self ~= f.boost then GameTooltip:AddLine("Shift-click: always do this for this item.", 0.5, 0.8, 1, true) end
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -309,6 +293,31 @@ local function makeFrame(i)
   f.secs:SetJustifyH("CENTER")
   f.secs:SetJustifyV("MIDDLE")
   f.secs:SetAllPoints()
+
+  -- an auction: the highest bid, big, and one button that bids the least that beats it (UI.fillBid)
+  f.price = K.fs(f, "GameFontHighlightLarge")
+  f.price:SetPoint("TOPLEFT", 14, -72)
+  f.priceBy = K.fs(f, "GameFontHighlightSmall")
+  f.priceBy:SetPoint("BOTTOMLEFT", f.price, "BOTTOMRIGHT", 8, 1)
+  f.bid = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  f.bid:SetSize(96, 22)
+  f.bid:SetPoint("TOPLEFT", 12, -96)
+  f.bid:SetMotionScriptsWhileDisabled(true)
+  f.bid:SetScript("OnClick", function(self)
+    if not f.copy or not self.amount then return end
+    -- shift-click: a max bid instead (LootRuler bids for me, up to it)
+    if IsShiftKeyDown() then UI.maxBidSheet(f.copy, self.amount) return end
+    LR.Rolls.bid(f.copy, self.amount)
+  end)
+  f.bid:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(self:GetText() or "", 1, 1, 1)
+    if self.tip then GameTooltip:AddLine(self.tip, 1, 0.82, 0, true) end
+    GameTooltip:AddLine("Shift-click: a max bid (LootRuler bids for you, up to it).", 0.5, 0.8, 1, true)
+    GameTooltip:Show()
+  end)
+  f.bid:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  f.price:Hide() f.priceBy:Hide() f.bid:Hide()
 
   f.status = K.fs(f, "GameFontHighlightSmall")
   f.status:SetWidth(W - 28)
@@ -384,6 +393,16 @@ local function rollList(f, copy)
   f.list:Show()
 end
 
+--- a max bid: LootRuler bids for me, as little as it takes to keep me on top, up to it
+function UI.maxBidSheet(copy, suggest)
+  UI.show()
+  UI.goldSheet("Max bid for " .. U.plain(copy.link), "LootRuler bids for you, as little as it takes to keep you on top, up to this. Nobody else sees it.",
+    copy.myMax or suggest, function(g)
+      local ok, why = LR.Rolls.myMax(copy, g)
+      if not ok then UI.toast(why) end
+    end)
+end
+
 --- a bid of any amount (not just the window's two): it's typed in raid chat, like theirs. lowest(): the least that counts now;
 --- place(g): bids it
 function UI.bidAmount(title, lowest, place)
@@ -429,12 +448,21 @@ local function extraRow(f, copy)
     K.setChip(b, "Bid an amount", false)
     setButton(b, not (top and U.samePlayer(top.p, me())))
     b:ClearAllPoints()
-    b:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.note:IsShown() and f.note or f.status, "BOTTOMLEFT", 0, -6)
-    b:SetWidth(110)
+    b:SetPoint("LEFT", f.bid, "RIGHT", 6, 0)
+    b:SetSize(100, 22)
     b:Show()
-    local used = 1
+    local m = f.extras[2]
+    m.kind, m.shows = nil, nil
+    m.action = function() UI.maxBidSheet(copy, R.nextBid(copy)) end
+    K.setChip(m, copy.myMax and ("Max " .. LR.Gdkp.gold(copy.myMax)) or "Max bid", false)
+    setButton(m, true)
+    m:ClearAllPoints()
+    m:SetPoint("LEFT", b, "RIGHT", 4, 0)
+    m:SetSize(copy.myMax and 80 or 64, 22)
+    m:Show()
+    local used = 2
     if copy.upNext and LR.hasFeature(copy.by, LR.FEATURE_AHEAD) then
-      local a = f.extras[2]
+      local a = f.extras[3]
       a.kind, a.shows = nil, nil
       a.action = function() UI.bidAheadSheet(copy) end
       local n = 0
@@ -442,13 +470,13 @@ local function extraRow(f, copy)
       K.setChip(a, n > 0 and ("Bid ahead (%d)"):format(n) or "Bid ahead", false)
       setButton(a, true)
       a:ClearAllPoints()
-      a:SetPoint("LEFT", b, "RIGHT", 4, 0)
+      a:SetPoint("TOPLEFT", f.list:IsShown() and f.list or f.note:IsShown() and f.note or f.status, "BOTTOMLEFT", 0, -6)
       a:SetWidth(100)
       a:Show()
-      used = 2
+      used = 3
     end
     for i = used + 1, #f.extras do f.extras[i]:Hide() end
-    return true
+    return used == 3
   end
   local xk = copy.mode == "OPEN" and copy.xk or {}
   local can = {}
@@ -495,7 +523,7 @@ local function underneath(f, copy)
   f.list:SetPoint("TOPLEFT", noted and f.note or f.status, "BOTTOMLEFT", 0, -4)
   rollList(f, copy)
   local row = extraRow(f, copy)
-  local h = 72 + f.status:GetStringHeight() + (noted and (4 + f.note:GetStringHeight()) or 0)
+  local h = 72 + (f.bidH or 0) + f.status:GetStringHeight() + (noted and (4 + f.note:GetStringHeight()) or 0)
     + (f.list:IsShown() and (4 + f.list:GetStringHeight()) or 0) + (row and 26 or 0) + 14
   f:SetHeight(math.max(H, h))
 end
@@ -516,29 +544,49 @@ local function fill(f, copy)
   f.name:SetText("|cff" .. hex .. name .. "|r")
 
   if copy.mode == "BID" then
-    -- an auction: the dice bids the least that counts, the coin a bigger jump; both just type it in raid chat
+    -- an auction: the highest bid, big, and one red button that bids the least that beats it (it types it in raid chat);
+    -- beside it, any amount, or a max bid
     local top = R.topBid(copy)
     local a1 = R.nextBid(copy)
-    local a2 = a1 + 4 * (copy.inc or 1)
-    local can = copy.state == "open" and not (top and U.samePlayer(top.p, me()))
-    f.dice.kind, f.coin.kind, f.boost.kind = can and "BID" or nil, can and "BID" or nil, nil
-    f.dice.amount, f.coin.amount = a1, a2
-    setButton(f.dice, can)
-    setButton(f.coin, can)
-    f.dice:Show() f.coin:Show() f.boost:Hide()
-    f.coin:ClearAllPoints()
-    f.coin:SetPoint("TOP", f.dice, "BOTTOM", -2, 2)
-    f.name:SetWidth(98)
-    f.dice.label:SetText(copy.state == "open" and LR.Gdkp.gold(a1) or "")
-    f.coin.label:SetText(copy.state == "open" and LR.Gdkp.gold(a2) or "")
-    f.dice.tipTitle, f.coin.tipTitle = "Bid " .. LR.Gdkp.gold(a1), "Bid " .. LR.Gdkp.gold(a2)
-    local word = copy.strict and "bid " or ""
-    f.dice.tip = ("Types \"%s%d\" in raid chat: the least that beats the highest bid."):format(word, a1)
-    f.coin.tip = ("Types \"%s%d\" in raid chat. Any other amount: type it yourself."):format(word, a2)
+    local open = copy.state == "open"
+    local can = open and not (top and U.samePlayer(top.p, me()))
+    f:SetWidth(BID_W)
+    f.dice:Hide() f.coin:Hide() f.boost:Hide()
+    f.dice.kind, f.coin.kind, f.boost.kind = nil, nil, nil
+    f.name:SetWidth(98 + BID_W - W)
+    f.status:SetWidth(BID_W - 28)
+    f.note:SetWidth(BID_W - 28)
+    f.list:SetWidth(BID_W - 28)
+    f.price:SetShown(open) f.priceBy:SetShown(open) f.bid:SetShown(open)
+    if open then
+      f.price:SetText(top and LR.Gdkp.gold(top.n) or LR.Gdkp.gold(copy.min or 0))
+      local who = top and (U.samePlayer(top.p, me()) and "you" or U.classText(U.short(top.p), (copy.classes and copy.classes[top.p]) or LR.classOf(top.p)))
+      f.priceBy:SetText(top and ("highest, by " .. who) or "where bids start: nobody's bid yet")
+      f.bid.amount = a1
+      f.bid:SetText("Bid " .. LR.Gdkp.gold(a1))
+      f.bid:SetWidth(math.max(80, f.bid:GetFontString():GetStringWidth() + 26))
+      if can then f.bid:Enable() else f.bid:Disable() end
+      local word = copy.strict and "bid " or ""
+      f.bid.tip = ("Types \"%s%d\" in raid chat: the least that beats the highest bid."):format(word, a1)
+      f.bidH = 54
+      f.status:ClearAllPoints()
+      f.status:SetPoint("TOPLEFT", 14, -126)
+    else
+      f.bidH = 0
+      f.status:ClearAllPoints()
+      f.status:SetPoint("TOPLEFT", 14, -72)
+    end
     f.status:SetText(UI.rollStatus(copy))
     underneath(f, copy)
     return
   end
+  -- (not an auction: the game's group loot window as it is)
+  f:SetWidth(W)
+  f.status:SetWidth(W - 28) f.note:SetWidth(W - 28) f.list:SetWidth(W - 28)
+  f.price:Hide() f.priceBy:Hide() f.bid:Hide()
+  f.bidH = 0
+  f.status:ClearAllPoints()
+  f.status:SetPoint("TOPLEFT", 14, -72)
   f.dice.amount, f.coin.amount = nil, nil
   local dice, coin, boost = buttonsFor(copy)
   local opts = R.options(copy, me())
