@@ -93,9 +93,9 @@ local function practicePanel(f)
       end } or nil,
     }, "left")
     if not locked then p:note("A swap is asked for once the reserves are locked (Reserved tab).") end
-    p:buttons({ { label = "End the practice raid", style = "link", danger = true, click = function() P.stop() UI.render() end } }, "left")
     p:chips({ { tick = true, label = "Make the next roll a tie", on = P.tie, click = function() P.tie = not P.tie UI.render() end } })
     p:note("Everything else works as it does in a raid: the Session tab (GDKP, priority lists, +1s, hard reserves), the reserves and Loot tabs, the loot master window and the trade timers. The pretend players roll, pass and bid on their own.")
+    p:buttons({ { label = "End the practice raid", style = "link", danger = true, click = function() P.stop() UI.render() end } }, "left")
   end)
 end
 
