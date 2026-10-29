@@ -74,8 +74,26 @@ local function practicePanel(f)
     for _, k in ipairs({ "reserve", "drop", "roll" }) do
       if k ~= nextStep then local b = steps[k] b.style = "quiet" rest[#rest + 1] = b end
     end
-    rest[#rest + 1] = { label = "End the practice raid", style = "link", danger = true, click = function() P.stop() UI.render() end }
     p:buttons(rest, "left")
+    -- what raiders do that a raid leader has to deal with: a swap asked for once reserves are locked, someone leaving
+    p:text("The raiders:", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+    local locked = ps and ps.locked
+    p:buttons({
+      { label = "A raider asks to swap", style = "quiet", disabled = not locked, click = function()
+        local x, why = P.askSwap()
+        UI.toast(x and ("%s asks to swap a reserve: see Swap requests on the Reserved tab."):format(U.short(x.name)) or why)
+      end, tip = "A pretend player whispers \"!lr swap [their reserve] [another item]\", as a player without the addon would." },
+      { label = "A raider leaves", style = "quiet", disabled = #P.players <= 1, click = function()
+        local x, why = P.leave()
+        UI.toast(x and ("%s left the group. Their reserves stay: the Reserved tab says so, with Clear their reserves."):format(U.short(x.name)) or why)
+      end, tip = "A pretend player leaves the group, keeping their reserves (one with reserves, when anyone has some). They don't roll any more." },
+      P.gone[1] and { label = "Bring " .. U.short(P.gone[#P.gone].name) .. " back", style = "quiet", click = function()
+        local x = P.comeBack()
+        if x then UI.toast(("%s is back in the group."):format(U.short(x.name))) end
+      end } or nil,
+    }, "left")
+    if not locked then p:note("A swap is asked for once the reserves are locked (Reserved tab).") end
+    p:buttons({ { label = "End the practice raid", style = "link", danger = true, click = function() P.stop() UI.render() end } }, "left")
     p:chips({ { tick = true, label = "Make the next roll a tie", on = P.tie, click = function() P.tie = not P.tie UI.render() end } })
     p:note("Everything else works as it does in a raid: the Session tab (GDKP, priority lists, +1s, hard reserves), the reserves and Loot tabs, the loot master window and the trade timers. The pretend players roll, pass and bid on their own.")
   end)

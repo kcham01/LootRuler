@@ -5,6 +5,11 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- **The practice raid tries swaps and players leaving** (Test tab, "The raiders:"): **A raider asks to swap** (once the
+  reserves are locked) has a pretend player whisper a swap request, to allow or refuse on the Reserved tab; **A raider
+  leaves** takes a pretend player out of the group with their reserves, so the Reserved tab's "Clear their reserves" and a
+  roll that waits for someone who left can be tried; **Bring them back** puts them in the group again. A pretend player
+  who left doesn't roll. And the trade good a pretend boss drops beside its loot is always one the raid counts.
 - A new layout for every tab and window (the owner's picks from the mockups): one red button for the main thing to do on
   each screen, quieter buttons for the rest and plain links for rare or risky ones; content first, with the main actions
   pinned under the list and the rarer ones under "More..."; rules, state and actions apart; shorter explanations.
