@@ -1277,6 +1277,18 @@ run("GDKP", function()
       LR.UI.showMaster()
       shot("auction-master", lead, { "LootRulerMasterFrame" })
     end
+    -- (the loot master's list: the amounts are as wide as they need, so 1,500g isn't cut to "1,5...")
+    LR.UI.showMaster()
+    local cut, seen = {}, 0
+    local function walkNums(fr) for _, c in ipairs(fr._children or {}) do
+      if c.num and c.kind and c:IsVisible() and (c.num:GetText() or "") ~= "" then
+        seen = seen + 1
+        if c.num:GetWidth() < c.num:GetStringWidth() then cut[#cut + 1] = c.num:GetText() end
+      end
+      walkNums(c) end end
+    walkNums(G.LootRulerMasterFrame)
+    check("every bid amount in the loot master window fits its row (" .. LR.itemName(x[1]) .. ")", seen > 0 and #cut == 0, seen .. " rows; cut: " .. table.concat(cut, ", "))
+    if x[1] == 28530 then shot("auction-master-wide", lead, { "LootRulerMasterFrame" }) end
     LR.Rolls.stop()
     srv:tick(1)
   end
