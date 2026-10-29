@@ -74,7 +74,7 @@ check("Bob rolls and it closes early", roll.state == "closed" and (ann.LR.Roll.r
 check("the award goes through master loot", Rolls.award(full(bob)) and srv.given and srv.given[1].id == WATCH and srv.given[1].to == bob)
 srv:tick(2)
 check("the leader's list has it", s.won and s.won[1] and s.won[1].p == full(bob) and s.won[1].k == "SR")
-check("and the party hears it", chat("goes to Bob", "PARTY") ~= nil)
+check("and the party hears it", chat(" has won ", "PARTY") ~= nil and chat(" has won ", "PARTY").text:find("Bob", 1, true) ~= nil)
 Rolls.dismiss()
 
 section("a player without the addon rolls in chat")

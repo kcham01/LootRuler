@@ -529,14 +529,16 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   every `Net.GUILD_EVERY` (30) seconds, and none while `Guild.onlineOutside()` is empty (someone who logs in asks with `Q`).
   A batch's `Z` carries item links (`l`) in its first send and every 10th (`LINKS_EVERY`); raiders only read them when they
   first see the batch, and make links from item numbers otherwise.
-- **The countdown** (#146, the owner's wording; setting `rollCountdown`, on): the tick says "You have 5 seconds to roll on [item]...",
-  then "4..." to "1..." (`roll.counted`, reset by `Rolls.extend`); auctions keep their final call and "5 seconds left to bid". With
+- **The countdown** (#146, then #161, the owner's wording; setting `rollCountdown`, on): the tick says "You have 10 seconds to roll on
+  [item]." with 10 seconds left (`roll.tenSaid`; not for a roll of 10 seconds or less), then "5..." to "1..." (`roll.counted`; both
+  reset by `Rolls.extend`); auctions keep their final call and "5 seconds left to bid". With
   `confirmWinner` nothing is said at close: the confirm line is the next one. `Gargul.fromLootRuler(text)`: lines starting
   `LR.TAG` are never read as Gargul's (the countdown reads like Gargul's start line).
 - **The winner is said when it's given out** (#142, then #154: the owner dropped the Confirm button, as Award did the same; setting
   `confirmWinner`, on, now "Say the winner when I give it out"): a roll with one winner closes silently and `X` carries `cw`
   (raiders' copies: `copy.confirm = "wait"`, their window says the loot master gives it out); `Rolls.award`'s line names the winner,
-  and adds "(the loot master's pick)" / "(the council's choice)" when it isn't the best roll. `Rolls.confirm` is gone; raiders still
+  "Pug has won [item] (MS roll 85)." since #161 (a hard reserve: "(hard reserve)"), with ", the loot master's pick" / ", the
+  council's choice" in the brackets when it isn't the best roll (given, disenchant and sold lines are unchanged). `Rolls.confirm` is gone; raiders still
   read `cf` from an older loot master's Confirm (`copy.confirm = "confirmed"`). Ties, nobody rolling and auctions are said at once.
 - **Bid an amount** (#143, the owner's ask; `UI.bidAmount(title, lowest, place)`, `UI.batchBidSheet(copy)`; `UI.goldSheet`'s 5th argument
   names its button): the auction window's `extras[1]` (then "Bid ahead" in `extras[2]`) opens a gold box; the bid goes through

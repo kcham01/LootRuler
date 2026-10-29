@@ -102,7 +102,7 @@ check("their rolls show as the game's roll lines", shown("rolls ") ~= nil)
 local okA, note = Rolls.award(top.p)
 srv:tick(2)
 check("giving it out", okA and s.won and #s.won == 1 and s.won[1].p == top.p, note)
-check("the award line shows as raid chat", shown("goes to " .. LR.U.short(top.p)) ~= nil)
+check("the award line shows as raid chat", shown(LR.U.short(top.p) .. " has won ") ~= nil)
 Rolls.dismiss()
 -- a pretend player with two reserves on an item rolls twice for it, and their best counts
 do

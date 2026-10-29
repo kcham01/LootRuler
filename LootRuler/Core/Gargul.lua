@@ -507,7 +507,7 @@ local LINK = "(|c%x+|Hitem:.-|h|r)"
 G.ROLL_LINES = { { "You have (%d+) seconds to roll on " .. LINK, "secs", "link" } }
 G.END_LINES = { "^Stop your rolls!", LINK .. " was awarded to ([^%s%.]+).-Congrats!", "^I gave " .. LINK .. " to ([^%s%.]+)" }
 local function withoutName(text) return (tostring(text or ""):gsub("^%s*Gargul%s*:%s*", "")) end   -- (" Gargul : ...")
---- LootRuler's own lines ("[LootRuler] You have 5 seconds to roll on [item]...") are never Gargul's, however they read
+--- LootRuler's own lines ("[LootRuler] You have 10 seconds to roll on [item].") are never Gargul's, however they read
 function G.fromLootRuler(text)
   local tag = LR.TAG or "[LootRuler]"
   return tostring(text or ""):sub(1, #tag) == tag

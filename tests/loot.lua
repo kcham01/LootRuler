@@ -157,15 +157,16 @@ check("the roll closes when the time's up", roll.state == "closed")
 check("and then the bar stops: nothing runs every frame", lead.G.LootRulerMasterFrame._scripts.OnUpdate == nil
   and lead.G.LootRulerMasterFrame:IsShown())
 do
-  -- the last five seconds counted down, one line a second, and then nothing until the loot master confirms the winner
+  -- 10 seconds left said once, the last five counted down, one line a second, and then nothing until the loot master gives
+  -- it out
   local from
-  for i = #srv.chat, 1, -1 do if srv.chat[i].text:find("You have 5 seconds to roll on " .. roll.link .. "...", 1, true) then from = i end end
+  for i = #srv.chat, 1, -1 do if srv.chat[i].text == "[LootRuler] You have 10 seconds to roll on " .. roll.link .. "." then from = i end end
   local after = {}
   for i = (from or #srv.chat) + 1, #srv.chat do if srv.chat[i].from == full(lead) and srv.chat[i].channel ~= "WHISPER" then after[#after + 1] = srv.chat[i].text end end
-  check("the last five seconds are counted down in raid chat", from ~= nil
-    and table.concat(after, " | ") == "[LootRuler] 4... | [LootRuler] 3... | [LootRuler] 2... | [LootRuler] 1...",
+  check("10 seconds left is said, then the last five are counted down in raid chat", from ~= nil
+    and table.concat(after, " | ") == "[LootRuler] 5... | [LootRuler] 4... | [LootRuler] 3... | [LootRuler] 2... | [LootRuler] 1...",
     table.concat(after, " | "))
-  check("and after 1, nothing: not that rolls closed, nor who won", #after == 4 and chat("Rolls closed for " .. roll.link) == nil
+  check("and after 1, nothing: not that rolls closed, nor who won", #after == 5 and chat("Rolls closed for " .. roll.link) == nil
     and chat("Pug wins with 85 (MS)") == nil, table.concat(after, " | "))
 end
 check("raiders' windows say who's highest, and that the loot master gives it out",
@@ -179,7 +180,7 @@ check("and doesn't change the winner", (lead.LR.Roll.result(roll)).p == full(pug
 clickText(lead, "Give to Pug", lead.G.LootRulerMasterFrame)
 srv:tick(1)
 check("Give hands it over through master loot", srv.given and srv.given[1] and srv.given[1].id == SIGNET and srv.given[1].to == pug)
-check("and says so: the raid hears who won (the best roll: no \"pick\")", chat(roll.link .. " goes to Pug (MS 85).") ~= nil
+check("and says so: the raid hears who won (the best roll: no \"pick\")", chat("Pug has won " .. roll.link .. " (MS roll 85).") ~= nil
   and chat("loot master's pick") == nil)
 check("it's on the list of loot given out", wonBy(s, SIGNET) == full(pug) .. ":MS")
 check("raiders' copies of the session have it", wonBy(ann.LR.current(), SIGNET) == full(pug) .. ":MS")
@@ -252,7 +253,7 @@ check("the loot master's window offers it to Ann", found(lead, "Give to Ann", le
 clickText(lead, "Give to Ann", lead.G.LootRulerMasterFrame)
 srv:tick(1)
 check("and hands it over", srv.given[3].id == HANDWRAPS and srv.given[3].to == ann and wonBy(s, HANDWRAPS) == full(ann) .. ":HR")
-check("saying so", chat("goes to Ann (hard reserved)") ~= nil)
+check("saying so", chat("Ann has won " .. srv:link(HANDWRAPS) .. " (hard reserve).") ~= nil)
 Rolls.dismiss()
 
 section("a tie")
@@ -264,6 +265,8 @@ bob.M.click(frameFor(bob, BROOCH).dice)
 dan.M.click(frameFor(dan, BROOCH).dice)
 srv:tick(13)
 check("tied rolls are found", roll.state == "closed" and roll.tied and #roll.tied == 2)
+check("a 10 second roll isn't told \"10 seconds\" again (its first line said so), but still counts down",
+  chat("You have 10 seconds to roll on " .. roll.link) == nil and chat("[LootRuler] 5...") ~= nil)
 check("and announced", chat("tied at 77") ~= nil)
 check("raiders see the tie", status(dan, BROOCH):find("Tied at 77", 1, true) ~= nil, status(dan, BROOCH))
 check("there's no winner to give it to yet", not found(lead, "Give to", lead.G.LootRulerMasterFrame))
@@ -1195,7 +1198,7 @@ check("with \"Say the winner when I give it out\" off, the result is said as rol
 clickText(lead, "Give to Pug", lead.G.LootRulerMasterFrame)
 srv:tick(1)
 check("given: off spec on the list, by its name", wonBy(s, TALISMAN):find(full(pug) .. ":OS", 1, true) ~= nil and s.won[#s.won].xn == "Transmog")
-check("and the raid hears it", chat("goes to Pug (Transmog 90)") ~= nil)
+check("and the raid hears it", chat("Pug has won " .. srv:link(TALISMAN) .. " (Transmog roll 90).") ~= nil)
 check("raiders' copies have its name", ann.LR.current().won[#ann.LR.current().won].xn == "Transmog")
 Rolls.dismiss()
 srv:closeLoot(lead)
@@ -2047,7 +2050,7 @@ section("a reserver who goes offline or leaves while the roll waits for them")
   check("nothing is said when rolls close (the loot master gives it out)", r2.state == "closed" and not said("Amy wins"))
   lia.LR.Rolls.award(full(lia))
   srv8:tick(1)
-  check("given to Lia, not the best roll: the raid hears it was the loot master's pick", said(r2.link .. " goes to Lia (MS 30) (the loot master's pick)."))
+  check("given to Lia, not the best roll: the raid hears it was the loot master's pick", said("Lia has won " .. r2.link .. " (MS roll 30, the loot master's pick)."))
   for _, p in ipairs({ lia, amy }) do
     check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | "))
   end

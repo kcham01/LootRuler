@@ -724,7 +724,7 @@ run("settings", function()
     and visible("Put won items in trades for me", ann) and visible("Hide !lr messages in my chat", ann) and visible("!lr in raid chat", ann) and visible("Minimap button", ann)
     and not visible("Say my trades nearby when I'm not in a group", ann))
   check("opening a trade with the winner is off to start with", ticked("Open a trade with the winner", ann) == false and not ann.LR.db.settings.autoTrade)
-  check("the countdown and confirming the winner are on to start with", ticked("Count down the last 5 seconds", ann) == true
+  check("the countdown and confirming the winner are on to start with", ticked("Count down the end of a roll", ann) == true
     and ticked("Say the winner when I give it out", ann) == true)
   check("each says what it does", visible("Leaves out items other players reserved", ann))
   -- every section's title fits on its gold plate, long or short
