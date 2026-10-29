@@ -6,6 +6,28 @@ work: what was done, and the numbers before and after, are in the next section. 
 Run it with `lua5.1 tools/bench.lua` (about a minute; `--quick` for a small raid). It writes `build/bench.txt`.
 The stress test, `lua5.1 tools/stress.lua` (about a minute), goes past an ordinary night; it writes `build/stress.txt`.
 
+## The new layout and themes (#163, 29 October 2026)
+
+The same 40-player night on `main` and on the layout branch (every screen redone, drop-downs, themes), run on the same
+computer one after the other. The work (Lua instructions, which moves by about 2% between runs) is the same within that 2% at
+every moment of the night, and so are the messages sent:
+
+| Moment | Leader's work, main → layout | Each raider | Leader's messages |
+| --- | --- | --- | --- |
+| Forming the raid (39 joins) | 14.7M → 14.8M | 674k → 679k | 136 → 136 |
+| Opening reserves | 2.2M → 2.2M | 136k → 137k | 46 → 46 |
+| Reserving (78 reserves) | 17.0M → 17.1M | 363k → 364k | 174 → 174 |
+| A boss dies (1 roll) | 1.2M → 1.2M | 246k → 243k | 5 → 5 |
+| Rolling out 4 more | 4.7M → 4.8M | 1.0M → 1.0M | 16 → 16 |
+| The leader's screens | 276k → 272k | | 0 |
+| A GDKP auction | 1.0M → 1.1M | 311k → 311k | 6 → 6 |
+| Five auctions at once | 4.0M → 4.1M | 1.6M → 1.7M | 53 → 53 |
+
+Loading the addon takes about 0.2 MB more (3.2 → 3.4 MB: the themes and the new screens). The numbers above are higher than
+those of 28 October below for every version: catching raiders up after hand-overs (#159) added whispered copies; that's
+on `main` too. The stress test (no problems), the fuzz test (300 rounds, no problems) and the chaos raids (4 raids of 500
+steps, no problems) were run on the branch too, and `tests/journeys.lua` plays whole nights through the window in every theme.
+
 ## The latest version, and a stress test (28 October 2026)
 
 Measured on `main` after #135 (everything through "bids not taken"), against the same night on `main` before #121
