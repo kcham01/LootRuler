@@ -993,11 +993,16 @@ end)
 run("the guild and boosted rolls", function()
   LR.UI.show("guild")
   srv:tick(0.3)
-  check("guild members get a Guild tab", visible("Boosted rolls for this guild") and visible("Who can change this"))
+  check("guild members get a Guild tab: points, or priority lists", visible("Points") and visible("Priority lists") and visible("Boosted rolls are off for this guild."))
   check("players outside a guild don't", (function() bob.LR.UI.show() srv:tick(0.3) local none = not visible("Guild", bob) bob.LR.UI.win:Hide() return none end)())
+  clickText("More...")
+  clickText("Guild settings")
+  check("the guild's settings, in a sheet", visible("Boosted rolls for this guild") and visible("Who can change this"))
   clickTick("Boosted rolls for this guild", false)
   srv:tick(1)
   check("an officer turns boosted rolls on, for the whole guild", LR.book().boost.on and ann.LR.book().boost.on)
+  LR.UI.closeAll()
+  clickText("More...")
   clickText("Give a player points")
   check("a sheet to give someone points", visible("Player") and visible("Points"))
   local boxes = {}
@@ -1009,7 +1014,7 @@ run("the guild and boosted rolls", function()
   srv:tick(1)
 
   check("the points are saved and shared", LR.Book.points(LR.book(), "Ann-Dreamscythe") == 25 and ann.LR.Book.points(ann.LR.book(), "Ann-Dreamscythe") == 25)
-  check("the list shows them, with the roll to type", visible("/roll 26 125") and visible("Edit"))
+  check("the list shows them, with the roll to type", visible("/roll 26 125") and visible("25"))
   local s5 = LR.startSession("Karazhan", 2, true, false)
   srv:tick(1)
   LR.UI.go("session")
@@ -1049,8 +1054,8 @@ run("the guild and boosted rolls", function()
   shot("guild")
   ann.LR.UI.show("guild")
   srv:tick(0.3)
-  check("a member sees their points, and can't change anything", visible("35 (a boosted roll is 36 to 135)", ann) and not visible("Edit", ann)
-    and not visible("Give a player points", ann))
+  check("a member sees their points, and can't change anything", visible("35 (a boosted roll is 36 to 135)", ann) and not visible("More...", ann)
+    and not visible("Give this raid's points", ann))
   ann.LR.UI.win:Hide()
   LR.Rolls.start(28525, {})
   srv:tick(0.5)
@@ -1085,6 +1090,7 @@ run("priority lists", function()
   end
   local function type(box, text) box:SetText(text) box._scripts.OnTextChanged(box, true) srv:tick(0.3) end
   LR.UI.go("guild")
+  clickText("Priority lists")
   check("the Guild tab has priority lists", visible("Priority lists") and visible("Add an item") and visible("Bring in"))
   clickText("Add an item")
   type(edits()[1], "signet of unsh")
@@ -1125,7 +1131,7 @@ run("priority lists", function()
   for _, l in ipairs(G.GameTooltip._lines or {}) do tipText[#tipText + 1] = l[1] end
   check("an item's tooltip shows its priority list", table.concat(tipText, " | "):find("Priority list: 1. Ann, Lead, 2. Bob", 1, true) ~= nil, table.concat(tipText, " | "))
   if brooch._scripts.OnLeave then brooch._scripts.OnLeave(brooch) end
-  clickText("Copy out", 2)                -- (the first is the points')
+  clickText("Copy out")
   check("Copy out opens the lists to copy, as Gargul's CSV", visible("Priority lists, to copy") and visible("Gargul's CSV: Gargul's thatsmybis importer reads it"))
   local memo
   local function walkMemo(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() then memo = memo or c end walkMemo(c) end end
@@ -1882,6 +1888,8 @@ run("+1s and boosted roll points from Gargul", function()
   G.Gargul = { PlusOnes = { getPlusOnes = function() return 0 end, export = function() return "Ann,2\nBob-Faerlina,1\n" end },
     BoostedRolls = { export = function() return "Ann,40,Annalt\nPug,15,\n" end } }
   LR.UI.go("guild")
+  clickText("Points")
+  if not visible("Bring in from Gargul") then clickText("More...") end
   clickText("Bring in from Gargul")
   check("points: read straight from Gargul", visible("Read them from Gargul"))
   clickText("Read them from Gargul")
@@ -1891,6 +1899,7 @@ run("+1s and boosted roll points from Gargul", function()
   srv:tick(1)
   check("the points are in, and shared", LR.Book.points(LR.book(), "Ann-Dreamscythe") == 40 and LR.Book.points(LR.book(), "Pug-Dreamscythe") == 15
     and ann.LR.Book.points(ann.LR.book(), "Ann-Dreamscythe") == 40)
+  clickText("More...")
   clickText("Copy out")
   local function memoText()
     local out
@@ -1926,8 +1935,8 @@ run("alts", function()
   LR.UI.go("guild")
   -- Ann has points from the Gargul import above: her Edit opens her points, and her alts
   local annRow
-  for _, x in ipairs(find("Ann")) do if x.frame._kind == "item" and M.plain(x.fs:GetText()) == "Ann" and x.frame.act:IsShown() then annRow = x.frame end end
-  M.click(annRow.act)
+  for _, x in ipairs(find("Ann")) do if x.frame._kind == "rollrow" and M.plain(x.fs:GetText()):find("^Ann ") then annRow = x.frame end end
+  M.click(annRow)
   srv:tick(0.3)
   check("a player's points sheet has their alts", visible("Points for Ann") and visible("Alts") and visible("Link this alt"))
   local box
@@ -1941,7 +1950,10 @@ run("alts", function()
   check("it's listed too", visible("Annbank") and #LR.Book.altsOf(LR.book(), "Ann") == 2)
   shot("alts")
   LR.UI.closeAll()
-  check("the points list shows them under Ann", visible("alts: Annalt, Annbank"))
+  check("the points list shows them with Ann", visible("+ Annalt, Annbank"))
+  clickText("Alts")
+  check("and so does the Alts sheet", visible("Annalt, alt of Ann") and visible("Annbank, alt of Ann") and visible("Link this alt"))
+  LR.UI.closeAll()
   LR.UI.go("reserve")
 end)
 
