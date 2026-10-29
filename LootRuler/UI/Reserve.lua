@@ -38,54 +38,64 @@ local function noSession(f)
   })
 end
 
+--- how my reserves stand, when there's something to say: locked (and a swap), locking soon, not sent yet, outside the group
+local function myStatus(f, s)
+  local picks = LR.myPicks(s)
+  local leader = LR.isLeader(s)
+  if s.locked then
+    local asked = LR.Swap.mine[s.id]
+    if asked then
+      f:strip(("Locked. You asked to swap %s for %s: waiting for %s."):format(LR.coloredName(asked.from), LR.coloredName(asked.to), U.short(s.leader)), "warn")
+    else
+      f:strip("|cffffffffReserves are locked.|r " .. (leader and "You can still change them." or ("Ask " .. U.short(s.leader) .. " if something needs changing.")), "bad",
+        not leader and #picks > 0 and { "Ask to swap one", function() UI.swapSheet(s) end } or nil)
+    end
+  elseif LR.pending(s) then
+    f:strip(pendingNote(s), "warn")
+  elseif s.go and not leader and not LR.inGroup(s.leader) then
+    f:strip(("|cffffffffOnly players in %s's group can reserve.|r Ask them for an invite first."):format(U.short(s.leader)), "warn")
+  elseif s.al then
+    local mins = math.max(1, math.ceil((s.al - U.now()) / 60))
+    f:strip(("Reserves lock at %s, in %s."):format(LR.Lock.clock(s.al), U.plural(mins, "minute")), "warn")
+  end
+end
+
+--- my reserves, pinned under the list: a slot for each, filled or empty
 local function myReserves(f, s)
   local picks = LR.myPicks(s)
-  f:panel("Your reserves", function(p)
-    local limit = S.limit(s, U.me())
-    local extra = S.extra(s, U.me())
-    local left = limit - #picks
-    local line = (left > 0 and ("%s left of %d."):format(U.plural(left, "reserve"), limit) or ("All %d used."):format(limit))
-      .. (extra > 0 and (" (" .. U.short(s.leader) .. " gave you " .. U.plural(extra, "extra reserve") .. ".)") or "")
-    if s.dupes then line = line .. " You can put more than one on the same item." end
-    p:text(line)
-    if s.locked then
-      p:note("|cffff5a4aReserves are locked.|r Ask " .. (LR.isLeader(s) and "yourself" or U.short(s.leader)) .. " if something needs changing.")
-      -- a swap request (Core/Swap.lua): one of mine for another item, the leader allows it
-      local asked = LR.Swap.mine[s.id]
-      if asked then
-        p:note(("You asked to swap %s for %s: waiting for %s."):format(LR.coloredName(asked.from), LR.coloredName(asked.to), U.short(s.leader)), K.GOLD)
-      elseif not LR.isLeader(s) and #picks > 0 then
-        p:buttons({ { label = "Ask to swap one", click = function() UI.swapSheet(s) end } }, "left")
-      end
-    end
-    if s.go and not LR.isLeader(s) and not LR.inGroup(s.leader) then
-      p:note(("|cffffd100Only players in %s's group can reserve.|r Ask them for an invite first."):format(U.short(s.leader)))
-    end
-    if LR.pending(s) then p:note(pendingNote(s), K.GOLD) end
-    p:gap(2)
-    if #picks == 0 then
-      p:note(LR.raidOf(s).custom and "Nothing reserved yet: shift-click an item into the box below." or "Nothing reserved yet: pick from the list below.")
-    end
-    local counts, order = {}, {}
-    for _, id in ipairs(picks) do
-      if not counts[id] then order[#order + 1] = id end
-      counts[id] = (counts[id] or 0) + 1
-    end
-    for _, id in ipairs(order) do
-      local b = K.get(p.owner, "item", p.parent)
-      local others = UI.whoLine(s, id, 4, U.me())
-      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id) .. (others and ("  -  " .. others) or ""),
-        counts[id] > 1 and ("x" .. counts[id]) or "",
+  local limit = S.limit(s, U.me())
+  local extra = S.extra(s, U.me())
+  f:heading("Your reserves", ("%d of %d"):format(#picks, limit) .. (extra > 0 and (" (%s gave you %s)"):format(U.short(s.leader), U.plural(extra, "extra reserve")) or ""))
+  local w = math.floor((f.width - 8) / 2)
+  local slots = math.max(limit, #picks)
+  local raid = LR.raidOf(s)
+  for i = 1, slots do
+    local col = (i - 1) % 2
+    local x, y = f.x + col * (w + 8), f.y
+    local id = picks[i]
+    if id then
+      local b = K.get(f.owner, "item", f.parent)
+      local from = LR.dropsFrom(s.raid, id)
+      K.setItem(b, w, LR.itemIcon(id), LR.coloredName(id), from[1] or LR.itemKind(id), "",
         not s.locked and { text = "x", tip = "Take this reserve back", click = function()
           local ok, why = LR.unreserve(s, id)
           if not ok then UI.refused(why) end
         end } or nil)
       b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
       b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      p:place(b, 36)
-      p:gap(3)
+      b:SetPoint("TOPLEFT", f.parent, "TOPLEFT", x, -y)
+    else
+      local e = K.get(f.owner, "fact", f.parent)
+      e:SetBackdropColor(0, 0, 0, 0)
+      e:SetBackdropBorderColor(0.42, 0.37, 0.3, 0.8)
+      e.k:SetText("")
+      e.v:SetWidth(w - 18)
+      e.v:SetText(raid.custom and "Empty: shift-click an item into the box" or "Empty: pick one above")
+      e:SetSize(w, 36)
+      e:SetPoint("TOPLEFT", f.parent, "TOPLEFT", x, -y)
     end
-  end)
+    if col == 1 or i == slots then f.y = f.y + 40 end
+  end
 end
 
 --- asking to swap a reserve once they're locked: which of mine, then which item instead
@@ -161,7 +171,12 @@ function UI.reserveRow(f, s, id, key, picks)
   if hr then sub = "|cffff5a4aHard reserved" .. (hr.f ~= "" and (" for " .. hr.f) or "") .. "|r"
   elseif who then sub = (sub ~= "" and (sub .. "  -  ") or "") .. who end
   local badge = hr and "|cffff5a4aHR|r" or (mine > 0 and ("|cff1eff00" .. (mine > 1 and ("x" .. mine) or "Yours") .. "|r") or "")
-  K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), sub, badge)
+  -- a Reserve button on each row (clicking the row does it too)
+  local act = s and not hr and not s.locked and (mine == 0 or s.dupes) and { text = "Reserve", width = 58, click = function()
+    local ok, why = LR.reserve(s, id)
+    if not ok then UI.refused(why) end
+  end } or nil
+  K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), sub, badge, act)
   if hr then b.icon:SetDesaturated(true) b:SetBackdropColor(0.15, 0.03, 0.02, 0.5) end
   if mine > 0 then b:SetBackdropColor(0.05, 0.18, 0.03, 0.6) b:SetBackdropBorderColor(0.12, 0.6, 0.1, 0.8) end
   b:SetScript("OnClick", function(_, button)
@@ -320,15 +335,18 @@ function UI.reserveView(f, s)
     end)
     return
   end
-  myReserves(f, s)
+  myStatus(f, s)
+  UI.pinPanel(function(p) myReserves(p, s) end)
+  local raid = LR.raidOf(s)
+  searchBox(f, UI.searchHint(s))
+  f.y = f.y - 2
   f:chips({
-    not LR.raidOf(s).custom and { label = "For my class", on = UI.usable, click = function() UI.usable = not UI.usable LR.db.ui.usable = UI.usable UI.render() end,
+    not raid.custom and { label = "For my class", on = UI.usable, click = function() UI.usable = not UI.usable LR.db.ui.usable = UI.usable UI.render() end,
       tip = "Only show what your class would reserve: tier tokens for your class, your kind of armour, weapons you can use." } or false,
     { label = "Reserved only", on = UI.reservedOnly, click = function() UI.reservedOnly = not UI.reservedOnly UI.render() end,
       tip = "Only show items someone has reserved." },
+    s.any and not raid.custom and { plain = true, label = "  Shift-click any item to reserve it too" } or false,
   })
-  local raid = LR.raidOf(s)
-  searchBox(f, UI.searchHint(s))
   -- an item linked (or its number typed) into the box: that item, whatever raid it's from
   local linked = LR.idFrom(UI.q)
   if linked then
