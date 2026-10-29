@@ -218,12 +218,19 @@ local function tick(roll, mine)
         or ("Final call for %s: no bids yet, from %s. %d seconds."):format(roll.link, LR.Gdkp.gold(roll.min), FINAL_CALL), true)
     end
     if roll.mode ~= "BID" and LR.db.settings.rollCountdown then
-      -- the last five seconds counted down in raid chat: "You have 5 seconds to roll on [item]...", "4...", ... "1..."
+      -- the end of a roll in raid chat: "You have 10 seconds to roll on [item]." with 10 seconds left (not for a roll of 10
+      -- seconds or less: its opening line just said so), then "5...", "4...", ... "1..."
       local n = math.ceil(left - 0.05)
-      if left > 5.05 then roll.counted = nil
+      if left > 10.05 then roll.tenSaid, roll.counted = nil, nil
+      elseif left > 5.05 then
+        roll.counted = nil
+        if roll.secs > 10 and not roll.tenSaid then
+          roll.tenSaid = true
+          say(("You have 10 seconds to roll on %s."):format(roll.link))
+        end
       elseif roll.secs >= 10 and n >= 1 and n <= 5 and n < (roll.counted or 6) then
         roll.counted = n
-        say(n == 5 and ("You have 5 seconds to roll on %s..."):format(roll.link) or (n .. "..."))
+        say(n .. "...")
       end
     elseif not roll.warned and roll.secs >= 10 and left <= 5.05 and left > 0 then
       roll.warned = true
@@ -373,7 +380,7 @@ function Rolls.extend(seconds)
   if not roll or roll.state ~= "open" then return false end
   roll.ends = math.max(roll.ends, now()) + (seconds or 10)
   roll.secs = roll.secs + (seconds or 10)
-  roll.warned, roll.counted = false, nil
+  roll.warned, roll.counted, roll.tenSaid = false, nil, nil
   roll.allIn = nil
   sendGroup(wire(roll))
   Rolls.follow(wire(roll), U.me())
@@ -593,12 +600,16 @@ function Rolls.award(player, kind, n, de)
     line = ("%s goes to %s (%s, given out without a roll)."):format(roll.link, U.short(player),
       kind == "SR" and "their reserve" or kind == "OS" and "off spec" or "main spec")
   else
-    line = ("%s goes to %s%s."):format(roll.link, U.short(player), n and (" (" .. (xn or R.LABEL[kind] or kind) .. " " .. n .. ")") or (kind == "HR" and " (hard reserved)" or ""))
-    -- not the best roll: the raid hears it was picked, so nobody thinks the rolls were read wrong
+    -- "Bob has won [item] (SR roll 87)." (and, when it isn't the best roll, who picked them, so nobody thinks the rolls
+    -- were read wrong)
+    local why = {}
+    if n then why[1] = ("%s roll %s"):format(xn or R.LABEL[kind] or kind, n)
+    elseif kind == "HR" then why[1] = "hard reserve" end
     local top, tied = R.result(roll)
     if n and roll.mode ~= "HR" and not tied and top and not U.samePlayer(top.p, player) then
-      line = line:sub(1, -2) .. (LR.Council.on(s) and " (the council's choice)." or " (the loot master's pick).")
+      why[#why + 1] = LR.Council.on(s) and "the council's choice" or "the loot master's pick"
     end
+    line = ("%s has won %s%s."):format(U.short(player), roll.link, #why > 0 and (" (" .. table.concat(why, ", ") .. ")") or "")
   end
   say(line)
   toGuild(line)

@@ -151,7 +151,7 @@ function UI.settingsView(f)
     end
     p:chips(keys, { gap = 2 })
     p:note("Click an item with these keys held (in your bags, the loot window or a chat link) to roll it out.")
-    toggle(p, "rollCountdown", "Count down the last 5 seconds", "Raid chat hears \"You have 5 seconds to roll on [item]...\", then \"4...\", \"3...\", \"2...\", \"1...\". Off: one line, \"5 seconds left to roll\".")
+    toggle(p, "rollCountdown", "Count down the end of a roll", "Raid chat hears \"You have 10 seconds to roll on [item].\", then \"5...\", \"4...\", \"3...\", \"2...\", \"1...\". Off: one line, \"5 seconds left to roll\".")
     toggle(p, "confirmWinner", "Say the winner when I give it out", "When rolls close, nothing is said until you click Award (or Give) in the loot master window, so you can check the rolls first: the winner is the next line. Off: the winner is said as soon as rolls close, and again when it's given out.")
     toggle(p, "raidWarning", "Announce rolls as raid warnings", "Off: in plain raid chat. (Raid warnings need you to lead or assist.)")
     toggle(p, "announceLoot", "Post the loot in raid chat", "When you open a corpse with master loot, each epic item, and anything reserved, is posted in raid chat once, with who reserved it (or who it's hard reserved for).")

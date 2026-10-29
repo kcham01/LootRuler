@@ -5,6 +5,10 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Clearer raid chat at the end of a roll (the owner's wording): with 10 seconds left, "You have 10 seconds to roll on
+  [item]."; then "5...", "4...", "3...", "2...", "1...". The winner's line now reads "Pug has won [item] (MS roll 85)."
+  (or "(hard reserve)", and ", the loot master's pick" when it isn't the best roll).
+  ([#161](https://github.com/kcham01/LootRuler/pull/161))
 - A private session has "Clear reserves of players not in the group" too, like a session for the group: after importing a
   softres.it sheet, the reserves of anyone not in your group come off in one click (after saying who). It works while
   you're in a group. ([#160](https://github.com/kcham01/LootRuler/pull/160))

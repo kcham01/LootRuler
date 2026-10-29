@@ -135,7 +135,7 @@ local top = lead.LR.Roll.result(roll)
 check("the highest number wins", top and top.p == full(ann) and top.kind == "BR")
 local ok, note = Rolls.award(full(ann))
 srv:tick(1)
-check("given out", ok and chat("goes to Ann (BR 120)", "RAID") ~= nil)
+check("given out", ok and chat("Ann has won " .. roll.link .. " (BR roll 120).", "RAID") ~= nil)
 check("Ann's points are spent", points(lead, ann) == 0 and note and note:find("Ann's 40 points are spent", 1, true), note)
 check("everywhere", points(ann, ann) == 0 and points(mira, ann) == 0 and points(kay, ann) == 0)
 local w = s.won[#s.won]
