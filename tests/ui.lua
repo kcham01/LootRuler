@@ -2017,7 +2017,12 @@ run("the Test tab", function()
   clickTick("Show the Test tab", false)
   check("switched on in Settings, it's there", tabShown())
   clickText("Test")
-  check("pretend rolls, messages and names", visible("Pretend rolls") and visible("Pretend messages") and visible("Names from softres.it"))
+  check("the practice raid first; pretend rolls, messages and Gargul folded under it", visible("Practice raid") and visible("Start the practice raid")
+    and visible("Pretend rolls") and visible("Pretend messages") and visible("Gargul") and not visible("LootRuler roll: reserved"))
+  clickText("Pretend rolls")
+  clickText("Pretend messages")
+  clickText("Gargul")
+  check("each opens", visible("LootRuler roll: reserved") and visible("Names from softres.it") and visible("Gargul roll"))
   -- eight made-up players reserved it, and me (the practice raid's two steppers come first)
   clickText("+", 3) clickText("+", 3)
   check("how many reserved it can be changed", visible("8"))
@@ -2630,12 +2635,7 @@ run("no button runs past its panel", function()
     walk(G.LootRulerFrame)
   end
   check("every button fits", #bad == 0, table.concat(bad, ", "))
-  check("the Test tab's messages wrap onto two lines", (function()
-    local a, b
-    for _, x in ipairs(find("The 2 hours running out")) do if x.clickable then a = M.rect(x.clickable) end end
-    for _, x in ipairs(find("Changing raids")) do if x.clickable then b = M.rect(x.clickable) end end
-    return a and b and b.t < a.b
-  end)())
+  check("the Test tab's message buttons are all there", visible("The 2 hours running out") and visible("Changing raids") and visible("The reminder"))
   local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
   local sf = scrollers(G.LootRulerFrame, {})[1]
   sf:SetVerticalScroll(sf:GetVerticalScrollRange())
