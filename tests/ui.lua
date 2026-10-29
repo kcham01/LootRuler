@@ -913,6 +913,22 @@ run("settings", function()
   check("/lr settings opens the tab", ann.LR.UI.tab == "settings")
   srv:tick(0.3)
   check("it stays on the page it was left on", visible("Show roll windows", ann) and visible("Seconds to roll:", ann))
+  -- the list down the side scrolls on its own: scrolling the settings leaves it where it is
+  local side = ann.LR.UI.sideFrame
+  local function navTop() for _, x in ipairs(ann.M.findText("Auto-roll", true, side)) do return x.fs:GetTop() end end
+  check("the sections down the side are a list of their own", side:IsShown() and navTop() ~= nil)
+  local topBefore = navTop()
+  local mainSF
+  local function walkSF(fr) for _, c in ipairs(fr._children or {}) do if c._type == "ScrollFrame" and c ~= side and c:IsVisible() and not mainSF then mainSF = c end walkSF(c) end end
+  walkSF(ann.G.LootRulerFrame)
+  mainSF:SetVerticalScroll(mainSF:GetVerticalScrollRange())
+  ann.M.invalidate()
+  check("scrolling the settings doesn't move it", mainSF:GetVerticalScrollRange() > 100 and navTop() == topBefore)
+  check("and the settings sit beside it, not under it", ann.M.findText("Show roll windows", true, mainSF)[1].fs:GetLeft() > side:GetRight())
+  mainSF:SetVerticalScroll(0)
+  check("the minimap button's section is called Map button", visible("Map button", ann) and not visible("This window", ann))
+  clickText("Map button", nil, ann)
+  check("it holds the minimap button", tickFor("Minimap button", nil, ann) ~= nil)
   -- searching: every section whose name or line matches, on one page
   local sbox
   local function walkS(fr) for _, c in ipairs(fr._children or {}) do if c._type == "EditBox" and c:IsVisible() and c.hint and c.hint:GetText() == "Search" then sbox = c end walkS(c) end end

@@ -7,13 +7,14 @@ local floor, max, min = math.floor, math.max, math.min
 
 local WIDTH, HEIGHT = 460, 640
 local TOP_H, TAB_H, PAD = 54, 30, 14
+local SIDE_GAP = 12           -- between a list down the side (UI.pinSide) and the scrolling part
 local BAR_H = 32               -- the bar of a screen's main actions, pinned above the tabs (UI.pin)
 LR.CONTENT_W = WIDTH - 2 * PAD - 22
 
 local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
-local win, top, view, tabsBar, toastFrame, bar
+local win, top, view, tabsBar, toastFrame, bar, side
 local TABS = { { "reserve", "My reserves" }, { "reserves", "Reserved" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
 
 ---------------------------------------------------------------------- the window
@@ -84,6 +85,12 @@ local function build()
   view = K.scroller(win)
   view:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
   view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16)
+  -- a list down the side that scrolls on its own (UI.pinSide: the Settings tab's sections), left of the scrolling part
+  side = K.scroller(win)
+  side:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
+  side:SetPoint("BOTTOMRIGHT", view, "BOTTOMLEFT", -SIDE_GAP, 0)
+  side:Hide()
+  UI.sideFrame = side
 
   -- a screen's main actions, pinned under the scrolling part so they're always there (UI.pin)
   bar = CreateFrame("Frame", nil, win)
@@ -242,7 +249,7 @@ function UI.render()
     b.text:SetTextColor(on and 1 or 0.8, on and 0.82 or 0.7, on and 0 or 0.5)
   end
   K.release("view")
-  UI.pinned = nil
+  UI.pinned, UI.side = nil, nil
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
   local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, guild = UI.guildView, settings = UI.settingsView, test = UI.testView }
   local ok, err = pcall(screens[UI.tab], flow, s)
@@ -251,7 +258,10 @@ function UI.render()
     geterrorhandler()(err)
   end
   UI.drawBar()
-  view:setContentHeight(flow.y + 8, keep)
+  UI.drawSide(keep)
+  -- (UI.toTop: the screen's own part starts at the top again, a list down the side stays where it was)
+  view:setContentHeight(flow.y + 8, keep and not UI.toTop)
+  UI.toTop = nil
   for _, e in ipairs(UI.openSheets()) do e.handle.redraw(true) end
 end
 
@@ -260,6 +270,21 @@ end
 function UI.pin(list, more) UI.pinned = { list = list, more = more } end
 --- something else pinned under the screen (your reserves, on the Reserve tab): fill(flow) draws it, as tall as it needs
 function UI.pinPanel(fill) UI.pinned = { fill = fill } end
+
+--- a list down the left of the screen that scrolls on its own (call while drawing the screen): fill(flow) draws it,
+--- width wide; the screen's own part is that much (and a gap) narrower, so its flow is f.width - UI.sideWidth(width)
+function UI.pinSide(width, fill) UI.side = { width = width, fill = fill } end
+function UI.sideWidth(width) return width + SIDE_GAP end
+
+function UI.drawSide(keep)
+  K.release("side")
+  local p = UI.side
+  if not p then side:Hide() return end
+  side:Show()
+  local flow = K.flow("side", side.child, 0, 4, p.width)
+  p.fill(flow)
+  side:setContentHeight(flow.y + 8, keep)
+end
 
 --- the rarer actions of a screen, one per line
 function UI.moreSheet(title, list)
@@ -280,7 +305,7 @@ function UI.drawBar()
   K.release("bar")
   local p = UI.pinned
   view:ClearAllPoints()
-  view:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
+  view:SetPoint("TOPLEFT", PAD + (UI.side and (UI.side.width + SIDE_GAP) or 0), -(TOP_H + 8))
   if not p then
     bar:Hide()
     view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16)

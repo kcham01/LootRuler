@@ -32,6 +32,7 @@ local function group(f, text)
 end
 
 local NAV = 128              -- the list of sections down the side
+local SIDE = NAV + 8         -- and room beside it for its own scroll bar
 
 --- draws the list down the side and the section(s) shown beside it
 local function drawSections(f)
@@ -41,40 +42,40 @@ local function drawSections(f)
   local known = page == "all"
   for _, x in ipairs(sections) do if x.title == page then known = true end end
   if not known then page = sections[1].title LR.db.ui.settingsPage = page end
-  -- down the side: the search box, then each heading and its sections
-  local nav = K.flow(f.owner, f.parent, f.x, f.y, NAV)
-  local box = K.get(f.owner, "edit", f.parent)
-  nav:place(box, 22, 4, NAV - 6)
-  box:SetText(UI.setQ or "")
-  K.setHint(box, "Search")
-  local seq = 0
-  K.onText(box, function(self, user)
-    if not user then return end
-    UI.setQ = self:GetText()
-    UI.setFocus = true
-    seq = seq + 1
-    local mine = seq
-    C_Timer.After(0.15, function() if mine == seq then UI.render() end end)
-  end)
-  box:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.setFocus = false end)
-  box:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.setFocus = false end)
-  if UI.setFocus then K.refocus(box) end
-  nav:gap(6)
+  -- down the side, scrolling on its own (UI.pinSide): the search box, then each heading and its sections
   local shown, lastGroup = {}, nil
-  local function navItem(title, label)
-    local b = K.get(f.owner, "nav", f.parent)
-    local h = K.setNav(b, NAV, label or title, q == "" and page == title)
-    b:SetScript("OnClick", function()
-      LR.db.ui.settingsPage = title
-      UI.setQ, UI.setFocus = "", false
-      UI.render()
+  for _, x in ipairs(sections) do if matches(x) then shown[#shown + 1] = x end end
+  UI.pinSide(SIDE, function(nav)
+    local box = K.get(nav.owner, "edit", nav.parent)
+    nav:place(box, 22, 4, NAV - 6)
+    box:SetText(UI.setQ or "")
+    K.setHint(box, "Search")
+    local seq = 0
+    K.onText(box, function(self, user)
+      if not user then return end
+      UI.setQ = self:GetText()
+      UI.setFocus = true
+      seq = seq + 1
+      local mine = seq
+      C_Timer.After(0.15, function() if mine == seq then UI.render() end end)
     end)
-    nav:place(b, h)
-    nav:gap(1)
-  end
-  for _, x in ipairs(sections) do
-    if matches(x) then
-      shown[#shown + 1] = x
+    box:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.setFocus = false end)
+    box:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.setFocus = false end)
+    if UI.setFocus then K.refocus(box) end
+    nav:gap(6)
+    local function navItem(title, label)
+      local b = K.get(nav.owner, "nav", nav.parent)
+      local h = K.setNav(b, NAV, label or title, q == "" and page == title)
+      b:SetScript("OnClick", function()
+        LR.db.ui.settingsPage = title
+        UI.setQ, UI.setFocus = "", false
+        UI.toTop = true
+        UI.render()
+      end)
+      nav:place(b, h)
+      nav:gap(1)
+    end
+    for _, x in ipairs(shown) do
       if x.group ~= lastGroup then
         lastGroup = x.group
         nav:gap(4)
@@ -82,11 +83,11 @@ local function drawSections(f)
       end
       navItem(x.title)
     end
-  end
-  nav:gap(8)
-  navItem("all", "All settings")
-  -- beside it: the section picked, or every one (All settings, or a search)
-  local content = K.flow(f.owner, f.parent, f.x + NAV + 12, f.y, f.width - NAV - 12)
+    nav:gap(8)
+    navItem("all", "All settings")
+  end)
+  -- beside it (the screen's own scrolling part): the section picked, or every one (All settings, or a search)
+  local content = K.flow(f.owner, f.parent, f.x, f.y, f.width - UI.sideWidth(SIDE))
   local list = (q ~= "" or page == "all") and shown or {}
   if q == "" and page ~= "all" then for _, x in ipairs(sections) do if x.title == page then list = { x } end end end
   if #list == 0 then content:note("No section matches your search.") end
@@ -97,7 +98,7 @@ local function drawSections(f)
     content:gap(2)
     x.fill(content)
   end
-  f.y = math.max(nav.y, content.y)
+  f.y = content.y
 end
 
 local function count(n, one, zero) return n == 0 and zero or U.plural(n, one) end
@@ -314,7 +315,7 @@ function UI.settingsView(f)
   end)
 
   group(f, "More")
-  section(f, "This window", "The minimap button.", function(p)
+  section(f, "Map button", "The button on the minimap.", function(p)
     p:chips({ { tick = true, label = "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
       if LR.minimap then LR.minimap:SetShown(not LR.db.ui.hideMinimap) end
