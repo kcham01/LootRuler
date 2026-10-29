@@ -20,6 +20,8 @@ it becomes 1.0.0. Each line links the pull request it came from.
     once it's open.
   - **Players who left with reserves** show as a gold line at the top of the Reserved tab, naming them, with "Clear their
     reserves" right there (it's still under More too).
+  - **Test tab**: nothing folds. The practice raid first (its raid in a drop-down, players and reserves on one line), then
+    Roll windows (open, reserved and Gargul rolls together), Alerts and raid lines, and softres.it names.
   - **Every x** (taking something off a list, closing a window) is the game's own red close button. Browsing the loot
     picks the raid from a drop-down too.
   - **First screen** (nothing open): running loot (import or open reserves) or just raiding, which says a raider can import

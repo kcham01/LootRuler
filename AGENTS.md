@@ -218,7 +218,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Flow:inline` (words with links after them), `Flow:cols`, `Flow:facts`, `Flow:entry` (a person's row). `UI.pin(list, more)` pins a
   screen's main actions under it (what doesn't fit, and `more`, go in `UI.moreSheet` behind "More..."); `UI.pinPanel(fill)` pins
   anything (My reserves' slots). The tabs are "My reserves" and "Reserved" (the owner's choice; a name that doesn't fit gets a
-  smaller font). Kept per character: `db.ui.sessionOpen` (the Session tab's folds, `UI.sessionFold`), `db.ui.testOpen`,
+  smaller font). Kept per character: `db.ui.sessionOpen` (the Session tab's folds, `UI.sessionFold`),
   `db.ui.settingsPage` (a section's title, or "all"), `db.ui.minorOpen`; in memory: `UI.resQ`, `UI.guildQ`, `UI.setQ` (searches),
   `UI.guildPage`, `UI.ownForm`. Drop-downs: `K.dropdown(owner, parent, width, label, items, pick, id)` (the game's look: a box, the gold arrow,
   a list with round ticks; `items` = { label, on, head, gap, tip }; one shared list, `K.dropList`, parented to the window and kept open
@@ -252,7 +252,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Only the group can reserve** (`s.go`, `S.groupOk`, `S.setGroupOnly`, `LR.setGroupOnly`): on for new sessions; the
   leader's addon refuses new reserves from outside the group (picks `P`, whispers) with `GROUP_ONLY`, while taking
   reserves back, the leader's own adds and imports still work. Switch it off for guild members to reserve pre-raid.
-- **The Test tab** (`UI/Test.lua`, setting `testTab`, off to start with): pretend rolls (`UI.testRoll(opts)`, `UI.testGargul`,
+- **The Test tab** (`UI/Test.lua`, setting `testTab`, off to start with; nothing folded since #163: the practice raid, Roll windows,
+  Alerts and raid lines, softres.it names): pretend rolls (`UI.testRoll(opts)`, `UI.testGargul`,
   made-up players in `UI.PRETEND`), the trade warning, the reminder line and a softres.it name check, all only on this
   screen. A pretend roll (`copy.test`) rolls locally in `Rolls.roll`, never with the game's /roll.
 - **Roll windows for Gargul's rolls** (`Rolls.followGargul`, `Rolls.gargulEnded`, setting `gargulWindows`, on to start with):
