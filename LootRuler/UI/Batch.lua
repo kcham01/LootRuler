@@ -86,7 +86,7 @@ local function itemLine(copy, item, mine)
     if copy.state == "cancelled" then return "Called off" end
     return top and ("|cff1eff00Sold to %s for %s|r"):format(U.short(top.p), G.gold(top.n)) or "Not sold: nobody bid"
   end
-  local text = top and ("Highest: %s, %s"):format(U.short(top.p), G.gold(top.n)) or ("No bids yet, from %s"):format(G.gold(item.min or 0))
+  local text = top and ("Highest: %s, %s"):format(U.short(top.p), G.gold(top.n)) or ("No bids yet - from %s"):format(G.gold(item.min or 0))
   if top and U.samePlayer(top.p, U.me()) then text = "|cff1eff00You're highest: " .. G.gold(top.n) .. "|r" end
   if item.myMax then text = text .. (" |cff9d9d9d(your max %s)|r"):format(G.gold(item.myMax)) end
   return text
@@ -114,6 +114,30 @@ function UI.batchBidSheet(copy)
   end)
 end
 
+--- max bids on the items: pick one, then the most you'd pay (LootRuler bids for you, as little as it takes)
+function UI.batchMaxSheet(copy)
+  UI.show()
+  UI.openSheet("Max bids", function(f, h)
+    f:note("LootRuler bids for you, as little as it takes to keep you on top, up to what you say. Nobody else sees it.")
+    for _, item in ipairs(copy.items) do
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(item.id), ("|cffffd100#%d|r %s"):format(item.n, LR.coloredName(item.id)),
+        item.myMax and ("Your max: %s"):format(G.gold(item.myMax)) or "No max bid", "",
+        { text = item.myMax and "Change" or "Max", width = 56, click = function()
+          if copy.state ~= "open" then UI.toast("The auction is over.") return end
+          h.close()
+          UI.goldSheet(("Max bid on #%d %s"):format(item.n, LR.itemName(item.id)), "LootRuler bids for you, as little as it takes to keep you on top, up to this. Nobody else sees it.",
+            item.myMax or R.nextBid(item), function(g)
+              local ok, why = B.myMax(copy, item.n, g)
+              if not ok then UI.toast(why) end
+            end)
+        end })
+      f:place(b, 36)
+      f:gap(2)
+    end
+  end)
+end
+
 function UI.batchDraw()
   local copy = shown()
   if not copy then if win then win:Hide() end return end
@@ -132,14 +156,14 @@ function UI.batchDraw()
   if pt then win:SetPoint(pt[1], UIParent, pt[2], pt[3], pt[4]) else win:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 540, -120) end
   local s = LR.Rolls.session()
   local by = (s and s.br and s.br.n) or (not mine and U.short(copy.by)) or nil
-  win.title:SetText(("Auction: %d items%s"):format(#copy.items, by and (" by " .. by) or ""))
+  win.title:SetText(("%d items up together%s"):format(#copy.items, by and (" - by " .. by) or ""))
   local f = K.flow("batch", win.body, 0, 0, W - 32)
   for _, item in ipairs(copy.items) do
     local b = K.get(f.owner, "item", f.parent)
     local amount = R.nextBid(item)
     local canBid = copy.state == "open" and not (item.top and U.samePlayer(item.top.p, U.me()))
     K.setItem(b, f.width, LR.itemIcon(item.id), ("|cffffd100#%d|r %s"):format(item.n, LR.coloredName(item.id)), itemLine(copy, item, mine), "",
-      copy.state == "open" and { text = G.gold(amount), width = 62, disabled = not canBid, tip = "Bid " .. G.gold(amount) .. " (shift-click: a max bid)", click = function()
+      copy.state == "open" and { text = canBid and ("Bid " .. G.gold(amount)) or "Yours", width = 80, disabled = not canBid, tip = "Bid " .. G.gold(amount) .. " (shift-click: a max bid)", click = function()
         if IsShiftKeyDown() then
           UI.show()
           UI.goldSheet(("Max bid on #%d %s"):format(item.n, LR.itemName(item.id)), "LootRuler bids for you, as little as it takes to keep you on top, up to this. Nobody else sees it.",
@@ -151,19 +175,24 @@ function UI.batchDraw()
         end
         B.bid(copy, item.n, amount)
       end } or nil)
+    -- (my highest bid stands out)
+    if copy.state == "open" and item.top and U.samePlayer(item.top.p, U.me()) then b:SetBackdropBorderColor(0.25, 0.55, 0.16, 1) end
     b:SetScript("OnEnter", function(self) UI.itemTooltip(self, LR.Rolls.session(), item.id) end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
     f:place(b, 36)
     f:gap(2)
   end
   if copy.state == "open" then
-    f:note(("Type the number and your bid in raid chat: \"%s\"."):format(B.bidText(1, copy.items[1].min or 0, copy.strict)))
-    f:buttons({ { label = "Bid an amount", click = function() UI.batchBidSheet(copy) end } }, "left")
+    f:note(("Or type the number and your bid in raid chat: \"%s\"."):format(B.bidText(1, copy.items[1].min or 0, copy.strict)))
+    f:buttons({
+      { label = "Bid an amount", style = "link", click = function() UI.batchBidSheet(copy) end },
+      { label = "Max bids", style = "link", click = function() UI.batchMaxSheet(copy) end },
+    }, "left")
     if mine then
       f:buttons({
-        { label = "+10 sec", width = 70, click = function() B.extend(10) end },
         { label = "Close now", click = function() B.close() end },
-        { label = "Call off", click = function() UI.confirm("Call off the auction", "Nothing is sold. The items stay where they are.", "Call it off", function() B.cancel() end) end },
+        { label = "+10 sec", style = "quiet", width = 70, click = function() B.extend(10) end },
+        { label = "Call off", style = "link", danger = true, click = function() UI.confirm("Call off the auction", "Nothing is sold. The items stay where they are.", "Call it off", function() B.cancel() end) end },
       }, "left")
     end
   end
@@ -204,7 +233,7 @@ function UI.batchSheet()
     f:chips(secs, { gap = 2 })
     f:gap(6)
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = ("Auction %d together"):format(n), disabled = n < 2 or n > B.MAX, click = function()
         local items = {}
         for i, it in ipairs(list) do if picked[i] then items[#items + 1] = it end end
