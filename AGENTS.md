@@ -217,7 +217,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   `Flow:strip(text, tone, link)` (how things stand, in one line), `Flow:row(label, fill, { lw })` (labels in a column of their own),
   `Flow:inline` (words with links after them), `Flow:cols`, `Flow:facts`, `Flow:entry` (a person's row). `UI.pin(list, more)` pins a
   screen's main actions under it (what doesn't fit, and `more`, go in `UI.moreSheet` behind "More..."); `UI.pinPanel(fill)` pins
-  anything (My reserves' slots). The tabs are "My reserves" and "All reserves" (the owner's choice; a name that doesn't fit gets a
+  anything (My reserves' slots). The tabs are "My reserves" and "Reserved" (the owner's choice; a name that doesn't fit gets a
   smaller font). Kept per character: `db.ui.sessionOpen` (the Session tab's folds, `UI.sessionFold`), `db.ui.testOpen`,
   `db.ui.settingsPage` (a section's title, or "all"), `db.ui.minorOpen`; in memory: `UI.resQ`, `UI.guildQ`, `UI.setQ` (searches),
   `UI.guildPage`, `UI.ownForm`. Drop-downs: `K.dropdown(owner, parent, width, label, items, pick, id)` (the game's look: a box, the gold arrow,

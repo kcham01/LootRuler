@@ -8,7 +8,7 @@ it becomes 1.0.0. Each line links the pull request it came from.
 - A new layout for every tab and window (the owner's picks from the mockups): one red button for the main thing to do on
   each screen, quieter buttons for the rest and plain links for rare or risky ones; content first, with the main actions
   pinned under the list and the rarer ones under "More..."; rules, state and actions apart; shorter explanations.
-  - The tabs are called **My reserves** and **All reserves**.
+  - The tabs are called **My reserves** and **Reserved**.
   - **Session tab** (leader): softres.it first, standing out, with four red buttons: import, tell the raid how to
     reserve, hand the reserves over, and "End session"; then "This raid's rules" (how loot goes, reserves each, what
     can be reserved, who can, locking) and "Who gets what" (hard reserves, extra reserves, the disenchanter, the loot
@@ -24,7 +24,7 @@ it becomes 1.0.0. Each line links the pull request it came from.
     a softres.it sheet into a private session when the loot master doesn't use LootRuler; then browse any raid's loot.
   - **A raider's Session tab**: how it stands for you in one line, the rules as four small boxes, the leader's message, and
     "Open your own reserves" and "Leave these reserves" (it asks first) as plain buttons.
-  - **All reserves**: how they stand in one line (open or locked, how many in the group reserved, Gargul); by item or by
+  - **Reserved** (the old Reserves tab): how they stand in one line (open or locked, how many in the group reserved, Gargul); by item or by
     player with a search; each player in one row, "Change" opening their reserves, extra reserves and +1s; Lock, Post and
     Remind pinned under the list; Gargul, importing again and clearing absent players under More.
   - **My reserves**: the search first, a Reserve button on each item, and your reserves pinned under the list as slots.

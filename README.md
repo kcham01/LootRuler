@@ -46,10 +46,10 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 1. **Open reserves** on the Session tab: pick the raid, how many soft reserves each player gets, whether a player can put more than one on the same item (on by default), and whether to share the session with your guild so people can reserve before the group is even made.
 2. **Hard reserve** anything: say who it's for and add a note if you like. Anyone who had soft reserved it gets that reserve back.
-3. **Extra reserves** for tanks, healers or anyone: on the Session tab (or a player's row on the All reserves tab), pick the players and how many more they get. `!lr` tells players without the addon how many they have.
+3. **Extra reserves** for tanks, healers or anyone: on the Session tab (or a player's row on the Reserved tab), pick the players and how many more they get. `!lr` tells players without the addon how many they have.
 4. **Reserve yourself** on the My reserves tab, like everyone else.
 5. **Post in raid chat** tells everyone how to reserve, addon or not. **Remind** names who hasn't reserved in raid chat, with how to. Switch on "Tell people who join how to reserve" (Settings) and anyone joining later hears it too.
-6. **Watch it fill up** on the All reserves tab, by item (boss by boss: each opens with a click, and a search opens every boss with a match) or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't (pick all of someone's items in one go).
+6. **Watch it fill up** on the Reserved tab, by item (boss by boss: each opens with a click, and a search opens every boss with a match) or by player, with who in the group hasn't reserved yet. Take reserves away or add them for people who can't (pick all of someone's items in one go).
 7. **Lock** when you're ready, or have them **lock by themselves** in 10 to 60 minutes or at a time you pick (the raid is told 5, 2 and 1 minute before, with how to reserve). Locking puts the reserves into Gargul (if it's loaded). Or **Send to Gargul** any time, or **Copy for Gargul** to paste into Gargul's importer (`/gl sr`) on the character running loot.
 8. **Leaving, or the leader dropped?** Hand the reserves to someone else on the Session tab. If the leader leaves or goes offline, the raid leader or the master looter can take them over (or pick who does). Everything reserved and given out stays, and the raid is told who to whisper now.
 9. **Only the group can reserve** (on to start with): players outside the group are told to ask for an invite first. You can still add reserves for anyone, and imports still come in. Switch it off on the Session tab to let guild members reserve before the raid forms.
@@ -66,12 +66,12 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
   <img src="docs/screens/auto-lock.png" alt="Reserves that lock by themselves" width="49%">
 </p>
 
-**Swapping a reserve after they're locked:** a raider asks (My reserves tab, "Ask to swap one", or whisper `!reserve swap [old] [new]`), the leader allows or refuses it on the All reserves tab, and the raider is told by whisper.
+**Swapping a reserve after they're locked:** a raider asks (My reserves tab, "Ask to swap one", or whisper `!reserve swap [old] [new]`), the leader allows or refuses it on the Reserved tab, and the raider is told by whisper.
 
-**Clearing reserves of players who left:** the All reserves tab (under More) shows how many players have reserves but aren't in the group, and one button (after a check that names them) takes their reserves off, so their items are free for the rest. Someone offline but still in the group keeps theirs.
+**Clearing reserves of players who left:** the Reserved tab (under More) shows how many players have reserves but aren't in the group, and one button (after a check that names them) takes their reserves off, so their items are free for the rest. Someone offline but still in the group keeps theirs.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/swap-requests.png" alt="Swap requests on the leader's All reserves tab" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/swap-requests.png" alt="Swap requests on the leader's Reserved tab" width="49%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/clear-absent.png" alt="Clearing the reserves of players not in the group" width="49%">
 </p>
 
@@ -160,7 +160,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 - **Gave it to the wrong player?** **Undo** in the loot master window takes it back off the list, and the roll is as it closed: give it to someone else or roll it again. If the item already went to them, the raid is asked for them to trade it on.
 - **When the game won't hand it over** (their bags are full, it's unique and they have one, they're too far away): the award is taken back, the raid hears the item is still to give out, and the loot master is told why.
 - **A disenchanter** (the leader picks them on the Session tab, or `/lr de [name]`): when nobody wants an item, the loot master's window has a one-click **Disenchant** button that gives it to them and tells the raid.
-- **The +1 rule** (the leader turns it on for a session): every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. The raid is told when a roll starts, roll windows and the loot master's window show who has a +1, `!lr` tells players their +1s, and the leader can give or take +1s on the All reserves tab.
+- **The +1 rule** (the leader turns it on for a session): every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. The raid is told when a roll starts, roll windows and the loot master's window show who has a +1, `!lr` tells players their +1s, and the leader can give or take +1s on the Reserved tab.
 - **Your own kinds of roll** (the loot master's Settings tab, "Roll types"): add Transmog (`/roll 98`) in one click, or up to four of your own, each with its own number. They count after off spec, in the order listed. Raid chat says how to roll for each, and roll windows get a button for each. Players without LootRuler just type the `/roll`.
 - **Item notes** (Settings, "Item notes"): your own note on an item, like "Warrior > Rogue". Rolling it out adds it to the raid chat line ("Note: Warrior > Rogue."), everyone's roll window shows it, and you see it in the item's tooltip. Kept between raids; copy them out or paste a list in ("28525: Warrior > Rogue", one a line).
 - **thatsmybis wishlists** (Settings, "thatsmybis wishlists"): paste your guild's thatsmybis download. When an item is rolled out, raid chat and everyone's roll window say who in the group wishlisted it ("Wishlisted: Ann (1), Bob (2)."), and so do the corpse loot posts and the item's tooltip. Anyone already given the item is left out.
@@ -407,7 +407,7 @@ the latest version. Some pictures further up are screenshots from the game itsel
 pull request's run). It unzips into its own `LootRulerTest` folder beside `LootRuler`, keeps its own sessions and settings,
 and shows "LootRuler test" in its window, so the real one isn't touched. Turn on only one of the two in the AddOns list.
 
-Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the All reserves tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
+Only the raid leader (and whoever runs loot) needs an up-to-date LootRuler. Older and newer versions work together, the addon says when someone has a newer one, and the Reserved tab shows the leader who in the group doesn't have LootRuler at all, so they know who'll whisper.
 
 | Command (`/lr` or `/lootruler`) | Does |
 | --- | --- |

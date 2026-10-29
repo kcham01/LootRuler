@@ -14,7 +14,7 @@ local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
 local win, top, view, tabsBar, toastFrame, bar
-local TABS = { { "reserve", "My reserves" }, { "reserves", "All reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
+local TABS = { { "reserve", "My reserves" }, { "reserves", "Reserved" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
 
 ---------------------------------------------------------------------- the window
 local function build()

@@ -39,7 +39,7 @@ function Sw.ask(s, player, from, to)
   end
   table.insert(Sw.list, { sid = s.id, p = player, from = from, to = to, at = U.now() })
   if not U.samePlayer(player, U.me()) then
-    LR.print(("%s asks to swap %s for %s: allow it on the All reserves tab."):format(U.short(player), LR.itemLink(from), LR.itemLink(to)))
+    LR.print(("%s asks to swap %s for %s: allow it on the Reserved tab."):format(U.short(player), LR.itemLink(from), LR.itemLink(to)))
   end
   LR.changed("swaps")
   return true

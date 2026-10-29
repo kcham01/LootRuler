@@ -464,7 +464,7 @@ local function rulesPanel(f, s)
         { tick = true, label = "One reserve win each", on = s.ow, click = function() LR.setOneWin(s, not s.ow) end,
           tip = "Once a player wins one of their reserves, their other reserves stop counting for the rest of the session, so loot goes further. The raid is told when it happens." },
         { tick = true, label = "+1 rule", on = s.plusOne, click = function() LR.setPlusOne(s, not s.plusOne) end,
-          tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the All reserves tab." },
+          tip = "Every item won on a main spec roll is a +1, and players with fewer +1s win main spec rolls over players with more. You can change anyone's +1s on the Reserved tab." },
         UI.boostOn() and { tick = true, label = "Boosted rolls", on = s.boost, click = function() LR.setSessionBoost(s, not s.boost) end,
           tip = "Guild members roll 1 to 100 plus their guild points on main spec (Guild tab). Whoever wins with a boosted roll spends their points." } or false,
       }, { gap = 2 })
@@ -547,7 +547,7 @@ local function manage(f, s)
   whoGetsWhat(f, s)
 
   if s.plusOne then
-    fold(f, "plusOne", "+1s", "everyone's are on the All reserves tab", function(p)
+    fold(f, "plusOne", "+1s", "everyone's are on the Reserved tab", function(p)
       p:buttons({
         { label = "Bring in from Gargul", style = "quiet", click = function()
           UI.countsSheet({ title = "+1s from Gargul", gargul = "plusOnes", max = 99,
