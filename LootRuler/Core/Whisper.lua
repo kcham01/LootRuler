@@ -11,7 +11,18 @@ local U, S = LR.U, LR.Session
 local W = {}
 LR.Whisper = W
 
-local COMMAND = "!lr"
+-- the words a command starts with: "!reserve" (what the raid is taught: it reads like what it does) and "!lr" (older
+-- versions, and habit). Every command works after either.
+local COMMANDS = { "!reserve", "!lr" }
+--- how long the command word at the start of text is, or nil when it doesn't start with one ("!lr", "!LR bid 300",
+--- "!reserve [item]"; not "!lrx" or "!reserved")
+local function commandLength(text)
+  if type(text) ~= "string" then return nil end
+  local lower = text:sub(1, 9):lower()
+  for _, c in ipairs(COMMANDS) do
+    if lower:sub(1, #c) == c and (#text == #c or text:sub(#c + 1, #c + 1) == " ") then return #c end
+  end
+end
 
 --- the session a whisper is about: the newest open one we lead
 function W.session(sender)
@@ -66,7 +77,7 @@ local function pick(s, player, text)
     for i = 1, math.min(4, #close) do some[i] = LR.itemLink(close[i]) end
     W.reply(player, ("Which one? %s%s - use the item link to be sure."):format(table.concat(some, " "), #close > 4 and " ..." or ""))
   else
-    W.reply(player, ("I couldn't find \"%s\" in %s. Shift-click the item to put its link after !lr."):format(U.plain(text), LR.raidOf(s).name))
+    W.reply(player, ("I couldn't find \"%s\" in %s. Shift-click the item to put its link after !reserve."):format(U.plain(text), LR.raidOf(s).name))
   end
 end
 
@@ -91,14 +102,14 @@ function W.handle(text, sender)
   local s = W.session(sender)
   if not s then
     -- a GDKP that's over, with payouts still to do: "!lr pot" still answers
-    local lower = U.trim(text:sub(#COMMAND + 1)):lower()
+    local lower = U.trim(text:sub((commandLength(text) or 0) + 1)):lower()
     local past = (lower == "pot" or lower == "gdkp") and LR.History.owing(sender)
     if past then W.reply(U.full(sender), LR.Pot.line(past, U.full(sender))) end
     return
   end
   local player = U.full(sender)
   local class = LR.classOf(player)
-  local args = U.trim(text:sub(#COMMAND + 1))
+  local args = U.trim(text:sub((commandLength(text) or 0) + 1))
   local lower = args:lower()
   local now = U.now()
 
@@ -112,7 +123,7 @@ function W.handle(text, sender)
       W.reply(player, ("%s goes by the guild's priority lists, not reserves.%s"):format(LR.raidOf(s).name, extra))
       return
     end
-    W.reply(player, ("Soft reserves for %s: %d each%s. %s Type \"!lr <item link>\" in raid chat or whisper me to reserve, \"!lr remove <item>\" to take one back.%s"):format(
+    W.reply(player, ("Soft reserves for %s: %d each%s. %s Type \"!reserve <item link>\" in raid chat or whisper me to reserve, \"!reserve remove <item>\" to take one back.%s"):format(
       LR.raidOf(s).name, s.sr, s.dupes and "" or " (one per item)", status(s, player), extra))
     return
   end
@@ -258,7 +269,7 @@ function W.handle(text, sender)
         if not to then return end                -- (pick has said what went wrong)
       end
     end
-    if not from or not to then W.reply(player, "To swap: \"!lr swap [old item] [new item]\", or \"!lr swap old for new\".") return end
+    if not from or not to then W.reply(player, "To swap: \"!reserve swap [old item] [new item]\", or \"!reserve swap old for new\".") return end
     local ok, why = LR.Swap.ask(s, player, from, to)
     W.reply(player, ok and ("Your swap request is in: %s for %s. %s decides."):format(LR.itemLink(from), LR.itemLink(to), U.short(s.leader)) or why)
     return
@@ -299,7 +310,7 @@ function W.handle(text, sender)
 end
 
 ---------------------------------------------------------------------- listening, and keeping the leader's chat tidy
-local function isCommand(text) return text and text:lower():sub(1, #COMMAND) == COMMAND and (#text == #COMMAND or text:sub(#COMMAND + 1, #COMMAND + 1) == " ") end
+local function isCommand(text) return commandLength(text) ~= nil end
 W.isCommand = isCommand
 
 -- raid and party chat count when the option's on (and only from people in the group)
@@ -331,16 +342,16 @@ W.hideIncoming, W.hideOutgoing, W.hideGroup = hideIncoming, hideOutgoing, hideGr
 --- the short how-to for raiders without the addon, posted to the group
 function W.howTo()
   if LR.db and LR.db.settings.raidCommands then
-    return "Type !lr [linked item] in raid chat to SR if you do not have the LootRuler addon."
+    return "Type !reserve [linked item] in raid chat to SR if you do not have the LootRuler addon."
   end
-  return "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon."
+  return "Whisper me !reserve [linked item] to SR if you do not have the LootRuler addon."
 end
 --- how to ask for a swap once reserves are locked (players without LootRuler; with it, "Ask to swap one" on the Reserve tab)
 function W.swapHowTo()
   if LR.db and LR.db.settings.raidCommands then
-    return "Want to swap one? Type !lr swap [your item] [new item] in raid chat, or click Ask to swap one in LootRuler."
+    return "Want to swap one? Type !reserve swap [your item] [new item] in raid chat, or click Ask to swap one in LootRuler."
   end
-  return "Want to swap one? Whisper me !lr swap [your item] [new item], or click Ask to swap one in LootRuler."
+  return "Want to swap one? Whisper me !reserve swap [your item] [new item], or click Ask to swap one in LootRuler."
 end
 function W.postHowTo()
   local channel = LR.groupChannel()
@@ -353,7 +364,7 @@ end
 function W.announce(s)
   local text = ("%s Soft reserves are open for %s: %s each%s. Reserve in the LootRuler addon, or %s."):format(
     LR.TAG, LR.raidOf(s).name, U.plural(s.sr, "reserve"), s.dupes and "" or ", one per item",
-    LR.db.settings.raidCommands and "type \"!lr <item link>\" in raid chat" or "whisper me \"!lr <item link>\"")
+    LR.db.settings.raidCommands and "type \"!reserve <item link>\" in raid chat" or "whisper me \"!reserve <item link>\"")
   local hr = U.keys(s.hr)
   if #hr > 0 then
     local links = U.map(hr, function(id) return LR.itemLink(id) end)
@@ -374,7 +385,7 @@ end
 --- how to reserve, in a few words, for a raid chat line
 local function howTo(s)
   return ("Soft reserves are open for %s (%s each). %s, or reserve in the LootRuler addon."):format(LR.raidOf(s).name,
-    s.sr, LR.db.settings.raidCommands and "Type \"!lr <item link>\" in raid chat" or ("Whisper " .. U.short(U.me()) .. " \"!lr <item link>\""))
+    s.sr, LR.db.settings.raidCommands and "Type \"!reserve <item link>\" in raid chat" or ("Whisper " .. U.short(U.me()) .. " \"!reserve <item link>\""))
 end
 --- whether players can reserve in a session now (open, and it goes by reserves)
 local function open(s) return s and not s.locked and not s.gdkp and s.prio ~= "only" end

@@ -759,7 +759,7 @@ local function nowMine(s, from, quiet)
   db.current = s.id
   leaderChanged(s)
   if quiet then return end
-  tellGroup(("%s runs the soft reserves now (taking over from %s). Whisper %s \"!lr [item]\" to reserve or check yours."):format(
+  tellGroup(("%s runs the soft reserves now (taking over from %s). Whisper %s \"!reserve [item]\" to reserve or check yours."):format(
     U.short(U.me()), U.short(from), U.short(U.me())))
 end
 --- takes over a session whose leader is gone (I lead the group or am its master looter). Returns true, or false and why not.

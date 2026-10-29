@@ -198,7 +198,7 @@ function P.reserve()
     local left = S.limit(s, x.name) - #S.reservesOf(s, x.name)
     for j = 1, left do
       local id = (math.random() < 0.6) and pick(popular) or pick(items)
-      local text = "!lr " .. LR.itemLink(id)
+      local text = "!reserve " .. LR.itemLink(id)
       n = n + 1
       after(0.4 * n, function()
         if math.random() < 0.5 and LR.db.settings.raidCommands then P.raidSay(x, text) else P.whisper(x, text) end

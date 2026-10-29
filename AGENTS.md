@@ -210,6 +210,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   with a higher rev), and a session's own leader yields only to a newer copy. Messages carry `fl` (what the
   sender's addon can do; 1 = can take a session) so only able players are offered (`LR.canLead`). Older versions
   still follow whoever sends the newest copy.
+- **`!reserve`** (#162, the owner's choice; `COMMANDS` / `commandLength` in `Core/Whisper.lua`): every command works after `!reserve`
+  or `!lr` (any capitals; "!reserved" isn't one). Raid lines, answers, Settings and the tour teach `!reserve`; `!lr` stays for
+  older versions and habit (an older loot master only knows `!lr`, so `Swap.lua`'s note to one still says it).
 - **Reminders** (`Whisper.notReserved`, `Whisper.remind`): one raid line naming who in the group hasn't reserved, with
   how to. `remindOnJoin` (off to start with): people who join while reserves are open, batched for `Whisper.JOIN_WAIT`
   seconds, hear it if they still haven't reserved.

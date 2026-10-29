@@ -721,7 +721,7 @@ run("settings", function()
   check("and closes it", not visible("Show roll windows", ann) and ann.LR.db.ui.settingsOpen["Roll windows"] == nil)
   clickText("Open all", nil, ann)
   check("every option is on the Settings tab", visible("Show roll windows", ann) and visible("Seconds to roll:", ann)
-    and visible("Put won items in trades for me", ann) and visible("Hide !lr messages in my chat", ann) and visible("!lr in raid chat", ann) and visible("Minimap button", ann)
+    and visible("Put won items in trades for me", ann) and visible("Hide !reserve messages in my chat", ann) and visible("!reserve in raid chat", ann) and visible("Minimap button", ann)
     and not visible("Say my trades nearby when I'm not in a group", ann))
   check("opening a trade with the winner is off to start with", ticked("Open a trade with the winner", ann) == false and not ann.LR.db.settings.autoTrade)
   check("the countdown and confirming the winner are on to start with", ticked("Count down the end of a roll", ann) == true
@@ -900,7 +900,7 @@ run("telling the raid how to SR without the addon", function()
   srv:tick(1)
   local got = pug.inbox[#pug.inbox]
   check("the raid gets the how-to", #pug.inbox == before + 1 and got.channel == "RAID"
-    and got.text == "Type !lr [linked item] in raid chat to SR if you do not have the LootRuler addon.", got and got.text)
+    and got.text == "Type !reserve [linked item] in raid chat to SR if you do not have the LootRuler addon.", got and got.text)
   check("and the leader is told it went", visible("Posted in raid chat."))
 end)
 

@@ -101,15 +101,15 @@ local W = lead.LR.Whisper
 local function said(text) for i = #srv.chat, 1, -1 do if srv.chat[i].channel == "RAID" and srv.chat[i].text:find(text, 1, true) then return true end end return false end
 check("the leader posts how to reserve", W.announce(s))
 srv:tick(3)
-check("one line says the rules and how to reserve without the addon", said("Soft reserves are open for Karazhan: 2 reserves each. Reserve in the LootRuler addon, or type \"!lr <item link>\" in raid chat."))
+check("one line says the rules and how to reserve without the addon", said("Soft reserves are open for Karazhan: 2 reserves each. Reserve in the LootRuler addon, or type \"!reserve <item link>\" in raid chat."))
 check("and what's hard reserved", said("Hard reserved: |cffa335ee|Hitem:" .. HANDWRAPS))
 lead.LR.db.settings.raidCommands = false
 W.announce(s)
 srv:tick(3)
-check("with !lr in raid chat off, it says to whisper", said("or whisper me \"!lr <item link>\"."))
-check("and so does the short how-to", W.howTo() == "Whisper me !lr [linked item] to SR if you do not have the LootRuler addon.")
+check("with !lr in raid chat off, it says to whisper", said("or whisper me \"!reserve <item link>\"."))
+check("and so does the short how-to", W.howTo() == "Whisper me !reserve [linked item] to SR if you do not have the LootRuler addon.")
 lead.LR.db.settings.raidCommands = true
-check("the short how-to otherwise says raid chat", W.howTo():find("Type !lr [linked item] in raid chat", 1, true) == 1)
+check("the short how-to otherwise says raid chat", W.howTo():find("Type !reserve [linked item] in raid chat", 1, true) == 1)
 
 section("the organiser's branding")
 check("only the leader names the raid", not ann.LR.setBrand(cur(ann), { n = "Mine" }))
@@ -131,7 +131,7 @@ lead.LR.setLocked(s, true)
 srv:tick(2)
 check("not shared with the guild: guild members outside the group stop hearing changes", cur(ann).locked and not cara.LR.session(s.id).locked)
 check("locking by hand tells the raid, with how to ask for a swap", said("Soft reserves are locked now. Want to swap one?")
-  and said("!lr swap [your item] [new item]"))
+  and said("!reserve swap [your item] [new item]"))
 lead.LR.setLocked(s, false)
 srv:tick(2)
 check("and unlocking, with how to reserve", said("Soft reserves are open again."))
@@ -221,6 +221,17 @@ srv:chatMessage(pug, "!lr |cffa335ee|Hitem:28528::::::::70:::::|h[Moroes' Lucky 
 srv:tick(1)
 check("reserving in raid chat", same(lead.LR.Session.reservesOf(s, full(pug)), { WATCH }))
 check("raiders with the addon don't see the !lr lines", srv:hidden(ann, "CHAT_MSG_RAID", "!lr watch") and not srv:hidden(ann, "CHAT_MSG_RAID", "pull in 10"))
+-- "!reserve" works like "!lr" (it's what the raid is taught), whispered or in raid chat, in any capitals
+srv:chatMessage(pug, "!reserve remove watch", "RAID")
+srv:tick(1)
+check("\"!reserve remove\" in raid chat takes it back", #lead.LR.Session.reservesOf(s, full(pug)) == 0)
+srv:whisper(pug, lead, "!Reserve |cffa335ee|Hitem:28528::::::::70:::::|h[Moroes' Lucky Pocket Watch]|h|r")
+srv:tick(1)
+check("\"!Reserve [item]\" whispered reserves it", same(lead.LR.Session.reservesOf(s, full(pug)), { WATCH }))
+check("raiders with the addon don't see !reserve lines either", srv:hidden(ann, "CHAT_MSG_RAID", "!reserve watch"))
+local W = lead.LR.Whisper
+check("words that only start like it aren't commands", not W.isCommand("!reserved") and not W.isCommand("!reserves are open")
+  and not W.isCommand("!lrx") and W.isCommand("!RESERVE") and W.isCommand("!lr"))
 lead.LR.db.settings.raidCommands = false
 srv:chatMessage(pug, "!lr clear", "RAID")
 srv:tick(1)
@@ -503,7 +514,7 @@ check("everyone follows Bob, the old leader too", leaderOf(lead) == full(bob) an
   and not lead.LR.isLeader(lead.LR.session(hs.id)))
 check("the same session, with everything in it", lead.LR.Session.reservesOf(bob.LR.session(hs.id), full(ann))[1] == WATCH
   and bob.LR.session(hs.id).was[1] == full(lead))
-check("the raid is told who to whisper", lines("Bob runs the soft reserves now (taking over from Lead-Dreamscythe). Whisper Bob \"!lr [item]\"") == 1)
+check("the raid is told who to whisper", lines("Bob runs the soft reserves now (taking over from Lead-Dreamscythe). Whisper Bob \"!reserve [item]\"") == 1)
 local n0 = #pug.inbox
 srv:whisper(pug, bob, "!lr brooch")
 srv:tick(2)
@@ -591,7 +602,7 @@ local ok, n = lead.LR.Whisper.remind(rs)
 srv:tick(1)
 local said = raidSaid("Not reserved yet:") or ""
 check("one click names everyone in the group who hasn't reserved", ok and n == 3 and said:find("Not reserved yet: Bob-Faerlina, Dan, Pug.", 1, true) ~= nil, said)
-check("and says how to", said:find("Soft reserves are open for Karazhan (2 each). Type \"!lr <item link>\" in raid chat", 1, true) ~= nil, said)
+check("and says how to", said:find("Soft reserves are open for Karazhan (2 each). Type \"!reserve <item link>\" in raid chat", 1, true) ~= nil, said)
 check("not the leader, nor who has reserved", not said:find("Lead", 1, true) and not said:find("Ann", 1, true))
 check("one line, under 255 characters", #srv.chat == before + 1 and #said <= 255)
 -- someone joins: off unless the leader switches it on
@@ -613,7 +624,7 @@ srv:tick(3)
 srv:whisper(yan, lead, "!lr brooch")                 -- Yan reserves straight away
 srv:tick(15)
 local hello = raidSaid("Welcome") or ""
-check("switched on: who joins and hasn't reserved hears how, in one line", hello:find("Welcome, Zed!", 1, true) ~= nil and hello:find("!lr <item link>", 1, true) ~= nil, hello)
+check("switched on: who joins and hasn't reserved hears how, in one line", hello:find("Welcome, Zed!", 1, true) ~= nil and hello:find("!reserve <item link>", 1, true) ~= nil, hello)
 check("not who reserved meanwhile, nor who was there already", not hello:find("Yan", 1, true) and not hello:find("Kim", 1, true) and not hello:find("Bob", 1, true))
 lead.LR.setLocked(rs, true)
 srv:tick(2)

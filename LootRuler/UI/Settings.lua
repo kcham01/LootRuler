@@ -173,9 +173,9 @@ function UI.settingsView(f)
     toggle(p, "awardGuild", "Tell my guild who got what", "Each item you give out (and any you take back) gets a line in guild chat too, with the raid's name: \"Karazhan: [item] goes to Ann (MS 85).\"")
   end)
 
-  section(f, "Raiders without LootRuler", "!lr in raid chat, and how people who join hear how to reserve.", function(p)
-    toggle(p, "raidCommands", "!lr in raid chat", "Raiders without the addon can type \"!lr [item]\" in raid chat, not just whisper you. The answers still go by whisper.")
-    toggle(p, "hideWhispers", "Hide !lr messages in my chat", "\"!lr\" whispers, \"!lr\" lines in raid chat and LootRuler's answers stay out of your chat while soft reserves are open.")
+  section(f, "Raiders without LootRuler", "!reserve in raid chat, and how people who join hear how to reserve.", function(p)
+    toggle(p, "raidCommands", "!reserve in raid chat", "Raiders without the addon can type \"!reserve [item]\" in raid chat, not just whisper you (\"!lr\" works too). The answers still go by whisper.")
+    toggle(p, "hideWhispers", "Hide !reserve messages in my chat", "\"!reserve\" and \"!lr\" whispers, those lines in raid chat and LootRuler's answers stay out of your chat while soft reserves are open.")
     toggle(p, "remindOnJoin", "Tell people who join how to reserve", "While your soft reserves are open, anyone who joins the group and hasn't reserved hears how to, in one raid chat line a few seconds after they join.")
   end)
 
@@ -555,7 +555,7 @@ function UI.versionSheet()
         if x.state == "older" then older = older + 1 end
       end
       f:note(("%d of %d in the group have LootRuler. You have %s."):format(have, #list, LR.VERSION), K.GOLD)
-      if have < #list then f:note("Without it, players still reserve by whispering \"!lr [item]\" and roll with /roll.") end
+      if have < #list then f:note("Without it, players still reserve by whispering \"!reserve [item]\" and roll with /roll.") end
       local rows = {}
       for _, x in ipairs(list) do
         rows[#rows + 1] = { U.classText(U.short(x.name), x.class), x.version and VERSION_TEXT[x.state]:format(x.version) or "|cff9d9d9dno LootRuler|r" }

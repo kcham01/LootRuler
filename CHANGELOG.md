@@ -5,6 +5,9 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- Players without the addon reserve with `!reserve [item]` (by whisper or in raid chat), which reads like what it does;
+  `!lr` still works, and every command works after either (`!reserve remove`, `!reserve swap`...), in any capitals. Raid
+  lines, answers and the Settings tab now teach `!reserve`. ([#162](https://github.com/kcham01/LootRuler/pull/162))
 - Clearer raid chat at the end of a roll (the owner's wording): with 10 seconds left, "You have 10 seconds to roll on
   [item]."; then "5...", "4...", "3...", "2...", "1...". The winner's line now reads "Pug has won [item] (MS roll 85)."
   (or "(hard reserve)", and ", the loot master's pick" when it isn't the best roll).
