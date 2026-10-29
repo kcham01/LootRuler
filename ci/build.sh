@@ -48,4 +48,7 @@ cp -r LootRuler out/pkg/
 cp LICENSE NOTICE.txt out/pkg/LootRuler/
 (cd out/pkg && zip -qr ../LootRuler.zip LootRuler)
 cp out/LootRuler.zip "out/LootRuler-$VERSION.zip"
+
+echo "== the test copy (its own folder and saved file, to try beside the real LootRuler)"
+bash ci/testcopy.sh
 ls -la out

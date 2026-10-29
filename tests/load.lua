@@ -11,15 +11,16 @@ function M.files(root)
   return files
 end
 
---- loads the addon into env (a stand-in global table); returns its namespace
-function M.load(root, env, want)
+--- loads the addon into env (a stand-in global table); returns its namespace. name: the folder it's in
+--- ("LootRuler", or "LootRulerTest" for the build's test copy)
+function M.load(root, env, want, name)
   local LR = {}
   for _, f in ipairs(M.files(root)) do
     if not want or want(f) then
       local chunk, err = loadfile(root .. "/LootRuler/" .. f)
       if not chunk then error(err) end
       setfenv(chunk, env)
-      chunk("LootRuler", LR)
+      chunk(name or "LootRuler", LR)
     end
   end
   return LR

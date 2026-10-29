@@ -47,7 +47,8 @@ function Server:player(o)
   return p
 end
 
---- a player running LootRuler; savedVariables: carry a LootRulerDB over (logging in again)
+--- a player running LootRuler; savedVariables: carry a LootRulerDB over (logging in again). o.addon: the folder it's
+--- loaded from ("LootRulerTest": the build's test copy, saving to LootRulerTestDB); o.twin: the test copy is on too
 function Server:client(o, savedVariables)
   local p = o.client ~= nil and o or self:player(o)
   p.online = true
@@ -55,10 +56,13 @@ function Server:client(o, savedVariables)
   local G = M.env({ name = p.name, realm = p.realm, class = p.class:lower() })
   p.M, p.G, p.client = M, G, true
   self:install(p)
-  G.LootRulerDB = savedVariables
+  local addon = o.addon or "LootRuler"
+  p.addon = addon
+  G[addon .. "DB"] = savedVariables
   if self.gargul and p.gargul then self.gargul(p) end
-  p.LR = L.load(self.root, G)
-  M.fire("ADDON_LOADED", "LootRuler")
+  p.LR = L.load(self.root, G, nil, addon)
+  M.fire("ADDON_LOADED", addon)
+  if o.twin then p.twin = L.load(self.root, G, nil, "LootRulerTest"); M.fire("ADDON_LOADED", "LootRulerTest") end
   -- events the game may send between loading the addon and logging in (o.early: event names), before the saved data is read
   for _, e in ipairs(o.early or {}) do
     local ok, err = xpcall(function() M.fire(e) end, debug.traceback)
@@ -73,7 +77,7 @@ end
 function Server:logout(p)
   p.online = false
   if p.M then p.M.fire("PLAYER_LOGOUT") end
-  local db = p.G and p.G.LootRulerDB
+  local db = p.G and p.G[(p.addon or "LootRuler") .. "DB"]
   p.M, p.G, p.LR, p.client = nil, nil, nil, false
   self:rosterChanged()
   return db

@@ -78,6 +78,9 @@ events:SetScript("OnEvent", function()
       LR.print(("updated to %s. /lr whatsnew (or Settings, About) says what's new."):format(LR.VERSION))
     end
     ui.seenVersion = LR.VERSION
+    if LR.TEST_COPY and LR.twin then
+      LR.print("LootRuler and its test copy are both turned on. Turn one off in the AddOns list at character select, or both answer every !reserve.")
+    end
   end)
 end)
 

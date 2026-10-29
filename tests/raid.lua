@@ -1293,6 +1293,39 @@ do
   for _, p in ipairs({ l7, a7, b7 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end
 
+section("the test copy: its own folder and saved file, the same raid")
+do
+  local srv8 = Server.new(".")
+  srv8.where = Server.PLACES.Karazhan
+  -- Tia runs the build's test copy; Ray runs the real LootRuler
+  local t8 = srv8:client({ name = "Tia", class = "PALADIN", addon = "LootRulerTest" })
+  local r8 = srv8:client({ name = "Ray", class = "MAGE" })
+  srv8:tick(6)
+  check("the test copy says so", t8.LR.TEST_COPY and t8.LR.TITLE == "LootRuler test" and not r8.LR.TEST_COPY and r8.LR.TITLE == "LootRuler")
+  check("it saves to its own file", type(t8.G.LootRulerTestDB) == "table" and t8.G.LootRulerDB == nil and t8.LR.db == t8.G.LootRulerTestDB)
+  check("its art is in its own folder", t8.LR.LOGO == "Interface\\AddOns\\LootRulerTest\\Media\\Logo"
+    and r8.LR.LOGO == "Interface\\AddOns\\LootRuler\\Media\\Logo")
+  srv8:setGroup({ t8, r8 }, t8, true)
+  srv8:tick(2)
+  local s8 = t8.LR.startSession("Karazhan", 2, true, false)
+  srv8:tick(3)
+  local ok8 = r8.LR.reserve(r8.LR.session(s8.id), WATCH)
+  srv8:tick(3)
+  check("it talks to the real LootRuler in the raid", ok8 and r8.LR.session(s8.id) ~= nil and #t8.LR.Session.reservesOf(t8.LR.session(s8.id), full(r8)) == 1)
+  -- logging out and in keeps the test copy's sessions in its own file
+  local saved = srv8:logout(t8)
+  local t8b = srv8:client(t8, saved)
+  check("logging in again reads its own file", t8b.LR.session(s8.id) ~= nil)
+  check("no warning with only one copy on", not U.find(t8b.M.chat, function(l) return l:find("both turned on", 1, true) end))
+  for _, p in ipairs({ t8b, r8 }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
+  -- both copies on at once: the test copy says to turn one off
+  local d8 = srv8:client({ name = "Dee", class = "PRIEST", twin = true })
+  srv8:tick(8)
+  check("both on: the real one keeps its name, and they know each other", d8.G.LootRuler == d8.LR and d8.LR.twin == d8.twin and d8.twin.twin == d8.LR)
+  check("both on: the test copy says to turn one off", U.find(d8.M.chat, function(l) return l:find("both turned on", 1, true) ~= nil end) ~= nil)
+  check("Dee: no Lua errors", #d8.M.errors == 0, table.concat(d8.M.errors, " | "))
+end
+
 print(("passed %d"):format(passed))
 print(("errors %d"):format(failed))
 os.exit(failed == 0 and 0 or 1)

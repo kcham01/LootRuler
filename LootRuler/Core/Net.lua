@@ -49,7 +49,7 @@ local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 AceComm:Embed(Net)
 
-local db              -- LootRulerDB: sessions, mine, current, settings
+local db              -- LootRulerDB (LR.DB_NAME): sessions, mine, current, settings
 local listeners = {}
 
 --- something changed that the window shows
@@ -59,7 +59,7 @@ function LR.changed(what)
 end
 function LR.onChange(fn) listeners[#listeners + 1] = fn end
 
-function LR.print(msg) print("|cffffd100LootRuler|r: " .. msg) end
+function LR.print(msg) print("|cffffd100" .. LR.TITLE .. "|r: " .. msg) end
 
 --- every LootRuler sound goes through here: none when they're switched off (Settings: sounds), on the channel picked
 --- (soundChannel); a window's own click sound (ui) stays on the game's effects channel
@@ -150,9 +150,10 @@ function LR.checkSettings(set)
 end
 
 function LR.loadDB()
-  local fresh = LootRulerDB == nil
-  LootRulerDB = type(LootRulerDB) == "table" and LootRulerDB or {}
-  db = LootRulerDB
+  local saved = _G[LR.DB_NAME]
+  local fresh = saved == nil
+  if type(saved) ~= "table" then saved = {}; _G[LR.DB_NAME] = saved end
+  db = saved
   db.sessions = type(db.sessions) == "table" and db.sessions or {}  -- id -> session (ours as leader, or the latest copy from its leader)
   db.mine = type(db.mine) == "table" and db.mine or {}              -- id -> { i = my picks, dirty = not yet confirmed by the leader }
   db.ui = type(db.ui) == "table" and db.ui or {}

@@ -152,7 +152,7 @@ local function drawTop(s)
   if not s then
     top.icon:SetTexture(LR.LOGO)
     top.icon:SetTexCoord(0, 1, 0, 1)
-    top.name:SetText("LootRuler")
+    top.name:SetText(LR.TITLE)
     top.sub:SetText("Soft reserves inside the game")
     top.count:Hide()
     return
@@ -523,7 +523,7 @@ local function minimapButton()
   b:SetScript("OnClick", function() UI.toggle() end)
   b:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:SetText("LootRuler")
+    GameTooltip:SetText(LR.TITLE)
     local s = LR.current()
     if s then
       GameTooltip:AddLine(("%s soft reserves by %s"):format(LR.raidOf(s).name, LR.isLeader(s) and "you" or U.short(s.leader)), 1, 1, 1)
