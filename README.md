@@ -68,11 +68,11 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 **Swapping a reserve after they're locked:** a raider asks (My reserves tab, "Ask to swap one", or whisper `!reserve swap [old] [new]`), the leader allows or refuses it on the Reserved tab, and the raider is told by whisper.
 
-**Clearing reserves of players who left:** the Reserved tab (under More) shows how many players have reserves but aren't in the group, and one button (after a check that names them) takes their reserves off, so their items are free for the rest. Someone offline but still in the group keeps theirs.
+**Clearing reserves of players who left:** a gold line on the leader's Reserved tab names anyone who has reserves but isn't in the group, with **Clear their reserves** beside it (also under More). After a check that names them, their reserves come off, so their items are free for the rest. Someone offline but still in the group keeps theirs.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/swap-requests.png" alt="Swap requests on the leader's Reserved tab" width="49%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/clear-absent.png" alt="Clearing the reserves of players not in the group" width="49%">
+  <img src="docs/screens/swap-requests.png" alt="Swap requests on the leader's Reserved tab" width="49%">
+  <img src="docs/screens/clear-absent.png" alt="Clearing the reserves of players not in the group" width="49%">
 </p>
 
 **Raid setup** (Session tab, under Your raid, or `/lr raid`): paste who's coming, from raid-helper, a spreadsheet or anywhere (one name per line, or names with commas; class and spec words are skipped). LootRuler shows who's here, who's missing and who's in the group but not on the list. **Invite** the missing (a party becomes a raid when it needs to), **Say who's missing** in raid chat, and **Sort into groups**: put "Group 1", "Group 2"... before names in the list and the raid is moved to match.
