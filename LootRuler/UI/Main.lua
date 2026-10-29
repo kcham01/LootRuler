@@ -478,7 +478,7 @@ function UI.confirm(title, text, yes, onYes)
   UI.openSheet(title, function(f, h)
     f:text(text)
     f:gap(6)
-    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = yes, click = function() h.close() onYes() end } })
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end }, { label = yes, click = function() h.close() onYes() end } })
   end)
 end
 

@@ -666,13 +666,13 @@ function UI.masterLooterPrompt()
       { label = "Tell the raid", disabled = LR.groupChannel() == nil, click = function()
         if LR.announceMasterLooter() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
       end },
-      { label = "Open the loot master window", click = function() h.close() UI.showMaster() end },
+      { label = "Open the loot master window", style = "quiet", click = function() h.close() UI.showMaster() end },
     }, "left")
     f:gap(4)
     local set = LR.db.settings
     f:chips({ { tick = true, label = "Don't ask again", on = not set.mlPrompt, click = function() set.mlPrompt = not set.mlPrompt h.redraw(true) end,
       tip = "Settings tab, Rolling out loot, to ask again." } })
-    f:buttons({ { label = "Not now", click = function() h.close() end } })
+    f:buttons({ { label = "Not now", style = "quiet", click = function() h.close() end } })
   end)
 end
 

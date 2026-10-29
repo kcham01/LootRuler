@@ -259,9 +259,9 @@ local function historyView(f)
   f:note(("Everything given out in your raids, by date. Kept on this character for your last %d raids."):format(LR.History.MAX))
   local n = #LR.History.all()
   f:buttons({
-    { label = "Export", click = function() UI.exportManySheet() end },
-    { label = "Who got what, over time", click = function() UI.fairSheet() end },
-    n > 0 and { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end } or nil,
+    { label = "Export", style = "quiet", click = function() UI.exportManySheet() end },
+    { label = "Who got what, over time", style = "quiet", click = function() UI.fairSheet() end },
+    n > 0 and { label = ("Past raids (%d)"):format(n), style = "quiet", click = function() UI.historySheet() end } or nil,
   }, "left")
   f:gap(4)
   if #all == 0 then f:note("Nothing given out yet. Once items are won, they're listed here under the day they were given out.") return end

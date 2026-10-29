@@ -115,7 +115,7 @@ function UI.saveProfileSheet()
     e:SetText(name)
     e:SetScript("OnTextChanged", function(self, user) if user then name = self:GetText() end end)
     f:gap(8)
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Save", click = function()
         if not LR.saveProfile(name) then UI.toast("Give it a name.") return end
         LR.db.ui.profile = U.trim(name)

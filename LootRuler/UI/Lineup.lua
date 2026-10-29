@@ -141,10 +141,10 @@ function UI.lineupSheet()
           local now, later = LR.inviteMissing(plan)
           UI.toast(later > 0 and ("Invited %d. %d more once the group is a raid."):format(now, later) or ("Invited %d."):format(now))
         end },
-        { label = "Say who's missing", disabled = #c.missing == 0 or not LR.groupChannel(), click = function()
+        { label = "Say who's missing", style = "quiet", disabled = #c.missing == 0 or not LR.groupChannel(), click = function()
           LR.postMissing(plan)
         end },
-        { label = "Sort into groups", disabled = not (can and grouped and IsInRaid()), click = function()
+        { label = "Sort into groups", style = "quiet", disabled = not (can and grouped and IsInRaid()), click = function()
           LR.sortGroups(plan, function(moves, stuck)
             UI.toast(stuck and "The game didn't move everyone (it can't in combat). Try again." or
               moves == 0 and "Everyone's in their group already." or ("Groups sorted (%s)."):format(U.plural(moves, "move")))

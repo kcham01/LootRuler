@@ -125,8 +125,8 @@ function UI.settingsView(f)
     end
     p:chips(sizes, { gap = 2 })
     p:buttons({
-      { label = "Try the roll window", click = function() UI.testRoll() end },
-      { label = "Put windows back", click = function()
+      { label = "Try the roll window", style = "quiet", click = function() UI.testRoll() end },
+      { label = "Put windows back", style = "link", click = function()
         LR.db.ui.rollPoint, LR.db.ui.masterPoint = nil, nil
         UI.resetPositions()
         UI.toast("Roll windows and the loot master window are back where they started.")
@@ -272,7 +272,7 @@ function UI.settingsView(f)
     end
     p:buttons({
       { label = "Add a note", click = function() UI.noteSheet() end },
-      { label = "Bring in or copy out", click = function() UI.notesSheet() end },
+      { label = "Bring in or copy out", style = "quiet", click = function() UI.notesSheet() end },
     }, "left")
   end)
 
@@ -285,7 +285,7 @@ function UI.settingsView(f)
     end
     p:buttons({
       { label = "Bring in wishlists", click = function() UI.wishSheet() end },
-      { label = "Forget them", disabled = items == 0, click = function()
+      { label = "Forget them", style = "link", danger = true, disabled = items == 0, click = function()
         UI.confirm("Forget the wishlists", "The wishlists you brought in are taken off this character.", "Forget", function()
           LR.db.wish = {}
           LR.changed("notes")
@@ -334,9 +334,9 @@ function UI.settingsView(f)
   section(f, "About", "Version " .. LR.VERSION .. ", who has LootRuler, what's new and the tour.", function(p)
     p:kv({ { "Version", LR.VERSION } })
     p:gap(4)
-    p:buttons({ { label = "Who has LootRuler", click = function() UI.versionSheet() end },
-      { label = "What's new", click = function() UI.whatsNew() end },
-      { label = "The tour", click = function() UI.tour(1) end } }, "left")
+    p:buttons({ { label = "Who has LootRuler", style = "quiet", click = function() UI.versionSheet() end },
+      { label = "What's new", style = "quiet", click = function() UI.whatsNew() end },
+      { label = "The tour", style = "quiet", click = function() UI.tour(1) end } }, "left")
     p:note("/lr opens this window. /lr help lists the rest.")
     p:note("Bugs and ideas: github.com/kcham01/LootRuler")
   end)
@@ -377,7 +377,7 @@ function UI.addLootRule()
     if what and to then
       f:note(("%s will go to %s."):format(LR.AutoLoot.whatText(what), LR.AutoLoot.toText(to, LR.Rolls.session())), K.GREEN)
     end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and to), click = function() LR.AutoLoot.add(what, to) h.close() UI.render() end } })
   end)
 end
@@ -408,7 +408,7 @@ function UI.noteSheet(id)
     n:SetText(note)
     n:SetScript("OnTextChanged", function(self, user) if user then note = self:GetText() end end)
     f:note("Short and plain: it goes in raid chat. Leave it empty to take the note off.")
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Save", disabled = not id, click = function() LR.setNote(id, note) h.close() UI.render() end } })
   end)
 end
@@ -435,7 +435,7 @@ function UI.wishSheet()
         f:note(why, K.RED)
       end
     end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", disabled = not lists, click = function()
         LR.db.wish = LR.Prio.checkWish(lists)
         LR.changed("notes")
@@ -463,7 +463,7 @@ function UI.notesSheet()
     K.setEditMemo(into, f.width, 110, pasted, function(t) pasted = t end)
     out.edit:ClearFocus()
     f:gap(6)
-    f:buttons({ { label = "Close", click = function() h.close() end },
+    f:buttons({ { label = "Close", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", click = function()
         local notes, bad = LR.Notes.parse(pasted)
         local n = 0
@@ -496,7 +496,7 @@ function UI.addRollKind()
     n:SetScript("OnTextChanged", function(self, user) if user then num = self:GetText() end end)
     f:note("A number from 2 to 98 that no other kind uses.")
     if why then f:note(why, K.RED) end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add it", click = function()
         local list, no = R.addKind(LR.db.settings.rollKinds, name, num)
         if not list then why = no h.redraw(true) return end
@@ -534,7 +534,7 @@ function UI.addGroupRule()
     for _, a in ipairs(LR.GroupLoot.choices()) do acts[#acts + 1] = { label = a[2], on = act == a[1], click = function() act = a[1] h.redraw(true) end } end
     f:chips(acts)
     if what and act then f:note(("%s: %s."):format(LR.AutoLoot.whatText(what), LR.GroupLoot.actText(act)), K.GREEN) end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and act), click = function() LR.GroupLoot.add(what, act) h.close() UI.render() end } })
   end)
 end
@@ -561,7 +561,7 @@ function UI.addRollRule()
       { label = "Always main spec", on = action == "MS", click = function() action = "MS" h.redraw(true) end },
       { label = "Always off spec", on = action == "OS", click = function() action = "OS" h.redraw(true) end },
     })
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add the rule", disabled = not (id and action), click = function() LR.AutoRoll.set(id, action) h.close() UI.render() end } })
   end)
 end
@@ -618,7 +618,7 @@ function UI.versionSheet()
       f:gap(6)
       f:note("Someone who just joined, or whose addon hasn't said anything yet, shows as having none until you ask again.")
       f:buttons({
-        { label = "Ask again", disabled = LR.groupChannel() == nil, click = function()
+        { label = "Ask again", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
           LR.query()
           UI.toast("Asked everyone. Answers come in over a few seconds.")
         end },

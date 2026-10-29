@@ -43,7 +43,7 @@ local function hardReserveSheet(s, id)
     e2:SetText(note)
     e2:SetScript("OnTextChanged", function(self) note = self:GetText() end)
     f:gap(10)
-    local list = { { label = "Cancel", click = function() h.close() end } }
+    local list = { { label = "Cancel", style = "quiet", click = function() h.close() end } }
     if s.hr[id] then list[#list + 1] = { label = "Lift it", click = function() h.close() LR.clearHR(s, id) end } end
     list[#list + 1] = { label = "Hard reserve", click = function() h.close() LR.setHR(s, id, forWho, note) end }
     f:buttons(list)
@@ -184,7 +184,7 @@ function UI.benchSheet(s)
     K.setHint(e, "Names, with commas between them")
     K.onText(e, function(self) typed = self:GetText() end)
     f:gap(8)
-    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = "Save", click = function()
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end }, { label = "Save", click = function()
       for name in typed:gmatch("[^,%s]+") do on[U.full(name)] = true end
       local list = {}
       for name in pairs(on) do list[#list + 1] = name end
@@ -215,7 +215,7 @@ function UI.autoLockSheet(s)
     K.setHint(e, "20:00")
     K.onText(e, function(self) typed = self:GetText() end)
     f:gap(8)
-    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = "Lock at that time", click = function()
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end }, { label = "Lock at that time", click = function()
       local secs = LR.Lock.parseTime(typed)
       if not secs then UI.toast("Type a time like 20:00 or 8:30pm.") return end
       set(LR.Lock.atTime(secs))
@@ -287,7 +287,7 @@ local function claimPanel(f, s)
       p:note(("%s says they took these reserves over from you while you were away. LootRuler can't confirm it (nobody who leads the group or is its master looter has said so). If they did, let them run them; if not, keep running them yourself."):format(who), K.GOLD)
       p:buttons({
         { label = "Let " .. who .. " run them", click = function() LR.followClaim(s.id) UI.toast(who .. " runs the reserves now.") end },
-        { label = "Keep running them", click = function() LR.dropClaim(s.id) end },
+        { label = "Keep running them", style = "quiet", click = function() LR.dropClaim(s.id) end },
       }, "left")
     end)
   else
@@ -296,7 +296,7 @@ local function claimPanel(f, s)
         who, U.short(c.was), who), K.GOLD)
       p:buttons({
         { label = "Follow " .. who, click = function() LR.followClaim(s.id) UI.toast("You follow " .. who .. "'s reserves now.") end },
-        { label = "Not now", click = function() LR.dropClaim(s.id) end },
+        { label = "Not now", style = "quiet", click = function() LR.dropClaim(s.id) end },
       }, "left")
     end)
   end
@@ -794,7 +794,7 @@ function UI.joinPrompt(t)
         LR.select(t.id)
         UI.toast(("You're in %s's reserves."):format(U.short(t.leader)))
       end },
-      { label = "Not now", click = function() h.close() LR.decline(t.id) end },
+      { label = "Not now", style = "quiet", click = function() h.close() LR.decline(t.id) end },
     }, "left")
     f:note("Either way, it's in the list of sessions on the Session tab.")
   end)

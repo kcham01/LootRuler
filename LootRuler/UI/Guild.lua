@@ -81,7 +81,7 @@ local function pointsSheet(name)
     end
     f:gap(6)
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Save", click = function()
         local player = U.trim(who)
         local points = tonumber(n)
@@ -342,10 +342,10 @@ local function prioSheet(id)
     e3:SetScript("OnTextChanged", function(self) note = self:GetText() end)
     f:gap(8)
     f:buttons({
-      { label = "Clear the list", disabled = #list == 0, click = function()
+      { label = "Clear the list", style = "link", danger = true, disabled = #list == 0, click = function()
         UI.confirm("Clear the list", "Everyone comes off " .. LR.coloredName(id) .. "'s priority list: it's rolled for as usual.", "Clear it", function() save({}) end)
       end },
-      { label = "Done", click = function() h.close() end },
+      { label = "Done", style = "quiet", click = function() h.close() end },
       { label = "Add", click = function()
         local player, n = U.trim(who), tonumber(num ~= "" and num or e2:GetText())
         if player == "" then UI.toast("Type the player's name.") return end
@@ -389,7 +389,7 @@ local function importSheet()
     f:chips({ { tick = true, label = "Clear lists that aren't in this", on = replaceAll, click = function() replaceAll = not replaceAll h.redraw(true) end,
       tip = "Off: only the items in what you paste change. On: every other item's list is cleared too." } })
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", disabled = not lists, click = function()
         h.close()
         local ok, why = Guild.edit(function(book, now) return P.apply(book, lists, now, replaceAll) end)

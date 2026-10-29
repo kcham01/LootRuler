@@ -19,7 +19,7 @@ local function goldSheet(title, note, current, done, okLabel)
     e:SetScript("OnTextChanged", function(self) text = self:GetText() end)
     f:gap(8)
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = okLabel or "Save", click = function()
         local g = tonumber((U.trim(text):gsub("[gG]$", "")))
         if not g or g < 0 then UI.toast("That's not an amount of gold.") return end
@@ -119,12 +119,12 @@ function UI.payoutSheet(s)
     f:gap(6)
     f:buttons({
       { label = "Tell the raid", disabled = LR.groupChannel() == nil, click = function() if LR.Pot.post(s) then UI.toast("Posted in raid chat.") end end },
-      { label = "Whisper everyone", disabled = not IsInGroup(), click = function() UI.toast(("Whispered %s their payout."):format(U.plural(LR.Pot.whisperAll(s), "player"))) end },
+      { label = "Whisper everyone", style = "quiet", disabled = not IsInGroup(), click = function() UI.toast(("Whispered %s their payout."):format(U.plural(LR.Pot.whisperAll(s), "player"))) end },
     }, "left")
     f:buttons({
-      { label = "Copy out", click = function() UI.payoutsOutSheet(s) end },
-      { label = "Bring in payouts", click = function() UI.payoutsInSheet(s) end },
-      split.fixed > 0 and { label = "Back to an even split", click = function() LR.gdkpFixedAll(s, {}) h.redraw(true) end } or nil,
+      { label = "Copy out", style = "quiet", click = function() UI.payoutsOutSheet(s) end },
+      { label = "Bring in payouts", style = "quiet", click = function() UI.payoutsInSheet(s) end },
+      split.fixed > 0 and { label = "Back to an even split", style = "quiet", click = function() LR.gdkpFixedAll(s, {}) h.redraw(true) end } or nil,
     }, "left")
     f:note("Addons can't put gold in a trade: open a trade with each player and LootRuler says what to give or take. Gold that changes hands is counted.")
     -- by mail: LootRuler fills in the Send Mail tab, the organiser presses Send
@@ -168,7 +168,7 @@ function UI.payoutsInSheet(s)
     f:place(into, 140, 0)
     K.setEditMemo(into, f.width, 140, pasted, function(t) pasted = t end)
     f:gap(6)
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", click = function()
         local list, why = LR.Prio.parseCounts(pasted, G.MAX_GOLD)
         if not list then UI.toast(why) return end
@@ -214,7 +214,7 @@ function UI.goldInOutSheet(s)
     end
     f:buttons({
       { label = "Put in the pot", click = function() go(1) end },
-      { label = "Take out of the pot", click = function() go(-1) end },
+      { label = "Take out of the pot", style = "quiet", click = function() go(-1) end },
     }, "left")
   end, { full = true })
 end
@@ -283,7 +283,7 @@ function UI.pricesSheet(s)
     f:place(into, 90, 0)
     K.setEditMemo(into, f.width, 90, pasted, function(t) pasted = t end)
     f:gap(6)
-    f:buttons({ { label = "Close", click = function() h.close() end },
+    f:buttons({ { label = "Close", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", click = function()
         local prices, bad = G.parsePrices(pasted)
         local n = 0
@@ -338,7 +338,7 @@ local function ruleSheet(s, index)
     end
     f:gap(6)
     f:buttons({
-      { label = "Take this rule away", click = function()
+      { label = "Take this rule away", style = "link", danger = true, click = function()
         UI.confirm("Take the rule away", ("%s comes out of the split."):format(r.n), "Take it away", function() LR.gdkpRemoveRule(s, index) h.close() end)
       end },
       { label = "Done", click = function() if typed then LR.gdkpEditRule(s, index, { n = typed }) end h.close() end },

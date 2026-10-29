@@ -17,7 +17,7 @@ local function swapRequests(f, s)
           local ok, why = LR.Swap.allow(s, r)
           UI.toast(ok and "Swapped." or ("Couldn't swap: " .. why))
         end },
-        { label = "No", width = 80, click = function() LR.Swap.deny(s, r) end },
+        { label = "No", style = "quiet", width = 80, click = function() LR.Swap.deny(s, r) end },
       }, "left")
     end
   end)
@@ -280,7 +280,7 @@ function UI.extraSheet(s, preset)
     local count = 0
     for _ in pairs(picked) do count = count + 1 end
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = count > 0 and ("Save for " .. U.plural(count, "player")) or "Save", disabled = count == 0, click = function()
         h.close()
         local lost = {}
@@ -319,7 +319,7 @@ function UI.countsSheet(opts)
       else f:note(why, { 1, 0.35, 0.29 }) end
     end
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", disabled = not list, click = function() h.close() opts.apply(list) end },
     })
   end)

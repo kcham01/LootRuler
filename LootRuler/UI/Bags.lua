@@ -42,7 +42,7 @@ function UI.bagReportSheet()
         local n = Bags.postMissing(check)
         UI.toast(n > 0 and ("Posted %s."):format(U.plural(n, "line")) or "Nobody is missing anything.")
       end },
-      { label = "Ask again", click = function()
+      { label = "Ask again", style = "quiet", click = function()
         local ok, why = Bags.ask(check.ids)
         if not ok then UI.toast(why) end
         h.redraw(true)
@@ -66,7 +66,7 @@ function UI.bagCheckSheet()
     if #picked == 0 then f:note("No items yet.") end
     f:gap(4)
     f:buttons({
-      { label = "Add an item", disabled = #picked >= Bags.MAX, click = function()
+      { label = "Add an item", style = "quiet", disabled = #picked >= Bags.MAX, click = function()
         UI.pickAnyItem("Which item?", function(id)
           if not U.indexOf(picked, id) then picked[#picked + 1] = id end
           h.redraw(true)
