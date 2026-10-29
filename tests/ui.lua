@@ -733,19 +733,18 @@ end)
 run("settings", function()
   ann.LR.UI.show("settings")
   srv:tick(0.3)
-  -- every section starts closed: its name and a line saying what's in it, under three headings
-  check("sections start closed: their names, and what's in each", visible("Roll windows", ann) and visible("What pops up when loot is rolled out", ann)
-    and visible("For everyone", ann) and visible("Running loot", ann) and visible("This window, and more", ann)
-    and visible("Rolling out loot", ann) and visible("Giving out and trading", ann) and visible("Auctions (GDKP)", ann)
-    and not visible("Show roll windows", ann) and visible("Click a section to open it.", ann))
-  check("with what's in them now", visible("Rolls or passes for you on items you pick: no rules yet.", ann)
-    and visible("Off: your rules for the game's Need / Greed rolls (no rules yet).", ann))
+  -- the sections down the side, under three headings; the first is shown beside them
+  check("the sections down the side, under their headings", visible("Roll windows", ann) and visible("For everyone", ann) and visible("Running loot", ann)
+    and visible("More", ann) and visible("Rolling out loot", ann) and visible("Giving out and trading", ann) and visible("Auctions (GDKP)", ann)
+    and visible("All settings", ann))
+  check("the first is shown, with what it's about", visible("Show roll windows", ann) and visible("What pops up when loot is rolled out", ann) and not visible("Seconds to roll:", ann))
   shot("settings", ann)
-  clickText("Roll windows", nil, ann)
-  check("a click opens one", visible("Show roll windows", ann) and not visible("Seconds to roll:", ann) and ann.LR.db.ui.settingsOpen["Roll windows"] == true)
-  clickText("Roll windows", nil, ann)
-  check("and closes it", not visible("Show roll windows", ann) and ann.LR.db.ui.settingsOpen["Roll windows"] == nil)
-  clickText("Open all", nil, ann)
+  clickText("Auto-roll", nil, ann)
+  check("a click shows another, and says what's in it now", visible("Rolls or passes for you on items you pick: no rules yet.", ann) and not visible("Show roll windows", ann)
+    and ann.LR.db.ui.settingsPage == "Auto-roll")
+  clickText("Need and Greed (group loot)", nil, ann)
+  check("with what's in them now", visible("Off: your rules for the game's Need / Greed rolls (no rules yet).", ann))
+  clickText("All settings", nil, ann)
   check("every option is on the Settings tab", visible("Show roll windows", ann) and visible("Seconds to roll:", ann)
     and visible("Put won items in trades for me", ann) and visible("Hide !reserve messages in my chat", ann) and visible("!reserve in raid chat", ann) and visible("Minimap button", ann)
     and not visible("Say my trades nearby when I'm not in a group", ann))
@@ -860,9 +859,19 @@ run("settings", function()
   ann.G.SlashCmdList.LOOTRULER("settings")
   check("/lr settings opens the tab", ann.LR.UI.tab == "settings")
   srv:tick(0.3)
-  check("sections stay open as they were left", visible("Show roll windows", ann))
-  clickText("Close all", nil, ann)
-  check("close all", not visible("Show roll windows", ann) and next(ann.LR.db.ui.settingsOpen) == nil)
+  check("it stays on the page it was left on", visible("Show roll windows", ann) and visible("Seconds to roll:", ann))
+  -- searching: every section whose name or line matches, on one page
+  local sbox
+  local function walkS(fr) for _, c in ipairs(fr._children or {}) do if c._type == "EditBox" and c:IsVisible() and c.hint and c.hint:GetText() == "Search" then sbox = c end walkS(c) end end
+  walkS(ann.G.LootRulerFrame)
+  sbox:SetText("sound") sbox._scripts.OnTextChanged(sbox, true)
+  srv:tick(0.3)
+  check("a search finds the sections it's in", visible("LootRuler's sounds", ann) and not visible("Seconds to roll:", ann))
+  sbox = nil walkS(ann.G.LootRulerFrame)
+  sbox:SetText("") sbox._scripts.OnTextChanged(sbox, true)
+  srv:tick(0.3)
+  clickText("Roll windows", nil, ann)
+  check("one section again", visible("Show roll windows", ann) and not visible("Seconds to roll:", ann))
   ann.LR.UI.win:Hide()
 end)
 
@@ -1997,7 +2006,7 @@ end)
 
 run("the Test tab", function()
   LR.UI.go("settings")
-  clickText("Open all")
+  clickText("All settings")
   local tabShown = function()
     for _, x in ipairs(M.findText("Test", true, G.LootRulerFrame)) do if M.plain(x.fs:GetText()) == "Test" and x.clickable and x.clickable:IsShown() then return true end end
     return false
@@ -2606,9 +2615,9 @@ run("no button runs past its panel", function()
   local function walk(fr)
     for _, c in ipairs(fr._children or {}) do
       if c:IsVisible() then
-        if c._kind == "button" then
+        if c._kind == "button" or c._kind == "quiet" or c._kind == "link" then
           local r, pr = M.rect(c), M.rect(c:GetParent())
-          if r and pr and (r.r > pr.r + 1 or r.l < pr.l - 1) then bad[#bad + 1] = M.plain(c:GetText() or "?") end
+          if r and pr and (r.r > pr.r + 1 or r.l < pr.l - 1) then bad[#bad + 1] = M.plain((c.text and c.text:GetText()) or c:GetText() or "?") end
         end
         walk(c)
       end
@@ -2617,7 +2626,7 @@ run("no button runs past its panel", function()
   for _, t in ipairs({ "reserve", "reserves", "loot", "session", "guild", "settings", "test" }) do
     LR.UI.go(t)
     srv:tick(0.3)
-    if t == "settings" then clickText("Open all") end
+    if t == "settings" then clickText("All settings") end
     walk(G.LootRulerFrame)
   end
   check("every button fits", #bad == 0, table.concat(bad, ", "))

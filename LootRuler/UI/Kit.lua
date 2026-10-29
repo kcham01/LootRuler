@@ -307,6 +307,31 @@ end, function(b)
   b:Enable()
 end)
 
+-- one entry in a list down the side (the Settings tab's sections): its words, gold when it's the one shown
+K.define("nav", function()
+  local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+  b:SetBackdrop(K.FLAT)
+  b.text = fs(b, "GameFontHighlightSmall")
+  b.text:SetPoint("TOPLEFT", 6, -4)
+  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  return b
+end, function(b) b:Enable() b.text:SetText("") end)
+
+--- an entry down the side: width, its words, and whether it's the one shown; returns its height
+function K.setNav(b, width, label, on)
+  b:SetWidth(width)
+  b.text:SetWidth(width - 12)
+  b.text:SetText(label)
+  if on then
+    b:SetBackdropColor(0.85, 0.66, 0.13, 1) b:SetBackdropBorderColor(0.36, 0.24, 0.06, 1) b.text:SetTextColor(0, 0, 0)
+  else
+    b:SetBackdropColor(0, 0, 0, 0) b:SetBackdropBorderColor(0, 0, 0, 0) b.text:SetTextColor(0.85, 0.81, 0.74)
+  end
+  local h = math.max(20, b.text:GetStringHeight() + 8)
+  b:SetHeight(h)
+  return h
+end
+
 -- a rounded toggle "chip"
 K.define("chip", function()
   local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")

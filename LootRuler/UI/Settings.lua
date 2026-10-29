@@ -16,42 +16,95 @@ local function toggle(p, key, label, what, after)
   p:note(what)
 end
 
---- which sections are open (saved, per character): title -> true
-local function openSections()
-  if type(LR.db.ui.settingsOpen) ~= "table" then LR.db.ui.settingsOpen = {} end
-  return LR.db.ui.settingsOpen
-end
-local titles = {}            -- every section's title, in order, as drawn (for "Open all")
+-- The sections go down the side, under three headings; the one picked is shown beside them (kept per character in
+-- db.ui.settingsPage). "All settings" shows every section on one page, and the search box shows every section whose
+-- name or line matches.
+local sections, groupName = {}, nil
 
---- a section that opens and closes: its title, a line saying what's in it, and its contents
+--- a section: its title, a line saying what's in it now, and its contents (drawn when it's shown)
 local function section(f, title, what, fill)
-  titles[#titles + 1] = title
-  local open = openSections()
-  f:fold(title, what, open[title] == true, function() open[title] = not open[title] or nil UI.render() end, fill)
+  sections[#sections + 1] = { group = groupName, title = title, what = what, fill = fill }
 end
 
---- a group of sections under a heading
-local function group(f, text, note)
-  f:gap(4)
-  f:text(text, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
-  if note then f:note(note) end
-  f:gap(2)
+--- the sections after this go under a heading
+local function group(f, text)
+  groupName = text
+end
+
+local NAV = 128              -- the list of sections down the side
+
+--- draws the list down the side and the section(s) shown beside it
+local function drawSections(f)
+  local page = LR.db.ui.settingsPage
+  local q = U.lower(U.trim(UI.setQ or ""))
+  local function matches(x) return q == "" or x.title:lower():find(q, 1, true) or (x.what or ""):lower():find(q, 1, true) end
+  local known = page == "all"
+  for _, x in ipairs(sections) do if x.title == page then known = true end end
+  if not known then page = sections[1].title LR.db.ui.settingsPage = page end
+  -- down the side: the search box, then each heading and its sections
+  local nav = K.flow(f.owner, f.parent, f.x, f.y, NAV)
+  local box = K.get(f.owner, "edit", f.parent)
+  nav:place(box, 22, 4, NAV - 6)
+  box:SetText(UI.setQ or "")
+  K.setHint(box, "Search")
+  local seq = 0
+  K.onText(box, function(self, user)
+    if not user then return end
+    UI.setQ = self:GetText()
+    UI.setFocus = true
+    seq = seq + 1
+    local mine = seq
+    C_Timer.After(0.15, function() if mine == seq then UI.render() end end)
+  end)
+  box:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.setFocus = false end)
+  box:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.setFocus = false end)
+  if UI.setFocus then K.refocus(box) end
+  nav:gap(6)
+  local shown, lastGroup = {}, nil
+  local function navItem(title, label)
+    local b = K.get(f.owner, "nav", f.parent)
+    local h = K.setNav(b, NAV, label or title, q == "" and page == title)
+    b:SetScript("OnClick", function()
+      LR.db.ui.settingsPage = title
+      UI.setQ, UI.setFocus = "", false
+      UI.render()
+    end)
+    nav:place(b, h)
+    nav:gap(1)
+  end
+  for _, x in ipairs(sections) do
+    if matches(x) then
+      shown[#shown + 1] = x
+      if x.group ~= lastGroup then
+        lastGroup = x.group
+        nav:gap(4)
+        nav:text(x.group, { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      end
+      navItem(x.title)
+    end
+  end
+  nav:gap(8)
+  navItem("all", "All settings")
+  -- beside it: the section picked, or every one (All settings, or a search)
+  local content = K.flow(f.owner, f.parent, f.x + NAV + 12, f.y, f.width - NAV - 12)
+  local list = (q ~= "" or page == "all") and shown or {}
+  if q == "" and page ~= "all" then for _, x in ipairs(sections) do if x.title == page then list = { x } end end end
+  if #list == 0 then content:note("No section matches your search.") end
+  for i, x in ipairs(list) do
+    if i > 1 then content:gap(10) end
+    content:text(x.title, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
+    if x.what and x.what ~= "" then content:note(x.what) end
+    content:gap(2)
+    x.fill(content)
+  end
+  f.y = math.max(nav.y, content.y)
 end
 
 local function count(n, one, zero) return n == 0 and zero or U.plural(n, one) end
 
 function UI.settingsView(f)
   local set = LR.db.settings
-  titles = {}
-  local open = openSections()
-  local anyOpen = next(open) ~= nil
-  f:chips({
-    { label = "Open all", click = function() for _, t in ipairs(titles) do open[t] = true end UI.render() end,
-      tip = "Opens every section below." },
-    { label = "Close all", click = function() for k in pairs(open) do open[k] = nil end UI.render() end,
-      tip = "Closes every section, so you see just their names." },
-  })
-  if not anyOpen then f:note("Click a section to open it.") end
+  sections, groupName = {}, nil
 
   group(f, "For everyone")
 
@@ -260,7 +313,7 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add a rule", click = function() UI.addLootRule() end } }, "left")
   end)
 
-  group(f, "This window, and more")
+  group(f, "More")
   section(f, "This window", "The minimap button.", function(p)
     p:chips({ { tick = true, label = "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
@@ -287,6 +340,7 @@ function UI.settingsView(f)
     p:note("/lr opens this window. /lr help lists the rest.")
     p:note("Bugs and ideas: github.com/kcham01/LootRuler")
   end)
+  drawSections(f)
 end
 
 --- a sheet to make a loot rule: what it's about, then who gets it
