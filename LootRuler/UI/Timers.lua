@@ -20,6 +20,7 @@ local WHY = {
   away = "%s isn't in the group.",
   far = "%s is too far away to trade. Ask them to come over.",
 }
+UI.TRADE_WHY = WHY
 
 local function click(row, button)
   local x = row.x
