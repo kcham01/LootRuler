@@ -441,54 +441,63 @@ function UI.showMaster()
 end
 
 ---------------------------------------------------------------------- giving an item out without a roll
---- a sheet to give an item to someone without rolling: who (the players who reserved it first), and how.
---- it: { id, link, slot, drop }
+--- a sheet to give an item to someone without rolling: who (the players who reserved it first, apart), and how.
+--- it: { id, link, slot, drop, to = who's picked to start with }
 function UI.giveSheet(it)
   local s = Rolls.session()
-  local pick, how = nil, "MS"
+  local pick, how = it.to, "MS"
   UI.show()
+  local reserved = {}
+  for _, w in ipairs(s and S.byItem(s)[it.id] or {}) do if S.claims(s, w[1], it.id) > 0 then reserved[U.foldCase(w[1])] = true end end
+  if pick and reserved[U.foldCase(pick)] then how = "SR" end
   UI.openSheet("Give " .. U.plain(it.link or LR.itemLink(it.id)), function(f, h)
-    f:note("Pick who gets it and how, without a roll. It's given through master loot if it's in the open loot window, or marked for you to trade it.")
-    -- who: everyone in the group, the ones who reserved it first
+    f:note("Pick who gets it and how, without a roll. It goes through master loot if it's in the open loot window, or is marked for you to trade.")
+    -- who: the players who reserved it, then everyone else in the group
     local people = LR.roster()
     if #people == 0 then people = { { name = U.me(), class = LR.myClass() } } end
-    local reserved = {}
-    for _, w in ipairs(s and S.byItem(s)[it.id] or {}) do if S.claims(s, w[1], it.id) > 0 then reserved[U.foldCase(w[1])] = true end end
-    table.sort(people, function(a, b)
-      local ra, rb = reserved[U.foldCase(a.name)] or false, reserved[U.foldCase(b.name)] or false
-      if ra ~= rb then return ra end
-      return a.name < b.name
-    end)
-    local chips = {}
-    for _, m in ipairs(people) do
+    table.sort(people, function(a, b) return a.name < b.name end)
+    local function chip(m)
       local sr = reserved[U.foldCase(m.name)]
-      chips[#chips + 1] = { label = U.classText(U.short(m.name), m.class) .. (sr and " |cffffd100SR|r" or ""), on = pick and U.samePlayer(pick, m.name),
+      return { label = U.classText(U.short(m.name), m.class) .. (sr and " |cffffd100SR|r" or ""), on = pick and U.samePlayer(pick, m.name),
         click = function() pick = m.name if sr then how = "SR" elseif how == "SR" then how = "MS" end h.redraw(true) end }
     end
-    f:chips(chips)
-    local ways = { { plain = true, label = "How:" },
-      { label = "Main spec", on = how == "MS", click = function() how = "MS" h.redraw(true) end },
-      { label = "Off spec", on = how == "OS", click = function() how = "OS" h.redraw(true) end } }
-    if pick and reserved[U.foldCase(pick)] then ways[#ways + 1] = { label = "Their reserve", on = how == "SR", click = function() how = "SR" h.redraw(true) end } end
-    f:chips(ways)
-    if s and s.de then
-      f:note(("Or give it to %s to disenchant."):format(U.short(s.de)))
+    local res, rest = {}, {}
+    for _, m in ipairs(people) do
+      if reserved[U.foldCase(m.name)] then res[#res + 1] = chip(m) else rest[#rest + 1] = chip(m) end
     end
-    f:gap(4)
-    local list = { { label = "Cancel", click = function() h.close() end } }
-    if s and s.de then
-      list[#list + 1] = { label = "Disenchant", click = function()
-        h.close()
-        local ok, note = Rolls.give(it.id, s.de, "DE", it)
-        if not ok then UI.toast(note) else UI.masterDraw() if note then UI.masterNote(note) end end
+    if #res > 0 then
+      f:text("Reserved it", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      f:chips(res)
+    end
+    if #rest > 0 then
+      f:text(#res > 0 and "Everyone else" or "Who", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      f:chips(rest)
+    end
+    f:gap(2)
+    f:row("How", function(r)
+      local ways = {}
+      if pick and reserved[U.foldCase(pick)] then ways[#ways + 1] = { label = "Their reserve", on = how == "SR", click = function() how = "SR" h.redraw(true) end } end
+      ways[#ways + 1] = { label = "Main spec", on = how == "MS", click = function() how = "MS" h.redraw(true) end }
+      ways[#ways + 1] = { label = "Off spec", on = how == "OS", click = function() how = "OS" h.redraw(true) end }
+      ways[#ways + 1] = { label = "To disenchant", on = how == "DE", click = function()
+        how = "DE"
+        if not pick and s and s.de then pick = s.de end
+        h.redraw(true)
       end }
-    end
-    list[#list + 1] = { label = pick and ("Give to " .. U.short(pick)) or "Give", disabled = not pick, click = function()
+      r:chips(ways, { gap = 2 })
+    end, { lw = 50 })
+    if s and s.de and how ~= "DE" then f:note(("%s disenchants: pick To disenchant, then them."):format(U.short(s.de))) end
+    f:gap(4)
+    local function go(who, kind)
       h.close()
-      local ok, note = Rolls.give(it.id, pick, how, it)
+      local ok, note = Rolls.give(it.id, who, kind, it)
       if not ok then UI.toast(note) else UI.masterDraw() if note then UI.masterNote(note) end end
-    end }
-    f:buttons(list)
+    end
+    f:buttons({
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
+      s and s.de and not pick and { label = "Disenchant", style = "quiet", click = function() go(s.de, "DE") end } or nil,
+      { label = pick and ((how == "DE" and "Disenchant: " or "Give to ") .. U.short(pick)) or "Give", disabled = not pick, click = function() go(pick, how) end },
+    })
   end)
 end
 
