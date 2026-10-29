@@ -450,7 +450,7 @@ function UI.giveSheet(it)
   local reserved = {}
   for _, w in ipairs(s and S.byItem(s)[it.id] or {}) do if S.claims(s, w[1], it.id) > 0 then reserved[U.foldCase(w[1])] = true end end
   if pick and reserved[U.foldCase(pick)] then how = "SR" end
-  UI.openSheet("Give " .. U.plain(it.link or LR.itemLink(it.id)), function(f, h)
+  UI.openSheet("Give " .. (U.plain(it.link or LR.itemLink(it.id)):gsub("^%[(.*)%]$", "%1")), function(f, h)
     f:note("Pick who gets it and how, without a roll. It goes through master loot if it's in the open loot window, or is marked for you to trade.")
     -- who: the players who reserved it, then everyone else in the group
     local people = LR.roster()

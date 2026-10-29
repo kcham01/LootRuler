@@ -14,20 +14,12 @@ function UI.prioAvailable()
   return false
 end
 
---- "Loot goes by": reserves, the guild's priority lists first, or only them (a session, or the new one)
+--- how loot goes, with the guild's priority lists: { mode, name, what it means } (the Session tab's "How loot goes")
 UI.PRIO_MODES = {
   { nil, "Reserves", "Soft and hard reserves, then everyone rolls." },
   { "both", "Priority lists, then reserves", "An item on the guild's priority lists goes by them when someone on its list is here; anything else by reserves." },
   { "only", "Priority lists only", "No reserves: items on the priority lists go by them, everything else is rolled for." },
 }
-function UI.prioChips(current, pick)
-  local chips = { { plain = true, label = "Loot goes by:" } }
-  for _, m in ipairs(UI.PRIO_MODES) do
-    chips[#chips + 1] = { label = m[2], on = current == m[1], click = function() pick(m[1]) end, tip = m[3] }
-  end
-  return chips
-end
-
 --- whether this guild uses boosted rolls (the Session tab's switch only shows then)
 function UI.boostOn()
   local book = LR.book()
