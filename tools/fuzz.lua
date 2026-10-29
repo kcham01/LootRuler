@@ -557,7 +557,7 @@ do
   local COMMANDS = { "", "remove", "clear", "list", "swap", "bid", "max", "pot", "prio", "vote", "help", "check", "x", "hr", "all" }
   local sent = 0
   for round = 1, ROUNDS * 4 do
-    local text = ("!lr " .. pick(COMMANDS) .. " " .. (chance(0.5) and tostring(junk()) or ("|cffa335ee|Hitem:" .. tostring(item()) .. "::::::::70:::::|h[x]|h|r"))):sub(1, 255)
+    local text = (pick({ "!lr ", "!reserve ", "!RESERVE " }) .. pick(COMMANDS) .. " " .. (chance(0.5) and tostring(junk()) or ("|cffa335ee|Hitem:" .. tostring(item()) .. "::::::::70:::::|h[x]|h|r"))):sub(1, 255)
     if chance(0.5) then srv:whisper(pug, lead, text) else srv:chatMessage(pug, text, "RAID") end
     sent = sent + 1
     if round % 50 == 0 then

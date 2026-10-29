@@ -7,7 +7,7 @@ local UI = LR.UI
 
 UI.TOUR = {
   { "Welcome to LootRuler", "It runs raid loot inside the game: soft reserves, rolling items out, the raid's loot list and trades. Only whoever runs the loot needs it: everyone else can whisper and /roll." },
-  { "Reserving", "The Reserve tab: pick your items once the raid leader has opened soft reserves. Players without LootRuler type !lr and an item link in raid chat." },
+  { "Reserving", "The Reserve tab: pick your items once the raid leader has opened soft reserves. Players without LootRuler type !reserve and an item link in raid chat." },
   { "Running the raid", "The Session tab: open soft reserves (the raid, and how many each), bring in softres.it, set up the raid and hand it over. The Reserves tab shows who reserved what." },
   { "Loot", "As master looter, click an item in the list beside the loot window to roll it out. Everyone gets a roll window, and you click Give. The Loot tab lists every drop and what's still to trade." },
   { "Make it yours", "The Settings tab has every option, from roll windows to loot rules. /lr help lists the commands, and /lr tour shows this again." },

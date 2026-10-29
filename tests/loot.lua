@@ -1801,7 +1801,7 @@ do
   check("raiders' copies know when", zoe.LR.current().al == ks.al)
   local function lines(text) local n = 0 for _, m in ipairs(srv7.chat) do if m.channel == "RAID" and m.text:find(text, 1, true) then n = n + 1 end end return n end
   srv7:tick(70)
-  check("5 minutes before, the raid is told, with how to reserve", lines("Soft reserves lock in 5 minutes.") == 1 and lines("!lr [linked item]") >= 1)
+  check("5 minutes before, the raid is told, with how to reserve", lines("Soft reserves lock in 5 minutes.") == 1 and lines("!reserve [linked item]") >= 1)
   srv7:tick(180)
   check("and at 2 minutes", lines("Soft reserves lock in 2 minutes.") == 1)
   srv7:tick(60)
@@ -2192,11 +2192,11 @@ section("nobody can fake a win")
   srv:tick(1)
   check("Dan's trade, though the loot master holds it, gets nothing", used == 1)
   srv:cancelTrade(dan)
-  -- a pug tries every !lr command, with nonsense after it, by whisper and in raid chat
+  -- a pug tries every command, with nonsense after it, by whisper ("!lr") and in raid chat ("!reserve")
   for _, cmd in ipairs({ "", "remove", "clear", "swap", "points", "prio", "vote", "bid", "max", "pot", "list", "help", "give", "trade", "award" }) do
     for _, arg in ipairs({ "", " Dan", " " .. link, " 999999", " #2 50", " Dan " .. link, (" x"):rep(80) }) do
       srv:whisper(pug, lead, ("!lr " .. cmd .. arg):sub(1, 255))
-      srv:chatMessage(pug, ("!lr " .. cmd .. arg):sub(1, 255), "RAID")
+      srv:chatMessage(pug, ("!reserve " .. cmd .. arg):sub(1, 255), "RAID")
     end
   end
   srv:tick(40)                -- (every one is answered by whisper: they queue behind each other)

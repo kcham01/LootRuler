@@ -4,7 +4,7 @@
 --                         thousands of ways (wrong types, missing fields, huge lists, deep tables), sent by a raider,
 --                         by someone outside the group and by the leader. Nothing may throw a Lua error, and nothing
 --                         from someone who isn't the leader may change the leader's session.
---   1b. broken whispers:   every !lr command with nonsense after it, by whisper and in raid chat, from a pug, a raider
+--   1b. broken whispers:   every !lr / !reserve command with nonsense after it, by whisper and in raid chat, from a pug, a raider
 --                         and someone outside the group, and raid chat lines made to look like the game's or Gargul's.
 --   2. the biggest raid:  40 players with 10 reserves each, all on one item (a roll for each reserve: 390 /rolls),
 --                         then every raider's 10 reserves on different items, on the leader's screens.
@@ -403,7 +403,7 @@ do
   local function burst(who, how, to)
     for _, c in ipairs(CMDS) do
       for _, a in ipairs(ARGS) do
-        local text = ("!lr " .. c .. a):sub(1, 255)
+        local text = ((sent % 2 == 0 and "!lr " or "!reserve ") .. c .. a):sub(1, 255)   -- (both command words, in turn)
         if how == "WHISPER" then srv:whisper(who, to or lead, text) else srv:chatMessage(who, text, "RAID") end
         sent = sent + 1
       end

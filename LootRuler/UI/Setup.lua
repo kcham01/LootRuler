@@ -567,7 +567,7 @@ local function newSession(f)
     if IsInGroup() and not UnitIsGroupLeader("player") then
       p:note("You're not the group leader. That's fine if you're running loot, but make sure only one of you opens reserves.", K.GOLD)
     end
-    p:note("Raiders reserve in LootRuler, or whisper you \"!lr <item link>\" if they don't have it. You reserve on the Reserve tab like everyone else; hard reserves come next.")
+    p:note("Raiders reserve in LootRuler, or whisper you \"!reserve <item link>\" if they don't have it. You reserve on the Reserve tab like everyone else; hard reserves come next.")
     local function open(then_import)
       if d.raid == LR.CUSTOM and U.trim(d.name or "") == "" then UI.toast("Give the raid a name.") return end
       local s = LR.startSession(d.raid, d.sr, d.dupes, d.guild, d.name, d.any)

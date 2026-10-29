@@ -26,7 +26,7 @@ Type **/lr** in game.
 
 | For | What LootRuler does |
 | --- | --- |
-| [Pugs](#for-raid-leaders) | Soft and hard reserves, extra reserves for tanks and healers, `!lr` in raid chat for anyone without the addon, softres.it import, raid setup from a sign-up list, and handing it all to Gargul |
+| [Pugs](#for-raid-leaders) | Soft and hard reserves, extra reserves for tanks and healers, `!reserve` in raid chat for anyone without the addon, softres.it import, raid setup from a sign-up list, and handing it all to Gargul |
 | [Handing out loot](#rolling-out-loot) | Roll windows that know who reserved what, one item or all of them one after another, ties, +1s, your own roll types, a disenchanter, a loot council, loot rules, trade help |
 | [Keeping track](#the-raids-loot-list) | The raid's loot list, who has what, exports (spreadsheet, thatsmybis, DFT), an award history by date, past raids, and who got what over time |
 | [GDKP](#gdkp) | Auctions bid on in raid chat (one at a time or several at once), max bids and bids ahead, the pot with cuts and rules of your own, a ledger, and payouts |
@@ -66,7 +66,7 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
   <img src="docs/screens/auto-lock.png" alt="Reserves that lock by themselves" width="49%">
 </p>
 
-**Swapping a reserve after they're locked:** a raider asks (Reserve tab, "Ask to swap one", or whisper `!lr swap [old] [new]`), the leader allows or refuses it on the Reserves tab, and the raider is told by whisper.
+**Swapping a reserve after they're locked:** a raider asks (Reserve tab, "Ask to swap one", or whisper `!reserve swap [old] [new]`), the leader allows or refuses it on the Reserves tab, and the raider is told by whisper.
 
 **Clearing reserves of players who left:** the Reserves tab shows how many players have reserves but aren't in the group, and one button (after a check that names them) takes their reserves off, so their items are free for the rest. Someone offline but still in the group keeps theirs.
 
@@ -118,13 +118,15 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/private-session.png" alt="A private session, only on your screen" width="49%">
 </p>
 
+Every command starts with `!reserve` or `!lr` (the same thing; the raid is taught `!reserve`, and any capitals work).
+
 | Type (raid chat or whisper) | Does |
 | --- | --- |
-| `!lr <item link or name>` | reserves it (several links in one whisper reserve each) |
-| `!lr remove <item>` | takes a reserve back |
-| `!lr clear` | takes all of them back |
-| `!lr` | tells you what you have reserved (and how many you get, extras included) |
-| `!lr swap <old item> <new item>` | once reserves are locked: asks the leader to swap one (also `!lr swap old for new`) |
+| `!reserve <item link or name>` | reserves it (several links in one whisper reserve each) |
+| `!reserve remove <item>` | takes a reserve back |
+| `!reserve clear` | takes all of them back |
+| `!reserve` | tells you what you have reserved (and how many you get, extras included) |
+| `!reserve swap <old item> <new item>` | once reserves are locked: asks the leader to swap one (also `!reserve swap old for new`) |
 | `!lr points` | your boosted roll points, and what to `/roll` with them (when the raid uses them) |
 | `!lr prio` / `!lr prio <item>` | your places on the guild's priority lists, or who's on an item's list |
 | `!lr vote <name>` | on the loot council: your vote on who gets the item up now |

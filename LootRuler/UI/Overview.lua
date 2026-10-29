@@ -444,7 +444,7 @@ local function byPlayer(f, s, leader)
   local without = 0
   for _, m in ipairs(LR.roster()) do if not LR.versionOf(m.name) then without = without + 1 end end
   if without > 0 then
-    f:note(("%s in the group %s LootRuler, as far as your addon can tell: they can whisper %s \"!lr [item]\"."):format(
+    f:note(("%s in the group %s LootRuler, as far as your addon can tell: they can whisper %s \"!reserve [item]\"."):format(
       U.plural(without, "player"), without == 1 and "doesn't have" or "don't have", leader and "you" or U.short(s.leader)))
   end
   -- names from softres.it that aren't anyone in the group, but could be (the leader picks)
