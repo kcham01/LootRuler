@@ -220,7 +220,11 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   anything (My reserves' slots). The tabs are "My reserves" and "All reserves" (the owner's choice; a name that doesn't fit gets a
   smaller font). Kept per character: `db.ui.sessionOpen` (the Session tab's folds, `UI.sessionFold`), `db.ui.testOpen`,
   `db.ui.settingsPage` (a section's title, or "all"), `db.ui.minorOpen`; in memory: `UI.resQ`, `UI.guildQ`, `UI.setQ` (searches),
-  `UI.guildPage`, `UI.ownForm`. `Gargul.preview(s, text, roster, names)` is an import worked out on a copy (nothing changes or is
+  `UI.guildPage`, `UI.ownForm`. Drop-downs: `K.dropdown(owner, parent, width, label, items, pick, id)` (the game's look: a box, the gold arrow,
+  a list with round ticks; `items` = { label, on, head, gap, tip }; one shared list, `K.dropList`, parented to the window and kept open
+  across redraws for the same `id`; a click elsewhere (`K.dropCatcher`) or Escape closes it); `UI.raidItems` / `UI.raidLabel` for raids.
+  Every x is the game's close button art (`UIPanelCloseButtonNoScripts`): `K.setItem`'s act with text "x" is `row.x`, a chip labelled
+  "x" is kind "x". `UI.confirm`'s 5th argument names the other button (ending a session asks "Yes" / "No"). `Gargul.preview(s, text, roster, names)` is an import worked out on a copy (nothing changes or is
   sent) for the import box's check; `UI.giveSheet`'s `it.to` picks who to start with; `UI.maxBidSheet`, `UI.batchMaxSheet`. The
   auction window has `f.bid` (red, the least that counts), `f.price`, `f.priceBy`, and extras 1-3: Bid an amount, Max bid, Bid
   ahead. Kept as they were (the owner's picks): the roll window, the loot panel, the trade timers.

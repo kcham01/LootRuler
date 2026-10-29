@@ -6,7 +6,7 @@ local U, K, S = LR.U, LR.K, LR.Session
 local UI = LR.UI
 
 UI.draft = { raid = "Karazhan", sr = 2, dupes = true }
-local brand                   -- the branding being typed (Your raid's name), for the session it's for
+local brand                   -- the branding being typed (Your raid), for the session it's for
 
 local function stepper(p, label, value, minV, maxV, onChange)
   p:chips({
@@ -285,7 +285,7 @@ local function privateView(f, s)
     p:buttons({
       { label = s.sx and "Import again" or "Import from softres.it", click = function() importSheet(s) end },
       { label = "End session", click = function()
-        UI.confirm("End your private session", "Its loot list and reserves are forgotten. Nobody else had them.", "End session", function() LR.closePrivate() end)
+        UI.confirm("End your private session?", "Its loot list and reserves are forgotten. Nobody else had them.", "Yes", function() LR.closePrivate() end, "No")
       end },
     }, "left")
   end)
@@ -354,15 +354,15 @@ local function endSession(s)
   end
   if s.boost and UI.boostOn() and LR.canEditBook() and not LR.Guild.pointsGiven(s) and #LR.Guild.raidMembers(s) > 0 then
     -- the end of a raid is when its points are usually given
-    UI.openSheet("End the session", function(sf, h)
+    UI.openSheet("End the session?", function(sf, h)
       sf:text(text)
       sf:note(("This raid's points haven't been given yet (%d each for %s from the guild)."):format(LR.book().boost.perRaid,
         U.plural(#LR.Guild.raidMembers(s), "player")), K.GOLD)
       sf:gap(6)
       sf:buttons({
-        { label = "Cancel", style = "quiet", click = function() h.close() end },
-        { label = "End it", style = "quiet", click = function() h.close() LR.endSession(s) end },
-        { label = "Give points and end", click = function()
+        { label = "No", style = "quiet", click = function() h.close() end },
+        { label = "Yes", style = "quiet", click = function() h.close() LR.endSession(s) end },
+        { label = "Yes, and give points", click = function()
           h.close()
           local ok, why = LR.Guild.raidPoints(s)
           if not ok then UI.refused(why) end
@@ -372,7 +372,7 @@ local function endSession(s)
     end)
     return
   end
-  UI.confirm("End the session", text, "End it", function() LR.endSession(s) end)
+  UI.confirm("End the session?", text, "Yes", function() LR.endSession(s) end, "No")
 end
 UI.endSessionAsk = endSession
 
@@ -501,7 +501,7 @@ local function whoGetsWhat(f, s)
         local h = s.hr[id]
         local b = K.get(r.owner, "item", r.parent)
         K.setItem(b, r.width, LR.itemIcon(id), LR.coloredName(id), (h.f ~= "" and ("For " .. h.f) or "For nobody in particular") .. (h.n ~= "" and ("  -  " .. h.n) or ""), "",
-          { text = "Lift", width = 36, tip = "Lift the hard reserve", click = function() LR.clearHR(s, id) end })
+          { text = "x", tip = "Lift the hard reserve", click = function() LR.clearHR(s, id) end })
         b:SetScript("OnClick", function() hardReserveSheet(s, id) end)
         b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -589,7 +589,8 @@ local function manage(f, s)
   end
 
   -- the organiser's branding: a name, a message and an icon raiders see (Core/Session.lua)
-  fold(f, "brand", "Your raid's name", s.br and s.br.n or "raiders see it in their window", function(p)
+  fold(f, "brand", "Your raid", s.br and s.br.n or (LR.canSetUp() and "its name and message, and raid setup" or "its name and message"), function(p)
+    p:text("Its name", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
     p:note("Name your raid and add a short message (where to sign up, your rules). Raiders with LootRuler see it in their window, and the raid hears it when you post the reserves. It's kept for your next session.")
     brand = brand and brand.sid == s.id and brand or { sid = s.id, n = s.br and s.br.n or "", m = s.br and s.br.m or "", i = s.br and s.br.i }
     local function box(label, key, max, width)
@@ -620,16 +621,18 @@ local function manage(f, s)
       end },
       s.br and { label = "Clear", style = "quiet", click = function() LR.setBrand(s, nil) brand = nil end } or nil,
     }, "left")
+    if LR.canSetUp() then
+      p:gap(4)
+      p:text("Raid setup", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+      p:note("Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups.")
+      p:buttons({ { label = "Raid setup", style = "quiet", click = function() UI.lineupSheet() end } }, "left")
+    end
   end)
 
-  f:gap(4)
-  f:buttons({
-    LR.canSetUp() and { label = "Raid setup", style = "quiet", click = function() UI.lineupSheet() end,
-      tip = "Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups." } or nil,
-    s.gdkp and { label = "Import from softres.it", style = "quiet", click = function() importSheet(s) end } or nil,
-  }, "left")
-  -- (a GDKP has no softres.it box at the top: its handing over and ending are here)
+  -- (a GDKP has no softres.it box at the top: its import, handing over and ending are here)
   if s.gdkp then
+    f:gap(4)
+    f:buttons({ { label = "Import from softres.it", style = "quiet", click = function() importSheet(s) end } }, "left")
     f:buttons({ handOverButton(s), { label = "End session", click = function() endSession(s) end } }, "left")
     if s.next then f:note(("Waiting for %s's LootRuler to take the reserves over."):format(U.short(s.next)), K.GOLD) end
   end
@@ -642,25 +645,25 @@ local function raidHere()
 end
 UI.raidHere = raidHere
 
---- picks a raid (a sheet): done(key). allowCustom: "Another raid" too; all: "Search every raid" too (browsing)
-function UI.pickRaid(title, current, done, allowCustom, all)
-  UI.openSheet(title, function(f, h)
-    for _, era in ipairs({ { "tbc", "Burning Crusade raids" }, { "classic", "Original raids" } }) do
-      f:text(era[2], { font = "GameFontNormal", gap = 2 })
-      local chips = {}
-      for _, r in ipairs(LR.RAIDS) do
-        if r.era == era[1] then
-          chips[#chips + 1] = { label = r.name, on = current == r.key, click = function() h.close() done(r.key) end }
-        end
-      end
-      f:chips(chips)
+--- the raids for a drop-down (K.dropdown), by era: each item's `key` is the raid's. allowCustom: "Another raid" too;
+--- all: "Every raid" too (browsing)
+function UI.raidItems(current, allowCustom, all)
+  local items = {}
+  for _, era in ipairs({ { "tbc", "Burning Crusade raids" }, { "classic", "Original raids" } }) do
+    items[#items + 1] = { label = era[2], head = true }
+    for _, r in ipairs(LR.RAIDS) do
+      if r.era == era[1] then items[#items + 1] = { label = r.name, key = r.key, on = current == r.key } end
     end
-    local more = {}
-    if allowCustom then more[#more + 1] = { label = "Another raid", on = current == LR.CUSTOM, click = function() h.close() done(LR.CUSTOM) end,
-      tip = "A raid that isn't in LootRuler's lists (a new one, or World of Warcraft: Forever's): name it, and any item can be reserved." } end
-    if all then more[#more + 1] = { label = "Search every raid", on = current == "all", click = function() h.close() done("all") end } end
-    if #more > 0 then f:gap(2) f:chips(more) end
-  end)
+  end
+  if allowCustom then items[#items + 1] = { label = "Another raid", key = LR.CUSTOM, on = current == LR.CUSTOM, gap = true,
+    tip = "A raid that isn't in LootRuler's lists (a new one, or World of Warcraft: Forever's): name it, and any item can be reserved." } end
+  if all then items[#items + 1] = { label = "Every raid", key = "all", on = current == "all", gap = not allowCustom, tip = "Search the loot of every raid at once." } end
+  return items
+end
+
+--- a raid's name in a drop-down
+function UI.raidLabel(key)
+  return key == LR.CUSTOM and "Another raid" or key == "all" and "Every raid" or LR.raid(key).name
 end
 
 --- opens reserves from the form: then_import opens the softres.it box straight away
@@ -702,12 +705,9 @@ local function newSession(f)
   if d.guild == nil then d.guild = IsInGuild() and true or false end
   draftRaid()
   f:row("Raid", function(r)
-    local b = K.button(r.owner, r.parent, "quiet", (d.raid == LR.CUSTOM and "Another raid" or LR.raid(d.raid).name) .. "  v", 180)
-    b.text:SetJustifyH("LEFT")
-    b:SetScript("OnClick", function()
-      UI.pickRaid("Which raid?", d.raid, function(key) d.raid = key d.picked = true UI.render() end, true)
-    end)
-    r:place(b, 24)
+    local b = K.dropdown(r.owner, r.parent, 200, UI.raidLabel(d.raid), UI.raidItems(d.raid, true),
+      function(it) d.raid = it.key d.picked = true UI.render() end, "newRaid")
+    r:place(b, 26)
     local here = raidHere()
     local tag = K.get(r.owner, "label", r.parent)
     tag.text:SetFontObject("GameFontHighlightSmall")
@@ -749,6 +749,12 @@ local function newSession(f)
           end, tip = "Guild members with LootRuler can see the session. To let them reserve before the group is made, switch off \"Only the group\" on the Session tab once it's open." },
         }, { gap = 4 })
         p:buttons({ { label = "Open reserves", style = "quiet", width = p.width, click = function() openFromDraft(false) end } }, "left")
+        -- not running loot: a private session (Core/Net.lua)
+        local mine = LR.privateSession()
+        p:buttons({ mine and { label = "Back to your private session", style = "quiet", width = p.width, click = function() LR.select(mine.id) UI.render() end }
+          or { label = "Private session", style = "quiet", width = p.width, click = function() privateFromDraft(false) end,
+            tip = "Not running loot? A private session keeps the loot list and reserves on your screen only, for this raid. Nothing is sent or said." } }, "left")
+        p:note("Not running loot? A private session keeps the raid's loot and reserves on your screen only.")
       end)
     end,
   })
@@ -756,17 +762,12 @@ local function newSession(f)
     f:note("You're not the group leader. That's fine if you're running loot, but make sure only one of you opens reserves.", K.GOLD)
   end
   f:note("More rules (GDKP, +1s, priority lists, hard reserves) are on the Session tab once it's open.")
-  f:gap(4)
-  -- not running loot: a private session (Core/Net.lua), and raid setup for whoever forms the raid
-  local mine = LR.privateSession()
-  f:buttons({
-    LR.canSetUp() and { label = "Raid setup", style = "quiet", click = function() UI.lineupSheet() end,
-      tip = "Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups." } or nil,
-    mine and { label = "Back to your private session", style = "quiet", click = function() LR.select(mine.id) UI.render() end }
-      or { label = "Private session", style = "quiet", click = function() privateFromDraft(false) end,
-        tip = "Not running loot? A private session keeps the loot list and reserves on your screen only, for this raid. Nothing is sent or said." },
-  }, "left")
-  f:note("Not running loot? A private session keeps the raid's loot and reserves on your screen only.")
+  -- raid setup, for whoever forms the raid
+  if LR.canSetUp() then
+    f:gap(4)
+    f:buttons({ { label = "Raid setup", style = "quiet", click = function() UI.lineupSheet() end,
+      tip = "Paste who's coming (from raid-helper, a spreadsheet, anywhere) to see who's missing, invite them and sort the raid into groups." } }, "left")
+  end
 end
 
 local function others(f, current)
@@ -870,7 +871,7 @@ local function theirSession(f, s)
       s.url and { "softres.it", s.url:gsub("^https://", "") } or { "Run by", leader },
     })
   end
-  -- the organiser's message (Session tab: Your raid's name)
+  -- the organiser's message (Session tab: Your raid)
   if s.br and s.br.m then
     f:panel("From " .. leader, function(p) p:text("\"" .. s.br.m .. "\"") end)
   end

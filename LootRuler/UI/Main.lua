@@ -474,11 +474,12 @@ function UI.closeTop()
 end
 function UI.closeAll() while UI.closeTop() do end end
 
-function UI.confirm(title, text, yes, onYes)
+--- asks before doing something: yes (the red button) runs onYes; no names the other button ("Cancel" if not given)
+function UI.confirm(title, text, yes, onYes, no)
   UI.openSheet(title, function(f, h)
     f:text(text)
     f:gap(6)
-    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end }, { label = yes, click = function() h.close() onYes() end } })
+    f:buttons({ { label = no or "Cancel", style = "quiet", click = function() h.close() end }, { label = yes, click = function() h.close() onYes() end } })
   end)
 end
 

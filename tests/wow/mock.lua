@@ -517,6 +517,9 @@ local TEMPLATES = {
   BackdropTemplate = function(f) f._backdropOk = true end,
   UIPanelButtonTemplate = function(f) f._template = "UIPanelButtonTemplate" f._normalFont = fontObjects.GameFontNormal end,
   UIPanelCloseButton = function(f) f._template = "UIPanelCloseButton" f:SetSize(32, 32) end,
+  -- (the same art without the script that hides its parent: SharedUIPanelTemplates.xml)
+  UIPanelCloseButtonNoScripts = function(f) f._template = "UIPanelCloseButtonNoScripts" f:SetSize(32, 32)
+    f._normalTex = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up" end,
   -- InputBoxScriptTemplate's scripts (SecureUIPanelTemplates.xml)
   InputBoxTemplate = function(f) f._template = "InputBoxTemplate"
     f._scripts.OnEditFocusGained = function(self) self:HighlightText() end
@@ -674,6 +677,11 @@ function M.render()
     end
     if r and f._type == "Button" and f._template == "UIPanelCloseButton" then
       table.insert(ops, { kind = "closebutton", key = key, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha })
+    end
+    -- a button's own art (SetNormalTexture, or its template's), drawn under its other pieces
+    if r and f._type == "Button" and type(f._normalTex) == "string" then
+      table.insert(ops, { kind = "texture", key = key, layer = 3, sub = -8, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha,
+        tex = f._enabled == false and f._disabledTex or f._normalTex })
     end
     for _, reg in ipairs(f._regions) do
       if reg._shown then

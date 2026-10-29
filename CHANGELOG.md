@@ -12,10 +12,14 @@ it becomes 1.0.0. Each line links the pull request it came from.
   - **Session tab** (leader): softres.it first, standing out, with four red buttons: import, tell the raid how to
     reserve, hand the reserves over, and "End session"; then "This raid's rules" (how loot goes, reserves each, what
     can be reserved, who can, locking) and "Who gets what" (hard reserves, extra reserves, the disenchanter, the loot
-    council), each row's choices lined up; the raid's name, +1s and boosted rolls fold away. A private session's top box
-    has "End session" too. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
-  - **Opening reserves**: the raid you're in is picked; softres.it or LootRuler side by side; raid setup and a private
-    session as plain buttons. Other options are on the Session tab once it's open.
+    council), each row's choices lined up; "Your raid" (its name and message, and raid setup), +1s and boosted rolls fold
+    away. A private session's top box has "End session" too, and ending asks "Yes" or "No". A hard reserve is lifted
+    with an x. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
+  - **Opening reserves**: the raid you're in is picked, in a drop-down like the game's; softres.it or LootRuler side by
+    side, with "Private session" under "Open reserves"; raid setup under them. Other options are on the Session tab
+    once it's open.
+  - **Every x** (taking something off a list, closing a window) is the game's own red close button. Browsing the loot
+    picks the raid from a drop-down too.
   - **First screen** (nothing open): running loot (import or open reserves) or just raiding, which says a raider can import
     a softres.it sheet into a private session when the loot master doesn't use LootRuler; then browse any raid's loot.
   - **A raider's Session tab**: how it stands for you in one line, the rules as four small boxes, the leader's message, and

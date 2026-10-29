@@ -88,6 +88,21 @@ end
 local function root(p) p = p or lead return p.LR.UI.topSheet() or p.G.LootRulerFrame end
 local function find(text, p) return (p or lead).M.findText(text, true, root(p)) end
 local function visible(text, p) return #find(text, p) > 0 end
+-- the drop-down list that's open (K.openDrop), and picking from it
+local function dropShown(text, p)
+  local list = (p or lead).LR.K.dropList
+  return list ~= nil and list:IsShown() and #(p or lead).M.findText(text, true, list) > 0
+end
+local function pickDrop(text, p)
+  local list = (p or lead).LR.K.dropList
+  local hit
+  for _, x in ipairs((p or lead).M.findText(text, true, list)) do
+    if x.clickable and (p or lead).M.plain(x.fs:GetText()) == text then hit = x break end
+  end
+  if not hit then error("nothing in the drop-down called " .. text, 2) end
+  (p or lead).M.click(hit.clickable)
+  srv:tick(0.3)
+end
 local function clickText(text, nth, p)
   local list = find(text, p)
   local exact, clickable = {}, {}
@@ -146,14 +161,26 @@ run("opening the window", function()
 end)
 
 run("browsing the loot", function()
-  clickText("Karazhan  v")
-  check("any raid is a click away", visible("Which raid's loot?") and visible("Search every raid"))
-  clickText("Molten Core")
+  clickText("Karazhan")
+  check("any raid is a click away, in a drop-down", dropShown("Molten Core") and dropShown("Every raid") and dropShown("Burning Crusade raids"))
+  shot("raid-dropdown")
+  LR.UI.render()
+  srv:tick(0.1)
+  check("a change coming in while it's open keeps it open, under the box", dropShown("Molten Core")
+    and math.abs(LR.K.dropList:GetLeft() - find("Karazhan")[1].clickable:GetLeft()) < 1)
+  clickText("Karazhan")
+  check("a second click closes it", not dropShown("Molten Core"))
+  clickText("Karazhan")
+  M.click(LR.K.dropCatcher)
+  check("so does a click anywhere else", not dropShown("Molten Core") and not LR.K.dropCatcher:IsShown())
+  clickText("Karazhan")
+  pickDrop("Molten Core")
+  check("picking closes it", not dropShown("Molten Core"))
   check("an original raid", visible("Ragnaros") and visible("Lucifron"))
   clickText("Open all")
   check("for my class: a paladin sees plate, not cloth", visible("Lawbringer Helm") and not visible("Robes of Prophecy"))
-  clickText("Molten Core  v")
-  clickText("Search every raid")
+  clickText("Molten Core")
+  pickDrop("Every raid")
   check("searching every raid wants some letters", visible("Type at least two letters"))
   local box
   local function walk(f) for _, c in ipairs(f._children) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
@@ -164,18 +191,30 @@ run("browsing the loot", function()
   shot("browse")
   box:SetText("") box._scripts.OnTextChanged(box, true) box._scripts.OnEnterPressed(box)
   srv:tick(0.3)
-  clickText("Every raid  v")
-  clickText("Karazhan")
+  clickText("Every raid")
+  pickDrop("Karazhan")
 end)
 
 run("opening reserves", function()
   clickText("Session")
-  check("the setup form: the raid you're in, softres.it or LootRuler side by side", visible("Karazhan  v") and visible("you're in it")
+  check("the setup form: the raid you're in, softres.it or LootRuler side by side", visible("Karazhan") and visible("you're in it")
     and visible("From softres.it") and visible("In LootRuler") and not visible("Black Temple"))
-  clickText("Karazhan  v")
-  check("another raid is a click away", visible("Which raid?") and visible("Black Temple") and visible("Another raid"))
   clickText("Karazhan")
+  check("another raid is a click away", dropShown("Black Temple") and dropShown("Another raid") and not dropShown("Every raid"))
+  local list = LR.K.dropList
+  local escapeList = {}
+  for _, n in ipairs(G.UISpecialFrames) do escapeList[n] = true end
+  check("Escape closes the list first, not the window", escapeList.LootRulerDropList and not escapeList.LootRulerFrame)
+  list:Hide()
+  escapeList = {}
+  for _, n in ipairs(G.UISpecialFrames) do escapeList[n] = true end
+  check("and then the window again", not escapeList.LootRulerDropList and escapeList.LootRulerFrame and G.LootRulerFrame:IsShown())
+  clickText("Karazhan")
+  pickDrop("Karazhan")
   shot("new-session")
+  local open, private = find("Open reserves")[1].clickable, find("Private session")[1].clickable
+  check("a private session is under Open reserves, the same size", private:GetWidth() == open:GetWidth() and private:GetTop() < open:GetTop()
+    and math.abs(private:GetLeft() - open:GetLeft()) < 1)
   check("it can open and import from softres.it in one go", visible("Import from softres.it"))
   clickText("Import from softres.it")
   srv:tick(2)
@@ -280,6 +319,9 @@ run("hard reserves", function()
   shot("hard-reserve")
   clickText("Hard reserve")
   srv:tick(2)
+  local hrRow = rowFor("Moroes' Lucky Pocket Watch")
+  check("a hard reserve is lifted with the game's x, not a word", hrRow.x:IsShown() and hrRow.x._template == "UIPanelCloseButtonNoScripts"
+    and not hrRow.act:IsShown() and not visible("Lift"))
   check("only the group can reserve, to start with", ticked("Only the group") == true and s.go == true)
   check("one reserve win each is off to start with", ticked("One reserve win each") == false and not s.ow)
   clickTick("One reserve win each", false)
@@ -326,7 +368,7 @@ run("the reserves list", function()
   -- take Bob's reserve away: his row opens his reserves
   clickText("Change", 1)
   check("one player's reserves", visible("Bob-Faerlina: 1 of 2 reserved") and visible("Add a reserve"))
-  M.click(rowFor("Handwraps of Flowing Thought").act)
+  M.click(rowFor("Handwraps of Flowing Thought").x)
   srv:tick(2)
   check("the leader takes a reserve away", #LR.Session.reservesOf(s, "Bob-Faerlina") == 0)
   check("Bob's addon agrees", #bob.LR.myPicks(bob.LR.current()) == 0)
@@ -860,7 +902,7 @@ run("settings", function()
   srv:tick(0.3)
   clickText("Put windows back", nil, ann)
   check("Put windows back forgets it", ann.LR.db.ui.rollPoint == nil and ann.LR.db.ui.masterPoint == nil)
-  ann.M.click(rowFor("Transmog", ann).act)
+  ann.M.click(rowFor("Transmog", ann).x)
   kinds = ann.LR.db.settings.rollKinds
   check("a roll type can be taken off", #kinds == 1 and kinds[1].n == "Alt" and visible("/roll 97. Counts after off spec.", ann))
   ann.LR.db.settings.rollKinds = {}
@@ -956,8 +998,9 @@ run("ending", function()
   srv:tick(0.3)
   LR.UI.go("session")
   clickText("End session")
-  check("asks first", visible("End the session"))
-  clickText("End it")
+  check("asks first, yes or no", visible("End the session?") and visible("Yes") and visible("No"))
+  shot("end-session")
+  clickText("Yes")
   srv:tick(2)
   check("the session is gone everywhere", LR.current() == nil and ann.LR.current() == nil)
   check("back to the setup form", visible("From softres.it") and visible("In LootRuler"))
@@ -979,9 +1022,9 @@ end)
 run("a raid that isn't in the lists", function()
   LR.UI.show("session")
   srv:tick(0.3)
-  clickText("Karazhan  v")
-  clickText("Another raid")
-  check("it asks for the raid's name", visible("Another raid  v") and visible("The raid's name"))
+  clickText("Karazhan")
+  pickDrop("Another raid")
+  check("it asks for the raid's name", visible("Another raid") and visible("The raid's name"))
   local box
   local function walk(f) for _, c in ipairs(f._children) do if c._type == "EditBox" and c:IsVisible() then box = c end walk(c) end end
   walk(G.LootRulerFrame)
@@ -1088,13 +1131,13 @@ run("the guild and boosted rolls", function()
   srv:tick(1)
   LR.UI.go("session")
   clickText("End session")
-  check("ending says the points were given, so it just asks", visible("End it") and not visible("Give points and end"))
-  clickText("Cancel")
+  check("ending says the points were given, so it just asks", visible("Yes") and not visible("Yes, and give points"))
+  clickText("No")
   LR.Book.setPoints(LR.book(), "Ann-Dreamscythe", 35, 0)
   LR.db.ui.pointsGiven = {}
   clickText("End session")
-  check("without points given, it offers to give them", visible("Give points and end") and visible("This raid's points haven't been given yet"))
-  clickText("Give points and end")
+  check("without points given, it offers to give them", visible("Yes, and give points") and visible("This raid's points haven't been given yet"))
+  clickText("Yes, and give points")
   srv:tick(1)
   check("points given and the session ended", LR.current() == nil and LR.Book.points(LR.book(), "Ann-Dreamscythe") == 45)
   check("/lr guild opens the tab", (function() G.SlashCmdList.LOOTRULER("guild") return LR.UI.tab == "guild" end)())
@@ -1556,8 +1599,8 @@ run("the organiser's branding", function()
   srv:tick(1)
   LR.UI.go("session")
   srv:tick(0.3)
-  clickText("Your raid's name")
-  check("the Session tab has the raid's name", visible("Your raid's name") and visible("Icon:"))
+  clickText("Your raid")
+  check("the Session tab has the raid's name, under Your raid", visible("Its name") and visible("Icon:"))
   local boxes = {}
   local function walk(f) for _, c in ipairs(f._children or {}) do if c._type == "EditBox" and c:IsVisible() and not c._multi then boxes[#boxes + 1] = c end walk(c) end end
   walk(G.LootRulerFrame)
@@ -1574,7 +1617,7 @@ run("the organiser's branding", function()
   check("the window's header shows it", visible("<Kings> Karazhan - 2 reserves each"))
   local function scrollers(fr, out) for _, c in ipairs(fr._children) do if c._type == "ScrollFrame" and c:IsVisible() then out[#out + 1] = c end scrollers(c, out) end return out end
   local sf = scrollers(G.LootRulerFrame, {})[1]
-  local panelText = M.findText("Your raid's name", true, G.LootRulerFrame)[1]
+  local panelText = M.findText("Its name", true, G.LootRulerFrame)[1]
   sf:SetVerticalScroll(math.min(sf:GetVerticalScrollRange(), math.max(0, sf:GetVerticalScroll() + (sf:GetTop() or 0) - (panelText.fs:GetTop() or 0) - 20)))
   shot("brand")
   sf:SetVerticalScroll(0)
@@ -2374,7 +2417,7 @@ run("need and greed rules", function()
   check("the rule is listed", #LR.db.settings.groupLootRules == 1 and visible("Greed"))
   clickText("Roll Need / Greed by my rules")
   check("switched on", LR.db.settings.groupLoot == true)
-  M.click(rowFor("Uncommon (green) items").act)
+  M.click(rowFor("Uncommon (green) items").x)
   check("a rule can be removed", #LR.db.settings.groupLootRules == 0)
   clickText("Roll Need / Greed by my rules")
 end)
@@ -2401,7 +2444,8 @@ run("raid setup", function()
   LR.UI.closeAll()
   LR.UI.go("session")
   srv:tick(0.3)
-  check("on the Session tab too", visible("Raid setup"))
+  if not visible("Its name") then clickText("Your raid") end
+  check("on the Session tab too, under Your raid", visible("Raid setup") and #find("Raid setup") == 2)
 end)
 
 run("who has LootRuler", function()
@@ -2591,8 +2635,8 @@ run("a private session", function()
   check("a new one opens", ann.LR.privateSession() ~= nil)
   local histBefore = #ann.LR.db.history
   clickText("End session", nil, ann)
-  check("ending asks first", visible("End your private session", ann))
-  clickText("End session", nil, ann)
+  check("ending asks first, yes or no", visible("End your private session?", ann) and visible("No", ann))
+  clickText("Yes", nil, ann)
   srv:tick(0.3)
   check("then it's forgotten, not kept as a past raid", ann.LR.privateSession() == nil and #ann.LR.db.history == histBefore)
   check("no Lua errors", #ann.M.errors == 0, table.concat(ann.M.errors, " | "))

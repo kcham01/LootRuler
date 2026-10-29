@@ -215,7 +215,7 @@ end, function(b)
   b.text:SetTextColor(0.91, 0.89, 0.82)
 end)
 
--- a link: words only, for rare or risky actions (Call off, Change, Lift). `danger` makes it red
+-- a link: words only, for rare or risky actions (Call off, Change). `danger` makes it red
 K.define("link", function()
   local b = CreateFrame("Button", nil, UIParent)
   b.text = fs(b, "GameFontNormalSmall")
@@ -359,6 +359,190 @@ function K.setChip(b, label, on)
     b.text:SetTextColor(0.85, 0.81, 0.74)
   end
 end
+
+-- a drop-down in the game's own look: a dark box with the choice in it and the gold arrow button, and a list with round
+-- ticks under it (K.dropdown). One list is shared; it sits over everything in the window, a click anywhere else or
+-- Escape closes it.
+local dropList, dropCatcher, dropOwner, dropId, dropSwapped
+local dropRows = {}
+local DROP_ROW = 16
+K.define("drop", function()
+  local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+  b:SetBackdrop(K.INSET)
+  b:SetHeight(26)
+  b.arrow = CreateFrame("Button", nil, b)
+  b.arrow:SetSize(24, 24)
+  b.arrow:SetPoint("RIGHT", -1, 0)
+  b.arrow:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+  b.arrow:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
+  b.arrow:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+  b.arrow:SetScript("OnClick", function() if b.toggle then b.toggle() end end)
+  b.text = fs(b, "GameFontHighlightSmall")
+  b.text:SetJustifyH("RIGHT")
+  b.text:SetJustifyV("MIDDLE")
+  b.text:SetPoint("LEFT", 8, 0)
+  b.text:SetPoint("RIGHT", b.arrow, "LEFT", -2, 0)
+  b.text:SetWordWrap(false)
+  -- hidden: the window closed, or the screen is being redrawn (K.dropdown with the same id takes the list over); a moment
+  -- later, a list nobody took over closes
+  b:SetScript("OnHide", function(self)
+    if dropOwner ~= self then return end
+    C_Timer.After(0, function() if dropOwner == self and not self:IsVisible() then K.closeDrop() end end)
+  end)
+  return b
+end, function(b)
+  b.toggle = nil
+  b.text:SetText("")
+  b:SetBackdropColor(0.02, 0.02, 0.02, 0.95)
+  b:SetBackdropBorderColor(0.62, 0.52, 0.32, 1)
+end)
+
+-- while the list is open, Escape closes it and nothing else: our frames come off the game's Escape list until it closes
+local function escapeToList(on)
+  if on then
+    dropSwapped = {}
+    for i = #UISpecialFrames, 1, -1 do
+      local n = UISpecialFrames[i]
+      if type(n) == "string" and n:find("^LootRuler") then table.insert(dropSwapped, 1, n) table.remove(UISpecialFrames, i) end
+    end
+    tinsert(UISpecialFrames, "LootRulerDropList")
+  else
+    for i = #UISpecialFrames, 1, -1 do if UISpecialFrames[i] == "LootRulerDropList" then table.remove(UISpecialFrames, i) end end
+    for _, n in ipairs(dropSwapped or {}) do tinsert(UISpecialFrames, n) end
+    dropSwapped = nil
+  end
+end
+
+local function makeDropList()
+  dropCatcher = CreateFrame("Button", nil, UIParent)
+  dropCatcher:SetAllPoints(UIParent)
+  dropCatcher:SetScript("OnClick", function() K.closeDrop() end)
+  dropCatcher:Hide()
+  dropList = CreateFrame("Frame", "LootRulerDropList", UIParent, "BackdropTemplate")
+  dropList:SetBackdrop({ bgFile = K.WHITE8, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = false, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+  dropList:SetBackdropColor(0, 0, 0, 0.97)
+  dropList:SetBackdropBorderColor(0.8, 0.8, 0.8, 1)
+  dropList:EnableMouse(true)
+  dropList:SetClampedToScreen(true)
+  dropList:Hide()
+  dropList:SetScript("OnHide", function()
+    dropOwner, dropId = nil, nil
+    dropCatcher:Hide()
+    if dropSwapped then escapeToList(false) end
+  end)
+  K.dropList, K.dropCatcher = dropList, dropCatcher
+end
+
+local function dropRow(i)
+  local r = dropRows[i]
+  if r then return r end
+  r = CreateFrame("Button", nil, dropList)
+  r:SetHeight(DROP_ROW)
+  r.tick = r:CreateTexture(nil, "ARTWORK")
+  r.tick:SetTexture("Interface\\Common\\UI-DropDownRadioChecks")
+  r.tick:SetSize(16, 16)
+  r.tick:SetPoint("LEFT", 0, 0)
+  r.text = fs(r, "GameFontHighlightSmall")
+  r.text:SetJustifyV("MIDDLE")
+  r.text:SetPoint("LEFT", 20, 0)
+  r.text:SetWordWrap(false)
+  r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+  dropRows[i] = r
+  return r
+end
+
+function K.closeDrop() if dropList and dropList:IsShown() then dropList:Hide() end end
+function K.dropOpen() return dropList ~= nil and dropList:IsShown() and dropOwner end
+
+-- fills the list for drop-down b and puts it under it
+local function fillDrop(b, items, pick)
+  -- the list goes in the window (not the scrolling area the box is in, which would cut it off), over everything
+  local root = b
+  while root:GetParent() and root:GetParent() ~= UIParent do root = root:GetParent() end
+  dropCatcher:SetParent(root)
+  dropCatcher:SetFrameStrata("FULLSCREEN_DIALOG")
+  dropList:SetParent(root)
+  dropList:SetFrameStrata("FULLSCREEN_DIALOG")
+  dropList:SetFrameLevel(dropCatcher:GetFrameLevel() + 5)
+  local width, y = b:GetWidth(), 9
+  for i, it in ipairs(items) do
+    local r = dropRow(i)
+    r:SetFrameLevel(dropList:GetFrameLevel() + 2)
+    r.text:SetFontObject(it.head and "GameFontNormalSmall" or "GameFontHighlightSmall")
+    r.text:SetText(it.label)
+    r.tick:SetShown(not it.head)
+    if it.on then r.tick:SetTexCoord(0, 0.5, 0.5, 1) else r.tick:SetTexCoord(0.5, 1, 0.5, 1) end
+    r.text:ClearAllPoints()
+    r.text:SetPoint("LEFT", it.head and 0 or 20, 0)
+    r:EnableMouse(not it.head)
+    r:SetScript("OnClick", not it.head and function() K.closeDrop() pick(it) end or nil)
+    if it.tip then tooltipOn(r, function(tt) tt:SetText(it.tip, 1, 1, 1, 1, true) end)
+    else r:SetScript("OnEnter", nil) r:SetScript("OnLeave", nil) end
+    if (it.head or it.gap) and i > 1 then y = y + 6 end
+    r:ClearAllPoints()
+    r:SetPoint("TOPLEFT", dropList, "TOPLEFT", 12, -y)
+    r:SetPoint("RIGHT", dropList, "RIGHT", -12, 0)
+    r:Show()
+    width = max(width, r.text:GetStringWidth() + (it.head and 0 or 20) + 28)
+    y = y + DROP_ROW
+  end
+  for i = #items + 1, #dropRows do dropRows[i]:Hide() end
+  dropList:SetSize(width, y + 9)
+  dropOwner = b
+  K.placeDrop()
+end
+
+--- puts the list under its box, moved up as far as it takes to stay inside the window
+function K.placeDrop()
+  local b = dropOwner
+  if not b then return end
+  local root = dropList:GetParent()
+  local up = 0
+  local bottom, rootBottom, rootTop = b:GetBottom(), root:GetBottom(), root:GetTop()
+  if bottom and rootBottom and rootTop then
+    up = min(max(0, dropList:GetHeight() - (bottom - 2 - rootBottom - 10)), max(0, rootTop - 10 - (bottom - 2)))
+  end
+  dropList:ClearAllPoints()
+  dropList:SetPoint("TOPLEFT", b, "BOTTOMLEFT", 0, -2 + up)
+end
+
+--- opens the list under drop-down b: items are { label, on (ticked), head (a heading, not a choice), gap (a little space
+--- before it), tip };
+--- pick(item) gets the one clicked. id: the same drop-down drawn again keeps it open (K.dropdown)
+function K.openDrop(b, items, pick, id)
+  if not dropList then makeDropList() end
+  K.closeDrop()
+  fillDrop(b, items, pick)
+  dropId = id
+  dropCatcher:Show()
+  dropList:Show()
+  escapeToList(true)
+end
+
+--- a drop-down `width` wide showing `label`; a click lists `items` (K.openDrop) and pick(item) gets the one chosen.
+--- id names it, so a list that's open stays open when the screen is redrawn (a change coming in while you choose)
+function K.dropdown(owner, parent, width, label, items, pick, id)
+  local b = K.get(owner, "drop", parent)
+  b:SetWidth(width)
+  b.text:SetText(label)
+  b.toggle = function()
+    if dropOwner == b then K.closeDrop() else K.openDrop(b, items, pick, id) end
+  end
+  b:SetScript("OnClick", b.toggle)
+  -- (placed once the screen has put the box where it goes)
+  if id and dropId == id and dropList:IsShown() then fillDrop(b, items, pick) C_Timer.After(0, K.placeDrop) end
+  return b
+end
+
+-- the game's own close button (the red square with a gold x): every x that closes something or takes it away. Its art
+-- has a margin round it, so K.X_SIZE is bigger than the square you see
+K.X_SIZE = 30
+K.define("x", function()
+  local b = CreateFrame("Button", nil, UIParent, "UIPanelCloseButtonNoScripts")
+  b:SetSize(K.X_SIZE, K.X_SIZE)
+  return b
+end, function(b) b:Enable() end)
 
 -- a tick box with its words beside it (an on / off switch): Flow:chips with tick = true
 K.define("tick", function()
@@ -578,6 +762,10 @@ K.define("item", function()
   b.act.text:SetJustifyV("MIDDLE")
   b.act.text:SetAllPoints()
   b.act:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  -- (an "x" is the game's own close button: K.X_SIZE)
+  b.x = CreateFrame("Button", nil, b, "UIPanelCloseButtonNoScripts")
+  b.x:SetSize(K.X_SIZE, K.X_SIZE)
+  b.x:SetPoint("RIGHT", 1, 0)
   b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetHeight(36)
@@ -586,13 +774,15 @@ end, function(b)
   b.name:SetText("") b.sub:SetText("") b.badge:SetText("")
   b.name:SetTextColor(1, 1, 1) b.sub:SetTextColor(K.rgb(K.SUB)) b.badge:SetTextColor(K.rgb(K.GOLD))
   b.act:Hide() b.act:SetWidth(20) b.act:SetScript("OnClick", nil) b.act:SetScript("OnEnter", nil) b.act:SetScript("OnLeave", nil)
+  b.x:Hide() b.x:SetScript("OnClick", nil) b.x:SetScript("OnEnter", nil) b.x:SetScript("OnLeave", nil)
   b.icon:SetDesaturated(false) b.icon:SetAlpha(1)
   b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.6)
   b:SetAlpha(1)
   b:Enable()
 end)
 
---- fills an item row; width is the row's width, act = { text, tip, click, width } for the small button
+--- fills an item row; width is the row's width, act = { text, tip, click, width } for the small button (text "x" is the
+--- game's close button: row.x, not row.act)
 function K.setItem(b, width, icon, name, sub, badge, act)
   b:SetWidth(width)
   b.icon:SetTexture(icon)
@@ -600,7 +790,12 @@ function K.setItem(b, width, icon, name, sub, badge, act)
   b.sub:SetText(sub or "")
   b.badge:SetText(badge or "")
   local right = 8
-  if act then
+  if act and act.text == "x" then
+    b.x:Show()
+    b.x:SetScript("OnClick", act.click)
+    if act.tip then tooltipOn(b.x, function(tt) tt:SetText(act.tip, 1, 1, 1, 1, true) end) end
+    right = K.X_SIZE - 2
+  elseif act then
     b.act:Show()
     b.act:SetWidth(act.width or 20)
     b.act.text:SetText(act.text)
@@ -892,6 +1087,8 @@ function Flow:chips(list, opts)
       b.text:SetText(c.label)
       b:SetSize(c.width or (b.text:GetStringWidth() + 4), 20)
       b.text:SetWordWrap(not c.width)
+    elseif c.label == "x" then
+      b = K.get(self.owner, "x", self.parent)
     elseif c.tick then
       b = K.get(self.owner, "tick", self.parent)
       K.setTick(b, c.label, c.on)
@@ -901,13 +1098,14 @@ function Flow:chips(list, opts)
       K.setChip(b, c.label, c.on)
       if c.width then b:SetWidth(c.width) end
     end
-    local w = b:GetWidth()
+    -- (an x's art has a margin: it takes the room of the square you see, 20 by 20)
+    local w = b._kind == "x" and 20 or b:GetWidth()
     if x > 0 and x + w > self.width then x = 0 lineY = lineY + rowH + 4 rowH = 0 end
-    b:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + x, -lineY)
+    b:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + x - (b._kind == "x" and 5 or 0), -lineY + (b._kind == "x" and 5 or 0))
     if not c.plain then b:SetScript("OnClick", c.click) end
     if c.tip then tooltipOn(b, function(tt) tt:SetText(c.tip, 1, 1, 1, 1, true) end) end
     x = x + w + 4
-    rowH = max(rowH, b:GetHeight())
+    rowH = max(rowH, b._kind == "x" and 20 or b:GetHeight())
   end end
   self.y = lineY + rowH + (opts.gap or 6)
   return self

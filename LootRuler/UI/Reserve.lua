@@ -281,12 +281,11 @@ local function browse(f)
   UI.browse = UI.browse or UI.raidHere() or "Karazhan"
   f:gap(4)
   f:heading("Browse the loot", "see what drops before the raid")
-  local b = K.button(f.owner, f.parent, "quiet", (UI.browse == "all" and "Every raid" or LR.raid(UI.browse).name) .. "  v", 150, 150)
-  b.text:SetJustifyH("LEFT")
-  b:SetScript("OnClick", function() UI.pickRaid("Which raid's loot?", UI.browse, function(key) UI.browse = key UI.render() end, false, true) end)
+  local b = K.dropdown(f.owner, f.parent, 170, UI.raidLabel(UI.browse), UI.raidItems(UI.browse, false, true),
+    function(it) UI.browse = it.key UI.render() end, "browseRaid")
   b:SetPoint("TOPLEFT", f.parent, "TOPLEFT", f.x, -f.y)
   -- the search box beside it
-  local inner = K.flow(f.owner, f.parent, f.x + 158, f.y + 1, f.width - 158)
+  local inner = K.flow(f.owner, f.parent, f.x + 178, f.y + 2, f.width - 178)
   searchBox(inner, UI.browse == "all" and "Search every raid's loot" or ("Search " .. LR.raid(UI.browse).name))
   f.y = math.max(f.y + 30, inner.y)
   f:chips({
@@ -307,7 +306,7 @@ function UI.reserveView(f, s)
     noSession(f)
     return browse(f)
   end
-  -- the organiser's message (Session tab: Your raid's name)
+  -- the organiser's message (Session tab: Your raid)
   if s.br and s.br.m and not LR.isLeader(s) then f:note((s.br.n and (s.br.n .. ": ") or "") .. s.br.m, K.GOLD) end
   if s.gdkp then
     f:panel("GDKP auctions", function(p)

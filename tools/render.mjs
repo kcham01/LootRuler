@@ -54,6 +54,11 @@ function clipStyle(op) {
   return `clip-path: inset(${top}px ${right}px ${bottom}px ${left}px);`;
 }
 
+// the game's close button (UI-Panel-MinimizeButton): a red square in a gold frame with a gold x, in the middle of its art
+function closeSquare(base) {
+  return `<div style="${base}"><div style="position:absolute;inset:20% 21% 22% 20%;box-sizing:border-box;border-radius:3px;border:2px solid #a8842f;box-shadow:0 0 0 1px #1a0e04,inset 0 0 0 1px #3a1a06;background:radial-gradient(circle at 45% 40%,#b0200f,#6a0a03 70%,#4a0602);display:flex;align-items:center;justify-content:center"><span style="color:#ffcf1a;font:bold 13px/1 Arial;text-shadow:0 0 1px #000,1px 1px 0 #3a1a00;transform:scaleX(1.1)">X</span></div></div>`;
+}
+
 function opHtml(op) {
   const b = op.box;
   if (b.w <= 0 || b.h <= 0) return '';
@@ -78,9 +83,7 @@ function opHtml(op) {
   if (op.kind === 'panelbutton') {
     return `<div style="${base}border-radius:4px;box-sizing:border-box;border:1px solid #000;background:${op.enabled ? 'linear-gradient(#a31a12,#6a0c07 55%,#4a0703)' : 'linear-gradient(#555,#333)'};box-shadow:inset 0 1px 0 rgba(255,200,150,.35),0 0 0 1px #b5893a"></div>`;
   }
-  if (op.kind === 'closebutton') {
-    return `<div style="${base}"><div style="position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c2321e,#5e0a03);border:1px solid #b5893a;color:#ffd9b0;font:bold 12px Arial;text-align:center;line-height:20px">x</div></div>`;
-  }
+  if (op.kind === 'closebutton') return closeSquare(base);
   if (op.kind === 'edit' && op.multi) {
     return `<div style="${base}color:#fff;font:11px/13px 'Friz Quadrata','Segoe UI',Arial;white-space:pre;overflow:hidden;background:rgba(80,120,200,.25)">${esc(op.text || '')}</div>`;
   }
@@ -137,6 +140,16 @@ function opHtml(op) {
     if (/Indicator-Red/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:22%;border-radius:50%;background:radial-gradient(#ff8a7a,#a8160a)"></div></div>`;
     if (/Indicator-Yellow/i.test(tex)) return `<div style="${base}border-radius:50%;background:radial-gradient(#ffe066,#c98a00)"></div>`;
     if (/ButtonHilight|QuestTitleHighlight/i.test(tex)) return '';
+    if (/UI-Panel-MinimizeButton-(Up|Disabled)/i.test(tex)) return closeSquare(base + (/Disabled/i.test(tex) ? 'filter:grayscale(1);' : ''));
+    if (/UI-Panel-MinimizeButton|UI-Common-MouseHilight/i.test(tex)) return '';
+    // the drop-down's arrow button (UI-ChatIcon-ScrollDown): a gold-edged square with a gold arrow
+    if (/UI-ChatIcon-ScrollDown-Up/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:14%;box-sizing:border-box;border-radius:3px;border:1px solid #c9a227;box-shadow:0 0 0 1px #000;background:linear-gradient(#5a4214,#2a1c06);display:flex;align-items:center;justify-content:center"><i style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #ffd100;margin-top:2px"></i></div></div>`;
+    if (/UI-ChatIcon-ScrollDown/i.test(tex)) return '';
+    // a drop-down list's round tick: ticked (a gold dot in a ring), or an empty ring
+    if (/UI-DropDownRadioChecks/i.test(tex)) {
+      const on = op.coord && op.coord[0] < 0.25;
+      return `<div style="${base}"><div style="position:absolute;inset:28%;border-radius:50%;box-sizing:border-box;border:1px solid ${on ? '#c98a00' : '#3a3530'};background:${on ? 'radial-gradient(#ffcc33,#d97a00 60%,#7a3a00)' : 'transparent'}"></div></div>`;
+    }
     return `<div style="${base}background:repeating-linear-gradient(45deg,#3a0040,#3a0040 4px,#200020 4px,#200020 8px)" title="${esc(tex)}"></div>`;
   }
   if (op.kind === 'model') {
