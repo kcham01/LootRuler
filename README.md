@@ -16,7 +16,7 @@
 
 <p align="center">
   <img src="docs/screens/reserve.png" alt="Reserving" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserves.png" alt="Everyone's reserves" width="32%">
+  <img src="docs/screens/reserves.png" alt="Everyone's reserves" width="32%">
   <img src="docs/screens/session.png" alt="Running the session" width="32%">
 </p>
 
@@ -56,14 +56,14 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/new-session.png" alt="Opening reserves" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/hard-reserve.png" alt="Hard reserving an item" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/extra-reserves.png" alt="Extra reserves for some players" width="32%">
+  <img src="docs/screens/hard-reserve.png" alt="Hard reserving an item" width="32%">
+  <img src="docs/screens/extra-reserves.png" alt="Extra reserves for some players" width="32%">
 </p>
 
 **One reserve win each** (Session tab): once a player wins one of their reserves, their other reserves stop counting, so loot goes further. The raid is told when it happens.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/auto-lock.png" alt="Reserves that lock by themselves" width="49%">
+  <img src="docs/screens/auto-lock.png" alt="Reserves that lock by themselves" width="49%">
 </p>
 
 **Swapping a reserve after they're locked:** a raider asks (My reserves tab, "Ask to swap one", or whisper `!reserve swap [old] [new]`), the leader allows or refuses it on the Reserved tab, and the raider is told by whisper.
@@ -80,8 +80,8 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 **Your raid** (Session tab): give your raid a name, a short message (where to sign up, your rules) and an icon. Raiders with LootRuler see it in their window, the raid hears it when you post the reserves, and it's kept for your next session.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/raid-setup.png" alt="Raid setup from a sign-up list" width="49%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/brand.png" alt="Your raid's name, message and icon" width="49%">
+  <img src="docs/screens/raid-setup.png" alt="Raid setup from a sign-up list" width="49%">
+  <img src="docs/screens/brand.png" alt="Your raid: its name, message and icon, and raid setup" width="49%">
 </p>
 
 **Bag checks** (Loot tab, under More, or `/lr bags`): pick some items (a flask, a key, an attunement item) and ask the group. Everyone with LootRuler answers with how many they carry, in bags and bank. The report shows who has none, and who can't be asked (no LootRuler). One click names who's missing what in raid chat. Answering can be switched off in Settings.
@@ -89,15 +89,15 @@ Every boss's loot in kill order, with trash drops, patterns, books, tier tokens,
 **Raid gear** (Loot tab, under More, or `/lr gear`): everyone in the group in one list, best item level first, with how many items and when it was read. A click shows what they wear, slot by slot. Everyone is read with the game's own inspect, one at a time, when they're close and out of combat, so nobody can make their gear up.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/bag-check.png" alt="A bag check" width="49%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/raid-gear.png" alt="Everyone's gear" width="49%">
+  <img src="docs/screens/bag-check.png" alt="A bag check" width="49%">
+  <img src="docs/screens/raid-gear.png" alt="Everyone's gear" width="49%">
 </p>
 
 Already used softres.it, or some of the raid did? **Import from softres.it** brings in its "Gargul Export", on top of the reserves made in LootRuler. Import it again whenever the sheet changes: the reserves from the sheet are updated to match it (swaps, removals, hard reserves), and reserves made only in LootRuler stay. An item someone reserved in both places counts once, and follows the sheet if they change it. Nobody ends up with more reserves than they should: a pick that has already won its item stays, and anything past someone's limit is skipped. Names on the sheet are matched to the characters in the group: capitals and accents don't matter ("Ghost" on the sheet is your "Ghøst"), and a name typed without its realm finds a player from another realm. A name that could be two players, or a typo nobody in the group has, is listed with a one-click fix ("Bobb -> Bob-Faerlina"). Someone who joins later gets their reserves as soon as they're in. A spreadsheet works too: softres.it's CSV export, or any sheet with a column for the player's name and one for the item's number. The softres.it export also brings the raid's softres.it link, and **Post the softres.it link** (Session tab) puts it in raid chat for players who'd rather reserve there.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/import-names.png" alt="After a softres.it import: names matched, and one to check" width="49%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve-for-player.png" alt="Picking several reserves for a player" width="49%">
+  <img src="docs/screens/import.png" alt="Bringing in a softres.it sheet" width="49%">
+  <img src="docs/screens/reserve-for-player.png" alt="Picking several reserves for a player" width="49%">
 </p>
 
 **A raid LootRuler doesn't know yet** (a brand new one, or *World of Warcraft: Forever*'s): pick **Another raid** and name it. Any item can be reserved for it: shift-click the item into the search box, or whisper its link. For a raid it does know, **Any item** lets people reserve loot its lists don't have yet. Either way, it's the leader's addon that decides what can be reserved, so raiders with an older version of LootRuler can still reserve everything.
@@ -110,11 +110,10 @@ Already used softres.it, or some of the raid did? **Import from softres.it** bri
 - **Without the addon:** type in raid chat, or whisper the leader. The answer comes by whisper.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/reserve-bosses.png" alt="A raider's My reserves tab, boss by boss" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/join-reserves.png" alt="Asked before joining someone else's reserves" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/swap-ask.png" alt="Asking to swap a reserve" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/join-reserves.png" alt="Asked before joining someone else's reserves" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/swap-ask.png" alt="Asking to swap a reserve" width="49%">
   <br>
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/picked-up.png" alt="What the loot master picked up, and who reserved it" width="49%">
+  <img src="docs/screens/picked-up.png" alt="What the loot master picked up, and who reserved it" width="49%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/private-session.png" alt="A private session, only on your screen" width="49%">
 </p>
 
@@ -143,9 +142,9 @@ Every command starts with `!reserve` or `!lr` (the same thing; the raid is taugh
 When it's time to hand out loot, LootRuler pops up a roll window for everyone, like the game's own Need/Greed window, and it knows who reserved what.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-master.png" alt="The loot master's window: everyone's rolls, best first" width="34%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/rolls-closed.png" alt="Rolls closed: award it, roll again, and a roll that came too late" width="31%">
-  <img src="docs/screens/roll-window.png" alt="A roll window, with the best rolls so far" width="31%">
+  <img src="docs/screens/loot-master.png" alt="The loot master's window: the winner, and one click to give it" width="34%">
+  <img src="docs/screens/rolls-closed.png" alt="A raider's window once the rolls close" width="31%">
+  <img src="docs/screens/roll-window.png" alt="A roll window, with everyone who reserved the item above it" width="31%">
 </p>
 
 - **The loot master** opens a corpse with master loot on and LootRuler lists what's in it beside the loot window, with who reserved each item. The raid hears it too, once per corpse: each epic, and anything reserved, with who reserved it. Click one to roll it out, or **Roll them all out** to put every item up one after another. **Ctrl+Alt+click** any item (in your bags, the loot window or a chat link), or type `/lr roll` and an item link. (The shortcut can be changed to Alt+click, Gargul's, on the Settings tab.)
@@ -193,7 +192,7 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 - **Becoming the master looter:** LootRuler asks whether to open the loot master window, and offers to tell the raid in one line who runs loot and how to roll. You can turn the question off, or have the raid told by itself (Settings tab).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/trade-timers.png" alt="Trade timers" width="32%">
+  <img src="docs/screens/trade-timers.png" alt="Trade timers" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/record-it.png" alt="Recording an item given out with the game's loot menu" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/master-looter.png" alt="Becoming the master looter" width="32%">
 </p>
@@ -207,7 +206,6 @@ When it's time to hand out loot, LootRuler pops up a roll window for everyone, l
 **Your reserves where you see items:** the game's own loot window and need/greed windows glow on items you reserved, and every item tooltip (bags, chat links, loot windows) says who reserved it and who it went to. With Gargul loaded, tooltips leave the reserves to Gargul, so they aren't listed twice. The loot window also marks every reserved item (SR, or HR) with who reserved it, for everyone.
 
 <p align="center">
-  <img src="docs/screens/reserve-strip.png" alt="Everyone who reserved the item, above the roll window" width="49%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-window-reserves.png" alt="Reserved items marked in the game's loot window" width="40%">
 </p>
 
@@ -238,9 +236,8 @@ The **Loot** tab lists the raid's loot as it drops, boss by boss, for the whole 
 - **Export** who won what, to paste into a spreadsheet, thatsmybis or a DFT sheet, or **post it in raid chat** so everyone (addon or not) sees the list. **Your own** layout writes each line the way you want it (`{date};{player};{item};{how}`, with the raid, boss, roll and more), and **Export several raids** (in the Award history) puts the last 7, 30 or 90 days, or everything, into one list.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-rules.png" alt="Loot rules" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/export.png" alt="Exporting who won what" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/export-raids.png" alt="Exporting several raids" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/loot-rules.png" alt="Loot rules" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/export.png" alt="Exporting who won what" width="49%">
 </p>
 
 **Award history** (the Loot tab's second page, or `/lr history`): everything given out in your raids, by date, newest first. Each date opens with a click to show what was given out that day, who won it, how, and in which raid. **Past raids** is there too: when a session ends, what it gave out is kept (the last 30 raids, on each character that was there), with the loot list, the export, and a GDKP's payouts. In a GDKP, the loot panel says what an item sold for before.
@@ -258,7 +255,7 @@ The **Loot** tab lists the raid's loot as it drops, boss by boss, for the whole 
 Pick **GDKP auction** for how loot goes (Session tab) and every item is auctioned for gold instead of reserved and rolled for. Nobody needs the addon to bid.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/auction-window.png" alt="An auction's roll window" width="40%">
+  <img src="docs/screens/auction-window.png" alt="An auction's roll window" width="40%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/payouts.png" alt="The payouts" width="40%">
 </p>
 
@@ -271,9 +268,8 @@ Pick **GDKP auction** for how loot goes (Session tab) and every item is auctione
 - **Bids not taken** (optional): someone who won't pay? Right-click them in the loot master window to stop taking their bids for the rest of the night. Their bids (in raid chat, by whisper, or max bids) don't count, the best of everyone else's is top again, and the raid is told once. The GDKP panel lists them, each with an x to take it back.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/auction-master.png" alt="The loot master's window during an auction" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/batch-window.png" alt="Several auctions at once" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/bid-ahead-window.png" alt="Bidding ahead from the roll window" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/auction-master.png" alt="The loot master's window during an auction" width="49%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/batch-window.png" alt="Several auctions at once" width="49%">
 </p>
 
 - **Prices:** where bids start and the least raise, for the whole raid, and a different start for any item you like. **Starting bids in and out** copies them all as text, or brings a list in ("28525: 500", one item a line).
@@ -285,11 +281,9 @@ Pick **GDKP auction** for how loot goes (Session tab) and every item is auctione
 - **Payouts:** addons can't put gold in a trade, so when the organiser opens a trade LootRuler says what to give or take, and counts the gold that changes hands. **Tell the raid** posts the pot in raid chat; **Whisper everyone** tells each player what they owe or are owed; `!lr pot` asks for it. **By mail:** at a mailbox, with the Send Mail tab open, **Mail Ann 405g** fills in the next payout (name, subject, gold) for you to check and send; once it's sent, it counts as paid.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/gdkp-panel.png" alt="The GDKP panel" width="32%">
+  <img src="docs/screens/gdkp-panel.png" alt="The GDKP panel" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/pot-rules.png" alt="Pot rules of your own" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/gdkp-ledger.png" alt="The ledger" width="32%">
-  <br>
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/no-bids.png" alt="Right-click a bidder to stop taking their bids" width="49%">
 </p>
 
 ## For guilds
@@ -323,7 +317,7 @@ Also on the tab: pretend LootRuler and Gargul rolls with as many made-up reserve
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/practice-start.png" alt="Starting a practice raid" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/practice-roll.png" alt="A roll in the practice raid" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/test-tab.png" alt="The Test tab" width="32%">
+  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/practice-raiders.png" alt="A swap asked for, and a raider leaving" width="32%">
 </p>
 
 ## Settings and getting started
@@ -338,7 +332,7 @@ Whoever runs loot needs LootRuler: the master looter, or the raid leader without
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/tour.png" alt="The welcome tour" width="32%">
-  <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/settings.png" alt="The Settings tab" width="32%">
+  <img src="docs/screens/settings.png" alt="The Settings tab" width="32%">
   <img src="https://raw.githubusercontent.com/kcham01/LootRuler/results/shots/versions.png" alt="Who has LootRuler" width="32%">
 </p>
 
