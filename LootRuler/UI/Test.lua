@@ -8,30 +8,36 @@ local UI = LR.UI
 local test = { reservers = 6, secs = 20, mine = true, name = "", raid = "Karazhan", players = 8, sr = 2 }
 local P = LR.Practice
 
---- a "- n +" row for a number
-local function stepper(p, label, value, minV, maxV, onChange)
+--- two "- n +" on one line: the first after the row's label, the second with its own
+local function twoSteppers(p, v1, min1, max1, on1, label2, v2, min2, max2, on2)
   p:chips({
-    { label = label, plain = true },
-    { label = "-", width = 24, click = function() if value > minV then onChange(value - 1) end end },
-    { label = tostring(value), on = true, width = 32, click = function() end },
-    { label = "+", width = 24, click = function() if value < maxV then onChange(value + 1) end end },
+    { label = "-", width = 24, click = function() if v1 > min1 then on1(v1 - 1) end end },
+    { label = tostring(v1), on = true, width = 32, click = function() end },
+    { label = "+", width = 24, click = function() if v1 < max1 then on1(v1 + 1) end end },
+    { plain = true, label = "", width = 18 },
+    { plain = true, label = label2 },
+    { label = "-", width = 24, click = function() if v2 > min2 then on2(v2 - 1) end end },
+    { label = tostring(v2), on = true, width = 32, click = function() end },
+    { label = "+", width = 24, click = function() if v2 < max2 then on2(v2 + 1) end end },
   })
 end
 
---- the practice raid: pretend players, the real screens, nothing leaving this one (Core/Practice.lua)
+--- the practice raid: pretend players, the real screens, nothing leaving this one (Core/Practice.lua). It stands out:
+--- it's what the tab is for
 local function practicePanel(f)
-  f:panel("Practice raid", function(p)
+  f:hot("Practice raid", function(p)
     if not P.on then
-      p:note("Run a pretend raid on your own, with made-up players, to try everything LootRuler does: reserves, rolling, giving out, GDKP, priority lists, the loot list and trades. It uses the real screens. Nothing is said in chat or sent to anyone, and the practice raid isn't kept.")
-      local raids = { { plain = true, label = "Raid:" } }
-      for _, r in ipairs(LR.RAIDS) do
-        if r.era == "tbc" and #r.bosses > 0 then
-          raids[#raids + 1] = { label = r.short, on = test.raid == r.key, click = function() test.raid = r.key UI.render() end }
-        end
+      p:note("A pretend raid with made-up players, to try reserves, rolling, giving out, GDKP and the loot list on the real screens. Nothing leaves your screen, and it isn't kept.", K.TEXT)
+      local raids = {}
+      for _, x in ipairs(LR.RAIDS) do
+        if x.era == "tbc" and #x.bosses > 0 then raids[#raids + 1] = { label = x.name, key = x.key, on = test.raid == x.key } end
       end
-      p:chips(raids, { gap = 2 })
-      stepper(p, "Pretend players", test.players, P.MIN, P.MAX, function(v) test.players = v UI.render() end)
-      stepper(p, "Reserves each", test.sr, 1, 3, function(v) test.sr = v UI.render() end)
+      p:row("Raid", function(r)
+        r:place(K.dropdown(r.owner, r.parent, 200, LR.raid(test.raid).name, raids, function(it) test.raid = it.key UI.render() end, "practiceRaid"), 26)
+        r:gap(4)
+      end, { lw = 110 })
+      p:row("Players", function(r) twoSteppers(r, test.players, P.MIN, P.MAX, function(v) test.players = v UI.render() end,
+        "Reserves", test.sr, 1, 3, function(v) test.sr = v UI.render() end) end, { lw = 110 })
       local ok, why = P.canStart()
       p:buttons({ { label = "Start the practice raid", disabled = not ok, click = function()
         local started, err = P.start({ raid = test.raid, players = test.players, sr = test.sr })
@@ -44,66 +50,75 @@ local function practicePanel(f)
     local ps = P.session()
     p:note(("On: %s with %s. Nothing leaves your screen; what the raid would hear shows in your chat, marked Practice. Joining a group ends it."):format(
       ps and LR.raidOf(ps).name or "?", U.plural(#P.players, "pretend player")), K.GREEN)
-    p:buttons({
-      { label = "They reserve", click = function()
+    -- the next step of a raid night is the red one: reserving, then loot dropping, then rolling it out
+    local reserved = 0
+    for _, x in ipairs(P.players) do if ps and #LR.Session.reservesOf(ps, x.name) > 0 then reserved = reserved + 1 end end
+    local nextStep = reserved == 0 and "reserve" or P.nextDrop() and "roll" or "drop"
+    local steps = {
+      reserve = { label = "They reserve", click = function()
         local n = P.reserve()
         UI.toast(n > 0 and ("%s on the way, by whisper and in raid chat."):format(U.plural(n, "reserve")) or "Everyone has reserved all they can.")
       end },
-      { label = "A boss drops loot", click = function()
+      drop = { label = "A boss drops loot", click = function()
         local list = P.drop(3)
         UI.toast(("%s in your bags. Roll them out from the Loot tab or the trade timers."):format(U.plural(#list, "item")))
       end },
-    }, "left")
-    p:buttons({
-      { label = "Roll out the next item", disabled = P.nextDrop() == nil, click = function()
+      roll = { label = "Roll out the next item", disabled = P.nextDrop() == nil, click = function()
         local roll, why = P.rollNext()
         if not roll then UI.toast(why) end
       end },
-      { label = "End the practice raid", click = function() P.stop() UI.render() end },
-    }, "left")
+    }
+    p:text("Next:", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+    p:buttons({ steps[nextStep] }, "left")
+    local rest = {}
+    for _, k in ipairs({ "reserve", "drop", "roll" }) do
+      if k ~= nextStep then local b = steps[k] b.style = "quiet" rest[#rest + 1] = b end
+    end
+    rest[#rest + 1] = { label = "End the practice raid", style = "link", danger = true, click = function() P.stop() UI.render() end }
+    p:buttons(rest, "left")
     p:chips({ { tick = true, label = "Make the next roll a tie", on = P.tie, click = function() P.tie = not P.tie UI.render() end } })
-    p:note("Everything else works as it does in a raid: the Session tab (GDKP, priority lists, +1s, hard reserves), the Reserves and Loot tabs, the loot master window and the trade timers. The pretend players roll, pass and bid on their own.")
+    p:note("Everything else works as it does in a raid: the Session tab (GDKP, priority lists, +1s, hard reserves), the reserves and Loot tabs, the loot master window and the trade timers. The pretend players roll, pass and bid on their own.")
   end)
 end
 
+--- the Test tab: the practice raid first (it's what the tab is for), then pretend windows and messages, each one click,
+--- all on show (nothing folded)
 function UI.testView(f, s)
   practicePanel(f)
-  f:panel("Pretend rolls", function(p)
-    p:note("A roll window and the strip of who reserved the item, as raiders see them. Only on your screen; clicking the dice rolls here, not with /roll.")
-    stepper(p, "Players who reserved it", test.reservers, 0, #UI.PRETEND, function(v) test.reservers = v UI.render() end)
-    stepper(p, "Seconds to roll", test.secs, 5, 60, function(v) test.secs = v UI.render() end)
+  f:panel("Roll windows", function(p)
+    p:note("A roll window and the strip of who reserved the item, as raiders see them. The dice roll here, not with /roll.")
+    p:row("Reserved by", function(r) twoSteppers(r, test.reservers, 0, #UI.PRETEND, function(v) test.reservers = v UI.render() end,
+      "Seconds", test.secs, 5, 60, function(v) test.secs = v UI.render() end) end, { lw = 110 })
     p:chips({ { tick = true, label = "I reserved it too", on = test.mine, click = function() test.mine = not test.mine UI.render() end } })
     p:buttons({
-      { label = "LootRuler roll: everyone", click = function() UI.testRoll({ mode = "OPEN", secs = test.secs, quiet = true }) end },
-      { label = "LootRuler roll: reserved", click = function()
-        UI.testRoll({ mode = "SR", reservers = test.reservers, mine = test.mine, secs = test.secs, quiet = true })
-      end },
+      { label = "Open roll", style = "quiet", tip = "Anyone can roll: the window everyone gets.",
+        click = function() UI.testRoll({ mode = "OPEN", secs = test.secs, quiet = true }) end },
+      { label = "Reserved roll", style = "quiet", tip = "Only the players who reserved it roll, with the strip of who they are.",
+        click = function() UI.testRoll({ mode = "SR", reservers = test.reservers, mine = test.mine, secs = test.secs, quiet = true }) end },
+      { label = "Gargul roll", style = "quiet", tip = "The window raiders without Gargul get when Gargul rolls an item out (read from raid chat).",
+        click = function() UI.testGargul(test.reservers, test.secs, test.mine) end },
     }, "left")
-    p:buttons({
-      { label = "Gargul roll", click = function() UI.testGargul(test.reservers, test.secs, test.mine) end },
-      { label = "Put windows back", click = function()
-        LR.db.ui.rollPoint, LR.db.ui.masterPoint = nil, nil
-        UI.resetPositions()
-      end },
-    }, "left")
-    p:note("A Gargul roll shows the window raiders without Gargul get when Gargul rolls an item out (read from raid chat).")
+    p:buttons({ { label = "Put windows back", style = "link", click = function()
+      LR.db.ui.rollPoint, LR.db.ui.masterPoint = nil, nil
+      UI.resetPositions()
+    end } }, "left")
   end)
 
-  f:panel("Pretend messages", function(p)
-    p:note("What LootRuler would show or say, without saying it.")
+  f:panel("Alerts and raid lines", function(p)
+    p:note("What LootRuler would show you or say, shown only to you.")
     p:buttons({
-      { label = "The 2 hours running out", click = function()
+      { label = "Trade time running out", style = "quiet", tip = "The warning when an item you hold has 15 or 5 minutes left to trade.", click = function()
         local line = ("14 minutes left to trade %s to %s."):format(LR.itemLink(UI.pretendItem()), UI.PRETEND[2][1])
         LR.print("(pretend) " .. line)
         if RaidNotice_AddMessage and RaidWarningFrame then RaidNotice_AddMessage(RaidWarningFrame, U.plain(line), ChatTypeInfo["RAID_WARNING"]) end
         LR.sound(SOUNDKIT.RAID_WARNING or 8959)
       end },
-      { label = "The reminder", disabled = not s, click = function()
+      { label = "Reserve reminder", style = "quiet", disabled = not s, tip = "The raid line naming who hasn't reserved yet.", click = function()
         local names = LR.Whisper.notReserved(s)
         if #names == 0 then names = U.map(UI.PRETEND, function(x) return x[1] end) names = { names[1], names[2], names[3] } end
         LR.print("(pretend, not posted) " .. LR.Whisper.reminderText(s, names))
       end },
-      { label = "Changing raids", disabled = not s, click = function()
+      { label = "Changing raids", style = "quiet", disabled = not s, tip = "The question when you walk into a different raid than your session's.", click = function()
         local bt = s.raid == "BlackTemple" and "Karazhan" or "BlackTemple"
         UI.newRaidPrompt(s, { map = LR.RAID_MAPS[bt], kind = "raid", name = LR.raid(bt).name }, "raid", true)
       end },
@@ -111,12 +126,13 @@ function UI.testView(f, s)
     if not s then p:note("The reminder and changing raids need a session open (Session tab).") end
   end)
 
-  f:panel("Names from softres.it", function(p)
+  f:panel("softres.it names", function(p)
     p:note("Type a name as it might be on a softres.it sheet, to see who in your group it would go to.")
     local e = K.get(p.owner, "edit", p.parent)
     p:place(e, 22, 6, p.width - 12)
     e:SetText(test.name)
-    e:SetScript("OnTextChanged", function(self, user)
+    K.setHint(e, "A name from the sheet")
+    K.onText(e, function(self, user)
       if not user then return end
       test.name = self:GetText()
       UI.render()

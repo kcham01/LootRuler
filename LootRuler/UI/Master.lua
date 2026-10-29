@@ -9,7 +9,7 @@ local U, K, S, R = LR.U, LR.K, LR.Session, LR.Roll
 local UI = LR.UI
 local Rolls = LR.Rolls
 
-local MW = 300
+local MW = 320
 local master, panel
 
 ---------------------------------------------------------------------- a row in the list of rolls
@@ -51,13 +51,13 @@ K.define("rollrow", function()
     GameTooltip:Show()
   end)
   b.gear:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+  K.hover(b, "rowHilite")
   return b
 end, function(b)
   b.gear.links = nil b.gear:Hide()
   b.rank:SetText("") b.name:SetText("") b.kind:SetText("") b.num:SetText("")
   b.num:SetTextColor(1, 1, 1) b.kind:SetTextColor(K.rgb(K.GOLD)) b.rank:SetTextColor(K.rgb(K.GOLD))
-  b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.5)
+  b:SetBackdropColor(K.bg(0, 0, 0, 0.35)) b:SetBackdropBorderColor(K.edge(0.42, 0.33, 0.19, 0.5))
   b:Enable()
 end)
 
@@ -86,7 +86,7 @@ end
 local function build()
   master = CreateFrame("Frame", "LootRulerMasterFrame", UIParent, "BackdropTemplate")
   master:SetSize(MW, 200)
-  master:SetBackdrop(K.ROCK)
+  K.skin(master, "rock")
   master:SetFrameStrata("HIGH")
   master:SetToplevel(true)
   master:SetClampedToScreen(true)
@@ -99,7 +99,7 @@ local function build()
     local point, _, relPoint, x, y = self:GetPoint()
     LR.db.ui.masterPoint = { point, relPoint, x, y }
   end)
-  master.close = CreateFrame("Button", nil, master, "UIPanelCloseButton")
+  master.close = K.closeButton(master)
   master.close:SetPoint("TOPRIGHT", -4, -4)
   master.close:SetScript("OnClick", function()
     local roll = Rolls.mine()
@@ -140,10 +140,10 @@ local function build()
   master.bar:SetSize(MW - 90, 12)
   master.bar:SetPoint("TOPLEFT", 18, -84)
   master.bar:SetBackdrop(K.FLAT)
-  master.bar:SetBackdropColor(0, 0, 0, 1)
-  master.bar:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+  master.bar:SetBackdropColor(K.bg(0, 0, 0, 1))
+  master.bar:SetBackdropBorderColor(K.edge(0.42, 0.33, 0.19, 1))
   master.bar.fill = master.bar:CreateTexture(nil, "ARTWORK")
-  master.bar.fill:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar")
+  master.bar.fill:SetTexture(K.T.bar)
   master.bar.fill:SetPoint("TOPLEFT", 1, -1)
   master.bar.fill:SetPoint("BOTTOMLEFT", 1, 1)
   master.secs = K.fs(master, "GameFontHighlightSmall")
@@ -220,8 +220,8 @@ local function rowFor(f, roll, e, rank, pick)
     b.name:SetText("|cff9d9d9d" .. U.short(e.p) .. "|r")
   end
   if pick and U.samePlayer(pick, e.p) and e.kind then
-    b:SetBackdropColor(0.35, 0.27, 0.05, 0.9)
-    b:SetBackdropBorderColor(1, 0.82, 0, 1)
+    b:SetBackdropColor(K.bg(0.35, 0.27, 0.05, 0.9))
+    b:SetBackdropBorderColor(K.edge(1, 0.82, 0, 1))
   end
   local s = Rolls.session()
   local organiser = roll.mode == "BID" and s and s.gdkp and LR.isLeader(s) and not U.samePlayer(e.p, U.me())
@@ -270,12 +270,53 @@ function UI.masterDraw()
   local f = K.flow("master", master.body, 0, 0, MW - 32)
   local good, bad = R.standings(roll)
   local pick = selectedPlayer(roll)
+  local inLoot = Rolls.lootSlot(roll) ~= nil and LR.isMasterLooter()
+  local give = inLoot and "Give to " or "Award to "
+  local s = Rolls.session()
+  local closed = roll.state ~= "open" and roll.state ~= "awarded"
+  local function award()
+    local ok, note = Rolls.award(pick)
+    if ok and note then roll.note = note end
+    if not ok then UI.masterNote(note) end
+  end
+  -- closed, with someone to give it to: the winner first, as a card with the one main button
+  local winner = closed and pick and roll.mode ~= "HR"
+  if winner then
+    local e
+    for _, x in ipairs(good) do if U.samePlayer(x.p, pick) then e = x end end
+    f:hot(nil, function(p)
+      p:text(roll.pick and "YOUR PICK" or (LR.Council.choice(roll) and "THE COUNCIL'S CHOICE") or (roll.mode == "BID" and "HIGHEST BID") or "WINNER",
+        { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      local kv = K.get(p.owner, "kv", p.parent)
+      kv.k:SetFontObject("GameFontNormalLarge")
+      local tries = e and roll.used and roll.used[R.key(e.p)] or 1
+      kv.k:SetText(U.classText(U.short(pick), LR.classOf(pick)) .. (e and ("  |cffbdb5a3" .. R.label(roll, e) .. "|r") or "")
+        .. (tries > 1 and (" |cff9d9d9d(best of %d)|r"):format(tries) or ""))
+      kv.v:SetFontObject("GameFontHighlightLarge")
+      kv.v:SetText(e and (roll.mode == "BID" and LR.Gdkp.gold(e.n) or tostring(e.n)) or "")
+      kv:SetWidth(p.width)
+      p:place(kv, 24)
+      local links = roll.gear and roll.gear[R.key(pick)]
+      if links then p:note("Wearing: " .. links[1]) end
+      p:gap(2)
+      p:buttons({ { label = give .. U.short(pick), width = p.width, click = award } }, "left")
+    end)
+  end
   if not noRoll(roll) then
     if #good == 0 and #bad == 0 then
       if roll.mode == "BID" then f:note(roll.state == "open" and "No bids yet." or "Nobody bid.")
       else f:note(roll.state == "open" and "No rolls yet." or "Nobody rolled.") end
     end
-    for i, e in ipairs(good) do rowFor(f, roll, e, i, pick) end
+    local others = good
+    if winner then
+      others = U.filter(good, function(x) return not U.samePlayer(x.p, pick) end)
+      if #others > 0 then f:text("Everyone else", { font = "GameFontNormalSmall", color = K.SUB, gap = 2 }) end
+    end
+    for _, e in ipairs(others) do
+      local rank
+      for i, x in ipairs(good) do if x == e then rank = i end end
+      rowFor(f, roll, e, rank, pick)
+    end
     -- (a player's lower rolls on their reserves aren't rows of their own: their best says how many it was the best of)
     local lower = 0
     for _, e in ipairs(bad) do
@@ -298,10 +339,8 @@ function UI.masterDraw()
       f:note("Still to roll: " .. table.concat(parts, ", "))
       if next(away) then f:note("Waiting for someone who's away: wait for them to come back, or click Close now.", K.GOLD) end
     end
-    local gs = Rolls.session()
-    if roll.mode == "BID" and gs and gs.gdkp and LR.isLeader(gs) and #good > 0 then f:note("Right-click a bidder to stop taking their bids tonight.") end
+    if roll.mode == "BID" and s and s.gdkp and LR.isLeader(s) and #good > 0 then f:note("Right-click a bidder to stop taking their bids tonight.") end
     -- the loot council's votes so far
-    local s = Rolls.session()
     if LR.Council.on(s) and LR.Council.votable(roll) then
       local _, voted = LR.Council.counts(roll)
       local choice, top = LR.Council.choice(roll)
@@ -314,30 +353,27 @@ function UI.masterDraw()
     if #passed > 0 then f:note("Passed: " .. table.concat(passed, ", ")) end
   end
   f:gap(4)
-  local inLoot = Rolls.lootSlot(roll) ~= nil and LR.isMasterLooter()
-  local give = inLoot and "Give to " or "Award to "
   if roll.state == "open" then
     f:buttons({
-      { label = "+10 sec", width = 70, click = function() Rolls.extend(10) end },
       { label = "Close now", click = function() Rolls.stop() end },
-      { label = "Call off", click = function() Rolls.cancel() end },
+      { label = "+10 sec", style = "quiet", width = 70, click = function() Rolls.extend(10) end },
+      { label = "Call off", style = "link", danger = true, click = function() Rolls.cancel() end },
     }, "left")
   elseif roll.state == "awarded" then
     local sold = roll.mode == "BID" and not roll.de and R.topBid(roll)
     f:text((sold and "Sold to " or "Given to ") .. U.classText(U.short(roll.winner), LR.classOf(roll.winner))
       .. (roll.de and ", to disenchant." or sold and (" for " .. LR.Gdkp.gold(sold.n) .. ".") or "."), { font = "GameFontNormal" })
     if roll.note then f:note(roll.note, K.GOLD) end
-    if Rolls.session() then f:note(LR.isLeader(Rolls.session()) and "It's on the soft reserves' list of loot given out." or "The soft reserves' leader keeps a list of loot given out.") end
+    if s then f:note(LR.isLeader(s) and "It's on the soft reserves' list of loot given out." or "The soft reserves' leader keeps a list of loot given out.") end
     f:buttons({
       { label = "Close", click = function() Rolls.dismiss() end },
-      { label = "Undo", click = function()
+      { label = "Undo", style = "link", click = function()
         local ok, note = Rolls.undo()
         if ok then roll.undoNote = note end
         if not ok then UI.masterNote(note) end
         UI.masterDraw()
-      end },
+      end, tip = "Wrong player? Undo, then give it to someone else or roll it again." },
     }, "left")
-    f:note("Wrong player? Undo, then give it to someone else or roll it again.")
   else
     local _, tied = R.result(roll)
     if roll.mode == "HR" and not pick then
@@ -346,18 +382,12 @@ function UI.masterDraw()
     if roll.undoNote then f:note(roll.undoNote, K.GOLD) end
     if tied and not roll.pick then f:note("A tie: roll it again between them, or click a name to pick.", K.GOLD) end
     local list = {}
-    if pick then
-      list[#list + 1] = { label = give .. U.short(pick), click = function()
-        local ok, note = Rolls.award(pick)
-        if ok and note then roll.note = note end
-        if not ok then UI.masterNote(note) end
-      end }
-    end
-    if tied then list[#list + 1] = { label = "Reroll the tie", click = function() Rolls.again("TIE") end } end
+    -- a hard reserve's player has no card (nobody rolled): the button is here
+    if pick and not winner then list[#list + 1] = { label = give .. U.short(pick), click = award } end
+    if tied then list[#list + 1] = { label = "Reroll the tie", style = #list > 0 and "quiet" or nil, click = function() Rolls.again("TIE") end } end
     -- nobody wants it: the disenchanter
-    local s = Rolls.session()
     if s and s.de and not noRoll(roll) then
-      list[#list + 1] = { label = "Disenchant (" .. U.short(s.de) .. ")", click = function()
+      list[#list + 1] = { label = "Disenchant (" .. U.short(s.de) .. ")", style = (pick or tied) and "quiet" or nil, click = function()
         local ok, note = Rolls.disenchant()
         if ok and note then roll.note = note end
         if not ok then UI.masterNote(note) end
@@ -367,15 +397,18 @@ function UI.masterDraw()
     if s and not s.de and not noRoll(roll) and not pick then
       f:note("Nobody to give it to? Pick a disenchanter on the Session tab and it's one click.")
     end
-    local more = {}
+    -- the rarer choices, as links
+    local more = { { label = "Give to someone else", style = "link", click = function()
+      UI.giveSheet({ id = roll.id, link = roll.link, slot = Rolls.lootSlot(roll), drop = roll.drop })
+    end } }
     if roll.mode == "SR" or roll.mode == "HR" or roll.mode == "TIE" or roll.mode == "PR" then
-      more[#more + 1] = { label = noRoll(roll) and "Roll it out anyway" or "Let everyone roll", click = function() Rolls.again("OPEN") end }
+      more[#more + 1] = { label = noRoll(roll) and "Roll it out anyway" or "Let everyone roll", style = "link", click = function() Rolls.again("OPEN") end }
     elseif roll.mode == "BID" then
-      more[#more + 1] = { label = "Roll it out instead", click = function() Rolls.again("OPEN") end }
+      more[#more + 1] = { label = "Roll it out instead", style = "link", click = function() Rolls.again("OPEN") end }
     else
-      more[#more + 1] = { label = "Roll again", click = function() Rolls.again("OPEN") end }
+      more[#more + 1] = { label = "Roll again", style = "link", click = function() Rolls.again("OPEN") end }
     end
-    more[#more + 1] = { label = "Call off", click = function() Rolls.cancel() end }
+    more[#more + 1] = { label = "Call off", style = "link", danger = true, click = function() Rolls.cancel() end }
     f:buttons(more, "left")
     if pick and not inLoot then
       f:note(LR.isMasterLooter() and "The item isn't in the open loot window: it's marked as theirs, for you to trade it." or "You're not the master looter: it's marked as theirs and announced, for whoever has it to hand it over.")
@@ -387,7 +420,7 @@ function UI.masterDraw()
     for id in pairs(Rolls.ahead) do ahead = ahead + Rolls.aheadCount(id) end
     f:note(("%s in the queue after this one.%s"):format(U.plural(#Rolls.queue, "more item"),
       ahead > 0 and (" %s placed ahead."):format(U.plural(ahead, "bid")) or ""), K.GOLD)
-    f:buttons({ { label = "Stop the queue", click = function() Rolls.clearQueue() UI.masterDraw() end } }, "left")
+    f:buttons({ { label = "Stop the queue", style = "link", click = function() Rolls.clearQueue() UI.masterDraw() end } }, "left")
   end
   master.body:SetHeight(math.max(1, f.y))
   master:SetHeight(104 + f.y + 14)
@@ -408,54 +441,63 @@ function UI.showMaster()
 end
 
 ---------------------------------------------------------------------- giving an item out without a roll
---- a sheet to give an item to someone without rolling: who (the players who reserved it first), and how.
---- it: { id, link, slot, drop }
+--- a sheet to give an item to someone without rolling: who (the players who reserved it first, apart), and how.
+--- it: { id, link, slot, drop, to = who's picked to start with }
 function UI.giveSheet(it)
   local s = Rolls.session()
-  local pick, how = nil, "MS"
+  local pick, how = it.to, "MS"
   UI.show()
-  UI.openSheet("Give " .. U.plain(it.link or LR.itemLink(it.id)), function(f, h)
-    f:note("Pick who gets it and how, without a roll. It's given through master loot if it's in the open loot window, or marked for you to trade it.")
-    -- who: everyone in the group, the ones who reserved it first
+  local reserved = {}
+  for _, w in ipairs(s and S.byItem(s)[it.id] or {}) do if S.claims(s, w[1], it.id) > 0 then reserved[U.foldCase(w[1])] = true end end
+  if pick and reserved[U.foldCase(pick)] then how = "SR" end
+  UI.openSheet("Give " .. (U.plain(it.link or LR.itemLink(it.id)):gsub("^%[(.*)%]$", "%1")), function(f, h)
+    f:note("Pick who gets it and how, without a roll. It goes through master loot if it's in the open loot window, or is marked for you to trade.")
+    -- who: the players who reserved it, then everyone else in the group
     local people = LR.roster()
     if #people == 0 then people = { { name = U.me(), class = LR.myClass() } } end
-    local reserved = {}
-    for _, w in ipairs(s and S.byItem(s)[it.id] or {}) do if S.claims(s, w[1], it.id) > 0 then reserved[U.foldCase(w[1])] = true end end
-    table.sort(people, function(a, b)
-      local ra, rb = reserved[U.foldCase(a.name)] or false, reserved[U.foldCase(b.name)] or false
-      if ra ~= rb then return ra end
-      return a.name < b.name
-    end)
-    local chips = {}
-    for _, m in ipairs(people) do
+    table.sort(people, function(a, b) return a.name < b.name end)
+    local function chip(m)
       local sr = reserved[U.foldCase(m.name)]
-      chips[#chips + 1] = { label = U.classText(U.short(m.name), m.class) .. (sr and " |cffffd100SR|r" or ""), on = pick and U.samePlayer(pick, m.name),
+      return { label = U.classText(U.short(m.name), m.class) .. (sr and " |cffffd100SR|r" or ""), on = pick and U.samePlayer(pick, m.name),
         click = function() pick = m.name if sr then how = "SR" elseif how == "SR" then how = "MS" end h.redraw(true) end }
     end
-    f:chips(chips)
-    local ways = { { plain = true, label = "How:" },
-      { label = "Main spec", on = how == "MS", click = function() how = "MS" h.redraw(true) end },
-      { label = "Off spec", on = how == "OS", click = function() how = "OS" h.redraw(true) end } }
-    if pick and reserved[U.foldCase(pick)] then ways[#ways + 1] = { label = "Their reserve", on = how == "SR", click = function() how = "SR" h.redraw(true) end } end
-    f:chips(ways)
-    if s and s.de then
-      f:note(("Or give it to %s to disenchant."):format(U.short(s.de)))
+    local res, rest = {}, {}
+    for _, m in ipairs(people) do
+      if reserved[U.foldCase(m.name)] then res[#res + 1] = chip(m) else rest[#rest + 1] = chip(m) end
     end
-    f:gap(4)
-    local list = { { label = "Cancel", click = function() h.close() end } }
-    if s and s.de then
-      list[#list + 1] = { label = "Disenchant", click = function()
-        h.close()
-        local ok, note = Rolls.give(it.id, s.de, "DE", it)
-        if not ok then UI.toast(note) else UI.masterDraw() if note then UI.masterNote(note) end end
+    if #res > 0 then
+      f:text("Reserved it", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      f:chips(res)
+    end
+    if #rest > 0 then
+      f:text(#res > 0 and "Everyone else" or "Who", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      f:chips(rest)
+    end
+    f:gap(2)
+    f:row("How", function(r)
+      local ways = {}
+      if pick and reserved[U.foldCase(pick)] then ways[#ways + 1] = { label = "Their reserve", on = how == "SR", click = function() how = "SR" h.redraw(true) end } end
+      ways[#ways + 1] = { label = "Main spec", on = how == "MS", click = function() how = "MS" h.redraw(true) end }
+      ways[#ways + 1] = { label = "Off spec", on = how == "OS", click = function() how = "OS" h.redraw(true) end }
+      ways[#ways + 1] = { label = "To disenchant", on = how == "DE", click = function()
+        how = "DE"
+        if not pick and s and s.de then pick = s.de end
+        h.redraw(true)
       end }
-    end
-    list[#list + 1] = { label = pick and ("Give to " .. U.short(pick)) or "Give", disabled = not pick, click = function()
+      r:chips(ways, { gap = 2 })
+    end, { lw = 50 })
+    if s and s.de and how ~= "DE" then f:note(("%s disenchants: pick To disenchant, then them."):format(U.short(s.de))) end
+    f:gap(4)
+    local function go(who, kind)
       h.close()
-      local ok, note = Rolls.give(it.id, pick, how, it)
+      local ok, note = Rolls.give(it.id, who, kind, it)
       if not ok then UI.toast(note) else UI.masterDraw() if note then UI.masterNote(note) end end
-    end }
-    f:buttons(list)
+    end
+    f:buttons({
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
+      s and s.de and not pick and { label = "Disenchant", style = "quiet", click = function() go(s.de, "DE") end } or nil,
+      { label = pick and ((how == "DE" and "Disenchant: " or "Give to ") .. U.short(pick)) or "Give", disabled = not pick, click = function() go(pick, how) end },
+    })
   end)
 end
 
@@ -480,12 +522,12 @@ end
 local function buildPanel()
   panel = CreateFrame("Frame", "LootRulerLootPanel", UIParent, "BackdropTemplate")
   panel:SetSize(300, 120)
-  panel:SetBackdrop(K.ROCK)
+  K.skin(panel, "rock")
   panel:SetFrameStrata("HIGH")
   panel:EnableMouse(true)
   panel.title = K.fs(panel, "GameFontNormal")
   panel.title:SetPoint("TOPLEFT", 18, -16)
-  panel.title:SetText("LootRuler")
+  panel.title:SetText(LR.TITLE)
   panel.icon = panel:CreateTexture(nil, "ARTWORK")
   panel.icon:SetTexture(LR.LOGO)
   panel.icon:SetSize(18, 18)
@@ -624,13 +666,13 @@ function UI.masterLooterPrompt()
       { label = "Tell the raid", disabled = LR.groupChannel() == nil, click = function()
         if LR.announceMasterLooter() then UI.toast("Posted in " .. (IsInRaid() and "raid" or "party") .. " chat.") end
       end },
-      { label = "Open the loot master window", click = function() h.close() UI.showMaster() end },
+      { label = "Open the loot master window", style = "quiet", click = function() h.close() UI.showMaster() end },
     }, "left")
     f:gap(4)
     local set = LR.db.settings
     f:chips({ { tick = true, label = "Don't ask again", on = not set.mlPrompt, click = function() set.mlPrompt = not set.mlPrompt h.redraw(true) end,
       tip = "Settings tab, Rolling out loot, to ask again." } })
-    f:buttons({ { label = "Not now", click = function() h.close() end } })
+    f:buttons({ { label = "Not now", style = "quiet", click = function() h.close() end } })
   end)
 end
 

@@ -17,83 +17,102 @@ local function swapRequests(f, s)
           local ok, why = LR.Swap.allow(s, r)
           UI.toast(ok and "Swapped." or ("Couldn't swap: " .. why))
         end },
-        { label = "No", width = 80, click = function() LR.Swap.deny(s, r) end },
+        { label = "No", style = "quiet", width = 80, click = function() LR.Swap.deny(s, r) end },
       }, "left")
     end
   end)
 end
 
---- reserves of players who aren't in the group (left, or never came): cleared after a confirm. In a session for the group
---- and in a private one alike (there, the group I'm in now).
-local function clearAbsentButton(p, s)
-  local away = LR.absent(s)
-  p:buttons({
-    { label = #away > 0 and ("Clear reserves of players not in the group (" .. #away .. ")") or "Clear reserves of players not in the group",
-      disabled = #away == 0, click = function()
-        local names = table.concat(U.map(away, U.short), ", ")
-        UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
-          names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
-          "Clear " .. #away, function()
-            local cleared = LR.clearAbsent(s)
-            UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
-          end)
-      end },
-  }, "left")
+--- the clear button's words and what it does (also in More)
+--- asks, naming them, before clearing the reserves of players who aren't in the group
+local function askClear(s, away)
+  local names = table.concat(U.map(away, U.short), ", ")
+  UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
+    names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
+    "Clear " .. #away, function()
+      local cleared = LR.clearAbsent(s)
+      UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
+    end)
 end
 
---- the leader's tools for the whole list
-local function leaderTools(f, s)
-  -- a private session (Core/Net.lua): only what I bring in. Nothing here is said or sent.
+local function clearAbsent(s)
+  local away = LR.absent(s)
+  return {
+    label = #away > 0 and ("Clear reserves of players not in the group (" .. #away .. ")") or "Clear reserves of players not in the group",
+    disabled = #away == 0, click = function() askClear(s, away) end,
+  }
+end
+
+--- players with reserves who aren't in the group: a gold line at the top, with the button to clear them, only while there are any
+local function absentLine(f, s)
+  local away = LR.absent(s)
+  if #away == 0 then return end
+  local names = U.map(away, U.short)
+  if #names > 5 then names = { names[1], names[2], names[3], names[4], ("%d more"):format(#names - 4) } end
+  f:strip(#away == 1 and ("%s has reserves but isn't in the group."):format(names[1])
+    or ("%d players with reserves aren't in the group: %s."):format(#away, table.concat(names, ", ")), "warn",
+    { "Clear their reserves", function() askClear(s, away) end })
+end
+
+local function copyForGargul(s)
+  UI.copyBox("Copy for Gargul", "Press Ctrl+C, then paste it into Gargul's soft-reserve importer (/gl sr). softres.it's \"Gargul export\" is the same kind of text.", LR.Gargul.export(s))
+end
+
+--- how the reserves stand, in one line: open or locked, how many in the group reserved, when they lock, and Gargul
+local function status(f, s, leader)
+  local inGroup, reserved = 0, 0
+  for _, m in ipairs(LR.roster()) do
+    inGroup = inGroup + 1
+    if #S.reservesOf(s, m.name) > 0 then reserved = reserved + 1 end
+  end
+  local bits = {}
+  bits[1] = s.locked and "|cffffffffLocked.|r" or "|cffffffffOpen.|r"
+  if s.pv then bits[#bits + 1] = "Only on your screen."
+  elseif inGroup > 0 then bits[#bits + 1] = ("%d of %d in the group reserved"):format(reserved, inGroup)
+  else bits[#bits + 1] = U.plural(#S.players(s), "player") .. " reserved" end
+  if s.al and not s.locked then bits[#bits + 1] = "- locks by itself at " .. LR.Lock.clock(s.al) end
+  if leader and not s.pv and LR.Gargul.available() then
+    local sent = s.sentToGargul
+    bits[#bits + 1] = sent == s.rev and "- Gargul has the reserves as they are now." or sent and "- changed since they went to Gargul" or ""
+  end
+  f:strip(table.concat(bits, " "), s.locked and "warn" or "ok")
+end
+
+--- the leader's actions for the whole list, pinned under it (the rarer ones under More)
+local function leaderBar(s)
   if s.pv then
-    f:panel("Your private session", function(p)
-      p:note("Only you see these reserves. Bring them in from softres.it, or add them by player. Nothing here is sent to anyone or said in chat.")
-      p:buttons({
-        { label = s.sx and "Import from softres.it again" or "Import from softres.it", click = function() UI.importSheet(s) end },
-        { label = "Copy for Gargul", click = function()
-          UI.copyBox("Copy for Gargul", "Press Ctrl+C, then paste it into Gargul's soft-reserve importer (/gl sr).", LR.Gargul.export(s))
-        end },
-      }, "left")
-      clearAbsentButton(p, s)
-    end)
+    -- a private session (Core/Net.lua): only what I bring in. Nothing here is said or sent.
+    UI.pin({
+      { label = s.sx and "Import again" or "Import from softres.it", click = function() UI.importSheet(s) end },
+      { label = "Copy for Gargul", style = "quiet", click = function() copyForGargul(s) end },
+    }, { clearAbsent(s) })
     return
   end
-  swapRequests(f, s)
   local gargul = LR.Gargul.available()
-  f:panel("Raid leader", function(p)
-    local sent = s.sentToGargul
-    if gargul then
-      if sent == s.rev then p:note("Gargul has the reserves as they are now.", K.GREEN)
-      elseif sent then p:note("Reserves changed since they went to Gargul: send them again.", K.GOLD)
-      else p:note("Send the reserves to Gargul when everyone's in. Locking the reserves sends them too.") end
-    else
-      p:note("Gargul isn't loaded on this character. Copy the reserves and paste them into Gargul's soft-reserve importer (/gl sr) on the character running loot.")
-    end
-    p:buttons({
-      { label = "Send to Gargul", disabled = not gargul, click = function()
-        local ok, why = LR.Gargul.send(s, true)
-        UI.toast(ok and "Gargul has the reserves." or why)
-        UI.render()
-      end },
-      { label = "Copy for Gargul", click = function()
-        UI.copyBox("Copy for Gargul", "Press Ctrl+C, then paste it into Gargul's soft-reserve importer (/gl sr). softres.it's \"Gargul export\" is the same kind of text.", LR.Gargul.export(s))
-      end },
-    }, "left")
-    p:buttons({ { label = s.sx and "Import from softres.it again" or "Import from softres.it", click = function() UI.importSheet(s) end } }, "left")
-    p:buttons({
-      { label = s.locked and "Unlock reserves" or "Lock reserves", click = function() LR.setLocked(s, not s.locked) end },
-      { label = "Post in raid chat", disabled = LR.groupChannel() == nil, click = function()
-        if LR.Whisper.announce(s) then UI.toast("Posted.") end
-      end },
-    }, "left")
-    local missing = LR.groupChannel() and #LR.Whisper.notReserved(s) or 0
-    p:buttons({
-      { label = missing > 0 and ("Remind who hasn't reserved (" .. missing .. ")") or "Remind who hasn't reserved", disabled = missing == 0, click = function()
-        local ok, why = LR.Whisper.remind(s)
-        UI.toast(ok and ("Reminded %s in raid chat."):format(U.plural(why, "player")) or why)
-      end },
-    }, "left")
-    clearAbsentButton(p, s)
-  end)
+  local missing = LR.groupChannel() and #LR.Whisper.notReserved(s) or 0
+  local sent = s.sentToGargul
+  UI.pin({
+    { label = s.locked and "Unlock reserves" or "Lock reserves", style = s.locked and "quiet" or nil, click = function() LR.setLocked(s, not s.locked) end,
+      tip = s.locked and "Let everyone change their reserves again." or "Nobody can change their reserves (you still can). Locking sends the reserves to Gargul when it's loaded." },
+    { label = "Post in raid chat", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
+      if LR.Whisper.announce(s) then UI.toast("Posted.") end
+    end },
+    { label = missing > 0 and ("Remind (" .. missing .. ")") or "Remind", style = "quiet", disabled = missing == 0, click = function()
+      local ok, why = LR.Whisper.remind(s)
+      UI.toast(ok and ("Reminded %s in raid chat."):format(U.plural(why, "player")) or why)
+    end, tip = "One raid line naming who in the group hasn't reserved, with how to." },
+  }, {
+    { label = "Send to Gargul", disabled = not gargul, click = function()
+      local ok, why = LR.Gargul.send(s, true)
+      UI.toast(ok and "Gargul has the reserves." or why)
+      UI.render()
+    end, note = not gargul and "Gargul isn't loaded on this character: copy the reserves for the character running loot."
+      or sent == s.rev and "Gargul has the reserves as they are now." or sent and "Reserves changed since they went to Gargul." or "Locking the reserves sends them too." },
+    { label = "Copy for Gargul", click = function() copyForGargul(s) end },
+    { label = s.sx and "Import from softres.it again" or "Import from softres.it", click = function() UI.importSheet(s) end },
+    { label = "Give extra reserves", click = function() UI.extraSheet(s) end },
+    clearAbsent(s),
+  })
 end
 
 --- picks an item for something (a sheet), then calls done(id): from the session's raid, the items it knows
@@ -275,7 +294,7 @@ function UI.extraSheet(s, preset)
     local count = 0
     for _ in pairs(picked) do count = count + 1 end
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = count > 0 and ("Save for " .. U.plural(count, "player")) or "Save", disabled = count == 0, click = function()
         h.close()
         local lost = {}
@@ -314,7 +333,7 @@ function UI.countsSheet(opts)
       else f:note(why, { 1, 0.35, 0.29 }) end
     end
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", disabled = not list, click = function() h.close() opts.apply(list) end },
     })
   end)
@@ -356,34 +375,37 @@ function UI.pickLeader(title, done)
     "Only players whose LootRuler can take the reserves over are listed. Players with an older LootRuler, or none, aren't.")
 end
 
-local function byItem(f, s, leader)
-  local hr = U.keys(s.hr)
+--- whether a search matches words (empty matches everything)
+local function hit(q, text) return q == "" or (text or ""):lower():find(q, 1, true) ~= nil end
+
+local function byItem(f, s, leader, q)
+  local hr = U.filter(U.keys(s.hr), function(id) return hit(q, LR.itemName(id)) end)
   if #hr > 0 then
-    f:panel("Hard reserves", function(p)
-      for _, id in ipairs(hr) do
-        local h = s.hr[id]
-        local b = K.get(p.owner, "item", p.parent)
-        local sub = (h.f ~= "" and ("For " .. h.f) or "Not soft reservable") .. (h.n ~= "" and ("  -  " .. h.n) or "")
-        K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), sub, "|cffff5a4aHR|r")
-        b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
-        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        p:place(b, 36)
-        p:gap(3)
-      end
-    end)
+    f:heading("Hard reserves", U.plural(#hr, "item"))
+    for _, id in ipairs(hr) do
+      local h = s.hr[id]
+      local b = K.get(f.owner, "item", f.parent)
+      local sub = (h.f ~= "" and ("For " .. h.f) or "Not soft reservable") .. (h.n ~= "" and ("  -  " .. h.n) or "")
+      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), sub, "|cffff5a4aHR|r")
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      f:place(b, 36)
+      f:gap(3)
+    end
+    f:gap(6)
   end
   local list = {}
-  for id, who in pairs(S.byItem(s)) do list[id] = who end      -- (a copy: items are taken off it below)
+  for id, who in pairs(S.byItem(s)) do
+    -- (a search matches the item's name or a reserver's)
+    local match = hit(q, LR.itemName(id))
+    if not match then for _, w in ipairs(who) do if hit(q, U.short(w[1])) then match = true end end end
+    if match then list[id] = who end
+  end
   local total = 0
   for _ in pairs(list) do total = total + 1 end
-  local hd = K.get(f.owner, "head", f.parent)
-  hd.text:SetText("Soft reserves")
-  hd.right:SetText(U.plural(total, "item"))
-  hd:SetWidth(f.width)
-  f:place(hd, 22)
-  f:gap(4)
-  if total == 0 then f:note("Nobody has reserved anything yet.") return end
-  -- each boss with reserved items opens and closes (closed to start with); its line says how many
+  f:heading("Soft reserves", U.plural(total, "item"))
+  if total == 0 then f:note(q ~= "" and "Nothing reserved matches your search." or "Nobody has reserved anything yet.") return end
+  -- each boss with reserved items opens and closes (closed to start with; a search opens them); its line says how many
   local byItem = S.byItem(s)
   local function count(id) local n = 0 for _, w in ipairs(byItem[id] or {}) do n = n + w[2] end return n end
   local function rows(p, ids)
@@ -416,84 +438,101 @@ local function byItem(f, s, leader)
     for _, id in ipairs(rest) do n = n + count(id) end
     sections[#sections + 1] = { name = LR.raidOf(s).custom and "Reserved items" or "Other items", ids = rest, n = n }
   end
-  UI.bossChips(f, "reserves", U.map(sections, function(x) return { s.raid, x.name } end))
+  if q == "" then UI.bossChips(f, "reserves", U.map(sections, function(x) return { s.raid, x.name } end)) end
   for _, x in ipairs(sections) do
     UI.bossFold(f, "reserves", s.raid, x.name, ("%s, %s"):format(U.plural(#x.ids, "item"), U.plural(x.n, "reserve")),
-      function(p) rows(p, x.ids) end)
+      function(p) rows(p, x.ids) end, q ~= "")
   end
 end
 
-local function byPlayer(f, s, leader)
+--- one player's reserves, for the leader: take one away, add one, extra reserves, +1s
+local function playerSheet(s, name, class)
+  UI.openSheet(U.short(name), function(f, h)
+    local items = S.reservesOf(s, name)
+    local limit, extra = S.limit(s, name), S.extra(s, name)
+    f:text(("%s: %d of %d reserved%s."):format(U.classText(U.short(name), class or LR.classOf(name)), #items, limit,
+      extra > 0 and (", with " .. U.plural(extra, "extra reserve")) or ""))
+    for _, id in ipairs(items) do
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), "",
+        { text = "x", tip = "Take this reserve away from " .. U.short(name), click = function()
+          local ok, why = LR.leaderRemove(s, name, id)
+          if not ok then UI.refused(why) end
+          h.redraw(true)
+        end })
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      f:place(b, 36)
+      f:gap(2)
+    end
+    f:gap(4)
+    f:buttons({
+      #items < limit and { label = "Add a reserve", click = function()
+        h.close()
+        UI.pickItem(s, "Reserve for " .. U.short(name), nil, function(id) return not s.hr[id] end, { player = name, class = class })
+      end } or nil,
+      { label = extra > 0 and ("Extra reserves: " .. extra) or "Extra reserves", style = "quiet", click = function() h.close() UI.extraSheet(s, { name }) end },
+    }, "left")
+    if s.plusOne then
+      local po = S.plusOnes(s, name)
+      f:inline(("+1s: %d"):format(po), {
+        { "+1", function() LR.adjustPlusOne(s, name, 1) h.redraw(true) end },
+        po > 0 and { "-1", function() LR.adjustPlusOne(s, name, -1) h.redraw(true) end } or false,
+      })
+    end
+  end)
+end
+UI.reservesPlayerSheet = playerSheet
+
+local function byPlayer(f, s, leader, q)
   -- everyone in the group, and everyone who reserved
   local people, seen = {}, {}
   for _, p in ipairs(S.players(s)) do people[#people + 1] = { name = p.name, class = p.class } seen[U.foldCase(p.name)] = true end
-  local missing = 0
   for _, m in ipairs(LR.roster()) do
     if not seen[U.foldCase(m.name)] then
       people[#people + 1] = { name = m.name, class = m.class, none = true }
       seen[U.foldCase(m.name)] = true
-      missing = missing + 1
     end
   end
   table.sort(people, function(a, b)
     if (a.none or false) ~= (b.none or false) then return b.none == true end
     return a.name < b.name
   end)
-  if missing > 0 then f:note(("%s in the group %s reserved anything yet."):format(U.plural(missing, "player"), missing == 1 and "hasn't" or "haven't"), K.GOLD) end
-  -- who in the group we haven't heard from a LootRuler of: they reserve by whisper
-  local without = 0
-  for _, m in ipairs(LR.roster()) do if not LR.versionOf(m.name) then without = without + 1 end end
-  if without > 0 then
-    f:note(("%s in the group %s LootRuler, as far as your addon can tell: they can whisper %s \"!reserve [item]\"."):format(
-      U.plural(without, "player"), without == 1 and "doesn't have" or "don't have", leader and "you" or U.short(s.leader)))
-  end
   -- names from softres.it that aren't anyone in the group, but could be (the leader picks)
   local fixes = {}
   if leader then for _, x in ipairs(LR.Gargul.unmatched(s, LR.roster())) do fixes[x.from] = x end end
+  local shown = 0
   for _, person in ipairs(people) do
     local items = S.reservesOf(s, person.name)
-    local class = person.class or LR.classOf(person.name)
-    local hd = K.get(f.owner, "head", f.parent)
-    local inGroup = LR.inGroup(person.name)
-    hd.text:SetText(U.classText(U.short(person.name), class) .. ((inGroup and not LR.versionOf(person.name)) and "  |cff9d9d9dno addon|r" or ""))
-    local po = s.plusOne and S.plusOnes(s, person.name) or 0
-    local limit, extra = S.limit(s, person.name), S.extra(s, person.name)
-    hd.right:SetText((person.none and "|cffffd100nothing reserved|r" or (#items .. " / " .. limit)) .. (extra > 0 and ("  |cff69ccf0+" .. extra .. " extra|r") or "")
-      .. (po > 0 and ("  |cff1eff00+" .. po .. "|r") or ""))
-    hd:SetWidth(f.width)
-    f:place(hd, 22)
-    f:gap(3)
-    if fixes[person.name] then UI.nameFix(f, s, fixes[person.name]) end
+    local names = {}
+    local counts, order = {}, {}
     for _, id in ipairs(items) do
-      local b = K.get(f.owner, "item", f.parent)
-      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), LR.itemKind(id), "",
-        leader and { text = "x", tip = "Take this reserve away from " .. U.short(person.name), click = function()
-          local ok, why = LR.leaderRemove(s, person.name, id)
-          if not ok then UI.refused(why) end
-        end } or nil)
-      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, id) end)
-      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      f:place(b, 36)
-      f:gap(2)
+      if not counts[id] then order[#order + 1] = id end
+      counts[id] = (counts[id] or 0) + 1
     end
-    if leader then
-      local list = {}
-      if #items < limit then
-        list[#list + 1] = { label = "Add a reserve for " .. U.short(person.name), click = function()
-          UI.pickItem(s, "Reserve for " .. U.short(person.name), nil, function(id) return not s.hr[id] end,
-            { player = person.name, class = class })
-        end }
-      end
-      local extra = S.extra(s, person.name)
-      list[#list + 1] = { label = extra > 0 and ("Extra reserves: " .. extra) or "Extra reserves", click = function() UI.extraSheet(s, { person.name }) end }
-      if s.plusOne then
-        list[#list + 1] = { label = "+1", width = 44, click = function() LR.adjustPlusOne(s, person.name, 1) end }
-        list[#list + 1] = { label = "-1", width = 44, disabled = po == 0, click = function() LR.adjustPlusOne(s, person.name, -1) end }
-      end
-      if #list > 0 then f:buttons(list, "left") end
+    local match = hit(q, U.short(person.name))
+    for _, id in ipairs(order) do
+      names[#names + 1] = LR.coloredName(id) .. (counts[id] > 1 and (" x" .. counts[id]) or "")
+      if hit(q, LR.itemName(id)) then match = true end
     end
-    f:gap(6)
+    if match then
+      shown = shown + 1
+      local class = person.class or LR.classOf(person.name)
+      local inGroup = LR.inGroup(person.name)
+      local limit, extra = S.limit(s, person.name), S.extra(s, person.name)
+      local po = s.plusOne and S.plusOnes(s, person.name) or 0
+      local sub = { ("%d of %d"):format(#items, limit) }
+      if extra > 0 then sub[#sub + 1] = "+" .. extra .. " extra" end
+      if po > 0 then sub[#sub + 1] = "|cff1eff00+" .. po .. "|r" end
+      if inGroup and not LR.versionOf(person.name) then sub[#sub + 1] = "no addon" end
+      local title = U.classText(U.short(person.name), class) .. ((not inGroup and IsInGroup() and not s.pv) and "  |cff9d9d9dnot in group|r" or "")
+      local link = leader and { #items == 0 and "Add" or "Change", function() playerSheet(s, person.name, class) end } or nil
+      local b = f:entry(title, table.concat(sub, " - "), #names > 0 and table.concat(names, "\n") or "|cff9d9d9dHasn't reserved|r", link, 130)
+      if leader then b:SetScript("OnClick", function() playerSheet(s, person.name, class) end) end
+      if fixes[person.name] then UI.nameFix(f, s, fixes[person.name]) f:gap(4) end
+    end
   end
+  if shown == 0 then f:note(q ~= "" and "Nobody matches your search." or "Nobody has reserved anything yet.") end
 end
 
 function UI.reservesView(f, s)
@@ -504,10 +543,34 @@ function UI.reservesView(f, s)
     return
   end
   local leader = LR.isLeader(s)
-  if leader then leaderTools(f, s) end
-  f:chips({
+  if leader and not s.pv then swapRequests(f, s) end
+  status(f, s, leader)
+  if leader then absentLine(f, s) end
+  -- by item or by player, and a search across both
+  local chips = K.flow(f.owner, f.parent, f.x, f.y, 180)
+  chips:chips({
     { label = "By item", on = UI.view == "item", click = function() UI.view = "item" UI.render() end },
     { label = "By player", on = UI.view == "player", click = function() UI.view = "player" UI.render() end },
   })
-  if UI.view == "player" then byPlayer(f, s, leader) else byItem(f, s, leader) end
+  local box = K.get(f.owner, "edit", f.parent)
+  box:SetPoint("TOPLEFT", f.parent, "TOPLEFT", f.x + 150, -(f.y - 1))
+  box:SetSize(f.width - 156, 22)
+  box:SetText(UI.resQ or "")
+  K.setHint(box, UI.view == "player" and "Search players or items" or "Search items or players")
+  local seq = 0
+  K.onText(box, function(self, user)
+    if not user then return end
+    UI.resQ = self:GetText()
+    UI.resFocus = true
+    seq = seq + 1
+    local mine = seq
+    C_Timer.After(0.15, function() if mine == seq then UI.render() end end)
+  end)
+  box:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.resFocus = false end)
+  box:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.resFocus = false end)
+  if UI.resFocus then K.refocus(box) end
+  f.y = chips.y + 4
+  local q = U.lower(U.trim(UI.resQ or ""))
+  if UI.view == "player" then byPlayer(f, s, leader, q) else byItem(f, s, leader, q) end
+  if leader then leaderBar(s) end
 end

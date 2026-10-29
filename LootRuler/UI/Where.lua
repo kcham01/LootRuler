@@ -64,7 +64,7 @@ function UI.newRaidPrompt(s, where, why, pretend)
         UI.toast(("%s reserves are open."):format(LR.raidOf(n).name))
         UI.go("session")
       end },
-      { label = "Keep " .. was, click = function() h.close() end },
+      { label = "Keep " .. was, style = "quiet", click = function() h.close() end },
     }, "left")
     local set = LR.db.settings
     f:chips({ { tick = true, label = "Don't ask again", on = not set.raidPrompt, click = function() set.raidPrompt = not set.raidPrompt h.redraw(true) end,

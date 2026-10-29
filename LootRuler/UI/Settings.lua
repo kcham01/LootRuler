@@ -16,42 +16,96 @@ local function toggle(p, key, label, what, after)
   p:note(what)
 end
 
---- which sections are open (saved, per character): title -> true
-local function openSections()
-  if type(LR.db.ui.settingsOpen) ~= "table" then LR.db.ui.settingsOpen = {} end
-  return LR.db.ui.settingsOpen
-end
-local titles = {}            -- every section's title, in order, as drawn (for "Open all")
+-- The sections go down the side, under three headings; the one picked is shown beside them (kept per character in
+-- db.ui.settingsPage). "All settings" shows every section on one page, and the search box shows every section whose
+-- name or line matches.
+local sections, groupName = {}, nil
 
---- a section that opens and closes: its title, a line saying what's in it, and its contents
+--- a section: its title, a line saying what's in it now, and its contents (drawn when it's shown)
 local function section(f, title, what, fill)
-  titles[#titles + 1] = title
-  local open = openSections()
-  f:fold(title, what, open[title] == true, function() open[title] = not open[title] or nil UI.render() end, fill)
+  sections[#sections + 1] = { group = groupName, title = title, what = what, fill = fill }
 end
 
---- a group of sections under a heading
-local function group(f, text, note)
-  f:gap(4)
-  f:text(text, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
-  if note then f:note(note) end
-  f:gap(2)
+--- the sections after this go under a heading
+local function group(f, text)
+  groupName = text
+end
+
+local NAV = 128              -- the list of sections down the side
+local SIDE = NAV + 8         -- and room beside it for its own scroll bar
+
+--- draws the list down the side and the section(s) shown beside it
+local function drawSections(f)
+  local page = LR.db.ui.settingsPage
+  local q = U.lower(U.trim(UI.setQ or ""))
+  local function matches(x) return q == "" or x.title:lower():find(q, 1, true) or (x.what or ""):lower():find(q, 1, true) end
+  local known = page == "all"
+  for _, x in ipairs(sections) do if x.title == page then known = true end end
+  if not known then page = sections[1].title LR.db.ui.settingsPage = page end
+  -- down the side, scrolling on its own (UI.pinSide): the search box, then each heading and its sections
+  local shown, lastGroup = {}, nil
+  for _, x in ipairs(sections) do if matches(x) then shown[#shown + 1] = x end end
+  UI.pinSide(SIDE, function(nav)
+    local box = K.get(nav.owner, "edit", nav.parent)
+    nav:place(box, 22, 4, NAV - 6)
+    box:SetText(UI.setQ or "")
+    K.setHint(box, "Search")
+    local seq = 0
+    K.onText(box, function(self, user)
+      if not user then return end
+      UI.setQ = self:GetText()
+      UI.setFocus = true
+      seq = seq + 1
+      local mine = seq
+      C_Timer.After(0.15, function() if mine == seq then UI.render() end end)
+    end)
+    box:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.setFocus = false end)
+    box:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.setFocus = false end)
+    if UI.setFocus then K.refocus(box) end
+    nav:gap(6)
+    local function navItem(title, label)
+      local b = K.get(nav.owner, "nav", nav.parent)
+      local h = K.setNav(b, NAV, label or title, q == "" and page == title)
+      b:SetScript("OnClick", function()
+        LR.db.ui.settingsPage = title
+        UI.setQ, UI.setFocus = "", false
+        UI.toTop = true
+        UI.render()
+      end)
+      nav:place(b, h)
+      nav:gap(1)
+    end
+    for _, x in ipairs(shown) do
+      if x.group ~= lastGroup then
+        lastGroup = x.group
+        nav:gap(4)
+        nav:text(x.group, { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
+      end
+      navItem(x.title)
+    end
+    nav:gap(8)
+    navItem("all", "All settings")
+  end)
+  -- beside it (the screen's own scrolling part): the section picked, or every one (All settings, or a search)
+  local content = K.flow(f.owner, f.parent, f.x, f.y, f.width - UI.sideWidth(SIDE))
+  local list = (q ~= "" or page == "all") and shown or {}
+  if q == "" and page ~= "all" then for _, x in ipairs(sections) do if x.title == page then list = { x } end end end
+  if #list == 0 then content:note("No section matches your search.") end
+  for i, x in ipairs(list) do
+    if i > 1 then content:gap(10) end
+    content:text(x.title, { font = "GameFontNormalLarge", color = K.GOLD, gap = 2 })
+    if x.what and x.what ~= "" then content:note(x.what) end
+    content:gap(2)
+    x.fill(content)
+  end
+  f.y = content.y
 end
 
 local function count(n, one, zero) return n == 0 and zero or U.plural(n, one) end
 
 function UI.settingsView(f)
   local set = LR.db.settings
-  titles = {}
-  local open = openSections()
-  local anyOpen = next(open) ~= nil
-  f:chips({
-    { label = "Open all", click = function() for _, t in ipairs(titles) do open[t] = true end UI.render() end,
-      tip = "Opens every section below." },
-    { label = "Close all", click = function() for k in pairs(open) do open[k] = nil end UI.render() end,
-      tip = "Closes every section, so you see just their names." },
-  })
-  if not anyOpen then f:note("Click a section to open it.") end
+  sections, groupName = {}, nil
 
   group(f, "For everyone")
 
@@ -72,8 +126,8 @@ function UI.settingsView(f)
     end
     p:chips(sizes, { gap = 2 })
     p:buttons({
-      { label = "Try the roll window", click = function() UI.testRoll() end },
-      { label = "Put windows back", click = function()
+      { label = "Try the roll window", style = "quiet", click = function() UI.testRoll() end },
+      { label = "Put windows back", style = "link", click = function()
         LR.db.ui.rollPoint, LR.db.ui.masterPoint = nil, nil
         UI.resetPositions()
         UI.toast("Roll windows and the loot master window are back where they started.")
@@ -219,7 +273,7 @@ function UI.settingsView(f)
     end
     p:buttons({
       { label = "Add a note", click = function() UI.noteSheet() end },
-      { label = "Bring in or copy out", click = function() UI.notesSheet() end },
+      { label = "Bring in or copy out", style = "quiet", click = function() UI.notesSheet() end },
     }, "left")
   end)
 
@@ -232,7 +286,7 @@ function UI.settingsView(f)
     end
     p:buttons({
       { label = "Bring in wishlists", click = function() UI.wishSheet() end },
-      { label = "Forget them", disabled = items == 0, click = function()
+      { label = "Forget them", style = "link", danger = true, disabled = items == 0, click = function()
         UI.confirm("Forget the wishlists", "The wishlists you brought in are taken off this character.", "Forget", function()
           LR.db.wish = {}
           LR.changed("notes")
@@ -260,8 +314,34 @@ function UI.settingsView(f)
     p:buttons({ { label = "Add a rule", click = function() UI.addLootRule() end } }, "left")
   end)
 
-  group(f, "This window, and more")
-  section(f, "This window", "The minimap button.", function(p)
+  group(f, "More")
+  section(f, "Themes", "How LootRuler looks: " .. (K.THEMES[set.theme] or K.T).name .. ".", function(p)
+    p:note("A theme changes only how LootRuler looks. Every window, button and setting stays where it is and works the same.")
+    local items = {}
+    for _, key in ipairs(K.THEME_ORDER) do
+      local t = K.THEMES[key]
+      items[#items + 1] = { label = t.name, key = key, on = set.theme == key, tip = t.what }
+    end
+    p:row("Theme", function(r)
+      r:place(K.dropdown(r.owner, r.parent, 180, (K.THEMES[set.theme] or K.T).name, items, function(it)
+        if it.key == set.theme then return end
+        set.theme = it.key
+        UI.render()
+        if it.key ~= K.T.key then
+          UI.confirm("Change the look?", ("LootRuler changes to the %s look when your interface reloads. Reload now?"):format(it.label),
+            "Yes", function() ReloadUI() end, "No")
+        end
+      end, "theme"), 26)
+      r:gap(4)
+    end, { lw = 80 })
+    p:note((K.THEMES[set.theme] or K.T).what)
+    -- (every frame is made in the look in use, so a new one comes in with a reload)
+    if set.theme ~= K.T.key then
+      p:note(("The %s look comes in when your interface reloads."):format(K.THEMES[set.theme].name), K.GOLD)
+      p:buttons({ { label = "Reload now", click = function() ReloadUI() end } }, "left")
+    end
+  end)
+  section(f, "Map button", "The button on the minimap.", function(p)
     p:chips({ { tick = true, label = "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap
       if LR.minimap then LR.minimap:SetShown(not LR.db.ui.hideMinimap) end
@@ -281,12 +361,13 @@ function UI.settingsView(f)
   section(f, "About", "Version " .. LR.VERSION .. ", who has LootRuler, what's new and the tour.", function(p)
     p:kv({ { "Version", LR.VERSION } })
     p:gap(4)
-    p:buttons({ { label = "Who has LootRuler", click = function() UI.versionSheet() end },
-      { label = "What's new", click = function() UI.whatsNew() end },
-      { label = "The tour", click = function() UI.tour(1) end } }, "left")
+    p:buttons({ { label = "Who has LootRuler", style = "quiet", click = function() UI.versionSheet() end },
+      { label = "What's new", style = "quiet", click = function() UI.whatsNew() end },
+      { label = "The tour", style = "quiet", click = function() UI.tour(1) end } }, "left")
     p:note("/lr opens this window. /lr help lists the rest.")
     p:note("Bugs and ideas: github.com/kcham01/LootRuler")
   end)
+  drawSections(f)
 end
 
 --- a sheet to make a loot rule: what it's about, then who gets it
@@ -323,7 +404,7 @@ function UI.addLootRule()
     if what and to then
       f:note(("%s will go to %s."):format(LR.AutoLoot.whatText(what), LR.AutoLoot.toText(to, LR.Rolls.session())), K.GREEN)
     end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and to), click = function() LR.AutoLoot.add(what, to) h.close() UI.render() end } })
   end)
 end
@@ -354,7 +435,7 @@ function UI.noteSheet(id)
     n:SetText(note)
     n:SetScript("OnTextChanged", function(self, user) if user then note = self:GetText() end end)
     f:note("Short and plain: it goes in raid chat. Leave it empty to take the note off.")
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Save", disabled = not id, click = function() LR.setNote(id, note) h.close() UI.render() end } })
   end)
 end
@@ -381,7 +462,7 @@ function UI.wishSheet()
         f:note(why, K.RED)
       end
     end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", disabled = not lists, click = function()
         LR.db.wish = LR.Prio.checkWish(lists)
         LR.changed("notes")
@@ -409,7 +490,7 @@ function UI.notesSheet()
     K.setEditMemo(into, f.width, 110, pasted, function(t) pasted = t end)
     out.edit:ClearFocus()
     f:gap(6)
-    f:buttons({ { label = "Close", click = function() h.close() end },
+    f:buttons({ { label = "Close", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", click = function()
         local notes, bad = LR.Notes.parse(pasted)
         local n = 0
@@ -442,7 +523,7 @@ function UI.addRollKind()
     n:SetScript("OnTextChanged", function(self, user) if user then num = self:GetText() end end)
     f:note("A number from 2 to 98 that no other kind uses.")
     if why then f:note(why, K.RED) end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add it", click = function()
         local list, no = R.addKind(LR.db.settings.rollKinds, name, num)
         if not list then why = no h.redraw(true) return end
@@ -480,7 +561,7 @@ function UI.addGroupRule()
     for _, a in ipairs(LR.GroupLoot.choices()) do acts[#acts + 1] = { label = a[2], on = act == a[1], click = function() act = a[1] h.redraw(true) end } end
     f:chips(acts)
     if what and act then f:note(("%s: %s."):format(LR.AutoLoot.whatText(what), LR.GroupLoot.actText(act)), K.GREEN) end
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add the rule", disabled = not (what and act), click = function() LR.GroupLoot.add(what, act) h.close() UI.render() end } })
   end)
 end
@@ -507,7 +588,7 @@ function UI.addRollRule()
       { label = "Always main spec", on = action == "MS", click = function() action = "MS" h.redraw(true) end },
       { label = "Always off spec", on = action == "OS", click = function() action = "OS" h.redraw(true) end },
     })
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Add the rule", disabled = not (id and action), click = function() LR.AutoRoll.set(id, action) h.close() UI.render() end } })
   end)
 end
@@ -564,7 +645,7 @@ function UI.versionSheet()
       f:gap(6)
       f:note("Someone who just joined, or whose addon hasn't said anything yet, shows as having none until you ask again.")
       f:buttons({
-        { label = "Ask again", disabled = LR.groupChannel() == nil, click = function()
+        { label = "Ask again", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
           LR.query()
           UI.toast("Asked everyone. Answers come in over a few seconds.")
         end },

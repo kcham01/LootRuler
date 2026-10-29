@@ -7,19 +7,21 @@ local floor, max, min = math.floor, math.max, math.min
 
 local WIDTH, HEIGHT = 460, 640
 local TOP_H, TAB_H, PAD = 54, 30, 14
+local SIDE_GAP = 12           -- between a list down the side (UI.pinSide) and the scrolling part
+local BAR_H = 32               -- the bar of a screen's main actions, pinned above the tabs (UI.pin)
 LR.CONTENT_W = WIDTH - 2 * PAD - 22
 
 local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
-local win, top, view, tabsBar, toastFrame
-local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
+local win, top, view, tabsBar, toastFrame, bar, side
+local TABS = { { "reserve", "My reserves" }, { "reserves", "Reserved" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
 
 ---------------------------------------------------------------------- the window
 local function build()
   win = CreateFrame("Frame", "LootRulerFrame", UIParent, "BackdropTemplate")
   win:SetSize(WIDTH, HEIGHT)
-  win:SetBackdrop(K.ROCK)
+  K.skin(win, "rock")
   win:SetFrameStrata("HIGH")
   win:SetToplevel(true)
   win:SetClampedToScreen(true)
@@ -47,7 +49,7 @@ local function build()
   end)
   UI.catcher = catcher
 
-  local close = CreateFrame("Button", nil, win, "UIPanelCloseButton")
+  local close = K.closeButton(win)
   close:SetPoint("TOPRIGHT", -4, -4)
   close:SetScript("OnClick", function() win:Hide() end)
 
@@ -77,12 +79,31 @@ local function build()
   top.count.word = K.fs(top.count, "GameFontNormalSmall")
   top.count.word:SetJustifyH("CENTER")
   top.count.word:SetPoint("TOP", 0, -23)
-  top.count:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  K.hover(top.count)
   top.count:SetScript("OnClick", function() UI.go("reserve") end)
 
   view = K.scroller(win)
   view:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
   view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16)
+  -- a list down the side that scrolls on its own (UI.pinSide: the Settings tab's sections), left of the scrolling part
+  side = K.scroller(win)
+  side:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
+  side:SetPoint("BOTTOMRIGHT", view, "BOTTOMLEFT", -SIDE_GAP, 0)
+  side:Hide()
+  UI.sideFrame = side
+
+  -- a screen's main actions, pinned under the scrolling part so they're always there (UI.pin)
+  bar = CreateFrame("Frame", nil, win)
+  bar:SetPoint("BOTTOMLEFT", PAD, TAB_H + 14)
+  bar:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 14)
+  bar:SetHeight(BAR_H)
+  bar.line = bar:CreateTexture(nil, "ARTWORK")
+  bar.line:SetColorTexture(unpack(K.T.line))
+  bar.line:SetHeight(1)
+  bar.line:SetPoint("TOPLEFT", 0, 0)
+  bar.line:SetPoint("TOPRIGHT", 0, 0)
+  bar:Hide()
+  UI.bar = bar
 
   tabsBar = CreateFrame("Frame", nil, win)
   tabsBar:SetPoint("BOTTOMLEFT", 12, 12)
@@ -100,7 +121,7 @@ local function build()
     b.text:SetJustifyV("MIDDLE")
     b.text:SetAllPoints()
     b.text:SetText(t[2])
-    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    K.hover(b)
     b:SetScript("OnClick", function() UI.go(t[1]) end)
     b.id = t[1]
     tabsBar.buttons[i] = b
@@ -108,8 +129,8 @@ local function build()
 
   toastFrame = CreateFrame("Frame", nil, win, "BackdropTemplate")
   toastFrame:SetBackdrop(K.INSET)
-  toastFrame:SetBackdropColor(0, 0, 0, 0.92)
-  toastFrame:SetBackdropBorderColor(1, 0.82, 0, 1)
+  toastFrame:SetBackdropColor(K.bg(0, 0, 0, 0.92))
+  toastFrame:SetBackdropBorderColor(K.edge(1, 0.82, 0, 1))
   toastFrame:SetFrameStrata("DIALOG")
   toastFrame:SetPoint("BOTTOM", win, "BOTTOM", 0, TAB_H + 26)
   toastFrame.text = K.fs(toastFrame, "GameFontHighlight")
@@ -152,7 +173,7 @@ local function drawTop(s)
   if not s then
     top.icon:SetTexture(LR.LOGO)
     top.icon:SetTexCoord(0, 1, 0, 1)
-    top.name:SetText("LootRuler")
+    top.name:SetText(LR.TITLE)
     top.sub:SetText("Soft reserves inside the game")
     top.count:Hide()
     return
@@ -165,7 +186,7 @@ local function drawTop(s)
   if s.gdkp and s.gk then
     top.sub:SetText((LR.isLeader(s) and "Your GDKP" or ("GDKP by " .. U.short(s.leader))) .. " - bids from " .. LR.Gdkp.gold(s.gk.min))
     top.count:Show()
-    top.count:SetBackdropColor(0.1, 0.08, 0.06, 0.9) top.count:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+    top.count:SetBackdropColor(K.bg(0.1, 0.08, 0.06, 0.9)) top.count:SetBackdropBorderColor(K.edge(0.42, 0.33, 0.19, 1))
     top.count.num:SetText(LR.Gdkp.gold(LR.Gdkp.pot(s)))
     top.count.word:SetText("POT") top.count.word:SetTextColor(1, 0.82, 0)
     return
@@ -186,13 +207,13 @@ local function drawTop(s)
   top.count.num:SetText(used .. " / " .. limit)
   local done = used >= limit
   if LR.pending(s) then
-    top.count:SetBackdropColor(0.25, 0.2, 0.03, 0.9) top.count:SetBackdropBorderColor(1, 0.82, 0, 1)
+    top.count:SetBackdropColor(K.bg(0.25, 0.2, 0.03, 0.9)) top.count:SetBackdropBorderColor(K.edge(1, 0.82, 0, 1))
     top.count.word:SetText("NOT SENT YET") top.count.word:SetTextColor(1, 0.82, 0)
   elseif done then
-    top.count:SetBackdropColor(0.05, 0.2, 0.03, 0.9) top.count:SetBackdropBorderColor(0.12, 0.7, 0.1, 1)
+    top.count:SetBackdropColor(K.bg(0.05, 0.2, 0.03, 0.9)) top.count:SetBackdropBorderColor(K.edge(0.12, 0.7, 0.1, 1))
     top.count.word:SetText("RESERVED") top.count.word:SetTextColor(0.12, 1, 0)
   else
-    top.count:SetBackdropColor(0.1, 0.08, 0.06, 0.9) top.count:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+    top.count:SetBackdropColor(K.bg(0.1, 0.08, 0.06, 0.9)) top.count:SetBackdropBorderColor(K.edge(0.42, 0.33, 0.19, 1))
     top.count.word:SetText((limit - used) .. " LEFT")
     top.count.word:SetTextColor(1, 0.82, 0)
   end
@@ -215,16 +236,19 @@ function UI.render()
   local tw = (WIDTH - 24 - (#shown - 1) * 4) / #shown
   for i, b in ipairs(shown) do
     b:SetWidth(tw)
+    -- (seven tabs leave little room: a name that doesn't fit goes smaller)
+    b.text:SetFontObject("GameFontNormal")
+    if b.text:GetStringWidth() > tw - 6 then b.text:SetFontObject("GameFontNormalSmall") end
     b:ClearAllPoints()
     b:SetPoint("LEFT", (i - 1) * (tw + 4), 0)
   end
   for _, b in ipairs(tabsBar.buttons) do
     local on = b.id == UI.tab
-    b:SetBackdropColor(on and 0.35 or 0.1, on and 0.27 or 0.08, on and 0.07 or 0.06, 1)
-    b:SetBackdropBorderColor(on and 1 or 0.42, on and 0.82 or 0.33, on and 0 or 0.19, 1)
+    K.paint(b, on and K.T.tabOnBg or K.T.tabBg, on and K.T.tabOnEdge or K.T.tabEdge)
     b.text:SetTextColor(on and 1 or 0.8, on and 0.82 or 0.7, on and 0 or 0.5)
   end
   K.release("view")
+  UI.pinned, UI.side = nil, nil
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
   local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, guild = UI.guildView, settings = UI.settingsView, test = UI.testView }
   local ok, err = pcall(screens[UI.tab], flow, s)
@@ -232,8 +256,100 @@ function UI.render()
     flow:text("|cffff5a4aSomething went wrong drawing this screen:|r " .. tostring(err), { font = "GameFontHighlightSmall" })
     geterrorhandler()(err)
   end
-  view:setContentHeight(flow.y + 8, keep)
+  UI.drawBar()
+  UI.drawSide(keep)
+  -- (UI.toTop: the screen's own part starts at the top again, a list down the side stays where it was)
+  view:setContentHeight(flow.y + 8, keep and not UI.toTop)
+  UI.toTop = nil
   for _, e in ipairs(UI.openSheets()) do e.handle.redraw(true) end
+end
+
+--- a screen's main actions, pinned under it (call while drawing the screen): list = buttons ({ label, click, style }, the
+--- first usually the red one), more = the rarer ones, behind a "More" button that opens them in a sheet
+function UI.pin(list, more) UI.pinned = { list = list, more = more } end
+--- something else pinned under the screen (your reserves, on the Reserve tab): fill(flow) draws it, as tall as it needs
+function UI.pinPanel(fill) UI.pinned = { fill = fill } end
+
+--- a list down the left of the screen that scrolls on its own (call while drawing the screen): fill(flow) draws it,
+--- width wide; the screen's own part is that much (and a gap) narrower, so its flow is f.width - UI.sideWidth(width)
+function UI.pinSide(width, fill) UI.side = { width = width, fill = fill } end
+function UI.sideWidth(width) return width + SIDE_GAP end
+
+function UI.drawSide(keep)
+  K.release("side")
+  local p = UI.side
+  if not p then side:Hide() return end
+  side:Show()
+  local flow = K.flow("side", side.child, 0, 4, p.width)
+  p.fill(flow)
+  side:setContentHeight(flow.y + 8, keep)
+end
+
+--- the rarer actions of a screen, one per line
+function UI.moreSheet(title, list)
+  UI.openSheet(title or "More", function(f, h)
+    for _, c in ipairs(list) do if c then
+      if c.heading then
+        f:text(c.heading, { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+      else
+        f:buttons({ { label = c.label, style = c.danger and "link" or "quiet", danger = c.danger, disabled = c.disabled, width = c.danger and nil or f.width,
+          click = function() h.close() c.click() end } }, "left")
+        if c.note then f:note(c.note) f:gap(2) end
+      end
+    end end
+  end)
+end
+
+function UI.drawBar()
+  K.release("bar")
+  local p = UI.pinned
+  view:ClearAllPoints()
+  view:SetPoint("TOPLEFT", PAD + (UI.side and (UI.side.width + SIDE_GAP) or 0), -(TOP_H + 8))
+  if not p then
+    bar:Hide()
+    view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16)
+    return
+  end
+  bar:Show()
+  local width = WIDTH - 2 * PAD
+  if p.fill then
+    local flow = K.flow("bar", bar, 0, 8, width)
+    p.fill(flow)
+    local h = math.min(HEIGHT - 260, flow.y + 2)
+    bar:SetHeight(h)
+    view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16 + h + 2)
+    return
+  end
+  bar:SetHeight(BAR_H)
+  view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16 + BAR_H + 2)
+  local more = {}
+  for _, c in ipairs(p.more or {}) do if c then more[#more + 1] = c end end
+  -- "More" on the right; buttons that don't fit go into it too
+  local moreB
+  local function makeMore()
+    if moreB or #more == 0 then return end
+    moreB = K.button("bar", bar, "quiet", "More...", 60)
+    moreB:SetScript("OnClick", function() UI.moreSheet("More", more) end)
+    moreB:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 0, -5)
+  end
+  makeMore()
+  local x = 0
+  local room = width - (moreB and (moreB:GetWidth() + 8) or 0)
+  for i, c in ipairs(p.list or {}) do if c then
+    local b = K.button("bar", bar, c.style, c.label, c.style == "quiet" and 60 or nil, room)
+    if x > 0 and x + b:GetWidth() > room then
+      -- (no room: this one and the rest go under More)
+      b:Hide()
+      for j = #p.list, i, -1 do if p.list[j] then table.insert(more, 1, p.list[j]) end end
+      makeMore()
+      break
+    end
+    if c.disabled then b:Disable() if b.text then b.text:SetTextColor(0.5, 0.5, 0.5) end end
+    b:SetScript("OnClick", c.click)
+    if c.tip then K.tooltipOn(b, function(tt) tt:SetText(c.tip, 1, 1, 1, 1, true) end) end
+    b:SetPoint("TOPLEFT", bar, "TOPLEFT", x, -(5 + math.floor((24 - b:GetHeight()) / 2)))
+    x = x + b:GetWidth() + 6
+  end end
 end
 
 -- redraws soon (item names arrive by the hundred when a raid's items load)
@@ -290,7 +406,7 @@ local sheets, stack = {}, {}
 
 local function makeSheet(depth)
   local s = CreateFrame("Frame", nil, win, "BackdropTemplate")
-  s:SetBackdrop(K.ROCK)
+  K.skin(s, "sheet")
   s:EnableMouse(true)
   s:SetFrameLevel(win:GetFrameLevel() + 30 + depth * 12)
   s.shade = CreateFrame("Frame", nil, win)
@@ -306,11 +422,11 @@ local function makeSheet(depth)
   s.title:SetPoint("TOPLEFT", 18, -18)
   s.title:SetPoint("RIGHT", s, "RIGHT", -40, 0)
   s.title:SetWordWrap(false)
-  s.close = CreateFrame("Button", nil, s, "UIPanelCloseButton")
+  s.close = K.closeButton(s)
   s.close:SetPoint("TOPRIGHT", -6, -6)
   s.close:SetScript("OnClick", function() UI.closeTop() end)
   s.line = s:CreateTexture(nil, "ARTWORK")
-  s.line:SetColorTexture(0.72, 0.54, 0.23, 0.45)
+  s.line:SetColorTexture(unpack(K.T.line))
   s.line:SetHeight(1)
   s.line:SetPoint("TOPLEFT", 14, -40)
   s.line:SetPoint("TOPRIGHT", -14, -40)
@@ -382,11 +498,12 @@ function UI.closeTop()
 end
 function UI.closeAll() while UI.closeTop() do end end
 
-function UI.confirm(title, text, yes, onYes)
+--- asks before doing something: yes (the red button) runs onYes; no names the other button ("Cancel" if not given)
+function UI.confirm(title, text, yes, onYes, no)
   UI.openSheet(title, function(f, h)
     f:text(text)
     f:gap(6)
-    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = yes, click = function() h.close() onYes() end } })
+    f:buttons({ { label = no or "Cancel", style = "quiet", click = function() h.close() end }, { label = yes, click = function() h.close() onYes() end } })
   end)
 end
 
@@ -523,7 +640,7 @@ local function minimapButton()
   b:SetScript("OnClick", function() UI.toggle() end)
   b:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:SetText("LootRuler")
+    GameTooltip:SetText(LR.TITLE)
     local s = LR.current()
     if s then
       GameTooltip:AddLine(("%s soft reserves by %s"):format(LR.raidOf(s).name, LR.isLeader(s) and "you" or U.short(s.leader)), 1, 1, 1)

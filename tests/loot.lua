@@ -269,7 +269,9 @@ check("a 10 second roll isn't told \"10 seconds\" again (its first line said so)
   chat("You have 10 seconds to roll on " .. roll.link) == nil and chat("[LootRuler] 5...") ~= nil)
 check("and announced", chat("tied at 77") ~= nil)
 check("raiders see the tie", status(dan, BROOCH):find("Tied at 77", 1, true) ~= nil, status(dan, BROOCH))
-check("there's no winner to give it to yet", not found(lead, "Give to", lead.G.LootRulerMasterFrame))
+check("there's no winner to give it to yet", (function()
+  for _, x in ipairs(lead.M.findText("Give to", true, lead.G.LootRulerMasterFrame)) do if lead.M.plain(x.fs:GetText()) ~= "Give to someone else" then return false end end
+  return true end)())
 clickText(lead, "Reroll the tie", lead.G.LootRulerMasterFrame)
 srv:tick(0.5)
 local tie = Rolls.mine()
@@ -1743,11 +1745,12 @@ do
   ml.LR.UI.show("loot")
   srv4:tick(0.5)
   local win = ml.G.LootRulerFrame
+  if not found(ml, "Looted by", win) then clickText(ml, "Everything else that dropped", win) end
   check("the Loot tab counts them, one row each", found(ml, "Everything else that dropped", win) and found(ml, "Nether Vortex", win)
     and found(ml, "x3", win) and found(ml, "Looted by Mel (2), Zoe", win)
     and found(ml, "Mark of the Illidari", win) and found(ml, "1 on the corpse", win) and found(ml, "x2", win) and not found(ml, "Arcane Dust", win)
     and not found(ml, "Netherweave Cloth", win) and not found(ml, "Primal Nether", win))
-  check("and the loot to roll for is counted apart", found(ml, "2 items dropped, 0 given out, 2 still to roll for.", win))
+  check("and the loot to roll for is listed apart", found(ml, "To roll out", win) and found(ml, "2 items", win))
   ml.LR.UI.win:Hide()
   for _, p in ipairs({ ml, zoe }) do check(p.name .. ": no Lua errors", #p.M.errors == 0, table.concat(p.M.errors, " | ")) end
 end

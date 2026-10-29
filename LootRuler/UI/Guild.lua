@@ -14,20 +14,12 @@ function UI.prioAvailable()
   return false
 end
 
---- "Loot goes by": reserves, the guild's priority lists first, or only them (a session, or the new one)
+--- how loot goes, with the guild's priority lists: { mode, name, what it means } (the Session tab's "How loot goes")
 UI.PRIO_MODES = {
   { nil, "Reserves", "Soft and hard reserves, then everyone rolls." },
   { "both", "Priority lists, then reserves", "An item on the guild's priority lists goes by them when someone on its list is here; anything else by reserves." },
   { "only", "Priority lists only", "No reserves: items on the priority lists go by them, everything else is rolled for." },
 }
-function UI.prioChips(current, pick)
-  local chips = { { plain = true, label = "Loot goes by:" } }
-  for _, m in ipairs(UI.PRIO_MODES) do
-    chips[#chips + 1] = { label = m[2], on = current == m[1], click = function() pick(m[1]) end, tip = m[3] }
-  end
-  return chips
-end
-
 --- whether this guild uses boosted rolls (the Session tab's switch only shows then)
 function UI.boostOn()
   local book = LR.book()
@@ -81,7 +73,7 @@ local function pointsSheet(name)
     end
     f:gap(6)
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Save", click = function()
         local player = U.trim(who)
         local points = tonumber(n)
@@ -110,76 +102,36 @@ function UI.giveRaidPoints(s, after)
   end)
 end
 
-local function boostPanel(f, book, editor)
-  f:panel("Boosted rolls", function(p)
+--- the guild's settings (a sheet): boosted rolls on or off, points for each raid, and who can change the book
+local function settingsSheet()
+  UI.openSheet("Guild settings", function(p, h)
+    local book = LR.book()
+    if not book then h.close() return end
+    local editor = LR.canEditBook()
     p:note("Guild members get points for each raid they come to. In a session with boosted rolls on, a player with points can roll 1 to 100 plus their points on main spec (\"/roll 31 130\" with 30 points). If they win with it, their points are spent.")
     if editor then
       p:chips({ { tick = true, label = "Boosted rolls for this guild", on = book.boost.on, click = function()
         Guild.edit(function(b, now) return B.setBoost(b, not b.boost.on, b.boost.perRaid, now) end)
+        h.redraw(true)
       end, tip = "Off: nobody's rolls are boosted, and the Session tab doesn't offer it." } }, { gap = 4 })
-      local chips = { { plain = true, label = "Points for each raid:" } }
-      for _, n in ipairs({ 5, 10, 15, 20, 25 }) do
-        chips[#chips + 1] = { label = tostring(n), width = 32, on = book.boost.perRaid == n, click = function()
-          Guild.edit(function(b, now) return B.setBoost(b, b.boost.on, n, now) end)
-        end }
-      end
-      p:chips(chips, { gap = 4 })
-      if book.boost.on then
-        p:note("Turn boosted rolls on for a raid on the Session tab. Give the raid its points from there too, or when you end the session.")
-      end
+      p:row("Points each raid", function(r)
+        local chips = {}
+        for _, n in ipairs({ 5, 10, 15, 20, 25 }) do
+          chips[#chips + 1] = { label = tostring(n), width = 32, on = book.boost.perRaid == n, click = function()
+            Guild.edit(function(b, now) return B.setBoost(b, b.boost.on, n, now) end)
+            h.redraw(true)
+          end }
+        end
+        r:chips(chips, { gap = 4 })
+      end)
     else
       p:kv({
         { "Boosted rolls", book.boost.on and "On for this guild" or "Off" },
         { "Points for each raid", tostring(book.boost.perRaid) },
       })
     end
-    local mine = B.points(book, U.me())
     p:gap(4)
-    local main = B.mainOf(book, U.me())
-    p:kv({ { "Your points", (mine > 0 and ("%d (a boosted roll is %d to %d)"):format(mine, B.boostRange(mine)) or "None yet")
-      .. (U.samePlayer(main, U.me()) and "" or (", " .. U.short(main) .. "'s")), K.TEXT, K.GOLD } })
-  end)
-end
-
-local function pointsPanel(f, book, editor)
-  f:panel("Points", function(p)
-    local list = {}
-    -- (a linked alt is listed under its main)
-    for name, e in pairs(book.points) do if e.n > 0 and B.mainOf(book, name) == name then list[#list + 1] = { name, e.n } end end
-    table.sort(list, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
-    if #list == 0 then p:note("Nobody has points yet. They come from raids (Give raid points), or an officer can set them here.") end
-    for _, x in ipairs(list) do
-      local b = K.get(p.owner, "item", p.parent)
-      local class = LR.classOf(x[1])
-      local alts = B.altsOf(book, x[1])
-      K.setItem(b, p.width, LR.LOGO, U.classText(U.short(x[1]), class), ("Boosted roll: /roll %d %d"):format(B.boostRange(x[2]))
-        .. (#alts > 0 and ("  -  alts: " .. table.concat(U.map(alts, U.short), ", ")) or ""),
-        "|cff1eff00" .. x[2] .. "|r", editor and { text = "Edit", width = 40, tip = "Change " .. U.short(x[1]) .. "'s points", click = function() pointsSheet(x[1]) end } or nil)
-      p:place(b, 36)
-      p:gap(2)
-    end
-    if editor then
-      p:buttons({ { label = "Give a player points", click = function() pointsSheet(nil) end } }, "left")
-      p:buttons({
-        { label = "Bring in from Gargul", click = function()
-          UI.countsSheet({ title = "Boosted roll points from Gargul", gargul = "boosted", max = B.MAX_POINTS,
-            note = "Paste Gargul's boosted roll export (\"Name,Points,Alt,Alt\" lines; Gargul: /gl br, Export), or read it straight from Gargul if it's loaded. Each player's points are set to these, and their alts are linked to them.",
-            apply = function(list)
-              local ok, why = Guild.importPoints(list)
-              if ok then UI.toast(("Points for %s are in, and shared with the guild."):format(U.plural(#list, "player"))) else UI.refused(why) end
-            end })
-        end },
-        { label = "Copy out", disabled = #list == 0, click = function()
-          UI.textSheet("Boosted roll points", "For Gargul's boosted roll importer, or a spreadsheet.",
-            LR.Prio.countsText(U.map(list, function(x) return { p = x[1], n = x[2], alts = B.altsOf(book, x[1]) } end)))
-        end },
-      }, "left")
-    end
-  end)
-end
-
-local function whoPanel(f, book)
-  f:panel("Who can change this", function(p)
+    p:text("Who can change this", { font = "GameFontNormal", color = K.GOLD, gap = 2 })
     local ranks = {}
     for i = 1, GuildControlGetNumRanks() do ranks[#ranks + 1] = GuildControlGetRankName(i) or ("Rank " .. i) end
     local current = ranks[book.editRank + 1] or ("rank " .. (book.editRank + 1))
@@ -189,16 +141,131 @@ local function whoPanel(f, book)
       for i, name in ipairs(ranks) do
         chips[#chips + 1] = { label = i == 1 and "Only me" or (name .. (i < #ranks and " and up" or "")), on = book.editRank == i - 1, click = function()
           Guild.setEditRank(i - 1)
-          UI.render()
+          h.redraw(true)
         end }
       end
       p:chips(chips)
     else
       p:note(book.editRank == 0 and "Only the guild master can change points and priority lists."
         or ("The guild master and ranks up to %s can change points and priority lists."):format(current))
-      p:note(LR.canEditBook() and "That includes you." or "Ask one of them to change your points.", LR.canEditBook() and K.GOLD or nil)
+      p:note(editor and "That includes you." or "Ask one of them to change your points.", editor and K.GOLD or nil)
     end
+    p:note("Everyone in " .. book.guild .. " with LootRuler gets a copy of this, and keeps it between raids.")
   end)
+end
+UI.guildSettingsSheet = settingsSheet
+
+--- alts (a sheet): each main's alts, unlinking one, and linking another (they share their main's points)
+local function altsSheet()
+  local alt, main = "", ""
+  UI.openSheet("Alts", function(f, h)
+    local book = LR.book()
+    f:note("An alt rolls with its main's points, and spends them if it wins.")
+    local any = false
+    for name in pairs(book.alts or {}) do
+      local m = B.mainOf(book, name)
+      if not U.samePlayer(m, name) then
+        any = true
+        f:chips({
+          { plain = true, width = f.width - 70, label = ("%s, alt of %s"):format(U.classText(U.short(name), LR.classOf(name)), U.classText(U.short(m), LR.classOf(m))) },
+          LR.canEditBook() and { label = "Unlink", width = 60, tip = U.short(name) .. " gets its own points again", click = function() Guild.unlinkAlt(name) h.redraw(true) end } or false,
+        }, { gap = 2 })
+      end
+    end
+    if not any then f:note("No alts linked yet.") end
+    if not LR.canEditBook() then return end
+    f:gap(4)
+    f:row("Alt", function(r)
+      local e = K.get(r.owner, "edit", r.parent)
+      r:place(e, 22, 6, 160)
+      e:SetText(alt)
+      K.onText(e, function(self) alt = self:GetText() end)
+    end, { lw = 60 })
+    f:row("Its main", function(r)
+      local e = K.get(r.owner, "edit", r.parent)
+      r:place(e, 22, 6, 160)
+      e:SetText(main)
+      K.onText(e, function(self) main = self:GetText() end)
+    end, { lw = 60 })
+    f:buttons({ { label = "Link this alt", click = function()
+      if U.trim(alt) == "" or U.trim(main) == "" then UI.toast("Type the alt's name and its main's.") return end
+      local ok, why = Guild.linkAlt(U.trim(alt), U.full(U.trim(main)))
+      if ok then alt, main = "", "" h.redraw(true) else UI.toast(why) end
+    end } }, "left")
+  end)
+end
+
+--- whether a search matches words (empty matches everything)
+local function hit(q, text) return q == "" or (text or ""):lower():find(q, 1, true) ~= nil end
+
+--- the points: everyone with some, most first, with the roll each would type (an officer clicks one to change it)
+local function pointsView(f, book, editor, q)
+  local mine = B.points(book, U.me())
+  local main = B.mainOf(book, U.me())
+  if not book.boost.on then
+    f:strip("Boosted rolls are off for this guild.", "warn", editor and { "Turn them on", function()
+      Guild.edit(function(b, now) return B.setBoost(b, true, b.boost.perRaid, now) end)
+    end } or nil)
+  else
+    f:strip(("Your points: %s%s"):format(mine > 0 and ("%d (a boosted roll is %d to %d)"):format(mine, B.boostRange(mine)) or "none yet",
+      U.samePlayer(main, U.me()) and "" or (", " .. U.short(main) .. "'s")), "ok")
+  end
+  local list = {}
+  -- (a linked alt is listed with its main)
+  for name, e in pairs(book.points) do if e.n > 0 and B.mainOf(book, name) == name then list[#list + 1] = { name, e.n } end end
+  table.sort(list, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
+  local shown = 0
+  for _, x in ipairs(list) do
+    local alts = B.altsOf(book, x[1])
+    local match = hit(q, U.short(x[1]))
+    for _, a in ipairs(alts) do if hit(q, U.short(a)) then match = true end end
+    if match then
+      shown = shown + 1
+      local b = K.get(f.owner, "rollrow", f.parent)
+      b:SetWidth(f.width)
+      b:SetHeight(24)
+      b.name:SetText(U.classText(U.short(x[1]), LR.classOf(x[1])) .. (U.samePlayer(x[1], U.me()) and " |cff9d9d9d(you)|r" or "")
+        .. (#alts > 0 and ("  |cff9d9d9d+ " .. table.concat(U.map(alts, U.short), ", ") .. "|r") or ""))
+      b.name:SetWidth(f.width - 150)
+      b.kind:SetText(("/roll %d %d"):format(B.boostRange(x[2])))
+      b.kind:SetTextColor(K.rgb(K.SUB))
+      b.num:SetText(tostring(x[2]))
+      b.num:SetTextColor(0.12, 1, 0)
+      if editor then
+        b:SetScript("OnClick", function() pointsSheet(x[1]) end)
+        K.tooltipOn(b, function(tt) tt:SetText("Click to change " .. U.short(x[1]) .. "'s points, or their alts.", 1, 1, 1, 1, true) end)
+      end
+      f:place(b, 24)
+      f:gap(2)
+    end
+  end
+  if #list == 0 then f:note("Nobody has points yet. They come from raids (Give this raid's points), or an officer can set them.")
+  elseif shown == 0 then f:note("Nobody matches your search.") end
+  f:gap(4)
+  f:note("Points come with each raid; a win with a boosted roll spends them." .. (editor and " Click a player to change theirs." or " Officers change them."))
+  if not editor then return end
+  local s = LR.current()
+  local mineS = s and LR.isLeader(s) and not s.pv and not s.practice and s or nil
+  UI.pin({
+    { label = "Give this raid's points", disabled = not mineS, click = function() UI.giveRaidPoints(mineS) end,
+      tip = mineS and "Everyone from the guild in your group gets the raid's points (and the bench)." or "Open reserves for tonight's raid first (Session tab)." },
+    { label = "Alts", style = "quiet", click = altsSheet },
+    { label = "Bring in from Gargul", style = "quiet", click = function()
+      UI.countsSheet({ title = "Boosted roll points from Gargul", gargul = "boosted", max = B.MAX_POINTS,
+        note = "Paste Gargul's boosted roll export (\"Name,Points,Alt,Alt\" lines; Gargul: /gl br, Export), or read it straight from Gargul if it's loaded. Each player's points are set to these, and their alts are linked to them.",
+        apply = function(got)
+          local ok, why = Guild.importPoints(got)
+          if ok then UI.toast(("Points for %s are in, and shared with the guild."):format(U.plural(#got, "player"))) else UI.refused(why) end
+        end })
+    end },
+  }, {
+    { label = "Give a player points", click = function() pointsSheet(nil) end },
+    { label = "Copy out", disabled = #list == 0, click = function()
+      UI.textSheet("Boosted roll points", "For Gargul's boosted roll importer, or a spreadsheet.",
+        LR.Prio.countsText(U.map(list, function(x) return { p = x[1], n = x[2], alts = B.altsOf(book, x[1]) } end)))
+    end },
+    { label = "Guild settings", click = settingsSheet },
+  })
 end
 
 ---------------------------------------------------------------------- priority lists
@@ -267,10 +334,10 @@ local function prioSheet(id)
     e3:SetScript("OnTextChanged", function(self) note = self:GetText() end)
     f:gap(8)
     f:buttons({
-      { label = "Clear the list", disabled = #list == 0, click = function()
+      { label = "Clear the list", style = "link", danger = true, disabled = #list == 0, click = function()
         UI.confirm("Clear the list", "Everyone comes off " .. LR.coloredName(id) .. "'s priority list: it's rolled for as usual.", "Clear it", function() save({}) end)
       end },
-      { label = "Done", click = function() h.close() end },
+      { label = "Done", style = "quiet", click = function() h.close() end },
       { label = "Add", click = function()
         local player, n = U.trim(who), tonumber(num ~= "" and num or e2:GetText())
         if player == "" then UI.toast("Type the player's name.") return end
@@ -314,7 +381,7 @@ local function importSheet()
     f:chips({ { tick = true, label = "Clear lists that aren't in this", on = replaceAll, click = function() replaceAll = not replaceAll h.redraw(true) end,
       tip = "Off: only the items in what you paste change. On: every other item's list is cleared too." } })
     f:buttons({
-      { label = "Cancel", click = function() h.close() end },
+      { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Bring them in", disabled = not lists, click = function()
         h.close()
         local ok, why = Guild.edit(function(book, now) return P.apply(book, lists, now, replaceAll) end)
@@ -384,37 +451,43 @@ local function exportSheet()
   end)
 end
 
-local function prioPanel(f, book, editor)
-  f:panel("Priority lists", function(p)
-    p:note("Who gets an item first, kept between raids. In a session that goes by them, the best place in the raid gets the item without a roll; players who share a place roll for it. Whoever gets it comes off its list.")
-    local ids = {}
-    for id, e in pairs(book.prio) do if #e.list > 0 then ids[#ids + 1] = id end end
-    table.sort(ids, function(a, b) return LR.itemName(a) < LR.itemName(b) end)
-    if #ids == 0 then p:note(editor and "No lists yet: add an item, or bring them in from DFT or thatsmybis." or "No lists yet.") end
-    for _, id in ipairs(ids) do
-      local list = B.prio(book, id)
-      local mine
-      for _, x in ipairs(list) do if U.samePlayer(x.p, U.me()) then mine = x.n end end
-      local b = K.get(p.owner, "item", p.parent)
-      K.setItem(b, p.width, LR.itemIcon(id), LR.coloredName(id), listLine(list), mine and ("|cff1eff00" .. P.place(mine) .. "|r") or "",
+local function prioView(f, book, editor, q)
+  local ids = {}
+  for id, e in pairs(book.prio) do if #e.list > 0 then ids[#ids + 1] = id end end
+  table.sort(ids, function(a, b) return LR.itemName(a) < LR.itemName(b) end)
+  if #ids == 0 then f:note(editor and "No lists yet: add an item, or bring them in from DFT or thatsmybis." or "No lists yet.") end
+  local shown = 0
+  for _, id in ipairs(ids) do
+    local list = B.prio(book, id)
+    local mine
+    local match = hit(q, LR.itemName(id))
+    for _, x in ipairs(list) do
+      if U.samePlayer(x.p, U.me()) then mine = x.n end
+      if hit(q, U.short(x.p)) then match = true end
+    end
+    if match then
+      shown = shown + 1
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), listLine(list), mine and ("|cff1eff00" .. P.place(mine) .. "|r") or "",
         editor and { text = "Edit", width = 40, tip = "Change this list", click = function() prioSheet(id) end } or nil)
       b:SetScript("OnEnter", function(self) UI.itemTooltip(self, LR.current(), id) end)
       b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      p:place(b, 36)
-      p:gap(2)
+      f:place(b, 36)
+      f:gap(2)
     end
-    if editor then
-      p:buttons({
-        { label = "Add an item", click = function()
-          UI.pickAnyItem("Priority list for which item?", function(id) prioSheet(id) end)
-        end },
-        { label = "Bring in", click = importSheet },
-        { label = "Copy out", disabled = #ids == 0, click = exportSheet },
-      }, "left")
-    elseif #ids > 0 then
-      p:buttons({ { label = "Copy out", click = exportSheet } }, "left")
-    end
-  end)
+  end
+  if #ids > 0 and shown == 0 then f:note("Nothing matches your search.") end
+  f:gap(4)
+  f:note("Who gets an item first, kept between raids. The best place in the raid gets it without a roll; players who share a place roll. Whoever gets it comes off its list.")
+  if editor then
+    UI.pin({
+      { label = "Add an item", click = function() UI.pickAnyItem("Priority list for which item?", function(id) prioSheet(id) end) end },
+      { label = "Bring in", style = "quiet", click = importSheet },
+      { label = "Copy out", style = "quiet", disabled = #ids == 0, click = exportSheet },
+    }, { { label = "Guild settings", click = settingsSheet } })
+  elseif #ids > 0 then
+    UI.pin({ { label = "Copy out", style = "quiet", click = exportSheet } })
+  end
 end
 
 function UI.guildView(f)
@@ -424,9 +497,32 @@ function UI.guildView(f)
     return
   end
   local editor = LR.canEditBook()
-  boostPanel(f, book, editor)
-  if book.boost.on or next(book.points) then pointsPanel(f, book, editor) end
-  prioPanel(f, book, editor)
-  whoPanel(f, book)
-  f:note("Everyone in " .. book.guild .. " with LootRuler gets a copy of this, and keeps it between raids.")
+  if UI.guildPage ~= "prio" then UI.guildPage = "points" end
+  -- points or priority lists, and a search across them
+  local chips = K.flow(f.owner, f.parent, f.x, f.y, 200)
+  chips:chips({
+    { label = "Points", on = UI.guildPage == "points", click = function() UI.guildPage = "points" UI.render() end },
+    { label = "Priority lists", on = UI.guildPage == "prio", click = function() UI.guildPage = "prio" UI.render() end },
+  })
+  local box = K.get(f.owner, "edit", f.parent)
+  box:SetPoint("TOPLEFT", f.parent, "TOPLEFT", f.x + 170, -(f.y - 1))
+  box:SetSize(f.width - 176, 22)
+  box:SetText(UI.guildQ or "")
+  K.setHint(box, UI.guildPage == "points" and "Search players" or "Search items or players")
+  local seq = 0
+  K.onText(box, function(self, user)
+    if not user then return end
+    UI.guildQ = self:GetText()
+    UI.guildFocus = true
+    seq = seq + 1
+    local mine = seq
+    C_Timer.After(0.15, function() if mine == seq then UI.render() end end)
+  end)
+  box:SetScript("OnEnterPressed", function(self) self:ClearFocus() UI.guildFocus = false end)
+  box:SetScript("OnEscapePressed", function(self) self:ClearFocus() UI.guildFocus = false end)
+  if UI.guildFocus then K.refocus(box) end
+  f.y = chips.y + 4
+  local q = U.lower(U.trim(UI.guildQ or ""))
+  if UI.guildPage == "prio" then prioView(f, book, editor, q) else pointsView(f, book, editor, q) end
+  if not editor then f:buttons({ { label = "Guild settings", style = "link", click = settingsSheet } }, "left") end
 end

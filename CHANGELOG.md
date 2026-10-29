@@ -5,6 +5,62 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- A new layout for every tab and window (the owner's picks from the mockups): one red button for the main thing to do on
+  each screen, quieter buttons for the rest and plain links for rare or risky ones; content first, with the main actions
+  pinned under the list and the rarer ones under "More..."; rules, state and actions apart; shorter explanations.
+  - The tabs are called **My reserves** and **Reserved**.
+  - **Session tab** (leader): softres.it first, standing out, with four red buttons: import, tell the raid how to
+    reserve, hand the reserves over, and "End session"; then "This raid's rules" (how loot goes, reserves each, what
+    can be reserved, who can, locking) and "Who gets what" (hard reserves, extra reserves, the disenchanter, the loot
+    council), each row's choices lined up; "Your raid" (its name and message, and raid setup), +1s and boosted rolls fold
+    away. A private session's top box has "End session" too, and ending asks "Yes" or "No". A hard reserve is lifted
+    with an x, and extra reserves say "None" until someone has some. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
+  - **Opening reserves**: the raid you're in is picked, in a drop-down like the game's; softres.it or LootRuler side by
+    side, with "Private session" under "Open reserves"; raid setup under them. Other options are on the Session tab
+    once it's open.
+  - **Players who left with reserves** show as a gold line at the top of the Reserved tab, naming them, with "Clear their
+    reserves" right there (it's still under More too).
+  - **Test tab**: nothing folds. The practice raid first (its raid in a drop-down, players and reserves on one line), then
+    Roll windows (open, reserved and Gargul rolls together), Alerts and raid lines, and softres.it names.
+  - **Settings**: the sections down the side scroll on their own, so scrolling a long section no longer moves them. "This
+    window" is now "Map button".
+  - **Themes** (Settings, More, Themes): a drop-down of looks. **Classic** is the game's own look, as it always was;
+    **ElvUI** is flat and dark, with thin black edges, gold for what's picked and a narrow font, to sit beside ElvUI.
+    A theme changes only the look: every window, button and setting stays where it is and works the same. It comes in
+    with a reload (it asks). Drawn with the game's own textures and font: nothing from ElvUI is used.
+  - **Every x** (taking something off a list, closing a window) is the game's own red close button. Browsing the loot
+    picks the raid from a drop-down too.
+  - **First screen** (nothing open): running loot (import or open reserves) or just raiding, which says a raider can import
+    a softres.it sheet into a private session when the loot master doesn't use LootRuler; then browse any raid's loot.
+  - **A raider's Session tab**: how it stands for you in one line, the rules as four small boxes, the leader's message, and
+    "Open your own reserves" and "Leave these reserves" (it asks first) as plain buttons.
+  - **Reserved** (the old Reserves tab): how they stand in one line (open or locked, how many in the group reserved, Gargul); by item or by
+    player with a search; each player in one row, "Change" opening their reserves, extra reserves and +1s; Lock, Post and
+    Remind pinned under the list; Gargul, importing again and clearing absent players under More.
+  - **My reserves**: the search first, a Reserve button on each item, and your reserves pinned under the list as slots.
+  - **Loot tab**: what's to roll out first (Roll, or "Give to Ann" for a hard reserve), then what you have to trade (Open a
+    trade), then what's given out (Change); everything else that dropped folds away. "Roll them all out" and "Post in raid
+    chat" are pinned under it; the export, bag check and raid gear under More. Taking an award off is in its Change sheet.
+  - **GDKP** (Session tab): the pot in one line, what's sold (paid, or owed) and what's still to auction; the rules and cuts
+    fold away; Payouts, auctioning several and the ledger pinned under it.
+  - **Guild tab**: points or priority lists, with a search; points as a table with the roll to type; the guild's settings
+    and alts in sheets.
+  - **Settings tab**: the sections down the side and the one picked beside them, a search, and "All settings" on one page.
+  - **Test tab**: the practice raid first, with the next step as the red button; pretend rolls, messages and Gargul fold away.
+  - **Loot master window**: the winner as a card, with its one red button; everyone else under it; Give to someone else,
+    Roll again and Call off as links.
+  - **Auction window**: the highest bid, big, and one red "Bid 310g", with Bid an amount and a Max bid beside it.
+  - **Several auctions at once**: "Bid 100g" on each item, your highest bid marked; Bid an amount and Max bids (new: a max on
+    any of them) as links.
+  - **Giving an item out**: who reserved it apart from everyone else, how (their reserve, main spec, off spec, to
+    disenchant), Cancel quiet.
+  - **softres.it import**: paste, then see what would come in (how many players and reserves, what's skipped, names to
+    check, with a click to pick who a name is) before "Bring them in".
+  - Pop-ups: Cancel is quiet everywhere, the button that does it is red.
+  The roll window, the loot panel and the trade timers are as they were. ([#163](https://github.com/kcham01/LootRuler/pull/163))
+- The build makes a test copy beside the addon (`LootRulerTest.zip`): the same LootRuler in its own folder, with its own
+  saved sessions and settings, to try a pull request in the game without touching the real one. It talks to the raid as
+  LootRuler. Turn on only one of the two (both on, the test copy says so). ([#163](https://github.com/kcham01/LootRuler/pull/163))
 - Players without the addon reserve with `!reserve [item]` (by whisper or in raid chat), which reads like what it does;
   `!lr` still works, and every command works after either (`!reserve remove`, `!reserve swap`...), in any capitals. Raid
   lines, answers and the Settings tab now teach `!reserve`. ([#162](https://github.com/kcham01/LootRuler/pull/162))

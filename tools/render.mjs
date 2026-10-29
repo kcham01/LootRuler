@@ -54,6 +54,17 @@ function clipStyle(op) {
   return `clip-path: inset(${top}px ${right}px ${bottom}px ${left}px);`;
 }
 
+// the game's close button (UI-Panel-MinimizeButton): a red square in a gold frame with a gold x, in the middle of its art
+function closeSquare(base) {
+  return `<div style="${base}"><div style="position:absolute;inset:20% 21% 22% 20%;box-sizing:border-box;border-radius:3px;border:2px solid #a8842f;box-shadow:0 0 0 1px #1a0e04,inset 0 0 0 1px #3a1a06;background:radial-gradient(circle at 45% 40%,#b0200f,#6a0a03 70%,#4a0602);display:flex;align-items:center;justify-content:center"><span style="color:#ffcf1a;font:bold 13px/1 Arial;text-shadow:0 0 1px #000,1px 1px 0 #3a1a00;transform:scaleX(1.1)">X</span></div></div>`;
+}
+
+// the game's fonts: Friz Quadrata (its usual one), or Arial Narrow (a theme's) as a narrow stand-in
+function fontFamily(op) {
+  if (/ARIALN/i.test(op.fontPath || '')) return "'Arial Narrow','DejaVu Sans Condensed','Liberation Sans Narrow',sans-serif;font-stretch:condensed";
+  return "'Friz Quadrata','Palatino Linotype','Book Antiqua',Georgia,serif";
+}
+
 function opHtml(op) {
   const b = op.box;
   if (b.w <= 0 || b.h <= 0) return '';
@@ -78,11 +89,12 @@ function opHtml(op) {
   if (op.kind === 'panelbutton') {
     return `<div style="${base}border-radius:4px;box-sizing:border-box;border:1px solid #000;background:${op.enabled ? 'linear-gradient(#a31a12,#6a0c07 55%,#4a0703)' : 'linear-gradient(#555,#333)'};box-shadow:inset 0 1px 0 rgba(255,200,150,.35),0 0 0 1px #b5893a"></div>`;
   }
-  if (op.kind === 'closebutton') {
-    return `<div style="${base}"><div style="position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c2321e,#5e0a03);border:1px solid #b5893a;color:#ffd9b0;font:bold 12px Arial;text-align:center;line-height:20px">x</div></div>`;
-  }
+  if (op.kind === 'closebutton') return closeSquare(base);
   if (op.kind === 'edit' && op.multi) {
     return `<div style="${base}color:#fff;font:11px/13px 'Friz Quadrata','Segoe UI',Arial;white-space:pre;overflow:hidden;background:rgba(80,120,200,.25)">${esc(op.text || '')}</div>`;
+  }
+  if (op.kind === 'edit' && op.template !== 'InputBoxTemplate') {
+    return `<div style="${base}box-sizing:border-box;color:#fff;font:13px 'Arial Narrow','DejaVu Sans Condensed',sans-serif;font-stretch:condensed;line-height:${b.h}px;padding-left:5px;overflow:hidden;white-space:nowrap">${richText((op.text || '').replace(/\|H[^|]*\|h(.*?)\|h/g, '$1'), [1, 1, 1])}</div>`;
   }
   if (op.kind === 'edit') {
     return `<div style="${base}box-sizing:border-box;border:1px solid #6b5530;background:#050403;border-radius:3px;color:#fff;font:12px 'Friz Quadrata','Segoe UI',Arial;line-height:${b.h}px;padding-left:6px;overflow:hidden;white-space:nowrap">${richText((op.text || '').replace(/\|H.-\|h(.-)\|h/g, '$1').replace(/\|H[^|]*\|h(.*?)\|h/g, '$1'), [1, 1, 1])}</div>`;
@@ -90,7 +102,12 @@ function opHtml(op) {
   if (op.kind === 'texture') {
     const tint = op.vertex || [1, 1, 1, 1];
     if (op.color) return `<div style="${base}background:${rgba([op.color[0] * tint[0], op.color[1] * tint[1], op.color[2] * tint[2], (op.color[3] ?? 1) * (tint[3] ?? 1)])}"></div>`;
+    // (a texture with nothing set draws nothing, as in the game; an icon by its file number is a plain dark square)
+    if (op.tex === undefined || op.tex === null || op.tex === '') return '';
+    if (typeof op.tex === 'number') return `<div style="${base}background:radial-gradient(#3a2d1d,#120d08)"></div>`;
     const tex = op.tex || '';
+    // a plain white texture, tinted (a flat look's bars)
+    if (/WHITE8X8/i.test(tex)) return `<div style="${base}background:${rgba(op.vertex || [1, 1, 1, 1])}"></div>`;
     const ic = iconName(tex);
     const desat = op.desat ? 'filter:grayscale(1) brightness(.6);' : '';
     if (ic) {
@@ -115,7 +132,7 @@ function opHtml(op) {
     if (/TalentFrame\\/i.test(tex) && !/Arrows/i.test(tex)) return `<div style="${base}background:linear-gradient(160deg,#2b3a52,#1a1410);"></div>`;
     if (/TalentArrows/i.test(tex)) return `<div style="${base}"><div style="position:absolute;left:30%;top:30%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ${op.coord && op.coord[2] >= 0.5 ? '#777' : '#ffd100'}"></div></div>`;
     if (/EmptySocket/i.test(tex)) return `<div style="${base}border-radius:50%;background:#222;border:2px solid #555;box-sizing:border-box"></div>`;
-    if (/GroupLoot-Pass/i.test(tex)) return `<div style="${base}color:#c9a227;font:bold 14px Arial;display:flex;align-items:center;justify-content:center">x</div>`;
+    if (/GroupLoot-Pass/i.test(tex)) return `<div style="${base}color:${op.desat ? '#e6e6e6' : '#c9a227'};font:bold ${Math.round(b.h * 0.95)}px/1 Arial;display:flex;align-items:center;justify-content:center;text-shadow:0 0 2px #000">${op.desat ? '&#10005;' : 'x'}</div>`;
     if (/Backpack-EmptySlot/i.test(tex)) return `<div style="${base}background:#151210;border:1px solid #333;box-sizing:border-box"></div>`;
     if (/SliderBar-Button/i.test(tex)) return '';
     if (/Minimap/i.test(tex)) return '';
@@ -133,8 +150,22 @@ function opHtml(op) {
     if (/GroupLoot-(Dice|Coin)-(Down|Highlight)/i.test(tex)) return '';
     if (/Skills-BarBorder/i.test(tex)) return `<div style="${base}"><div style="position:absolute;left:0;right:0;top:25%;bottom:25%;border:1px solid #9a8560;border-radius:2px;box-shadow:0 0 0 1px #000"></div></div>`;
     if (/Skills-Bar/i.test(tex)) return `<div style="${base}background:linear-gradient(${rgba(tint)},${rgba([tint[0] * 0.6, tint[1] * 0.6, tint[2] * 0.6, tint[3] ?? 1])})"></div>`;
+    if (/Indicator-Green/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:22%;border-radius:50%;background:radial-gradient(#9dff7a,#2f9a10)"></div></div>`;
+    if (/Indicator-Red/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:22%;border-radius:50%;background:radial-gradient(#ff8a7a,#a8160a)"></div></div>`;
     if (/Indicator-Yellow/i.test(tex)) return `<div style="${base}border-radius:50%;background:radial-gradient(#ffe066,#c98a00)"></div>`;
     if (/ButtonHilight|QuestTitleHighlight/i.test(tex)) return '';
+    if (/UI-Panel-MinimizeButton-(Up|Disabled)/i.test(tex)) return closeSquare(base + (/Disabled/i.test(tex) ? 'filter:grayscale(1);' : ''));
+    if (/UI-Panel-MinimizeButton|UI-Common-MouseHilight/i.test(tex)) return '';
+    // the drop-down's arrow button (UI-ChatIcon-ScrollDown): a gold-edged square with a gold arrow
+    if (/Arrow-Down-Up/i.test(tex)) return `<div style="${base}display:flex;align-items:center;justify-content:center"><i style="width:7px;height:7px;border-right:2px solid #ffd100;border-bottom:2px solid #ffd100;transform:rotate(45deg);margin-top:-4px"></i></div>`;
+    if (/Arrow-Down-Down/i.test(tex)) return '';
+    if (/UI-ChatIcon-ScrollDown-Up/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:14%;box-sizing:border-box;border-radius:3px;border:1px solid #c9a227;box-shadow:0 0 0 1px #000;background:linear-gradient(#5a4214,#2a1c06);display:flex;align-items:center;justify-content:center"><i style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #ffd100;margin-top:2px"></i></div></div>`;
+    if (/UI-ChatIcon-ScrollDown/i.test(tex)) return '';
+    // a drop-down list's round tick: ticked (a gold dot in a ring), or an empty ring
+    if (/UI-DropDownRadioChecks/i.test(tex)) {
+      const on = op.coord && op.coord[0] < 0.25;
+      return `<div style="${base}"><div style="position:absolute;inset:28%;border-radius:50%;box-sizing:border-box;border:1px solid ${on ? '#c98a00' : '#3a3530'};background:${on ? 'radial-gradient(#ffcc33,#d97a00 60%,#7a3a00)' : 'transparent'}"></div></div>`;
+    }
     return `<div style="${base}background:repeating-linear-gradient(45deg,#3a0040,#3a0040 4px,#200020 4px,#200020 8px)" title="${esc(tex)}"></div>`;
   }
   if (op.kind === 'model') {
@@ -149,7 +180,7 @@ function opHtml(op) {
     const valign = { TOP: 'flex-start', MIDDLE: 'center', BOTTOM: 'flex-end' }[op.justifyV] || 'center';
     const lines = op.maxLines ? `display:-webkit-box;-webkit-line-clamp:${op.maxLines};-webkit-box-orient:vertical;overflow:hidden;` : '';
     return `<div style="${base}display:flex;align-items:${valign};justify-content:${just === 'left' ? 'flex-start' : just === 'right' ? 'flex-end' : 'center'};overflow:visible">
-      <div style="width:100%;text-align:${just};color:${rgba(c)};font:${op.size}px/${Math.round(op.size * 1.18)}px 'Friz Quadrata','Palatino Linotype','Book Antiqua',Georgia,serif;text-shadow:1px 1px 0 #000;${op.wrap ? '' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'}${lines}">${richText(op.text, c)}</div></div>`;
+      <div style="width:100%;text-align:${just};color:${rgba(c)};font:${op.size}px/${Math.round(op.size * 1.18)}px ${fontFamily(op)};text-shadow:1px 1px 0 #000;${op.wrap ? '' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'}${lines}">${richText(op.text, c)}</div></div>`;
   }
   return '';
 }

@@ -49,7 +49,7 @@ local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 AceComm:Embed(Net)
 
-local db              -- LootRulerDB: sessions, mine, current, settings
+local db              -- LootRulerDB (LR.DB_NAME): sessions, mine, current, settings
 local listeners = {}
 
 --- something changed that the window shows
@@ -59,7 +59,7 @@ function LR.changed(what)
 end
 function LR.onChange(fn) listeners[#listeners + 1] = fn end
 
-function LR.print(msg) print("|cffffd100LootRuler|r: " .. msg) end
+function LR.print(msg) print("|cffffd100" .. LR.TITLE .. "|r: " .. msg) end
 
 --- every LootRuler sound goes through here: none when they're switched off (Settings: sounds), on the channel picked
 --- (soundChannel); a window's own click sound (ui) stays on the game's effects channel
@@ -72,6 +72,7 @@ end
 ---------------------------------------------------------------------- saved state
 -- every option, and what it is until changed (the Settings tab, UI/Settings.lua)
 LR.DEFAULTS = {
+  theme = "classic",       -- how LootRuler's windows look (UI/Kit.lua, K.THEMES); a change comes in with a reload
   hideWhispers = true,     -- "!lr" messages (whispers and raid chat) and the answers don't show in my chat
   rollWindow = true,       -- roll windows pop up
   rollOnlyMine = false,    -- ...only for items I may roll on
@@ -146,18 +147,22 @@ function LR.checkSettings(set)
   for _, c in ipairs(LR.SOUND_CHANNELS) do if c[1] == set.soundChannel then okChannel = true end end
   if not okChannel then set.soundChannel = "Master" end
   set.groupLootRules = LR.GroupLoot.check(set.groupLootRules)
+  if LR.K and LR.K.THEMES and not LR.K.THEMES[set.theme] then set.theme = "classic" end
   return set
 end
 
 function LR.loadDB()
-  local fresh = LootRulerDB == nil
-  LootRulerDB = type(LootRulerDB) == "table" and LootRulerDB or {}
-  db = LootRulerDB
+  local saved = _G[LR.DB_NAME]
+  local fresh = saved == nil
+  if type(saved) ~= "table" then saved = {}; _G[LR.DB_NAME] = saved end
+  db = saved
   db.sessions = type(db.sessions) == "table" and db.sessions or {}  -- id -> session (ours as leader, or the latest copy from its leader)
   db.mine = type(db.mine) == "table" and db.mine or {}              -- id -> { i = my picks, dirty = not yet confirmed by the leader }
   db.ui = type(db.ui) == "table" and db.ui or {}
   if fresh then db.ui.toured = false end            -- (a new player: the welcome tour, the first time they open it)
   db.settings = LR.checkSettings(db.settings)
+  -- the look, before any window is made (every frame is made in it)
+  if LR.K and LR.K.useTheme then LR.K.useTheme(db.settings.theme) LR.themeLoaded = db.settings.theme end
   -- settings saved under a name (UI/Welcome.lua): checked the same way
   db.profiles = type(db.profiles) == "table" and db.profiles or {}
   for name, set in pairs(db.profiles) do

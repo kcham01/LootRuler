@@ -67,6 +67,8 @@ local function badge(s, d)
   return ""
 end
 
+UI.rollingNow = rolling
+
 --- rolls a drop out (the loot master)
 local function rollOut(s, d)
   local slot
@@ -76,54 +78,7 @@ local function rollOut(s, d)
   if not roll then UI.toast(why) return end
   UI.masterDraw()
 end
-
-local function dropRow(f, s, d, runner, leader)
-  local state = S.dropState(s, d)
-  local b = K.get(f.owner, "item", f.parent)
-  local act
-  if runner and (state == "corpse" or state == "held") and not rolling(d.i) then
-    act = { text = "Roll", width = 40, tip = "Roll it out now", click = function() rollOut(s, d) end }
-  elseif leader and (state == "given" or state == "toTrade") then
-    local _, idx = S.dropWin(s, d.k)
-    act = { text = "x", tip = "Take the award off the list (a mistake). The item stays where it is.", click = function()
-      local w = s.won[idx]
-      UI.confirm("Take the award off", ("%s to %s comes off the list%s."):format(LR.itemName(d.i), U.short(w.p),
-        w.k == "SR" and ", and their reserve on it counts again" or ""), "Take it off", function() LR.unaward(s, idx) end)
-    end }
-  end
-  K.setItem(b, f.width, LR.itemIcon(d.i), LR.coloredName(d.i), UI.dropLine(s, d), badge(s, d), act)
-  if state == "given" or state == "looted" then b.icon:SetAlpha(0.75) end
-  b:SetScript("OnEnter", function(self)
-    UI.itemTooltip(self, s, d.i)
-    if runner and (state == "corpse" or state == "held") then GameTooltip:AddLine("Click to give it to someone without a roll.", 0.7, 0.7, 0.7) GameTooltip:Show() end
-    if leader and (state == "given" or state == "toTrade") then GameTooltip:AddLine("Click to change who got it, or how.", 0.7, 0.7, 0.7) GameTooltip:Show() end
-    if leader then GameTooltip:AddLine("Right-click to take it off the loot list.", 0.7, 0.7, 0.7) GameTooltip:Show() end
-  end)
-  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  b:SetScript("OnClick", function(_, button)
-    if UI.modifiedClick(LR.itemLink(d.i)) then return end
-    -- an item still to give out: give it to someone without a roll (the loot master)
-    if button == "LeftButton" and runner and (state == "corpse" or state == "held") and not rolling(d.i) then
-      local slot
-      for sl, k in pairs(Drops.slotKeys) do if k == d.k and Rolls.lootOpen then slot = sl end end
-      UI.giveSheet({ id = d.i, link = slot and GetLootSlotLink(slot) or LR.itemLink(d.i), slot = slot, drop = d.k })
-      return
-    end
-    -- given out: change who got it, or how (a mistake)
-    if button == "LeftButton" and leader and (state == "given" or state == "toTrade") then
-      local _, idx = S.dropWin(s, d.k)
-      if idx then UI.editAwardSheet(s, idx) end
-      return
-    end
-    if button == "RightButton" and leader then
-      UI.confirm("Take it off the loot list", LR.itemName(d.i) .. " comes off the raid's loot list (it didn't really drop, or it's there twice).", "Take it off", function()
-        LR.removeDrop(s, d.k)
-      end)
-    end
-  end)
-  f:place(b, 36)
-  f:gap(2)
-end
+UI.rollOut = rollOut
 
 --- changes an award: who got it, and how
 function UI.editAwardSheet(s, index)
@@ -143,11 +98,17 @@ function UI.editAwardSheet(s, index)
     end
     f:chips(kinds)
     f:note("The raid is told. Reserves used, +1s and who has it to trade follow the change.")
-    f:buttons({ { label = "Cancel", click = function() h.close() end },
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end },
       { label = "Save", click = function()
         if LR.editAward(s, index, who, how) then UI.toast("Changed.") end
         h.close()
       end } })
+    -- a mistake: off the list of loot given out (the item stays where it is)
+    f:buttons({ { label = "Take the award off", style = "link", danger = true, click = function()
+      h.close()
+      UI.confirm("Take the award off", ("%s to %s comes off the list%s. The item stays where it is."):format(LR.itemName(w.i), U.short(w.p),
+        w.k == "SR" and ", and their reserve on it counts again" or ""), "Take it off", function() LR.unaward(s, index) end)
+    end } }, "left")
   end)
 end
 
@@ -298,9 +259,9 @@ local function historyView(f)
   f:note(("Everything given out in your raids, by date. Kept on this character for your last %d raids."):format(LR.History.MAX))
   local n = #LR.History.all()
   f:buttons({
-    { label = "Export", click = function() UI.exportManySheet() end },
-    { label = "Who got what, over time", click = function() UI.fairSheet() end },
-    n > 0 and { label = ("Past raids (%d)"):format(n), click = function() UI.historySheet() end } or nil,
+    { label = "Export", style = "quiet", click = function() UI.exportManySheet() end },
+    { label = "Who got what, over time", style = "quiet", click = function() UI.fairSheet() end },
+    n > 0 and { label = ("Past raids (%d)"):format(n), style = "quiet", click = function() UI.historySheet() end } or nil,
   }, "left")
   f:gap(4)
   if #all == 0 then f:note("Nothing given out yet. Once items are won, they're listed here under the day they were given out.") return end
@@ -339,6 +300,86 @@ local function historyView(f)
   end
 end
 
+--- the line under an item on the Loot tab's lists: which boss, then how it stands
+local function bossOf(d) return d.b ~= "" and d.b or nil end
+local function withBoss(d, text) local b = bossOf(d) return b and (b .. "  -  " .. text) or text end
+
+--- the slot an item is in, while my loot window is open on it
+local function slotOf(d)
+  for sl, k in pairs(Drops.slotKeys) do if k == d.k and Rolls.lootOpen then return sl end end
+end
+
+--- one item on the Loot tab: what to do with it now (Roll, Give to..., Open a trade, Change) on its button
+local function lootRow(f, s, d, runner, leader, group)
+  local state, w = S.dropState(s, d)
+  local b = K.get(f.owner, "item", f.parent)
+  local act, sub
+  if group == "roll" then
+    local hr = s.hr[d.i]
+    local reserved = UI.whoLine(s, d.i, 3)
+    if rolling(d.i) then sub = "|cffffd100Being rolled for now|r"
+    else
+      sub = hr and ("|cffff5a4ahard reserved|r" .. (hr.f ~= "" and (" for " .. hr.f) or "")) or (reserved and ("SR: " .. reserved)) or "not reserved"
+      if state == "held" then sub = sub .. "  -  " .. (U.samePlayer(d.h, U.me()) and "in your bags" or (U.short(d.h) .. " has it")) end
+    end
+    sub = withBoss(d, sub)
+    if runner and not rolling(d.i) then
+      local to = hr and hr.f ~= "" and LR.inGroup(hr.f)
+      if to then
+        act = { text = "Give to " .. U.short(to.name), width = math.min(110, 40 + #U.short(to.name) * 7), click = function()
+          UI.giveSheet({ id = d.i, link = slotOf(d) and GetLootSlotLink(slotOf(d)) or LR.itemLink(d.i), slot = slotOf(d), drop = d.k, to = to.name })
+        end }
+      else
+        act = { text = s.gdkp and "Auction" or "Roll", width = s.gdkp and 62 or 46, tip = "Roll it out now", click = function() rollOut(s, d) end }
+      end
+    end
+  elseif group == "trade" then
+    local left = Drops.tradeLeft(d)
+    sub = withBoss(d, "won by " .. who(w.p, s) .. " (" .. how(w) .. ")" .. (left and (left > 0 and ("  -  " .. UI.duration(left) .. " left") or "  -  |cffff5a4atoo late to trade|r") or ""))
+    if U.samePlayer(d.h, U.me()) and not U.samePlayer(w.p, U.me()) then
+      act = { text = "Open a trade", width = 92, click = function()
+        local ok, why = Drops.openTrade(w.p)
+        if not ok then UI.toast(((UI.TRADE_WHY or {})[why] or why):format(U.short(w.p))) end
+      end }
+    end
+  else
+    sub = UI.dropLine(s, d)
+    if leader and (state == "given" or state == "toTrade") then
+      local _, idx = S.dropWin(s, d.k)
+      act = { text = "Change", width = 58, tip = "Change who got it, or how", click = function() if idx then UI.editAwardSheet(s, idx) end end }
+    end
+  end
+  K.setItem(b, f.width, LR.itemIcon(d.i), LR.coloredName(d.i), sub, act and "" or badge(s, d), act)
+  if group == "given" then b.icon:SetAlpha(0.75) b:SetAlpha(0.85) end
+  b:SetScript("OnEnter", function(self)
+    UI.itemTooltip(self, s, d.i)
+    if runner and group == "roll" then GameTooltip:AddLine("Click to give it to someone without a roll.", 0.7, 0.7, 0.7) GameTooltip:Show() end
+    if leader then GameTooltip:AddLine("Right-click to take it off the loot list.", 0.7, 0.7, 0.7) GameTooltip:Show() end
+  end)
+  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  b:SetScript("OnClick", function(_, button)
+    if UI.modifiedClick(LR.itemLink(d.i)) then return end
+    -- an item still to give out: give it to someone without a roll (the loot master)
+    if button == "LeftButton" and runner and group == "roll" and not rolling(d.i) then
+      UI.giveSheet({ id = d.i, link = slotOf(d) and GetLootSlotLink(slotOf(d)) or LR.itemLink(d.i), slot = slotOf(d), drop = d.k })
+      return
+    end
+    -- given out: change who got it, or how (a mistake)
+    if button == "LeftButton" and leader and (state == "given" or state == "toTrade") then
+      local _, idx = S.dropWin(s, d.k)
+      if idx then UI.editAwardSheet(s, idx) end
+      return
+    end
+    if button == "RightButton" and leader then
+      UI.confirm("Take it off the loot list", LR.itemName(d.i) .. " comes off the raid's loot list (it didn't really drop, or it's there twice).", "Take it off", function()
+        LR.removeDrop(s, d.k)
+      end)
+    end
+  end)
+  f:place(b, 36)
+  f:gap(2)
+end
+
 function UI.lootView(f, s)
   -- this raid's loot, or the award history (kept per character)
   if LR.db.ui.lootPage ~= "history" then LR.db.ui.lootPage = "raid" end
@@ -355,82 +396,64 @@ function UI.lootView(f, s)
     return
   end
   -- the loot to roll for, and everything else that dropped (counted: LR.minorLoot)
-  local drops, minor = {}, {}
-  for _, d in ipairs(s.drops or {}) do
-    if LR.minorLoot(s, d.i) then minor[#minor + 1] = d else drops[#drops + 1] = d end
-  end
   local runner = LR.canRunLoot() and not s.pv          -- (nothing is rolled out from a private session)
   local leader = LR.isLeader(s)
-  local given, toRoll = 0, 0
-  for _, d in ipairs(drops) do
-    local state = S.dropState(s, d)
-    if state == "given" or state == "toTrade" or state == "looted" then given = given + 1 else toRoll = toRoll + 1 end
+  local toRoll, toTrade, given, minor = {}, {}, {}, {}
+  for _, d in ipairs(s.drops or {}) do
+    if LR.minorLoot(s, d.i) then minor[#minor + 1] = d
+    else
+      local state = S.dropState(s, d)
+      if state == "corpse" or state == "held" then toRoll[#toRoll + 1] = d
+      elseif state == "toTrade" and U.samePlayer(d.h, U.me()) and LR.versionOf(d.h) then toTrade[#toTrade + 1] = d
+      else given[#given + 1] = d end
+    end
   end
-  if #drops == 0 and #minor == 0 then
+  if #toRoll + #toTrade + #given + #minor == 0 then
     f:panel("The raid's loot", function(p)
       p:text("Nothing has dropped yet. Items show up here as the loot master opens corpses (with master loot on), or as people loot them.")
       if runner then p:note("You can roll things out straight away, or keep them in your bags and roll them out from here at the end. The game lets you trade raid loot for 2 hours after you loot it.") end
     end)
-  elseif #drops > 0 then
-    f:note(("%s dropped, %d given out, %d still to roll for."):format(U.plural(#drops, "item"), given, toRoll), toRoll > 0 and K.GOLD or K.GREEN)
-  end
-  if s.won and #s.won > 0 then
-    f:buttons({
-      { label = "Export", click = function() UI.exportSheet(s) end },
-      (runner or leader) and not s.pv and { label = "Post in raid chat", disabled = LR.groupChannel() == nil, click = function()
-        for _, line in ipairs(LR.Export.chat(s)) do LR.say(line, LR.groupChannel()) end
-        UI.toast("Posted who won what.")
-      end } or nil,
-    }, "left")
-  end
-  if runner or leader then
-    f:buttons({
-      { label = "Bag check", click = function() UI.bagCheckSheet() end },
-      { label = "Raid gear", click = function() UI.gearSheet() end },
-    }, "left")
   end
 
-  -- what the loot master still has to hand over
-  local deliver = Drops.toDeliver()
-  if #deliver > 0 then
-    f:panel("To trade", function(p)
-      p:note(LR.db.settings.tradeHelp and "Open a trade with the winner and LootRuler puts their items in." or "Trade these to their winners.")
-      for _, x in ipairs(deliver) do
-        local d, winner = x[1], x[2]
-        local b = K.get(p.owner, "item", p.parent)
-        local left = Drops.tradeLeft(d)
-        K.setItem(b, p.width, LR.itemIcon(d.i), LR.coloredName(d.i), "For " .. who(winner, s),
-          left and (left > 0 and UI.duration(left) or "|cffff5a4alate|r") or "")
-        b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, d.i) end)
-        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        p:place(b, 36)
-        p:gap(2)
-      end
-      p:chips({ { tick = true, label = "Put won items in trades for me", on = LR.db.settings.tradeHelp,
-        click = function() LR.db.settings.tradeHelp = not LR.db.settings.tradeHelp UI.render() end } })
-    end)
+  -- what to do now first: what's still to roll out, then what I have to trade, then what's done
+  if #toRoll > 0 then
+    f:heading(s.gdkp and "To auction" or "To roll out", U.plural(#toRoll, "item"))
+    for _, d in ipairs(toRoll) do lootRow(f, s, d, runner, leader, "roll") end
+    f:gap(6)
   end
-
-  -- boss by boss, in the order they died
-  local order, byBoss = {}, {}
-  for _, d in ipairs(drops) do
-    local b = d.b ~= "" and d.b or "Other loot"
-    if not byBoss[b] then byBoss[b] = {} order[#order + 1] = b end
-    table.insert(byBoss[b], d)
+  if #toTrade > 0 then
+    local soonest
+    for _, d in ipairs(toTrade) do local l = Drops.tradeLeft(d) if l and (not soonest or l < soonest) then soonest = l end end
+    f:heading("To trade", U.plural(#toTrade, "item") .. (soonest and (", " .. UI.duration(soonest) .. " left") or ""))
+    for _, d in ipairs(toTrade) do lootRow(f, s, d, runner, leader, "trade") end
+    f:chips({ { tick = true, label = "Put won items in trades for me", on = LR.db.settings.tradeHelp,
+      click = function() LR.db.settings.tradeHelp = not LR.db.settings.tradeHelp UI.render() end } })
+    f:gap(2)
   end
-  for _, boss in ipairs(order) do
-    local hd = K.get(f.owner, "head", f.parent)
-    hd.text:SetText(boss)
-    local n = #byBoss[boss]
-    hd.right:SetText(U.plural(n, "item"))
-    hd:SetWidth(f.width)
-    f:place(hd, 22)
-    f:gap(3)
-    for _, d in ipairs(byBoss[boss]) do dropRow(f, s, d, runner, leader) end
+  -- loot given out that isn't on the list (rolled out from bags before it was seen dropping)
+  local others = {}
+  for i, w in ipairs(s.won or {}) do if not w.d or not S.drop(s, w.d) then others[#others + 1] = { w, i } end end
+  if #given + #others > 0 then
+    f:heading("Given out", U.plural(#given + #others, "item"))
+    for _, d in ipairs(given) do lootRow(f, s, d, runner, leader, "given") end
+    for _, x in ipairs(others) do
+      local w, idx = x[1], x[2]
+      local b = K.get(f.owner, "item", f.parent)
+      K.setItem(b, f.width, LR.itemIcon(w.i), LR.coloredName(w.i), "Won by " .. who(w.p, s) .. " (" .. how(w) .. ")",
+        U.samePlayer(w.p, U.me()) and "|cff1eff00Yours|r" or "",
+        leader and { text = "x", tip = "Take the award off the list (a mistake).", click = function()
+          UI.confirm("Take the award off", ("%s to %s comes off the list."):format(LR.itemName(w.i), U.short(w.p)), "Take it off", function() LR.unaward(s, idx) end)
+        end } or nil)
+      b.icon:SetAlpha(0.75) b:SetAlpha(0.85)
+      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, w.i) end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      f:place(b, 36)
+      f:gap(2)
+    end
     f:gap(6)
   end
 
-  -- everything else that dropped, counted: one row per item, with who looted how many
+  -- everything else that dropped, counted, folded: one row per item, with who looted how many
   if #minor > 0 then
     local order, by = {}, {}
     for _, d in ipairs(minor) do
@@ -443,54 +466,60 @@ function UI.lootView(f, s)
         x.who[d.h] = x.who[d.h] + n
       else x.left = x.left + n end
     end
-    local hd = K.get(f.owner, "head", f.parent)
-    hd.text:SetText("Everything else that dropped")
-    local total = 0
-    for _, x in ipairs(order) do total = total + x.n end
-    hd.right:SetText(U.plural(total, "item"))
-    hd:SetWidth(f.width)
-    f:place(hd, 22)
-    f:gap(3)
-    for _, x in ipairs(order) do
-      local parts = {}
-      for i, name in ipairs(x.whoOrder) do
-        if i > 4 then parts[#parts + 1] = ("%d more"):format(#x.whoOrder - 4) break end
-        parts[#parts + 1] = who(name, s) .. (x.who[name] > 1 and (" (" .. x.who[name] .. ")") or "")
-      end
-      local line = #parts > 0 and ("Looted by " .. table.concat(parts, ", ")) or ""
-      if x.left > 0 then line = line .. (line ~= "" and "; " or "") .. x.left .. " on the corpse" end
-      local b = K.get(f.owner, "item", f.parent)
-      K.setItem(b, f.width, LR.itemIcon(x.id), LR.coloredName(x.id), line, "|cffffffffx" .. x.n .. "|r")
-      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, x.id) end)
-      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      b:SetScript("OnClick", function() UI.modifiedClick(LR.itemLink(x.id)) end)
-      f:place(b, 36)
-      f:gap(2)
+    local what = {}
+    for i, x in ipairs(order) do
+      if i > 3 then what[#what + 1] = "..." break end
+      what[#what + 1] = LR.itemName(x.id) .. " x" .. x.n
     end
-    f:gap(6)
+    if type(LR.db.ui.minorOpen) ~= "boolean" then LR.db.ui.minorOpen = false end
+    f:fold("Everything else that dropped", table.concat(what, ", "), LR.db.ui.minorOpen, function() LR.db.ui.minorOpen = not LR.db.ui.minorOpen UI.render() end, function(p)
+      for _, x in ipairs(order) do
+        local parts = {}
+        for i, name in ipairs(x.whoOrder) do
+          if i > 4 then parts[#parts + 1] = ("%d more"):format(#x.whoOrder - 4) break end
+          parts[#parts + 1] = who(name, s) .. (x.who[name] > 1 and (" (" .. x.who[name] .. ")") or "")
+        end
+        local line = #parts > 0 and ("Looted by " .. table.concat(parts, ", ")) or ""
+        if x.left > 0 then line = line .. (line ~= "" and "; " or "") .. x.left .. " on the corpse" end
+        local b = K.get(p.owner, "item", p.parent)
+        K.setItem(b, p.width, LR.itemIcon(x.id), LR.coloredName(x.id), line, "|cffffffffx" .. x.n .. "|r")
+        b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, x.id) end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        b:SetScript("OnClick", function() UI.modifiedClick(LR.itemLink(x.id)) end)
+        p:place(b, 36)
+        p:gap(2)
+      end
+    end)
   end
 
-  -- loot given out that isn't on the list (rolled out from bags before it was seen dropping)
-  local others = {}
-  for i, w in ipairs(s.won or {}) do if not w.d or not S.drop(s, w.d) then others[#others + 1] = { w, i } end end
-  if #others > 0 then
-    local hd = K.get(f.owner, "head", f.parent)
-    hd.text:SetText("Also given out")
-    hd:SetWidth(f.width)
-    f:place(hd, 22)
-    f:gap(3)
-    for _, x in ipairs(others) do
-      local w, idx = x[1], x[2]
-      local b = K.get(f.owner, "item", f.parent)
-      K.setItem(b, f.width, LR.itemIcon(w.i), LR.coloredName(w.i), "Won by " .. who(w.p, s) .. " (" .. how(w) .. ")",
-        U.samePlayer(w.p, U.me()) and "|cff1eff00Yours|r" or "",
-        leader and { text = "x", tip = "Take the award off the list (a mistake).", click = function()
-          UI.confirm("Take the award off", ("%s to %s comes off the list."):format(LR.itemName(w.i), U.short(w.p)), "Take it off", function() LR.unaward(s, idx) end)
-        end } or nil)
-      b:SetScript("OnEnter", function(self) UI.itemTooltip(self, s, w.i) end)
-      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      f:place(b, 36)
-      f:gap(2)
-    end
+  -- the loot master's actions, pinned under the list
+  local canRoll = U.filter(toRoll, function(d) return not rolling(d.i) and not s.hr[d.i] end)
+  local won = s.won and #s.won > 0
+  local more = {
+    won and { label = "Export who won what", click = function() UI.exportSheet(s) end } or false,
+    (runner or leader) and { label = "Bag check", click = function() UI.bagCheckSheet() end, note = "Who has an item in their bags (or bank)." } or false,
+    (runner or leader) and { label = "Raid gear", click = function() UI.gearSheet() end, note = "Everyone's gear, by inspecting." } or false,
+  }
+  if runner and not s.pv then
+    UI.pin({
+      { label = s.gdkp and "Auction them all" or "Roll them all out", disabled = #canRoll == 0, click = function()
+        local items = {}
+        for _, d in ipairs(canRoll) do items[#items + 1] = { id = d.i, link = slotOf(d) and GetLootSlotLink(slotOf(d)) or LR.itemLink(d.i), slot = slotOf(d), drop = d.k } end
+        Rolls.enqueue(items)
+        UI.masterDraw()
+      end, tip = "One after another, in the order they dropped. Hard reserved items wait for you to give them out." },
+      { label = "Post in raid chat", style = "quiet", disabled = not won or LR.groupChannel() == nil, click = function()
+        for _, line in ipairs(LR.Export.chat(s)) do LR.say(line, LR.groupChannel()) end
+        UI.toast("Posted who won what.")
+      end, tip = "Who won what, in a few raid lines." },
+    }, more)
+  elseif leader or won then
+    UI.pin({
+      won and { label = "Export who won what", style = "quiet", click = function() UI.exportSheet(s) end } or nil,
+      leader and not s.pv and won and { label = "Post in raid chat", style = "quiet", disabled = LR.groupChannel() == nil, click = function()
+        for _, line in ipairs(LR.Export.chat(s)) do LR.say(line, LR.groupChannel()) end
+        UI.toast("Posted who won what.")
+      end } or nil,
+    }, leader and { more[2], more[3] } or nil)
   end
 end

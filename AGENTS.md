@@ -22,10 +22,10 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. `Gdkp.lua` is GDKP's money (no game calls), `Pot.lua` does it in the game. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua`, `journeys.lua` (whole nights clicked through the window, in every theme: a reserve night, a softres.it raid, handing over, GDKP, a private session, the practice raid) |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `fuzz.lua` (random and broken input into every rule and parser, checking what they promise), `chaos.lua` (whole raids where everyone does random things; copies must agree), `gen_loot.py`, `art.mjs` |
-| `ci/` | `build.sh` (everything CI runs), `publish.sh` (results branch) |
+| `ci/` | `build.sh` (everything CI runs), `testcopy.sh` (the test copy, to try a branch beside the real addon), `publish.sh` (results branch) |
 | `docs/` | `benchmark.md` (the speed measurements), `exploits.md` (what LootRuler protects against), `screens/` (the owner's in-game screenshots, used in the README; retake or swap back to a `results/shots` picture when that screen changes) |
 
 ## Working rules
@@ -112,6 +112,7 @@ Players don't update their addons, so every version has to work with every other
 lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/party.lua && lua5.1 tests/practice.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
 lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
+lua5.1 tests/journeys.lua                                   # whole nights clicked through, in every theme
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
 lua5.1 tools/coverage.lua                                   # functions no test reaches: build/coverage.txt
 lua5.1 tools/bench.lua                                      # a 40-player raid, measured: build/bench.txt (about a minute)
@@ -210,6 +211,40 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   with a higher rev), and a session's own leader yields only to a newer copy. Messages carry `fl` (what the
   sender's addon can do; 1 = can take a session) so only able players are offered (`LR.canLead`). Older versions
   still follow whoever sends the newest copy.
+- **The layout** (#163, the owner's picks from mockups of every screen; the review's rules: one main action per screen, quieter
+  buttons for the rest, content first, rare things folded, short explanations): buttons have three weights, `K.button(owner,
+  parent, style, label, minW, maxW, danger)` and `Flow:buttons`' `style` ("quiet", "link", else the game's red button; `danger` a red
+  link). **One red button per screen or box**; Cancel is quiet. Layout pieces: `Flow:hot` (the box that matters most), `Flow:heading`,
+  `Flow:strip(text, tone, link)` (how things stand, in one line), `Flow:row(label, fill, { lw })` (labels in a column of their own),
+  `Flow:inline` (words with links after them), `Flow:cols`, `Flow:facts`, `Flow:entry` (a person's row). `UI.pin(list, more)` pins a
+  screen's main actions under it (what doesn't fit, and `more`, go in `UI.moreSheet` behind "More..."); `UI.pinPanel(fill)` pins
+  anything (My reserves' slots); `UI.pinSide(width, fill)` puts a list down the left that scrolls on its own (`UI.sideFrame`; the
+  Settings tab's sections; the screen's flow is then `f.width - UI.sideWidth(width)` wide, `UI.toTop` starts it at the top again). The tabs are "My reserves" and "Reserved" (the owner's choice; a name that doesn't fit gets a
+  smaller font). Kept per character: `db.ui.sessionOpen` (the Session tab's folds, `UI.sessionFold`),
+  `db.ui.settingsPage` (a section's title, or "all"), `db.ui.minorOpen`; in memory: `UI.resQ`, `UI.guildQ`, `UI.setQ` (searches),
+  `UI.guildPage`, `UI.ownForm`. Drop-downs: `K.dropdown(owner, parent, width, label, items, pick, id)` (the game's look: a box, the gold arrow,
+  a list with round ticks; `items` = { label, on, head, gap, tip }; one shared list, `K.dropList`, parented to the window and kept open
+  across redraws for the same `id`; a click elsewhere (`K.dropCatcher`) or Escape closes it); `UI.raidItems` / `UI.raidLabel` for raids.
+  Every x is the game's close button art (`UIPanelCloseButtonNoScripts`): `K.setItem`'s act with text "x" is `row.x`, a chip labelled
+  "x" is kind "x". `UI.confirm`'s 5th argument names the other button (ending a session asks "Yes" / "No"). `Gargul.preview(s, text, roster, names)` is an import worked out on a copy (nothing changes or is
+  sent) for the import box's check; `UI.giveSheet`'s `it.to` picks who to start with; `UI.maxBidSheet`, `UI.batchMaxSheet`. The
+  auction window has `f.bid` (red, the least that counts), `f.price`, `f.priceBy`, and extras 1-3: Bid an amount, Max bid, Bid
+  ahead. Kept as they were (the owner's picks): the roll window, the loot panel, the trade timers.
+- **Themes** (#163, the owner's ask; `K.THEMES`, `K.THEME_ORDER`, `K.useTheme`, `K.T` in `UI/Kit.lua`; setting `theme`, Settings "Themes"):
+  a theme changes only the look, never the layout or what anything does. `LR.loadDB` sets it before any frame is made, so a change
+  comes in with a reload (`ReloadUI`, asked). Each theme is a table of backdrops (`rock`, `sheet`, `panel`, `inset`, `flat`), colours
+  (`panelBg`, `chipOnEdge`, `tabBg`...) and styles (`plate`, `buttons`, `close`, `tick`, `drop`, `sign`, `edit`: "game" or "flat"), and
+  `font` (a game font file every `K.fs` text is drawn in, `K.themeFont`). Use the theme for anything new: `K.skin(frame, role)` for a
+  window, `K.paint(frame, bg, edge)`, `K.hover(button, art)`, `K.closeButton(parent)`, `K.xButton(parent)`, `K.mainButton(parent)`
+  (the red button outside the pools; the flat one is kind "flatmain"), `K.foldSign`, and `K.edge(r, g, b, a)` / `K.bg(...)` around
+  colours a screen sets itself (the classic look's browns become black edges and grey fills in flat looks; gold, greens and reds
+  keep their meaning). Only the game's own textures and fonts, and plain colours: no other addon's art or code (ElvUI's included).
+  The UI test's "themes" run draws the ElvUI look on a second player (`elvui-*` pictures).
+- **The test copy** (#163, `ci/testcopy.sh`, `out/LootRulerTest.zip`): the addon in the folder LootRulerTest, saving to
+  `LootRulerTestDB`. The code names nothing by folder: `LR.NAME` is the folder, `LR.DB_NAME` the saved file, `LR.LOGO` the art,
+  `LR.TITLE` "LootRuler test" in the window and chat; the network prefix and raid lines stay LootRuler's. With both loaded, the
+  first keeps `_G.LootRuler` and each has `LR.twin`; the test copy says in chat to turn one off. The test server's `o.addon` /
+  `o.twin` load it (`tests/raid.lua`, "the test copy").
 - **`!reserve`** (#162, the owner's choice; `COMMANDS` / `commandLength` in `Core/Whisper.lua`): every command works after `!reserve`
   or `!lr` (any capitals; "!reserved" isn't one). Raid lines, answers, Settings and the tour teach `!reserve`; `!lr` stays for
   older versions and habit (an older loot master only knows `!lr`, so `Swap.lua`'s note to one still says it).
@@ -229,7 +264,8 @@ Start here in a new session; rewrite this section at the end of each piece of wo
 - **Only the group can reserve** (`s.go`, `S.groupOk`, `S.setGroupOnly`, `LR.setGroupOnly`): on for new sessions; the
   leader's addon refuses new reserves from outside the group (picks `P`, whispers) with `GROUP_ONLY`, while taking
   reserves back, the leader's own adds and imports still work. Switch it off for guild members to reserve pre-raid.
-- **The Test tab** (`UI/Test.lua`, setting `testTab`, off to start with): pretend rolls (`UI.testRoll(opts)`, `UI.testGargul`,
+- **The Test tab** (`UI/Test.lua`, setting `testTab`, off to start with; nothing folded since #163: the practice raid, Roll windows,
+  Alerts and raid lines, softres.it names): pretend rolls (`UI.testRoll(opts)`, `UI.testGargul`,
   made-up players in `UI.PRETEND`), the trade warning, the reminder line and a softres.it name check, all only on this
   screen. A pretend roll (`copy.test`) rolls locally in `Rolls.roll`, never with the game's /roll.
 - **Roll windows for Gargul's rolls** (`Rolls.followGargul`, `Rolls.gargulEnded`, setting `gargulWindows`, on to start with):
@@ -388,7 +424,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   on; my own is read from my character. Item links in real slots only. Item level from `C_Item.GetItemInfo(link)`. Pretend players'
   made-up gear counts as inspected. Messages `H` and `I` (older versions) are neither sent nor answered.
 - **Organiser branding** (`s.br` = { n, m, i }; `S.okBrand`, `S.setBrand`, `S.brandIcon`, `S.BRAND_ICONS` (game icon paths, by place);
-  `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid's name"): shown in the window's header (icon and name),
+  `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid"): shown in the window's header (icon and name),
   as a note on raiders' Reserve tab, after `Whisper.announce`'s line, in the "opened soft reserves" note and the batch window's title.
   `S.valid` keeps the session and only the right parts of `br` (a newer version's icon number shows as the raid's own).
 - **Loot council** (`Core/Council.lua`; `s.lc` = names, `S.cleanCouncil`, `S.COUNCIL_MAX`; `Council.set`, `on`, `isMember`, `votable`, `vote`,
@@ -410,8 +446,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   locked, one per player (a new one replaces it), checked like a reserve (`S.set` of the whole new list, so it can't half-happen);
   the answer is whispered. Locking a practice raid makes a pretend player ask.
 - **Clearing reserves of players not in the group** (`S.absent(s, inGroup)`, `S.clearAbsent(s, inGroup, now)`; `LR.absent`, `LR.clearAbsent`,
-  leader only, in a group or the practice raid): a button on the leader's Reserves tab with the count, after `UI.confirm` naming them
-  (`clearAbsentButton` in `UI/Overview.lua`; a private session has it too since #160, against the group I'm in).
+  leader only, in a group or the practice raid): on the leader's Reserved tab, a gold line under how it stands names them with "Clear
+  their reserves" while there are any (`absentLine`), and More has the button with the count; both ask first with `UI.confirm`
+  naming them (`askClear` in `UI/Overview.lua`; a private session has it too since #160, against the group I'm in).
   Offline members are still in the group. Each is cleared like a reserve taken back (`S.set` with no items) and dropped from `s.sx`, so a
   re-import counts what the sheet gives them as new again.
 - **The owner's plan from the Gargul comparison is done:** the practice raid, pot rules, GDKP bookkeeping, bidding ahead, several
@@ -452,7 +489,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   tick boxes (`tick = true` in `Flow:chips`, `K.setTick`); the softres.it import is first on the Session tab, on the Reserves
   tab and in the new-session form (`UI.importSheet`); Settings sections fold (`Flow:fold`, `section` in `UI/Settings.lua`,
   open ones kept in `db.ui.settingsOpen`). A new setting goes in a section, and its line should say what's in it now.
-  The owner kept: the windows' see-through backgrounds, the size, greyed buttons, and the tabs as they are.
+  The owner kept: the windows' see-through backgrounds, the size and greyed buttons (the tabs were renamed in #163).
 - **Loot only from the session's raid** (#111; `Drops.here(s, where)`, gating `Drops.writer`; `LR.RAID_MAPS`, `LR.raidAt`, `LR.where`;
   `UI/Where.lua`: `UI.newRaidPrompt`, `UI.whereCheck`, setting `raidPrompt`): inside the raid's instance (by `GetInstanceInfo`'s
   instance id), outdoors for world bosses, any raid LootRuler doesn't know for a custom raid; the practice raid anywhere. The

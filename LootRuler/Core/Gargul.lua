@@ -356,6 +356,7 @@ end
 --- A pick that has already won its item stays, even if the sheet drops it (the reserve was used): "used".
 --- Returns a summary { players, items (from the sheet now), added, removed, hard, hardRemoved, skipped, over, used,
 --- matched = { { from, to } }, unsure = { { from, options } }, missing = { { from, near } } }, or nil and what's wrong.
+local previewing = false      -- (G.preview: an import tried on a copy, that nobody hears about)
 function G.importInto(s, text, roster)
   local data, err = G.decode(text)
   if not data then return nil, err end
@@ -368,7 +369,7 @@ function G.importInto(s, text, roster)
   local sum = { players = 0, items = 0, added = 0, removed = 0, hard = 0, hardRemoved = 0, skipped = 0, over = 0, used = 0,
     matched = {}, unsure = {}, missing = {} }
   roster = roster or (LR.roster and LR.roster()) or {}
-  for _, m in ipairs(roster) do wasHere[U.foldCase(U.full(m.name))] = true end
+  if not previewing then for _, m in ipairs(roster) do wasHere[U.foldCase(U.full(m.name))] = true end end
   local people = G.people(s, roster)
   s.nm = type(s.nm) == "table" and s.nm or {}
   local classes = {}
@@ -492,8 +493,23 @@ function G.importInto(s, text, roster)
   if not next(s.sx) then s.sx = nil end
   if not next(s.nm) then s.nm = nil end
   if s.rev == was.rev and not (S.same(was.sx, s.sx) and S.same(was.hx, s.hx) and S.same(was.nm, s.nm)) then S.bump(s, now) end
-  LR.leaderChanged(s)
+  if not previewing then LR.leaderChanged(s) end
   return sum
+end
+
+--- what importing would do, without doing it: the same summary as G.importInto, worked out on a copy of the session
+--- (nothing changes, nothing is sent). names: { [name on the sheet] = character } to match first, as the leader picked
+function G.preview(s, text, roster, names)
+  local copy = U.copy(s)
+  if names and next(names) then
+    copy.nm = type(copy.nm) == "table" and copy.nm or {}
+    for from, to in pairs(names) do copy.nm[from] = to end
+  end
+  previewing = true
+  local ok, sum, err = pcall(G.importInto, copy, text, roster)
+  previewing = false
+  if not ok then return nil, "That doesn't look like a softres.it export." end
+  return sum, err
 end
 
 ---------------------------------------------------------------------- Gargul's rolls, read from raid chat

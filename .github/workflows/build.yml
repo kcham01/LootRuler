@@ -47,6 +47,7 @@ jobs:
           name: LootRuler-pr${{ github.event.number }}
           path: |
             out/LootRuler.zip
+            out/LootRulerTest.zip
             build/shots/*.png
             build/*.log
           if-no-files-found: warn

@@ -24,10 +24,17 @@
 --   Core/Practice.lua the practice raid: pretend players on the real rules, nothing leaving the screen (UI/Test.lua)
 local ADDON, LR = ...
 LR.NAME = ADDON
+-- The build also makes a test copy (out/LootRulerTest.zip, folder LootRulerTest) to try changes beside the real
+-- LootRuler: its own folder, art path and saved file, and its window says "test". It talks to the raid as LootRuler.
+LR.TEST_COPY = ADDON ~= "LootRuler"
+LR.DB_NAME = ADDON .. "DB"         -- the saved file's name in the TOC (LootRulerDB, or LootRulerTestDB)
+LR.TITLE = LR.TEST_COPY and "LootRuler test" or "LootRuler"
 LR.PREFIX = "LootRuler"          -- addon message prefix (16 characters at most)
 LR.TAG = "[LootRuler]"           -- starts every chat line the addon writes for other players
 LR.VERSION = "1.0.0-beta"
-LR.LOGO = "Interface\\AddOns\\LootRuler\\Media\\Logo"   -- Media/Logo.tga (drawn by tools/art.mjs)
+LR.LOGO = "Interface\\AddOns\\" .. ADDON .. "\\Media\\Logo"   -- Media/Logo.tga (drawn by tools/art.mjs)
 
-_G.LootRuler = LR                -- for other addons (and /dump)
+-- for other addons (and /dump); with LootRuler and its test copy both on, the first keeps the name, and each knows
+-- the other (LR.twin) so the test copy can say to turn one off
+if _G.LootRuler and _G.LootRuler ~= LR then LR.twin = _G.LootRuler; _G.LootRuler.twin = LR else _G.LootRuler = LR end
 LR.Practice = { on = false }     -- the practice raid (Core/Practice.lua); off until it starts

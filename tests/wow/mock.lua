@@ -296,6 +296,7 @@ end
 function EditBox:SetMultiLine(v) self._multi = v end
 function EditBox:SetMaxLetters(n) self._max = n end
 function EditBox:SetFontObject(f) self._font = f end
+function EditBox:SetFont(path, size, flags) self._fontPath, self._fontSize = path, size end
 function EditBox:SetTextInsets() end
 function EditBox:SetJustifyH() end
 function EditBox:SetCursorPosition(n) self._cursor = math.max(0, math.min(n or 0, #self:GetText())) end
@@ -439,6 +440,7 @@ function FontString:GetText() return self._text end
 function FontString:SetFormattedText(f, ...) self._text = f:format(...) end
 function FontString:SetFontObject(f)
   if type(f) == "string" then f = fontObjects[f] or fail("no font object " .. f) end
+  self._fontSize, self._fontPath = nil, nil          -- (a font object replaces a font set with SetFont)
   if not f or not f._size then fail("bad font object") end
   self._font = f
 end
@@ -517,6 +519,9 @@ local TEMPLATES = {
   BackdropTemplate = function(f) f._backdropOk = true end,
   UIPanelButtonTemplate = function(f) f._template = "UIPanelButtonTemplate" f._normalFont = fontObjects.GameFontNormal end,
   UIPanelCloseButton = function(f) f._template = "UIPanelCloseButton" f:SetSize(32, 32) end,
+  -- (the same art without the script that hides its parent: SharedUIPanelTemplates.xml)
+  UIPanelCloseButtonNoScripts = function(f) f._template = "UIPanelCloseButtonNoScripts" f:SetSize(32, 32)
+    f._normalTex = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up" end,
   -- InputBoxScriptTemplate's scripts (SecureUIPanelTemplates.xml)
   InputBoxTemplate = function(f) f._template = "InputBoxTemplate"
     f._scripts.OnEditFocusGained = function(self) self:HighlightText() end
@@ -675,6 +680,11 @@ function M.render()
     if r and f._type == "Button" and f._template == "UIPanelCloseButton" then
       table.insert(ops, { kind = "closebutton", key = key, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha })
     end
+    -- a button's own art (SetNormalTexture, or its template's), drawn under its other pieces
+    if r and f._type == "Button" and type(f._normalTex) == "string" then
+      table.insert(ops, { kind = "texture", key = key, layer = 3, sub = -8, order = f._order, box = box(r), clip = clip and box(clip), alpha = alpha,
+        tex = f._enabled == false and f._disabledTex or f._normalTex })
+    end
     for _, reg in ipairs(f._regions) do
       if reg._shown then
         local rr = M.rect(reg)
@@ -692,6 +702,7 @@ function M.render()
             op.size = reg._fontSize or (reg._font and reg._font._size) or 12
             op.color = reg._color or (reg._font and reg._font._color) or { 1, 1, 1 }
             op.justifyH, op.justifyV, op.wrap, op.maxLines = reg._justifyH or "CENTER", reg._justifyV or "MIDDLE", reg._wrap ~= false, reg._maxLines
+            op.fontPath = reg._fontPath
             if op.text ~= "" then table.insert(ops, op) end
           end
         end
@@ -1116,6 +1127,7 @@ function M.env(player)
   G.ShowUIPanel = function(f) f:Show() end
   G.HideUIPanel = function(f) f:Hide() end
   G.CloseDropDownMenus = function() end
+  G.ReloadUI = function() M.reloads = (M.reloads or 0) + 1 end
   G.C_AddOns = { GetAddOnMetadata = function(_, k) return k == "Version" and "1.0.0-beta" or nil end,
     LoadAddOn = function(name)
       if M.loadAddOn then return M.loadAddOn(name) end
