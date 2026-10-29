@@ -14,7 +14,7 @@ it becomes 1.0.0. Each line links the pull request it came from.
     can be reserved, who can, locking) and "Who gets what" (hard reserves, extra reserves, the disenchanter, the loot
     council), each row's choices lined up; "Your raid" (its name and message, and raid setup), +1s and boosted rolls fold
     away. A private session's top box has "End session" too, and ending asks "Yes" or "No". A hard reserve is lifted
-    with an x. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
+    with an x, and extra reserves say "None" until someone has some. GDKP auctions, priority lists and reserves are one choice, "How loot goes".
   - **Opening reserves**: the raid you're in is picked, in a drop-down like the game's; softres.it or LootRuler side by
     side, with "Private session" under "Open reserves"; raid setup under them. Other options are on the Session tab
     once it's open.

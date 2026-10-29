@@ -518,7 +518,7 @@ local function whoGetsWhat(f, s)
         local list = {}
         for name, n in pairs(s.xr or {}) do list[#list + 1] = { name, n } end
         table.sort(list, function(a, b) return a[1] < b[1] end)
-        r:inline(#list == 0 and "|cff9d9d9dEveryone gets the same.|r"
+        r:inline(#list == 0 and "|cff9d9d9dNone|r"
           or table.concat(U.map(list, function(x) return U.classText(U.short(x[1]), LR.classOf(x[1])) .. " +" .. x[2] end), ", "),
           { { #list == 0 and "Give extra reserves" or "Change", function() UI.extraSheet(s) end } })
       end)
