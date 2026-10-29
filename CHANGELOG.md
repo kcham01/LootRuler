@@ -18,6 +18,8 @@ it becomes 1.0.0. Each line links the pull request it came from.
   - **Opening reserves**: the raid you're in is picked, in a drop-down like the game's; softres.it or LootRuler side by
     side, with "Private session" under "Open reserves"; raid setup under them. Other options are on the Session tab
     once it's open.
+  - **Players who left with reserves** show as a gold line at the top of the Reserved tab, naming them, with "Clear their
+    reserves" right there (it's still under More too).
   - **Every x** (taking something off a list, closing a window) is the game's own red close button. Browsing the loot
     picks the raid from a drop-down too.
   - **First screen** (nothing open): running loot (import or open reserves) or just raiding, which says a raider can import

@@ -433,8 +433,9 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   locked, one per player (a new one replaces it), checked like a reserve (`S.set` of the whole new list, so it can't half-happen);
   the answer is whispered. Locking a practice raid makes a pretend player ask.
 - **Clearing reserves of players not in the group** (`S.absent(s, inGroup)`, `S.clearAbsent(s, inGroup, now)`; `LR.absent`, `LR.clearAbsent`,
-  leader only, in a group or the practice raid): a button on the leader's Reserves tab with the count, after `UI.confirm` naming them
-  (`clearAbsentButton` in `UI/Overview.lua`; a private session has it too since #160, against the group I'm in).
+  leader only, in a group or the practice raid): on the leader's Reserved tab, a gold line under how it stands names them with "Clear
+  their reserves" while there are any (`absentLine`), and More has the button with the count; both ask first with `UI.confirm`
+  naming them (`askClear` in `UI/Overview.lua`; a private session has it too since #160, against the group I'm in).
   Offline members are still in the group. Each is cleared like a reserve taken back (`S.set` with no items) and dropped from `s.sx`, so a
   re-import counts what the sheet gives them as new again.
 - **The owner's plan from the Gargul comparison is done:** the practice raid, pot rules, GDKP bookkeeping, bidding ahead, several

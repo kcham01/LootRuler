@@ -24,20 +24,34 @@ local function swapRequests(f, s)
 end
 
 --- the clear button's words and what it does (also in More)
+--- asks, naming them, before clearing the reserves of players who aren't in the group
+local function askClear(s, away)
+  local names = table.concat(U.map(away, U.short), ", ")
+  UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
+    names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
+    "Clear " .. #away, function()
+      local cleared = LR.clearAbsent(s)
+      UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
+    end)
+end
+
 local function clearAbsent(s)
   local away = LR.absent(s)
   return {
     label = #away > 0 and ("Clear reserves of players not in the group (" .. #away .. ")") or "Clear reserves of players not in the group",
-    disabled = #away == 0, click = function()
-      local names = table.concat(U.map(away, U.short), ", ")
-      UI.confirm("Clear their reserves", ("%s: not in the group, so their reserves are taken off (and their items are free for others). Someone offline but still in the group keeps theirs.%s"):format(
-        names, s.sx and " Importing the softres.it sheet again would bring back what it gave them." or ""),
-        "Clear " .. #away, function()
-          local cleared = LR.clearAbsent(s)
-          UI.toast(("Cleared the reserves of %s."):format(U.plural(#cleared, "player")))
-        end)
-    end,
+    disabled = #away == 0, click = function() askClear(s, away) end,
   }
+end
+
+--- players with reserves who aren't in the group: a gold line at the top, with the button to clear them, only while there are any
+local function absentLine(f, s)
+  local away = LR.absent(s)
+  if #away == 0 then return end
+  local names = U.map(away, U.short)
+  if #names > 5 then names = { names[1], names[2], names[3], names[4], ("%d more"):format(#names - 4) } end
+  f:strip(#away == 1 and ("%s has reserves but isn't in the group."):format(names[1])
+    or ("%d players with reserves aren't in the group: %s."):format(#away, table.concat(names, ", ")), "warn",
+    { "Clear their reserves", function() askClear(s, away) end })
 end
 
 local function copyForGargul(s)
@@ -531,6 +545,7 @@ function UI.reservesView(f, s)
   local leader = LR.isLeader(s)
   if leader and not s.pv then swapRequests(f, s) end
   status(f, s, leader)
+  if leader then absentLine(f, s) end
   -- by item or by player, and a search across both
   local chips = K.flow(f.owner, f.parent, f.x, f.y, 180)
   chips:chips({
