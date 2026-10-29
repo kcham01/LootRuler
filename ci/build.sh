@@ -38,6 +38,9 @@ lua5.1 tests/gargul.lua | tee build/gargul.log
 echo "== only what the TBC Anniversary client has"
 lua5.1 tools/check_api.lua wowui | tee build/api.log
 
+echo "== whole raid nights clicked through the window, in every theme"
+lua5.1 tests/journeys.lua | tee build/journeys.log
+
 echo "== the window, clicked through"
 lua5.1 tests/ui.lua | tee build/ui.log
 ICONS=1 node tools/render.mjs build/shots

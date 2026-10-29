@@ -22,7 +22,7 @@ raids' loot isn't known in advance, so nothing may depend on the built-in loot l
 | `LootRuler/Core/*.lua` | Rules and networking. `Session.lua`, `Roll.lua` and `Book.lua` make no game calls (tested on their own). `Book.lua` is the guild book (points, priority lists), `Guild.lua` shares it. `Gdkp.lua` is GDKP's money (no game calls), `Pot.lua` does it in the game. |
 | `LootRuler/UI/*.lua` | The window (`Main.lua`, a tab per file), roll windows (`RollFrame.lua`), loot master (`Master.lua`) |
 | `LootRuler/Libs` | Bundled libraries (LibStub, AceComm, LibSerialize, LibDeflate); don't change them |
-| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua` |
+| `tests/` | `session.lua`, `rolls.lua` (rules), `raid.lua`, `loot.lua`, `party.lua`, `guild.lua`, `gdkp.lua` (whole raids and parties), `practice.lua` (the practice raid), `gargul.lua` (the reserves handed to Gargul, without Gargul), `ui.lua`, `journeys.lua` (whole nights clicked through the window, in every theme: a reserve night, a softres.it raid, handing over, GDKP, a private session, the practice raid) |
 | `tests/wow/mock.lua` | A strict stand-in for the game client; `server.lua` runs many clients side by side |
 | `tools/` | `check_api.lua` (only what the client has), `render.mjs` (pictures), `coverage.lua` (what no test reaches), `bench.lua` (a 40-player raid's work, messages and memory), `stress.lua` (past an ordinary night: broken messages, the biggest raid, a long night, chat floods), `fuzz.lua` (random and broken input into every rule and parser, checking what they promise), `chaos.lua` (whole raids where everyone does random things; copies must agree), `gen_loot.py`, `art.mjs` |
 | `ci/` | `build.sh` (everything CI runs), `testcopy.sh` (the test copy, to try a branch beside the real addon), `publish.sh` (results branch) |
@@ -112,6 +112,7 @@ Players don't update their addons, so every version has to work with every other
 lua5.1 tests/session.lua && lua5.1 tests/rolls.lua && lua5.1 tests/raid.lua && lua5.1 tests/loot.lua && lua5.1 tests/party.lua && lua5.1 tests/practice.lua && lua5.1 tests/guild.lua && lua5.1 tests/gdkp.lua
 lua5.1 tests/gargul.lua
 lua5.1 tools/check_api.lua <wow-ui-source checkout, branch classic_anniversary>
+lua5.1 tests/journeys.lua                                   # whole nights clicked through, in every theme
 lua5.1 tests/ui.lua && node tools/render.mjs build/shots   # PW_CHROMIUM=<chromium> if Playwright's isn't installed
 lua5.1 tools/coverage.lua                                   # functions no test reaches: build/coverage.txt
 lua5.1 tools/bench.lua                                      # a 40-player raid, measured: build/bench.txt (about a minute)
