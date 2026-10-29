@@ -424,7 +424,7 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   on; my own is read from my character. Item links in real slots only. Item level from `C_Item.GetItemInfo(link)`. Pretend players'
   made-up gear counts as inspected. Messages `H` and `I` (older versions) are neither sent nor answered.
 - **Organiser branding** (`s.br` = { n, m, i }; `S.okBrand`, `S.setBrand`, `S.brandIcon`, `S.BRAND_ICONS` (game icon paths, by place);
-  `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid's name"): shown in the window's header (icon and name),
+  `LR.setBrand`, kept in `db.ui.brand` for the next session; Session tab "Your raid"): shown in the window's header (icon and name),
   as a note on raiders' Reserve tab, after `Whisper.announce`'s line, in the "opened soft reserves" note and the batch window's title.
   `S.valid` keeps the session and only the right parts of `br` (a newer version's icon number shows as the raid's own).
 - **Loot council** (`Core/Council.lua`; `s.lc` = names, `S.cleanCouncil`, `S.COUNCIL_MAX`; `Council.set`, `on`, `isMember`, `votable`, `vote`,
