@@ -11,19 +11,31 @@ local function pendingNote(s)
   return U.short(s.leader) .. " isn't online in your group right now: your reserves go to them as soon as their addon is back."
 end
 
+--- no reserves open: running loot (open them, or bring the sheet in) or just raiding (wait, or keep my own list)
 local function noSession(f)
-  f:panel("No soft reserves open", function(p)
-    if IsInGroup() then
-      p:text("Nobody in your group has opened soft reserves in LootRuler yet. When the raid leader does, they show up here.")
-    else
-      p:text("When your raid leader opens soft reserves in LootRuler, they show up here: in your group, or before that if they share them with the guild.")
-    end
-    p:gap(4)
-    p:buttons({
-      { label = "Look again", click = function() LR.query() UI.toast("Asking your group and guild for open reserves...") end },
-      { label = "Open reserves myself", click = function() UI.go("session") end },
-    })
-  end)
+  local here = UI.raidHere()
+  f:cols({
+    function(c)
+      return c:hot("Running loot?", function(p)
+        p:note("Bring in your softres.it sheet, or let the raid reserve here.", K.TEXT)
+        p:buttons({ { label = "Import from softres.it", width = p.width, click = function()
+          if here then UI.draft.picked = nil UI.openFromDraft(true) else UI.toast("Pick the raid first.") UI.go("session") end
+        end } }, "left")
+        p:buttons({ { label = "Open reserves", style = "quiet", width = p.width, click = function() UI.go("session") end } }, "left")
+      end)
+    end,
+    function(c)
+      return c:panel("Just raiding?", function(p)
+        p:note(IsInGroup() and "When the raid leader opens reserves in LootRuler, they show up here by themselves."
+          or "When your raid leader opens reserves in LootRuler, they show up here: in your group, or before that if they share them with the guild.", K.TEXT)
+        p:buttons({ { label = "Look again", style = "quiet", width = p.width, click = function() LR.query() UI.toast("Asking your group and guild for open reserves...") end } }, "left")
+        p:note("Loot master not using LootRuler? Import the softres.it sheet yourself, in a private session, to see who reserved what.")
+        p:buttons({ { label = "Import it just for me", style = "quiet", width = p.width, click = function()
+          if here then UI.draft.picked = nil UI.privateFromDraft(true) else UI.toast("Pick the raid first.") UI.go("session") end
+        end } }, "left")
+      end)
+    end,
+  })
 end
 
 local function myReserves(f, s)
@@ -251,23 +263,21 @@ end
 
 --- looking through any raid's loot without a session
 local function browse(f)
-  UI.browse = UI.browse or "Karazhan"
-  f:panel("Browse the loot", function(p)
-    for _, era in ipairs({ { "tbc", "Burning Crusade raids" }, { "classic", "Original raids" } }) do
-      p:text(era[2], { font = "GameFontNormal", gap = 2 })
-      local chips = {}
-      for _, r in ipairs(LR.RAIDS) do
-        if r.era == era[1] then chips[#chips + 1] = { label = r.name, on = UI.browse == r.key, click = function() UI.browse = r.key UI.render() end } end
-      end
-      p:chips(chips)
-    end
-    p:chips({ { label = "Search every raid", on = UI.browse == "all", click = function() UI.browse = "all" UI.render() end } })
-  end)
+  UI.browse = UI.browse or UI.raidHere() or "Karazhan"
+  f:gap(4)
+  f:heading("Browse the loot", "see what drops before the raid")
+  local b = K.button(f.owner, f.parent, "quiet", (UI.browse == "all" and "Every raid" or LR.raid(UI.browse).name) .. "  v", 150, 150)
+  b.text:SetJustifyH("LEFT")
+  b:SetScript("OnClick", function() UI.pickRaid("Which raid's loot?", UI.browse, function(key) UI.browse = key UI.render() end, false, true) end)
+  b:SetPoint("TOPLEFT", f.parent, "TOPLEFT", f.x, -f.y)
+  -- the search box beside it
+  local inner = K.flow(f.owner, f.parent, f.x + 158, f.y + 1, f.width - 158)
+  searchBox(inner, UI.browse == "all" and "Search every raid's loot" or ("Search " .. LR.raid(UI.browse).name))
+  f.y = math.max(f.y + 30, inner.y)
   f:chips({
     { label = "For my class", on = UI.usable, click = function() UI.usable = not UI.usable LR.db.ui.usable = UI.usable UI.render() end,
       tip = "Only show what your class would reserve: tier tokens for your class, your kind of armour, weapons you can use." },
   })
-  searchBox(f, UI.browse == "all" and "Search every raid's loot" or ("Search " .. LR.raid(UI.browse).name))
   if UI.browse ~= "all" and UI.preloaded ~= UI.browse then UI.preloaded = UI.browse LR.preload(UI.browse) end
   if UI.browse == "all" then
     if #U.trim(UI.q) < 2 then f:note("Type at least two letters to search every raid.") return end
