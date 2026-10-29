@@ -5,6 +5,8 @@ it becomes 1.0.0. Each line links the pull request it came from.
 
 ## 1.0.0-beta (not released yet: being tested)
 
+- The loot master window shows big bids in full (1,500g was cut short), seen in the owner's in-game screenshots
+  ([#166](https://github.com/kcham01/LootRuler/pull/166)).
 - A new layout for every tab and window (the owner's picks from the mockups): one red button for the main thing to do on
   each screen, quieter buttons for the rest and plain links for rare or risky ones; content first, with the main actions
   pinned under the list and the rarer ones under "More..."; rules, state and actions apart; shorter explanations.

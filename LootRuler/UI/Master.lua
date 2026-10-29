@@ -55,7 +55,7 @@ K.define("rollrow", function()
   return b
 end, function(b)
   b.gear.links = nil b.gear:Hide()
-  b.rank:SetText("") b.name:SetText("") b.kind:SetText("") b.num:SetText("")
+  b.rank:SetText("") b.name:SetText("") b.kind:SetText("") b.num:SetText("") b.num:SetWidth(36)
   b.num:SetTextColor(1, 1, 1) b.kind:SetTextColor(K.rgb(K.GOLD)) b.rank:SetTextColor(K.rgb(K.GOLD))
   b:SetBackdropColor(K.bg(0, 0, 0, 0.35)) b:SetBackdropBorderColor(K.edge(0.42, 0.33, 0.19, 0.5))
   b:Enable()
@@ -219,6 +219,8 @@ local function rowFor(f, roll, e, rank, pick)
     b.num:SetTextColor(K.rgb(K.GREY))
     b.name:SetText("|cff9d9d9d" .. U.short(e.p) .. "|r")
   end
+  -- (as wide as the number needs: a bid of 1,200g is wider than a roll of 96)
+  b.num:SetWidth(math.max(36, math.ceil(b.num:GetStringWidth()) + 4))
   if pick and U.samePlayer(pick, e.p) and e.kind then
     b:SetBackdropColor(K.bg(0.35, 0.27, 0.05, 0.9))
     b:SetBackdropBorderColor(K.edge(1, 0.82, 0, 1))
