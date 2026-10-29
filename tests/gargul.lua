@@ -74,6 +74,17 @@ local site = {
 }
 local siteString = U.b64encode((LibDeflate:CompressZlib(U.toJSON(site))))
 local s2 = S.new("Lead-Dreamscythe", "Karazhan", 2, true, 1760000000)
+-- first, checked before it goes in (the import box): the same summary, and nothing changes
+local told = 0
+LR.leaderChanged = function() told = told + 1 end
+local before = U.copy(s2)
+local look = LR.Gargul.preview(s2, siteString, {})
+check("a preview says what would come in", look and look.players == 2 and look.items == 2 and look.hard == 1 and look.skipped == 1)
+check("and changes nothing, and tells nobody", S.same(before, s2) and told == 0 and s2.url == nil and next(s2.res) == nil)
+check("a preview of something that isn't an export says so", select(2, LR.Gargul.preview(s2, "nonsense!", {})) ~= nil)
+local look2 = LR.Gargul.preview(s2, siteString, {}, { ["Zed-Dreamscythe"] = "Zeddy-Dreamscythe" })
+check("names the leader matched are used", look2 and look2.players == 2 and s2.nm == nil)
+LR.leaderChanged = function() end
 local sum = LR.Gargul.importInto(s2, siteString)
 check("a softres.it export comes into a session", sum and sum.players == 2 and sum.items == 2 and sum.hard == 1)
 check("items from other raids are skipped", sum and sum.skipped == 1)

@@ -50,41 +50,111 @@ local function hardReserveSheet(s, id)
   end)
 end
 
+--- what a finished import did, in a line (chat, and the summary)
+local function importLine(sum)
+  local msg = ("From softres.it: %s for %s"):format(U.plural(sum.items, "reserve"), U.plural(sum.players, "player"))
+  local changes = {}
+  if sum.added > 0 then changes[#changes + 1] = sum.added .. " new" end
+  if sum.removed > 0 then changes[#changes + 1] = sum.removed .. " taken off" end
+  if #changes > 0 then msg = msg .. " (" .. table.concat(changes, ", ") .. ")" elseif sum.items > 0 then msg = msg .. " (no changes)" end
+  if sum.hard > 0 then msg = msg .. (", %d hard reserved"):format(sum.hard) end
+  if sum.hardRemoved > 0 then msg = msg .. (", %d hard reserves taken off"):format(sum.hardRemoved) end
+  if sum.used > 0 then msg = msg .. ("; %d kept (they already won with it)"):format(sum.used) end
+  if sum.over > 0 then msg = msg .. ("; %d past someone's limit, skipped"):format(sum.over) end
+  if sum.skipped > 0 then msg = msg .. ("; %d not from this raid, skipped"):format(sum.skipped) end
+  return msg .. "."
+end
+
+--- bringing reserves in from softres.it: paste, then check what would come in (and sort out names) before it goes in
 local function importSheet(s)
   local text = ""
   local link = s.url or ""
+  local names = {}               -- names on the sheet the leader matched here: name -> character
+  local seq = 0
+  local raid = LR.raidOf(s)
   UI.openSheet("Bring in reserves from softres.it", function(f, h)
-    f:text("On softres.it, open the raid and click |cffffd100Gargul Export|r, copy what it shows, and paste it here (Ctrl+V). A spreadsheet works too: softres.it's CSV, or any with a column for the player's name and one for the item's number.")
-    f:note("The sheet's reserves are added to this session's. Import again whenever the sheet changes: the reserves from the sheet are updated to match it, and reserves made in LootRuler stay. Items that don't drop in " .. LR.raidOf(s).name .. " are skipped, and so are reserves past the limit.")
+    f:note("On softres.it, open your raid, click |cffffd100Gargul Export|r, copy it and paste it here (Ctrl+V). A spreadsheet works too: softres.it's CSV, or any with a column for the name and one for the item's number. Nothing goes in until you check it below.")
     local e = K.get(f.owner, "memo", f.parent)
     f:place(e, 90, 0)
-    K.setEditMemo(e, f.width, 90, text, function(t) text = t end, true)
+    K.setEditMemo(e, f.width, 90, text, function(t)
+      text = t
+      -- (the check below is worked out once the paste or typing stops)
+      seq = seq + 1
+      local mine = seq
+      C_Timer.After(0.3, function() if mine == seq and h.frame:IsShown() then h.redraw(true) K.refocus(e.edit) end end)
+    end, U.trim(text) == "")
     f:gap(6)
-    f:text("The raid's softres.it link (optional)", { font = "GameFontNormalSmall", color = K.GOLD, gap = 2 })
-    local le = K.get(f.owner, "edit", f.parent)
-    f:place(le, 22, 6, f.width - 12)
-    le:SetText(link)
-    le:SetScript("OnTextChanged", function(self) link = self:GetText() end)
-    f:note("To post in raid chat (Session tab), for players who'd rather reserve there. A Gargul Export from softres.it fills it in.")
-    f:gap(10)
-    f:buttons({ { label = "Cancel", click = function() h.close() end }, { label = "Import", click = function()
+    local ready = false
+    if U.trim(text) ~= "" then
+      -- what it would do, worked out on a copy (Gargul.preview)
+      local sum, err = LR.Gargul.preview(s, text, LR.roster(), names)
+      if not sum then
+        f:strip(err, "bad")
+      else
+        ready = true
+        local reserves = sum.items + sum.over
+        f:strip(("|cffffffff%s, %s|r - %s"):format(U.plural(sum.players, "player"), U.plural(sum.items, "reserve"), raid.name), sum.items > 0 and "ok" or "warn")
+        local bits = {}
+        if sum.hard > 0 then bits[#bits + 1] = U.plural(sum.hard, "hard reserve") end
+        if sum.added > 0 and sum.added ~= sum.items then bits[#bits + 1] = sum.added .. " new" end
+        if sum.removed > 0 then bits[#bits + 1] = sum.removed .. " taken off (gone from the sheet)" end
+        if sum.used > 0 then bits[#bits + 1] = sum.used .. " kept (already won)" end
+        if #bits > 0 then f:note(table.concat(bits, " - ")) end
+        if sum.skipped > 0 then f:note(("%s %s: skipped (it isn't from %s)."):format(U.plural(sum.skipped, "reserve"), sum.skipped == 1 and "is on an item that doesn't drop here" or "are on items that don't drop here", raid.name), K.GOLD) end
+        if sum.over > 0 then f:note(("%s past someone's limit of %d: skipped."):format(U.plural(sum.over, "reserve"), s.sr), K.GOLD) end
+        if reserves == 0 and sum.skipped == 0 then f:note("There are no reserves in it.", K.GOLD) end
+        -- names to check: a name that could be someone (pick), or nobody in the group (they may join later)
+        local check = {}
+        for _, x in ipairs(sum.unsure) do check[#check + 1] = { from = x[1], options = x[2] } end
+        for _, x in ipairs(sum.missing) do check[#check + 1] = { from = x[1], near = x[2] } end
+        if #check > 0 then
+          f:gap(2)
+          f:text(("%s to check"):format(U.plural(#check, "name")), { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+          for _, x in ipairs(check) do
+            local list = x.options or x.near or {}
+            local said = x.options and ("could be " .. table.concat(U.map(list, U.short), " or ")) or "isn't in your group"
+            local chips = { { plain = true, label = U.short(x.from) .. ": " .. said, width = f.width < 300 and f.width or nil } }
+            for _, to in ipairs(list) do
+              chips[#chips + 1] = { label = "Use " .. U.short(to), on = names[x.from] == to, click = function()
+                names[x.from] = names[x.from] ~= to and to or nil
+                h.redraw(true)
+              end }
+            end
+            f:chips(chips, { gap = 4 })
+          end
+          f:note("Not in the group yet? Leave it: their reserves count for them when they join.")
+        end
+        if #sum.matched > 0 then
+          f:note("Spelled differently on the sheet, matched to who's in the group: "
+            .. table.concat(U.map(sum.matched, function(m) return U.short(m[1]) .. " is " .. U.short(m[2]) end), ", ") .. ".", K.GREEN)
+        end
+        f:note(s.sx and "It replaces what the sheet brought before. Reserves made in LootRuler stay." or "Reserves made in LootRuler stay, alongside the sheet's.")
+      end
+      f:gap(4)
+    end
+    f:row("softres.it link", function(r)
+      local le = K.get(r.owner, "edit", r.parent)
+      r:place(le, 22, 6, r.width - 12)
+      le:SetText(link)
+      K.setHint(le, "optional: the export fills it in")
+      K.onText(le, function(self) link = self:GetText() end)
+    end, { lw = 96 })
+    f:gap(4)
+    f:buttons({ { label = "Cancel", style = "quiet", click = function() h.close() end }, { label = "Bring them in", disabled = not ready and U.trim(text) ~= "", click = function()
       if U.trim(link) ~= (s.url or "") and not LR.setLink(s, link) then UI.toast("That isn't a softres.it link (https://softres.it/...).") return end
-      if U.trim(text) == "" and U.trim(link) ~= "" then h.close() return end
+      if U.trim(text) == "" then h.close() return end
+      -- the leader's picks for names first (as Bobb -> Bob would be after the import)
+      if next(names) then
+        s.nm = type(s.nm) == "table" and s.nm or {}
+        for from, to in pairs(names) do s.nm[from] = to end
+      end
       local sum, err = LR.Gargul.importInto(s, text)
       if not sum then UI.toast(err) return end
       h.close()
-      local msg = ("From softres.it: %s for %s"):format(U.plural(sum.items, "reserve"), U.plural(sum.players, "player"))
-      local changes = {}
-      if sum.added > 0 then changes[#changes + 1] = sum.added .. " new" end
-      if sum.removed > 0 then changes[#changes + 1] = sum.removed .. " taken off" end
-      if #changes > 0 then msg = msg .. " (" .. table.concat(changes, ", ") .. ")" elseif sum.items > 0 then msg = msg .. " (no changes)" end
-      if sum.hard > 0 then msg = msg .. (", %d hard reserved"):format(sum.hard) end
-      if sum.hardRemoved > 0 then msg = msg .. (", %d hard reserves taken off"):format(sum.hardRemoved) end
-      if sum.used > 0 then msg = msg .. ("; %d kept (they already won with it)"):format(sum.used) end
-      if sum.over > 0 then msg = msg .. ("; %d past someone's limit, skipped"):format(sum.over) end
-      if sum.skipped > 0 then msg = msg .. ("; %d not from this raid, skipped"):format(sum.skipped) end
-      LR.print(msg .. ".")
-      UI.importSummary(s, sum, msg .. ".")
+      local msg = importLine(sum)
+      LR.print(msg)
+      -- names still to sort out, or matched: the summary says so; else a word is enough
+      if #sum.matched > 0 or #sum.unsure > 0 or #sum.missing > 0 then UI.importSummary(s, sum, msg) else UI.toast(msg) end
     end } })
   end)
 end
