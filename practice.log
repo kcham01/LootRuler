@@ -1,0 +1,89 @@
+== only on your own
+ok   not in a group
+ok   on your own it can start
+== starting
+ok   a practice session, mine, of the raid picked
+ok   eight pretend players are in the group
+ok   what the raid would hear goes to raid chat, which is only shown
+ok   I can run the loot
+ok   the guild book is a copy
+== reserves
+ok   the pretend players reserve, by whisper and in raid chat
+ok   their whispers are answered, on my screen only
+ok   and their lines show too
+ok   everyone reserved all they could: nothing more
+== someone who left
+ok   a reserve of someone not in the practice raid is listed; the pretend players aren't
+ok   clearing takes theirs only
+== a swap request
+ok   reserves locked: a pretend player asks to swap one, by whisper
+ok   and the practice raid's chat shows the lock line
+ok   allowing it swaps it
+ok   asked for on purpose: a pretend player asks to swap one
+ok   refusing it keeps their reserves
+ok   only while locked
+ok   a raider leaves the group, with their reserves
+ok   their reserves are listed as someone not in the group
+ok   and comes back
+ok   nobody's left to bring back
+== loot and a reserved roll
+ok   a boss drops loot into my bags
+ok   and something to count, looted by a pretend player
+ok   the note of what's picked up shows, as raiders get it
+ok   the raid would hear what dropped, with who reserved it
+ok   rolling out the next item
+ok   its roll window shows
+ok   the pretend players who may roll do; it closes
+ok   only reservers rolled a reserved item
+ok   their rolls show as the game's roll lines
+ok   giving it out
+ok   the award line shows as raid chat
+ok   a pretend player with two reserves on it rolls twice; the best counts
+== a tie
+ok   an item nobody reserved: everyone may roll
+ok   asked for a tie: two of them tie
+ok   rolled again, only the tied players roll
+== a loot council
+ok   pretend council members vote on who gets it
+== an auction
+ok   in a GDKP, the next item is auctioned
+ok   the pretend players bid against each other
+ok   one of them bids by a max, by whisper
+ok   and one bids ahead on what's next
+ok   it's sold, and the pot has it
+ok   the next one comes up, with the bid ahead in it
+== several auctions at once
+ok   the items I hold go up together
+ok   my own raid line counts as it would in a raid (/lr say)
+ok   the pretend players bid by number
+ok   it ends, and what had bids is sold (mine to me)
+== a bag check
+ok   the pretend players answer a bag check
+ok   everyone in the report has counts
+== the gear overview
+ok   asking for everyone's gear
+ok   the pretend players send made-up gear from the loot lists
+== the guild book is a copy
+ok   changes go to the copy
+== nothing left the client
+ok   no chat line was said
+ok   no addon message was sent
+== real whispers don't reach it
+ok   a real player's !lr doesn't reserve in the practice raid
+== Gargul
+ok   its reserves aren't handed to Gargul
+== ending
+ok   /lr say is only for a practice raid
+ok   ending its session ends it: no session, no pretend players
+ok   not kept under past raids
+ok   the real guild book has its own points
+ok   raid chat is real again (none: on my own)
+== a reload in the middle
+ok   a practice raid isn't kept over a reload
+== joining a group ends it
+ok   ends on joining a group
+ok   and says so
+== no errors
+ok   none
+passed 67
+errors 0

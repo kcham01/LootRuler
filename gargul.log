@@ -1,0 +1,106 @@
+== the reserves, the way Gargul's soft-reserve importer takes them
+ok   one line of base64 (what Gargul's importer box takes)
+ok   zlib-compressed JSON inside
+ok   metadata: an id, the raid, when
+ok   every player who reserved
+ok   names without this realm, with other realms
+ok   each player's items
+ok   doubled reserves listed twice
+ok   classes in lower case, or none
+ok   the fields every entry has
+ok   hard reserves, with who they're for and the note
+ok   hard reserved for nobody in particular
+ok   LootRuler reads its own export back
+== a softres.it export, into a session
+ok   a preview says what would come in
+ok   and changes nothing, and tells nobody
+ok   a preview of something that isn't an export says so
+ok   names the leader matched are used
+ok   a softres.it export comes into a session
+ok   items from other raids are skipped
+ok   with classes
+ok   and hard reserves
+== importing the sheet again, after it changed
+ok   first import: the sheet's reserves join Ann's own
+ok   importing the same sheet again changes nothing
+ok   an updated sheet: Zed's swap comes through
+ok   Ann's own reserve stays, and the same item on the sheet counts once
+ok   whoever left the sheet loses what it gave them
+ok   hard reserves the sheet dropped come off; ones set in LootRuler stay
+ok   and it says what changed
+ok   it's still a valid session
+ok   an import that only changes what the sheet brought still changes the version
+ok   but not with nonsense in it
+ok   rubbish is refused with a reason
+== a changed sheet never gives anyone more reserves than they should have
+ok   a swap: the old pick goes, the new one comes
+ok   both swapped
+ok   a pick dropped
+ok   asking for more than the limit: the extra is skipped, and counted
+ok   a reserve made only in LootRuler stays
+ok   an item reserved in both places follows the sheet when it changes
+ok   and doesn't push out a pick they kept
+ok   a pick that has already won stays (the reserve was used)
+ok   so the new pick is past the limit: no extra reserve
+ok   a new pick never pushes out one they had, whatever the sheet's order
+ok   off the sheet altogether: the picks go, except one that has won
+== names on the sheet spelled differently from the characters
+ok   a name without its accent goes to the character
+ok   capitals don't matter, accented ones either
+ok   a name typed without its realm finds the player from another realm
+ok   the summary says which names were matched
+ok   names nobody in the group has are kept as they are
+ok   and listed, with close spellings
+ok   Gargul gets the game's spelling
+ok   importing again goes to the same characters
+ok   the typo is listed for the leader, Zed (no close spelling) isn't
+ok   one character can't take a second name's picks while it has the first's
+ok   but someone without any can
+ok   and the next import remembers it
+ok   the session with its matches is valid
+ok   someone joining with the accent gets the sheet's reserves
+ok   once is enough
+ok   a name that could be two characters stays as it is
+ok   and the leader is asked which
+ok   it stays on the list until the leader picks
+ok   a later join doesn't guess either
+ok   the leader's pick
+ok   no double entry: the sheet's picks join the player's own
+ok   both spellings on a sheet: the exact one wins, the other isn't lost
+ok   a name that was in the group isn't moved to a lookalike
+== handing the reserves to a loaded Gargul (a stand-in here: Gargul itself is never used)
+ok   no Gargul: nothing to hand to
+ok   a loaded Gargul takes the export
+ok   one that says no: the leader is told
+ok   one that breaks: LootRuler carries on, and the error is shown the game's way
+== moving a misspelt name's reserves keeps its extra reserves
+ok   two picks, with an extra
+ok   moved to the right character
+== Gargul's rolls, read from raid chat
+ok   Gargul's line gives the item, its link and the seconds
+ok   with anything in front of it
+ok   other raid chat isn't a roll
+ok   LootRuler's own countdown isn't Gargul's roll, though it reads like one
+ok   "Stop your rolls!" ends it
+ok   so does the item going to someone
+ok   the countdown doesn't
+ok   with " Gargul : " in front: a roll starts
+ok   and stops
+ok   "I gave [item] to Name-Realm" ends it too, with who got it
+ok   someone else saying "Stop your rolls!" in the middle of a line doesn't
+ok   and says who it went to
+ok   a roll that doesn't say how long lasts a minute
+ok   looting another item doesn't end it
+ok   looting the item does
+== spreadsheets, and the softres.it link
+ok   a spreadsheet's fields, quotes and all
+ok   softres.it's CSV: each player once, with their items and class
+ok   and it comes into a session like an export
+ok   importing it again changes nothing
+ok   lines of just a name and an item number
+ok   a spreadsheet without names and items says why
+ok   a softres.it export brings its page's link
+ok   only a softres.it link is kept
+ok   a copy carrying some other link drops it, and is still taken
+passed 95
+errors 0

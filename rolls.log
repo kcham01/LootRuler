@@ -1,0 +1,321 @@
+== how an item is rolled for
+ok   reserved by people here: only they roll
+ok   reservers who aren't in the group are left out, and named
+ok   reserved only by someone who isn't here: everyone rolls
+ok   nobody reserved it: everyone rolls
+ok   hard reserved: nobody rolls
+ok   no soft reserves open: everyone rolls
+== an open roll
+ok   main spec and off spec
+ok   main spec beats a higher off spec roll
+ok   only the first roll counts
+ok   a roll of the wrong range doesn't count
+ok   the winner
+ok   everyone who may roll isn't known for an open roll
+== a soft reserved item
+ok   a reserver rolls 1-100
+ok   someone who didn't reserve it can't roll
+ok   their roll doesn't count
+ok   waiting for Ann
+ok   nobody left to wait for once Ann passes
+ok   a tie
+ok   a roll after the close is late
+== a tie, rolled again
+ok   only the tied players
+ok   they roll the way they did before, still for the reserve
+ok   an off spec tie is rolled with /roll 99
+== loot given out
+ok   Ann has two reserves on the watch to claim
+ok   winning it uses one up
+ok   when another drops, Bob has nothing left to claim and Ann still has one
+ok   once Ann's both are used up, everyone rolls
+ok   winning on a main spec roll doesn't use up a reserve
+ok   the record keeps who and how
+ok   a session with loot given out is still valid
+ok   a mistake can be taken back
+ok   and something nonsensical isn't recorded
+== one reserve win each
+ok   off to start with
+ok   once Ann wins a reserve, her other one stops counting
+ok   so only Bob rolls for the brooch as a reserve
+ok   a main spec win doesn't count as a reserve win
+ok   switched off, her other reserve counts again
+ok   saved or sent wrong, it's dropped, not trusted
+ok   a session with a broken record isn't trusted
+== the raid's drops
+ok   a drop goes on the list
+ok   the same drop again doesn't
+ok   still on the corpse
+ok   who has it is brought up to date
+ok   the loot master holding it, to roll out
+ok   an award goes to the first drop nobody's won
+ok   won, and the loot master still has it to trade
+ok   traded: given
+ok   an award can name its drop
+ok   someone else looted it, not through LootRuler
+ok   with no loot master (group loot) whoever has it looted it
+ok   a session with drops is valid
+ok   a drop off the list keeps its award, unlinked
+ok   a broken drop isn't trusted
+ok   names from the loot message
+ok   the x2 kind
+== changing an award (a mistake)
+ok   a reserve that won is used up
+ok   changed to main spec: the reserve counts again, and it's a +1
+ok   given to someone else
+ok   to disenchant
+ok   nothing changed: nothing to send
+ok   not to nonsense
+ok   a sale isn't changed here (its price is, on the GDKP panel)
+ok   still a good session
+== the +1 rule
+ok   a main spec roll with fewer +1s wins over a higher one with more
+ok   off spec rolls still come after main spec
+ok   the +1 shows with the roll
+ok   equal rolls aren't a tie when the +1s differ
+ok   only main spec wins are +1s
+ok   the leader can give one
+ok   or take one off
+ok   never below none
+ok   the table for a roll
+ok   a session with +1s is valid
+== the disenchanter
+ok   the leader picks a disenchanter
+ok   a disenchanted item is an off spec award marked to disenchant (older versions read it as off spec)
+ok   it isn't a +1
+ok   and shows as disenchanted
+ok   nobody
+ok   a broken disenchanter isn't trusted
+== exporting who won what
+ok   a spreadsheet: a heading and a line each
+ok   with the item, player, how, roll and boss
+ok   a name with a comma is quoted
+ok   disenchanted
+ok   thatsmybis: its columns, the name without the realm, and Magtheridon's head as TMB knows it
+ok   DFT: date;[item];player, without disenchanted items
+ok   your own layout: your first line, then a line each from the template
+ok   with every field filled in, and anything else left as it is
+ok   no first line when there isn't one
+ok   several raids: only between the dates, oldest first
+ok   each line says which raid
+ok   thatsmybis ids stay apart for each raid
+ok   up to a date too
+== the guild book
+ok   a new book: nobody has points, officers edit, boosted rolls off
+ok   setting points gives the change to send
+ok   setting the same points again sends nothing
+ok   points stay between 0 and the most
+ok   a raid gives everyone in it the points for a raid
+ok   a boosted roll's range
+ok   points for each raid are kept sane
+ok   a change has the right shape
+ok   merging takes what's newer
+ok   merging the same again changes nothing
+ok   points taken away spread too
+ok   only the guild master changes who may edit
+ok   a change from far in the future counts as made an hour from now at most
+ok   so a change made after that still wins
+ok   a change a second ahead (two edits in a second) keeps its time
+ok   the same for priority lists and boosted rolls
+ok   an older change of who may edit doesn't count
+ok   boosted rolls switched off spreads
+ok   nonsense isn't a change
+ok   a change can't be endless
+ok   a whole saved book is checked
+== priority lists (in the guild book)
+ok   a list, best first, each player once
+ok   whose turn: the best who are here (ties together)
+ok   nobody on the list here: a free roll
+ok   someone who gets the item comes off its list
+ok   everything a player has priority on
+== alts (sharing their main's points)
+ok   an alt uses its main's points
+ok   spending them spends the main's
+ok   a main and their alt in the same raid get its points once
+ok   not an alt of itself, or linked twice
+ok   an alt's alt goes to the main
+ok   a main made someone's alt takes its alts along
+ok   unlinking: its own points again
+ok   links spread like everything else
+ok   and the newest wins
+ok   never an alt of itself, even from someone else
+ok   nonsense isn't a link
+ok   a saved book with links is fine
+== priority lists in and out
+ok   Gargul's CSV, in order, with a shared place
+ok   and numbered, with realms
+ok   DFT's export (Free Roll items left out)
+ok   thatsmybis: its priorities, not its wishlists
+ok   only wishlists: those
+ok   thatsmybis compressed
+ok   anything else isn't a list
+ok   an empty paste
+ok   names that can't be names are left out
+ok   bringing lists in replaces them, and clears others when asked
+ok   names get this realm
+ok   out as Gargul's CSV
+ok   which reads back the same
+ok   out for a spreadsheet
+ok   places
+== Gargul's +1s and boosted roll points
+ok   Gargul's lines (and a spreadsheet's)
+ok   with the alts after the number
+ok   nothing useful in it
+ok   a limit
+ok   written back out the same way
+ok   setting +1s keeps what they won on top
+ok   a sane number only
+== a priority roll
+ok   only the players who share the top place roll
+ok   anyone else's roll doesn't count
+ok   who still has to roll
+== boosted rolls
+ok   someone with points may roll boosted
+ok   someone without points can't
+ok   a boosted roll counts as boosted, ranked with main spec by its number
+ok   someone else's range doesn't count
+ok   a boosted roll's label
+ok   the highest number wins
+ok   a boosted and a main spec roll can tie
+ok   with the +1 rule, a +1 still rolls after those without, boosted or not
+ok   a boosted win is a main spec win (a +1), marked as boosted
+== an auction (GDKP)
+ok   everyone may bid, nobody rolls
+ok   the first bid is at least the start
+ok   each bid at least the raise more
+ok   raising your own bid: the old one stops counting
+ok   the bids that didn't count are listed why
+ok   the highest bid wins
+ok   a bid after it closed doesn't count
+ok   what counts as a bid in chat
+ok   with bids that must start with "bid", only those count
+ok   and what doesn't
+== max bids (GDKP)
+ok   a max bid opens at the lowest bid
+ok   someone bids: the max bids just above them
+ok   a higher max beats it, just above the other max
+ok   a bid under the max: the max answers
+ok   a bid over every max wins
+ok   equal maxes: whoever set theirs first wins, at that price
+ok   nothing to do without maxes, or in a roll
+== the pot (GDKP)
+ok   GDKP on: reserves stop counting, nobody can reserve
+ok   its settings
+ok   an item can start higher
+ok   starting bids from text: numbers or links, with commas and a g
+ok   brought in: how many changed
+ok   and written out by item number
+ok   a sale's price can change
+ok   but not to nonsense, nor on something that wasn't sold
+ok   everyone in the group gets a share
+ok   the pot is what was sold
+ok   the cut, then an even split between everyone (Cara bought, so she's in)
+ok   who owes and who's owed
+ok   a bonus comes out of the pot first; someone left out gets no share
+ok   tanks and healers get their role's cut
+ok   out of the pot, before the even split
+ok   taking someone out of a role
+ok   nonsense roles aren't valid
+ok   a rule of my own, named (no colours)
+ok   a percent of the pot, for the players picked
+ok   paid out of the pot after the cuts, before the even split
+ok   gold each, for several players
+ok   never more than is left: made smaller to fit
+ok   nonsense isn't taken
+ok   someone left out gets nothing from a rule
+ok   a session with rules is valid
+ok   taking a rule away
+ok   no more than ten
+ok   rules with nonsense in them aren't valid
+ok   nor a percent that isn't a number
+ok   a session without rules (an older version's) is fine
+ok   before: 1,000g, 100g cut, 20g healer cut, 880g four ways
+ok   gold put in by hand goes in the pot
+ok   and taken out
+ok   nothing, or nonsense, isn't
+ok   taking one back
+ok   payments are logged, with how
+ok   the ledger: the sale, the gold, the payments, oldest first
+ok   a payout set by hand: all they get; the rest is split between the others
+ok   never more than is left: made smaller to fit
+ok   back to a share
+ok   brought in from lines, replacing the ones before
+ok   the payouts as Name,Gold lines
+ok   and for a spreadsheet
+ok   Name,Gold lines come back in the same
+ok   it's all valid
+ok   gold by hand with nonsense isn't
+ok   nor a log
+ok   nor payouts set by hand
+ok   gold handed over counts
+ok   it's all a valid session
+ok   who still owes or is owed, biggest first (not the organiser)
+ok   nobody, once it's all paid
+ok   nonsense in it isn't
+ok   gold for people
+ok   GDKP off and on again keeps its settings
+== reading roll messages
+ok   English
+ok   other lines aren't rolls
+ok   a translation with numbered places
+ok   names for chat
+== names with letters beyond A-Z
+ok   a reserve counts for the character, whatever the capitals
+ok   and they may roll
+ok   an accent apart is someone else: they're away, everyone rolls
+ok   so Ghøst can't roll on Ghost's reserve
+== the loot master's own roll types
+ok   checked: names cleaned, bad tops and repeats dropped, four at most
+ok   nothing sensible: none
+ok   adding one
+ok   and another
+ok   a number that's taken is refused
+ok   so is a name that's taken
+ok   and 99 or 100
+ok   and no name
+ok   a roll open to everyone offers them after off spec
+ok   /roll 98 counts as Transmog
+ok   /roll 97 as Alt
+ok   another number doesn't count
+ok   Transmog wins over Alt, whatever the numbers
+ok   off spec wins over both
+ok   main spec over everything
+ok   a roll without them: /roll 98 doesn't count
+ok   a reserved item: only the reserve
+ok   a tie on Transmog is rolled again as Transmog
+ok   two equal Transmog rolls tie
+ok   won on one: off spec, by its name
+ok   a name that isn't text is refused when loaded
+== thatsmybis wishlists
+ok   a download's wishlists: type 2, in order, without its priorities
+ok   nothing pasted, or not a download, says so
+ok   one with no wishlists says so
+ok   saved wishlists are checked
+== item notes
+ok   a note is made safe: no links or colours, one line, trimmed
+ok   an empty one is none
+ok   and short
+ok   read from text: a number, or a link, then the note
+ok   lines that aren't notes are counted
+ok   and written out by item number
+ok   saved notes are checked
+== sorting a big roll
+ok   300 rolls of every kind, with +1s, come out in the same order
+ok   a player whose bids aren't taken: their bid doesn't count
+ok   everyone else's do
+ok   stopped in the middle of an auction: their top bid goes, the best of the rest is top again
+ok   their next bid doesn't count either
+ok   stopping them twice changes nothing
+ok   a max bid of theirs isn't used, anyone else's is
+ok   three reserves are three rolls; one is one
+ok   each roll is numbered; the best counts and the others are lower
+ok   the first one, beaten, no longer counts
+ok   a fourth roll doesn't count
+ok   Bob still has his roll to make
+ok   his one roll
+ok   Ann's best and Bob's tie: they roll again
+ok   nobody's waiting
+ok   the standings count each player once
+ok   a roll open to everyone is still one roll each
+passed 292
+errors 0

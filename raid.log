@@ -1,0 +1,385 @@
+== opening reserves
+ok   the leader has a session
+ok   raiders in the group get it
+ok   and are told in chat
+ok   a raider on another realm gets it too
+ok   guild members outside the group see it
+ok   but don't make it their current one until they're grouped
+== reserving in the addon
+ok   Ann reserves a watch
+ok   the leader has it
+ok   Ann's pick is confirmed
+ok   doubling up is allowed
+ok   a third reserve is refused before it's sent
+ok   Bob sees Ann's reserves
+ok   items from another raid are refused by the leader's addon (it decides, not the raider's)
+ok   and Bob is told why
+ok   Bob, from another realm, reserves
+ok   with his class
+== the leader's own reserves
+ok   the leader reserves like everyone else
+ok   and raiders see it
+== hard reserves
+ok   hard reserving takes Bob's soft reserve away
+ok   Bob's addon agrees
+ok   the leader is told who lost a reserve
+ok   raiders see the hard reserve
+ok   and can't reserve it
+== posting the reserves to the raid
+ok   the leader posts how to reserve
+ok   one line says the rules and how to reserve without the addon
+ok   and what's hard reserved
+ok   with !lr in raid chat off, it says to whisper
+ok   and so does the short how-to
+ok   the short how-to otherwise says raid chat
+== the organiser's branding
+ok   only the leader names the raid
+ok   raiders' copies have it
+ok   it's kept for the leader's next session
+ok   the raid hears it after the reserves line
+ok   cleared, for raiders too
+== sharing with the guild
+ok   not shared with the guild: guild members outside the group stop hearing changes
+ok   locking by hand tells the raid, with how to ask for a swap
+ok   and unlocking, with how to reserve
+ok   shared again: they catch up
+ok   in a group, the guild's copy waits a while after the last one (raiders get theirs at once)
+ok   and hear the next change
+ok   everyone from the guild who's online is in the group: no copy goes to the guild
+ok   the raid still hears it
+ok   a guild member who logs in then gets the session as it is now
+ok   and, outside the group, hears changes again
+== whispers from players without the addon
+ok   an item from another raid isn't found
+ok   a linked item is reserved
+ok   and the answer says so
+ok   answers start with the tag
+ok   Pug's class comes from the raid
+ok   part of a name finds the item
+ok   an unclear name asks which
+ok   no reserves left: refused
+ok   remove one
+ok   !lr on its own lists your reserves
+ok   hard reserved items can't be whispered for
+ok   !sr is left to Gargul
+ok   every whisper fits in one chat message
+ok   the leader's chat hides !lr whispers
+ok   and the answers
+ok   raiders see whispered reserves
+== +1s in whispers
+ok   with the +1 rule on, !lr says your +1s
+== !lr in raid chat
+ok   typed in raid chat, it works like a whisper
+ok   and the answer comes by whisper, not in raid chat
+ok   raid chat isn't flooded with answers
+ok   reserving in raid chat
+ok   raiders with the addon don't see the !lr lines
+ok   "!reserve remove" in raid chat takes it back
+ok   "!Reserve [item]" whispered reserves it
+ok   raiders with the addon don't see !reserve lines either
+ok   words that only start like it aren't commands
+ok   the leader can switch it off
+ok   twelve people reserving at once all get in
+ok   and all get an answer
+== the leader goes offline
+ok   Ann's change waits
+ok   the leader's session survives logging out
+ok   Ann's change arrives when the leader is back
+ok   and is confirmed
+== reserving before the group is made
+ok   new sessions: only the group can reserve
+ok   so a guild member outside the group can't (her addon says why)
+ok   and the leader's addon refuses her picks if they're sent anyway
+ok   the leader switches it off, for everyone
+ok   a guild member outside the group reserves over the guild channel
+ok   and gets the answer
+ok   with her class
+== extra reserves
+ok   two reserves each: a third is refused
+ok   only the leader gives extra reserves
+ok   Ann's addon knows she has one extra
+ok   so she can reserve a third
+ok   and the leader takes it
+ok   a player without extra hears the usual
+ok   players without the addon hear about their extra reserves
+ok   and can use them
+ok   taking the extra away takes her last reserve
+== changing the rules
+ok   fewer reserves trims everyone
+ok   raiders' addons agree
+== locking
+ok   raiders see the lock
+ok   and can't change
+ok   whispers can't either
+ok   the leader still can
+== the wrong people can't change things
+ok   a session sent by someone who isn't its leader is ignored
+ok   picks only ever count for whoever sent them
+ok   and a class claimed in a message doesn't beat the raid roster
+ok   Bob's reserves weren't touched
+ok   nonsense is ignored
+ok   a broken answer from the leader is ignored, without an error
+ok   and doesn't change what I picked
+ok   names that aren't text are no one
+== no chatter
+ok   group changes don't make raiders resend the same picks over and over
+ok   and Ann's picks are confirmed
+== joining late
+ok   not in the group: nothing yet
+ok   joining the group brings the session
+== the leader's addon decides what can be reserved
+ok   a link to another raid's item is refused by whisper, saying why
+ok   the leader allows any item; raiders see it
+ok   then a linked item from anywhere is reserved
+ok   a raider whose loot list is out of date can still reserve what the leader's allows
+== older and newer versions
+ok   everyone's addon says which version it is
+ok   a player without the addon has none
+ok   a newer version's session is still taken
+ok   and the player is told, once, that there's a newer LootRuler
+ok   only once
+ok   screens show what they don't know without breaking
+ok   a message only newer versions can handle is left alone
+ok   and a kind of message this version doesn't know is ignored
+ok   who has which version: the leader's is newer
+ok   a player without it has none
+ok   and mine is mine
+ok   asking again: everyone's addon answers, older ones first
+ok   then those without it
+ok   those with an older one are whispered
+ok   that there's a newer one
+ok   once
+== ending
+ok   the leader's session is gone
+ok   raiders' copies are gone
+ok   guild members' too
+ok   and they're told
+ok   whispers are left alone once it's over
+== no errors
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Cara: no Lua errors
+ok   Dan: no Lua errors
+== a raid that isn't in the lists
+ok   raiders get it, by name
+ok   any item can be reserved
+ok   by whisper too
+ok   by name, once someone has linked it (found, then refused: one per item)
+== a new leader for the reserves
+ok   only players whose LootRuler can take them are offered
+ok   a player without LootRuler can't be handed them
+ok   Bob's addon takes them on
+ok   everyone follows Bob, the old leader too
+ok   the same session, with everything in it
+ok   the raid is told who to whisper
+ok   a pug whispers the new leader
+ok   a forged copy naming someone else the leader is ignored
+ok   the raid leader is told the reserves' leader left
+ok   a raider isn't offered it
+ok   the raid leader takes over
+ok   everyone in the group follows
+ok   the raid hears it
+ok   nothing is lost
+ok   the old leader, back, follows the new one
+ok   and the raid leader keeps them (Bob's old copy doesn't win them back)
+ok   an assistant can't take over (pugs often make everyone one)
+ok   the master looter can, while the leader is offline
+ok   or hand them to someone else
+ok   Dan runs them, and everyone follows
+ok   one line in raid chat, from Dan
+ok   the leader logs back in and follows Dan (his old copy doesn't win it back)
+ok   it's still one session, with who led it
+ok   the new leader ends it, for everyone
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Dan: no Lua errors
+== only the group can reserve
+ok   a whisper from outside the group is refused
+ok   the leader can still add for them
+ok   and they can still take reserves back
+ok   once in the group, they can
+== reminding who hasn't reserved
+ok   one click names everyone in the group who hasn't reserved
+ok   and says how to
+ok   not the leader, nor who has reserved
+ok   one line, under 255 characters
+ok   nobody is greeted while it's off
+ok   switched on: who joins and hasn't reserved hears how, in one line
+ok   not who reserved meanwhile, nor who was there already
+ok   not once the reserves are locked
+ok   a reminder for locked reserves is refused
+== the softres.it link
+ok   only a softres.it link is taken
+ok   raiders' addons have it
+ok   a raider can't set it
+ok   posted in raid chat in one line
+ok   saying where to reserve
+== bag checks
+ok   only someone running loot asks
+ok   each item once
+ok   Ann's addon answers with her bags
+ok   Bob's counts his bank too
+ok   Pug has no LootRuler: he can't be asked
+ok   who has none of each
+ok   one raid line for each item someone lacks
+ok   naming who
+ok   switched off: no answer, and the report says so
+== swap requests
+ok   not locked: change it yourself
+ok   locked: Ann asks from her addon
+ok   the leader has it, and Ann is told it's in
+ok   her window says she's waiting
+ok   Pug asks by whisper, by name
+ok   he can't swap what he hasn't reserved
+ok   nor for a hard reserved item; his last good request still stands
+ok   allowing Ann's swaps it, for raiders too
+ok   she's told, and her addon has it
+ok   saying no to Pug's leaves his reserve, and he's told
+ok   none left
+== clearing reserves of players not in the group
+ok   who's not in the group: Gone and Cara (Bob is offline, still in it)
+ok   only the leader clears them
+ok   their reserves go; everyone in the group keeps theirs
+ok   raiders' copies agree
+== the gear overview
+ok   only someone running loot looks
+ok   the loot runner looks
+ok   everyone is inspected: the game's word, not their addon's
+ok   Bob too
+ok   and Pug, who has no addon (not the shirt)
+ok   mine too
+ok   the overview lists everyone, with how many items
+ok   and how old it is
+ok   what's read is checked: only item links, only real slots
+== raid setup
+ok   the list is read
+ok   on their own: a party's worth invited first, the rest once it's a raid
+ok   once someone joins, the party becomes a raid
+ok   and the rest are invited
+ok   who's missing
+ok   the raid is told who's missing
+ok   in one line
+ok   everyone's in group 1 or 2 by when they joined
+ok   a raider can't move people
+ok   in combat the game moves nobody, and the leader is told
+ok   sorted into the list's groups, one move at a time
+ok   sorting again moves nobody
+== saved data that's wrong
+ok   a session that isn't one is dropped
+ok   one nobody touched for a week goes to past raids
+ok   a recent one stays
+ok   saved picks must be items, and for a session that's kept
+ok   loot rules that make no sense are dropped
+ok   and roll rules
+ok   settings of the wrong kind go back to how they start
+ok   profiles are checked the same way
+ok   the window's saved places start over
+== fewer copies of the session
+ok   someone joins: they're noted as having come
+ok   but that alone sends no copy of the session
+ok   it goes out with the next change
+ok   someone with LootRuler joins and asks what's open: only they're sent it, by whisper
+ok   and they have it
+ok   the leader's version is said to the raid, once in a while, not whispered to each newcomer
+ok   five copies in a row: the one going out, then only the newest (to the raid)
+ok   raiders end up with the newest
+== only what changed goes to the raid
+ok   a change goes to the raid as just that change
+ok   much smaller than the whole session
+ok   raiders' copies end up the same as the leader's
+ok   a raider who missed a change is sent the whole session, by whisper
+ok   with an older LootRuler in the group, the whole session goes
+ok   changes from someone who isn't its leader don't count
+ok   nor changes that would make it wrong
+== the group is read once and kept until it changes
+ok   asking 150 times reads the game's list once
+ok   a name is found however it's written
+ok   the list handed out can be sorted and added to without changing the kept one
+ok   someone joins: they're in
+ok   someone leaves: they're out
+ok   an assistant is seen as one
+ok   someone goes offline (no roster update): it's seen
+ok   and it's read again after a while anyway (once: 3 members)
+ok   every frame that hears a roster update sees the group as it is now, whichever hears it first
+== events before the saved data is loaded
+ok   every event LootRuler listens for can come before logging in (36 of them)
+ok   and after logging in it carries on: its session is there
+== changes go only onto the copy they were made from (found by tools/chaos.lua)
+ok   Ben's copy has Pug's reserve, one change ahead of the group
+ok   the group's changes (from the copy before) aren't put onto Ben's: he catches up whole, without Pug's reserve
+ok   Amy, who took the changes, agrees
+== away when the reserves changed hands (found by tools/chaos.lua)
+ok   Amy runs them now, Lia follows
+ok   Ben comes back: his LootRuler asks Lia, who passed them on, and follows Amy
+ok   his reserves reach Amy
+ok   a raider's copy naming himself, passed on, is ignored by everyone
+ok   Lia's copy is older than Amy's last change
+ok   Lia (the raid leader) takes over while Amy is away
+ok   Amy comes back: she follows Lia (it changed hands after her last change), so one leader
+ok   and is told
+ok   Lia: no Lua errors
+ok   Amy: no Lua errors
+ok   Ben: no Lua errors
+ok   Dax: no Lua errors
+== a take-over nobody here can confirm: the player decides (found by tools/chaos.lua)
+ok   Fay, the master looter, takes over while Lia is away
+ok   Cal's LootRuler doesn't take Fay's word on its own
+ok   he's told, and the Session tab asks him
+ok   with a button to follow Fay
+ok   he follows her, and his reserves go to her
+ok   and reach her
+ok   Lia is asked whether to let Fay run them
+ok   she lets Fay: one leader, everyone follows Fay
+ok   Lia: no Lua errors
+ok   Fay: no Lua errors
+ok   Cal: no Lua errors
+== an old leader back while the one who took over is away (found by tools/chaos.lua)
+ok   Ben follows Amy
+ok   Ben isn't asked to follow Lia: his copy says she ran it before Amy
+ok   Ben tells Lia; as he doesn't run the group, she's asked whether to let Amy run them
+ok   she lets Amy
+ok   Amy comes back: one leader, the same copy everywhere
+ok   Lia: no Lua errors
+ok   Amy: no Lua errors
+ok   Ben: no Lua errors
+ok   Ben follows Amy
+ok   Ben isn't asked to follow Lia: his copy says she ran it before Amy
+ok   Ben, the master looter, tells Lia, and she follows Amy
+ok   Amy comes back: one leader, the same copy everywhere
+ok   Lia: no Lua errors
+ok   Amy: no Lua errors
+ok   Ben: no Lua errors
+ok   Ben follows Amy
+ok   Ben isn't asked to follow Lia: his copy says she ran it before Amy
+ok   Ben tells Lia; as he doesn't run the group, she's asked whether to let Amy run them
+ok   she lets Amy
+ok   Amy comes back: one leader, the same copy everywhere
+ok   following a claim that's an old copy now changes nothing
+ok   and such a claim isn't offered
+ok   Lia: no Lua errors
+ok   Amy: no Lua errors
+ok   Ben: no Lua errors
+== a leader back after a change of their own, with nobody to settle who runs it (found by tools/chaos.lua)
+ok   (Lia's copy is now fewer than a hand-over's jump behind Amy's)
+ok   Amy still runs them, and Ben follows her
+ok   Lia is asked whether to let Amy run them
+ok   she lets Amy: one leader
+ok   Lia: no Lua errors
+ok   Amy: no Lua errors
+ok   Ben: no Lua errors
+== the test copy: its own folder and saved file, the same raid
+ok   the test copy says so
+ok   it saves to its own file
+ok   its art is in its own folder
+ok   it talks to the real LootRuler in the raid
+ok   logging in again reads its own file
+ok   no warning with only one copy on
+ok   Tia: no Lua errors
+ok   Ray: no Lua errors
+ok   both on: the real one keeps its name, and they know each other
+ok   both on: the test copy says to turn one off
+ok   Dee: no Lua errors
+passed 340
+errors 0

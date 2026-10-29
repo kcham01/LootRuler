@@ -1,0 +1,30 @@
+== who runs the loot
+ok   it's a party, not a raid
+ok   everyone's addon finds the master looter by their place in the party
+ok   the master looter finds themselves
+ok   so they may roll loot out
+ok   messages go to the party
+== reserves
+ok   Bob's reserve reaches the leader
+ok   and the master looter
+ok   Pug reserves by whisper
+== rolling it out
+ok   the master looter rolls out Bob's reserve
+ok   the party is told
+ok   everyone with the addon gets a window
+ok   Bob rolls and it closes early
+ok   the award goes through master loot
+ok   the leader's list has it
+ok   and the party hears it
+== a player without the addon rolls in chat
+ok   Pug's reserve: only he rolls
+ok   his /roll counts, and it closes early
+ok   it goes to him
+ok   every client's copy of the session agrees
+== no errors
+ok   Lead had no errors
+ok   Ann had no errors
+ok   Bob had no errors
+ok   Dan had no errors
+passed 23
+errors 0

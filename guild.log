@@ -1,0 +1,124 @@
+== who may change the guild book
+ok   everyone knows their guild
+ok   the guild master and officers may
+ok   a member may not
+ok   and knows who may
+== an officer changes it: everyone in the guild gets the change
+ok   boosted rolls are on for the whole guild
+ok   points spread
+== a member can't change it, even by sending the change themselves
+ok   nobody takes it
+ok   only the guild master says who may edit
+ok   nor someone outside the guild
+ok   nonsense is ignored
+== the raid
+ok   the Session tab offers boosted rolls when the guild uses them
+ok   the session has them on, for raiders too
+ok   who's from the guild in the group (not Zed)
+ok   raid points
+ok   everyone from the guild in the raid gets them
+ok   the guild's other copies too
+ok   the raid is told
+== someone logging in later gets the book
+ok   from an officer, on asking the guild
+== a boosted roll
+ok   everyone's points go with the roll
+ok   the raid is told how to roll boosted
+ok   Ann's roll window has a green dice with her points
+ok   Zed has no points: no green dice
+ok   the green dice rolls 41-140
+ok   and she can't roll again
+ok   Pug's typed boosted roll counts
+ok   Zed's doesn't (it's not his range)
+ok   the highest number wins
+ok   given out
+ok   Ann's points are spent
+ok   everywhere
+ok   it's a main spec win, marked as boosted
+== a tie with boosted rolls
+ok   two boosted rolls of the same number tie
+ok   they roll again as plain main spec
+ok   whoever wins the tie still spends their points
+ok   and it's marked boosted
+== undoing a boosted win
+ok   taken back: Bob gets his points back, everywhere
+ok   given again: spent again
+== players without the addon ask
+ok   Pug hears his points and what to type
+ok   Ann hears she has none now
+== priority lists
+ok   an officer brings lists in, for the guild
+ok   everyone in the guild has them
+ok   a member can't change them
+ok   the session goes by priority lists, then reserves
+ok   first on the list and here: it's theirs, no roll (over Zed's reserve)
+ok   the raid is told
+ok   the loot master's window says so, with a button
+ok   given, and Ann comes off the list
+ok   everywhere
+ok   two share first place: only they roll
+ok   the raid is told who
+ok   Bob's window lets him roll; Ann's doesn't
+ok   and says why
+ok   Ann's roll doesn't count; it's over once both have rolled
+ok   Bob comes off that list; Pug stays first
+ok   the first on a list who's here (Kay isn't)
+ok   an item with no list goes by reserves
+ok   !lr prio: your places
+ok   !lr prio [item]: its list
+ok   priority lists only: nobody can reserve
+ok   players without the addon are told
+ok   !lr on its own says so, and how to see their places
+ok   reserves don't count: everyone rolls
+== alts
+ok   an officer links Bob as Kay's alt
+ok   a member can't
+ok   everyone's copy knows: Bob uses Kay's points
+ok   Bob rolls boosted with Kay's points
+ok   he wins: Kay's points are spent
+ok   an officer links Pug as Ann's alt (both in the raid)
+ok   raid points: Ann and her alt get them once, Kay through Bob
+ok   !lr points from an alt says whose they are
+ok   unlinking gives Pug his own points again
+ok   Gargul's export brings alts in
+ok   everywhere
+ok   and writes them back out
+== the guild master picks who may edit
+ok   only the guild master can
+ok   everyone hears it
+ok   officers can't any more
+ok   and can again
+== running loot without the right to change the book
+ok   an assistant who isn't an officer: Pug's points stay, and she's told to ask an officer
+ok   taking it back: ask an officer to give them back
+ok   an item off a priority list: she's told to ask an officer to take them off
+ok   taking it back says to put them back on if they came off
+== ending the session
+ok   ended
+== saved data is checked
+ok   a broken book is mended (and the guild's comes back)
+ok   so is anything else that isn't a book
+ok   a book with a few bad entries keeps every good one
+ok   a priority list keeps at most 100 players
+ok   an alt can't be linked to nobody
+== the bench
+ok   nobody to start with
+ok   the leader benches Mira (and Zed, who isn't in the guild)
+ok   raid points go to the bench from the guild too
+ok   Mira gets the raid's points
+ok   the raid is told how many were on the bench
+ok   the bench counts as there
+ok   the bench can be emptied
+ok   a broken bench from a message is cleaned
+== no errors
+ok   every chat line fits
+ok   Mira: no Lua errors
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Kay: no Lua errors
+ok   Zed: no Lua errors
+ok   Neo: no Lua errors
+ok   Old: no Lua errors
+passed 105
+errors 0

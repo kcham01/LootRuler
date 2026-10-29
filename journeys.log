@@ -1,0 +1,142 @@
+ok   [classic] every player's LootRuler is in the theme
+== [classic] a soft reserve night, start to end
+ok   [classic] no session yet: the form to open one, the raid picked
+ok   [classic] the leader opens reserves from the form
+ok   [classic] raiders' LootRuler has it
+ok   [classic] the raid is told how to reserve
+ok   [classic] Ann sees the loot list, with a Reserve button on each item
+ok   [classic] Ann reserves with a click: the leader has it
+ok   [classic] Bob too
+ok   [classic] Pug, without the addon, reserves by whisper
+ok   [classic] the Reserved tab says how it stands
+ok   [classic] the leader locks them from the bar under the list
+ok   [classic] the loot panel opens with the corpse's loot
+ok   [classic] a click rolls it out to its reservers
+ok   [classic] Ann's roll window pops up
+ok   [classic] the roll closes
+ok   [classic] the loot master gives it out with a click
+ok   [classic] and the raid hears who won
+ok   [classic] Bob's reserve too
+ok   [classic] the Loot tab lists who won what
+ok   [classic] raiders see the same
+ok   [classic] ending asks first, yes or no
+ok   [classic] the session ends everywhere, and is kept under past raids
+== [classic] a raid that reserved on softres.it
+ok   [classic] one click opens reserves and the import box
+ok   [classic] what the sheet brings is shown first
+ok   [classic] the sheet's reserves are in, for raiders too
+ok   [classic] the link to post comes with it
+ok   [classic] posted
+== [classic] handing the reserves over
+ok   [classic] it asks who
+ok   [classic] Ann's LootRuler takes them over
+ok   [classic] Ann gets the leader's Session tab
+ok   [classic] ending asks first, yes or no
+ok   [classic] she can end it
+== [classic] a GDKP night
+ok   [classic] one click makes it a GDKP
+ok   [classic] the auction starts from the loot panel
+ok   [classic] Ann's auction window, with one button to bid
+ok   [classic] her click bids
+ok   [classic] Pug bids in raid chat
+ok   [classic] sold to the highest bid, and given out
+ok   [classic] the next one comes up by itself
+ok   [classic] Bob buys it with one click
+ok   [classic] the Session tab shows the pot
+ok   [classic] gold still owed: it says so before ending
+ok   [classic] ended anyway, kept under past raids to finish the payouts
+== [classic] a private session (the loot master doesn't use LootRuler)
+ok   [classic] Bob opens a private session from the form
+ok   [classic] he brings the sheet in, only for himself
+ok   [classic] ending asks first, yes or no
+ok   [classic] and ends it: it's forgotten
+== [classic] trying it all on your own: the practice raid
+ok   [classic] the Test tab is switched on in Settings
+ok   [classic] a practice raid starts, with pretend players
+ok   [classic] before reserves are locked, nobody can ask to swap
+ok   [classic] a raider asks to swap a reserve, on purpose
+ok   [classic] the Reserved tab lists the swap requests
+ok   [classic] allowing one swaps their reserve
+ok   [classic] a raider leaves the group, keeping their reserves
+ok   [classic] and can be brought back
+ok   [classic] the Reserved tab says they've left, with the button to clear them
+ok   [classic] clearing takes their reserves off
+ok   [classic] they're back in the group
+ok   [classic] they reserve, and a boss drops loot
+ok   [classic] the next item is rolled out, and the pretend players roll
+ok   [classic] and ends it: nothing is kept
+ok   [classic] Lead: no Lua errors
+ok   [classic] Ann: no Lua errors
+ok   [classic] Bob: no Lua errors
+ok   [elvui] every player's LootRuler is in the theme
+== [elvui] a soft reserve night, start to end
+ok   [elvui] no session yet: the form to open one, the raid picked
+ok   [elvui] the leader opens reserves from the form
+ok   [elvui] raiders' LootRuler has it
+ok   [elvui] the raid is told how to reserve
+ok   [elvui] Ann sees the loot list, with a Reserve button on each item
+ok   [elvui] Ann reserves with a click: the leader has it
+ok   [elvui] Bob too
+ok   [elvui] Pug, without the addon, reserves by whisper
+ok   [elvui] the Reserved tab says how it stands
+ok   [elvui] the leader locks them from the bar under the list
+ok   [elvui] the loot panel opens with the corpse's loot
+ok   [elvui] a click rolls it out to its reservers
+ok   [elvui] Ann's roll window pops up
+ok   [elvui] the roll closes
+ok   [elvui] the loot master gives it out with a click
+ok   [elvui] and the raid hears who won
+ok   [elvui] Bob's reserve too
+ok   [elvui] the Loot tab lists who won what
+ok   [elvui] raiders see the same
+ok   [elvui] ending asks first, yes or no
+ok   [elvui] the session ends everywhere, and is kept under past raids
+== [elvui] a raid that reserved on softres.it
+ok   [elvui] one click opens reserves and the import box
+ok   [elvui] what the sheet brings is shown first
+ok   [elvui] the sheet's reserves are in, for raiders too
+ok   [elvui] the link to post comes with it
+ok   [elvui] posted
+== [elvui] handing the reserves over
+ok   [elvui] it asks who
+ok   [elvui] Ann's LootRuler takes them over
+ok   [elvui] Ann gets the leader's Session tab
+ok   [elvui] ending asks first, yes or no
+ok   [elvui] she can end it
+== [elvui] a GDKP night
+ok   [elvui] one click makes it a GDKP
+ok   [elvui] the auction starts from the loot panel
+ok   [elvui] Ann's auction window, with one button to bid
+ok   [elvui] her click bids
+ok   [elvui] Pug bids in raid chat
+ok   [elvui] sold to the highest bid, and given out
+ok   [elvui] the next one comes up by itself
+ok   [elvui] Bob buys it with one click
+ok   [elvui] the Session tab shows the pot
+ok   [elvui] gold still owed: it says so before ending
+ok   [elvui] ended anyway, kept under past raids to finish the payouts
+== [elvui] a private session (the loot master doesn't use LootRuler)
+ok   [elvui] Bob opens a private session from the form
+ok   [elvui] he brings the sheet in, only for himself
+ok   [elvui] ending asks first, yes or no
+ok   [elvui] and ends it: it's forgotten
+== [elvui] trying it all on your own: the practice raid
+ok   [elvui] the Test tab is switched on in Settings
+ok   [elvui] a practice raid starts, with pretend players
+ok   [elvui] before reserves are locked, nobody can ask to swap
+ok   [elvui] a raider asks to swap a reserve, on purpose
+ok   [elvui] the Reserved tab lists the swap requests
+ok   [elvui] allowing one swaps their reserve
+ok   [elvui] a raider leaves the group, keeping their reserves
+ok   [elvui] and can be brought back
+ok   [elvui] the Reserved tab says they've left, with the button to clear them
+ok   [elvui] clearing takes their reserves off
+ok   [elvui] they're back in the group
+ok   [elvui] they reserve, and a boss drops loot
+ok   [elvui] the next item is rolled out, and the pretend players roll
+ok   [elvui] and ends it: nothing is kept
+ok   [elvui] Lead: no Lua errors
+ok   [elvui] Ann: no Lua errors
+ok   [elvui] Bob: no Lua errors
+passed 128
+errors 0

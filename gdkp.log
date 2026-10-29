@@ -1,0 +1,198 @@
+== a GDKP raid
+ok   GDKP is on, for raiders too
+ok   everyone in the group is in the split
+ok   nobody can reserve
+ok   players without the addon are told
+ok   the leader changes the raise and an item's start
+== auctioning everything, one after another
+ok   the loot panel says each is auctioned, and from how much
+ok   the first one is up
+ok   the raid is told how to bid
+ok   raiders see what's coming up next
+ok   in their window
+ok   Ann's window: where bids start, big, and one button that bids the least that counts
+ok   clicking types the bid in raid chat
+ok   and it counts
+ok   Ann's window says she's highest, and won't bid against her
+ok   Bob's window has the next amount, and who's highest
+ok   Pug types a bid without the addon
+ok   Ann had the highest bid: she's told she's outbid, and by how much to win it back
+ok   nobody else is
+ok   too little: it doesn't count, and Bob is told
+ok   chat that isn't a bid is left alone
+ok   Dan bids by whisper
+ok   a final call with 10 seconds left, with the highest bid
+ok   a bid at the last moment gives everyone a few seconds more
+ok   sold to the highest bid
+ok   with the pot so far
+ok   given through master loot
+ok   and on the list of loot given out
+ok   raiders' windows say who bought it
+ok   the next one starts on its own
+ok   nobody bids: it isn't sold, and the next one starts
+ok   a hard reserved item isn't auctioned
+ok   then the last one, from its own start
+ok   sold
+ok   the loot master's window says so
+== the pot
+ok   the pot is what was sold
+ok   10% to the organiser, the rest split five ways
+ok   Pug owes, Bob is owed
+ok   !lr pot tells Pug what he owes
+ok   !lr on its own says how bidding works
+== payouts in trades
+ok   a trade with Pug: the organiser is told what he owes
+ok   the gold counts: Pug is settled
+ok   a trade with Bob: what to give him
+ok   Bob is settled
+ok   gold paid for an enchant doesn't count towards the pot
+ok   marked settled by hand (gold sent by mail)
+== telling everyone
+ok   the pot in raid chat
+ok   one short line
+ok   everyone whispered their payout
+ok   settled players hear so
+== changing a sale, and starting bids in and out
+ok   a sale's price can be changed: the pot changes with it
+ok   raiders' copies agree
+ok   a raider can't change it
+ok   bringing in starting bids
+ok   raiders' copies have them
+== payouts by mail
+ok   who's still owed, the most first
+ok   not before a mailbox is open
+ok   at the mailbox: the mail is filled in
+ok   nothing is sent until the organiser presses Send
+ok   once it's sent, Dan's gold counts as paid
+ok   an ordinary mail with no gold counts for nothing
+== tanks and healers
+ok   only the leader sets role cuts
+ok   Bob tanks: 2% of the pot on top of his share
+ok   he's told
+ok   the raid's summary says so
+ok   cuts that would come to more than the pot are cut down to fit
+== pot rules of my own
+ok   only the leader adds a rule
+ok   the rules come out of the pot before the split
+ok   raiders' copies have them
+ok   Bob is told his share includes it
+ok   the raid's summary names each rule
+ok   taken away, the split is as it was
+== bookkeeping
+ok   the ledger has the sales, the trades and the mail
+ok   gold put in by hand: the pot and the split grow, for raiders too
+ok   the raid's summary says so
+ok   a payout set by hand: Dan is told it
+ok   everyone else splits the rest
+ok   back as it was
+ok   back to an even split
+== bids that must start with "bid"
+ok   the raid is told to type "bid"
+ok   just a number doesn't count
+ok   "bid 300" does
+ok   the window says so
+ok   and its button types "bid" too
+== bids not taken
+ok   Pug bids highest
+ok   only the organiser can stop taking someone's bids
+ok   the organiser stops taking Pug's bids
+ok   his bid goes: Ann's is the highest again
+ok   the raid is told, once
+ok   raiders' windows follow
+ok   his bids in raid chat or by whisper don't count
+ok   it's kept for the GDKP, and shared
+ok   the next auction leaves him out too
+ok   taken again
+ok   his bids count again
+== max bids
+ok   the raid is told how to bid up to a max
+ok   Ann's max: LootRuler opens the bidding for her, at the start
+ok   she's told, and the raid hears where it is
+ok   nobody else sees her max
+ok   Pug bids 300: her max answers, just above
+ok   Dan's higher max (by whisper) beats hers, just above it
+ok   a max can't go down, or below the lowest bid
+ok   Bob bids under Dan's max: it answers
+ok   and Bob's whisper says a max beat him
+ok   Bob bids over it: Bob is highest
+ok   the loot master's own max goes in on their own addon; too low is refused
+ok   a high enough one bids for them
+== bidding ahead
+ok   what another addon can do: an older one can take a session, not bids ahead
+ok   an auction with another to come
+ok   raiders' windows offer to bid ahead, under bidding an amount and a max
+ok   Ann bids ahead from her window
+ok   the loot master's addon has it, and she's told
+ok   her window counts it
+ok   Pug bids ahead by whisper
+ok   0 takes it back
+ok   too little isn't taken
+ok   nor an item that isn't coming up
+ok   the loot master sees how many
+ok   when it comes up, the bids ahead bid, as little as it takes
+ok   and Ann's window knows her max
+ok   nothing sold: the pot is as it was
+== several auctions at once
+ok   reading a bid with an item's number
+ok   and what isn't one
+ok   three items up at once, from the loot window
+ok   the raid hears each with its number, and how to bid
+ok   raiders get a window with all three
+ok   no single roll while it's on
+ok   Pug bids by number in raid chat (no addon)
+ok   Bob sets a max on #2 by whisper; it opens the bidding for him
+ok   Dan bids on #2: Bob's max answers
+ok   too little: Dan is told the lowest
+ok   Ann's window shows who's highest
+ok   the batch went out several times, with the items' links only in the first
+ok   and raiders' windows keep the links
+ok   a max from her window goes to the loot master's addon, which answers
+ok   +10 sec gives everyone more time
+ok   the auction window's bar runs while it's on
+ok   and the raid hears it
+ok   her window's button types the bid in raid chat
+ok   Pug, outbid, would be told if he had the addon; Ann's copy knows it's hers
+ok   a bid at the last moment gives everyone a few seconds more
+ok   it ends: the items with bids are sold
+ok   each handed out through master loot
+ok   the raid hears each sale, and what didn't sell
+ok   raiders' windows say so
+ok   and their bars stop: nothing runs every frame
+ok   the pot has both
+ok   ten fast bids while the loot master's sending is backed up: fewer updates of the batch go out
+ok   and raiders end up with the newest bids
+ok   (taken back, for what follows)
+== ending
+ok   ended
+== past raids
+ok   the raid is kept, with its sales
+ok   raiders keep it too
+ok   Dan is still owed his share
+ok   !lr pot still answers after the raid
+ok   a trade with Dan: what to give him, from which raid
+ok   the gold counts on the past raid
+== what items usually sell for
+ok   a past sale's price
+ok   the loot panel says what it sold for before
+ok   a raid that gave nothing out isn't kept
+== saved past raids are checked
+ok   broken ones are thrown away
+== who's in the pot goes out slowly
+ok   someone joins: they're in the pot on the organiser's screen at once
+ok   raiders hear it a little later, not at once
+ok   within a few seconds
+== no errors
+ok   every chat line fits
+== odd values (found by tools/fuzz.lua)
+ok   GDKP changes on a session that isn't GDKP are refused, not errors
+ok   a blank name is refused everywhere
+ok   a payment that isn't a number of gold is refused
+ok   and the session is still valid
+ok   U.clock: a real time, and blank for one the game can't show
+ok   Lead: no Lua errors
+ok   Ann: no Lua errors
+ok   Bob: no Lua errors
+ok   Dan: no Lua errors
+ok   Old: no Lua errors
+passed 174
+errors 0
