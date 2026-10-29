@@ -286,6 +286,27 @@ end, function(f)
   f:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
 end)
 
+-- a row for a person (or anything with a few things under it): a name and a line under it on the left, words in the
+-- middle, and maybe a link on the right (Flow:entry)
+K.define("entry", function()
+  local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+  b:SetBackdrop(K.FLAT)
+  b.name = fs(b, "GameFontNormal")
+  b.name:SetPoint("TOPLEFT", 8, -7)
+  b.name:SetWordWrap(false)
+  b.sub = fs(b, "GameFontHighlightSmall")
+  b.sub:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -3)
+  b.sub:SetWordWrap(false)
+  b.body = fs(b, "GameFontHighlightSmall")
+  b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+  return b
+end, function(b)
+  b.name:SetText("") b.sub:SetText("") b.body:SetText("")
+  b.sub:SetTextColor(K.rgb(K.SUB)) b.body:SetTextColor(K.rgb(K.TEXT))
+  b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.6)
+  b:Enable()
+end)
+
 -- a rounded toggle "chip"
 K.define("chip", function()
   local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
@@ -759,6 +780,34 @@ function Flow:inline(text, links)
     self.y = self.y + (#made > 0 and 22 or 2)
   end
   return self
+end
+
+--- a row for a person: name, the line under it, words in the middle (wrapping), and maybe a link on the right
+--- ({ label, click }). Returns the row (click it for more)
+function Flow:entry(name, sub, body, link, lw)
+  lw = lw or 112
+  local b = K.get(self.owner, "entry", self.parent)
+  b:SetWidth(self.width)
+  b.name:SetText(name)
+  b.name:SetWidth(lw - 12)
+  b.sub:SetText(sub or "")
+  b.sub:SetWidth(lw - 12)
+  local right = 8
+  if link then
+    local l = K.button(self.owner, self.parent, "link", link[1])
+    l:SetScript("OnClick", link[2])
+    l:SetFrameLevel(b:GetFrameLevel() + 3)
+    l:SetPoint("TOPRIGHT", self.parent, "TOPLEFT", self.x + self.width - 8, -(self.y + 6))
+    right = l:GetWidth() + 18
+  end
+  b.body:ClearAllPoints()
+  b.body:SetPoint("TOPLEFT", lw, -8)
+  b.body:SetWidth(self.width - lw - right)
+  b.body:SetText(body or "")
+  local h = max(8 + b.name:GetStringHeight() + 3 + ((sub and sub ~= "") and b.sub:GetStringHeight() or 0) + 8, 8 + b.body:GetStringHeight() + 8, 34)
+  self:place(b, h)
+  self:gap(2)
+  return b
 end
 
 --- side by side: fills (a list of functions) each lay out one column; the panels they return are made as tall as the
