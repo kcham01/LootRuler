@@ -24,6 +24,10 @@ it becomes 1.0.0. Each line links the pull request it came from.
     Roll windows (open, reserved and Gargul rolls together), Alerts and raid lines, and softres.it names.
   - **Settings**: the sections down the side scroll on their own, so scrolling a long section no longer moves them. "This
     window" is now "Map button".
+  - **Themes** (Settings, More, Themes): a drop-down of looks. **Classic** is the game's own look, as it always was;
+    **ElvUI** is flat and dark, with thin black edges, gold for what's picked and a narrow font, to sit beside ElvUI.
+    A theme changes only the look: every window, button and setting stays where it is and works the same. It comes in
+    with a reload (it asks). Drawn with the game's own textures and font: nothing from ElvUI is used.
   - **Every x** (taking something off a list, closing a window) is the game's own red close button. Browsing the loot
     picks the raid from a drop-down too.
   - **First screen** (nothing open): running loot (import or open reserves) or just raiding, which says a raider can import

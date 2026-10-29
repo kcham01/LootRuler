@@ -214,7 +214,7 @@ local function makeFrame(i)
   f.item:SetPoint("TOPLEFT", f.slot, "TOPLEFT", 15, -15)
   f.item.icon = f.item:CreateTexture(nil, "ARTWORK")
   f.item.icon:SetAllPoints()
-  f.item:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  K.hover(f.item)
   f.item:SetScript("OnEnter", function(self)
     local copy = f.copy
     if not copy then return end
@@ -231,8 +231,20 @@ local function makeFrame(i)
   end)
   f.item:SetScript("OnLeave", function() GameTooltip:Hide() end)
   f.item:SetScript("OnClick", function() if f.copy then modifiedClick(f.copy.link) end end)
+  if not K.T.plate then
+    -- (a flat look: no slot, name plate, dragon or corner art, and the item gets a thin black edge. Every piece keeps
+    -- its place, so the window is laid out the same)
+    f.slot:SetColorTexture(0, 0, 0, 0)
+    f.plate:SetColorTexture(0, 0, 0, 0)
+    f.dragon:SetTexture(nil)
+    f.itemEdge = f:CreateTexture(nil, "BORDER")
+    f.itemEdge:SetColorTexture(0, 0, 0, 1)
+    f.itemEdge:SetPoint("TOPLEFT", f.item, "TOPLEFT", -1, 1)
+    f.itemEdge:SetPoint("BOTTOMRIGHT", f.item, "BOTTOMRIGHT", 1, -1)
+    f.item.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+  end
 
-  f.pass = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+  f.pass = K.closeButton(f)
   f.pass:SetPoint("TOPRIGHT", f.corner, "TOPRIGHT", 5, 5)
   f.pass:SetScript("OnClick", function()
     local copy = f.copy
@@ -279,7 +291,7 @@ local function makeFrame(i)
   f.bar.bg:SetAllPoints()
   f.bar.bg:SetColorTexture(0, 0, 0, 1)
   f.bar.fill = f.bar:CreateTexture(nil, "BORDER")
-  f.bar.fill:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar")
+  f.bar.fill:SetTexture(K.T.bar)
   f.bar.fill:SetPoint("TOPLEFT")
   f.bar.fill:SetPoint("BOTTOMLEFT")
   f.bar.fill:SetWidth(BAR)
@@ -287,8 +299,15 @@ local function makeFrame(i)
   f.bar.border:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-Skills-BarBorder")
   f.bar.border:SetSize(BAR + 4, 20)
   f.bar.border:SetPoint("TOP", 0, 5)
+  if not K.T.plate then
+    f.bar.border:SetTexture(nil)
+    f.bar.bg:ClearAllPoints()
+    f.bar.bg:SetPoint("TOPLEFT", -1, 1)
+    f.bar.bg:SetPoint("BOTTOMRIGHT", 1, -1)
+  end
   -- the seconds left, on the bar
   f.secs = f.bar:CreateFontString(nil, "OVERLAY")
+  K.themeFont(f.secs)
   f.secs:SetFontObject("GameFontHighlightSmall")
   f.secs:SetJustifyH("CENTER")
   f.secs:SetJustifyV("MIDDLE")
@@ -299,7 +318,7 @@ local function makeFrame(i)
   f.price:SetPoint("TOPLEFT", 14, -72)
   f.priceBy = K.fs(f, "GameFontHighlightSmall")
   f.priceBy:SetPoint("BOTTOMLEFT", f.price, "BOTTOMRIGHT", 8, 1)
-  f.bid = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  f.bid = K.mainButton(f)
   f.bid:SetSize(96, 22)
   f.bid:SetPoint("TOPLEFT", 12, -96)
   f.bid:SetMotionScriptsWhileDisabled(true)
@@ -343,7 +362,7 @@ local function makeFrame(i)
     b.text:SetJustifyV("MIDDLE")
     b.text:SetPoint("LEFT", 6, 0)
     b.text:SetPoint("RIGHT", -6, 0)
-    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    K.hover(b)
     b:SetScript("OnClick", function(self)
       if self.action then self.action() return end
       if f.copy and self.kind then
@@ -533,13 +552,22 @@ local function fill(f, copy)
   local name, hex = LR.linkParts(copy.link, copy.id)
   local q = LR.ITEMS[copy.id] and LR.quality(copy.id) or (hex == "ff8000" and 5 or hex == "a335ee" and 4 or 3)
   local epic = q >= 4
-  f:SetBackdrop(epic and {
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
-    tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } } or {
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } })
-  f.corner:SetTexture(epic and "Interface\\DialogFrame\\UI-DialogBox-Gold-Corner" or "Interface\\DialogFrame\\UI-DialogBox-Corner")
-  f.dragon:SetShown(epic)
+  if K.T.plate then
+    f:SetBackdrop(epic and {
+      bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
+      tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } } or {
+      bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+      tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } })
+    f.corner:SetTexture(epic and "Interface\\DialogFrame\\UI-DialogBox-Gold-Corner" or "Interface\\DialogFrame\\UI-DialogBox-Corner")
+    f.dragon:SetShown(epic)
+  else
+    -- (a flat look: its frame, with the edge in the item's colour when it's epic or better)
+    K.skin(f, "rock")
+    if epic and hex and #hex == 6 then
+      f:SetBackdropBorderColor(tonumber(hex:sub(1, 2), 16) / 255, tonumber(hex:sub(3, 4), 16) / 255, tonumber(hex:sub(5, 6), 16) / 255, 1)
+    end
+    f.dragon:Hide()
+  end
   f.item.icon:SetTexture(LR.itemIcon(copy.id))
   f.name:SetText("|cff" .. hex .. name .. "|r")
 

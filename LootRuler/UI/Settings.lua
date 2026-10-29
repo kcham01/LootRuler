@@ -315,6 +315,32 @@ function UI.settingsView(f)
   end)
 
   group(f, "More")
+  section(f, "Themes", "How LootRuler looks: " .. (K.THEMES[set.theme] or K.T).name .. ".", function(p)
+    p:note("A theme changes only how LootRuler looks. Every window, button and setting stays where it is and works the same.")
+    local items = {}
+    for _, key in ipairs(K.THEME_ORDER) do
+      local t = K.THEMES[key]
+      items[#items + 1] = { label = t.name, key = key, on = set.theme == key, tip = t.what }
+    end
+    p:row("Theme", function(r)
+      r:place(K.dropdown(r.owner, r.parent, 180, (K.THEMES[set.theme] or K.T).name, items, function(it)
+        if it.key == set.theme then return end
+        set.theme = it.key
+        UI.render()
+        if it.key ~= K.T.key then
+          UI.confirm("Change the look?", ("LootRuler changes to the %s look when your interface reloads. Reload now?"):format(it.label),
+            "Yes", function() ReloadUI() end, "No")
+        end
+      end, "theme"), 26)
+      r:gap(4)
+    end, { lw = 80 })
+    p:note((K.THEMES[set.theme] or K.T).what)
+    -- (every frame is made in the look in use, so a new one comes in with a reload)
+    if set.theme ~= K.T.key then
+      p:note(("The %s look comes in when your interface reloads."):format(K.THEMES[set.theme].name), K.GOLD)
+      p:buttons({ { label = "Reload now", click = function() ReloadUI() end } }, "left")
+    end
+  end)
   section(f, "Map button", "The button on the minimap.", function(p)
     p:chips({ { tick = true, label = "Minimap button", on = not LR.db.ui.hideMinimap, click = function()
       LR.db.ui.hideMinimap = not LR.db.ui.hideMinimap

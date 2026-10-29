@@ -86,8 +86,8 @@ local function myReserves(f, s)
       b:SetPoint("TOPLEFT", f.parent, "TOPLEFT", x, -y)
     else
       local e = K.get(f.owner, "fact", f.parent)
-      e:SetBackdropColor(0, 0, 0, 0)
-      e:SetBackdropBorderColor(0.42, 0.37, 0.3, 0.8)
+      e:SetBackdropColor(K.bg(0, 0, 0, 0))
+      e:SetBackdropBorderColor(K.edge(0.42, 0.37, 0.3, 0.8))
       e.k:SetText("")
       e.v:SetWidth(w - 18)
       e.v:SetText(raid.custom and "Empty: shift-click an item into the box" or "Empty: pick one above")
@@ -177,8 +177,8 @@ function UI.reserveRow(f, s, id, key, picks)
     if not ok then UI.refused(why) end
   end } or nil
   K.setItem(b, f.width, LR.itemIcon(id), LR.coloredName(id), sub, badge, act)
-  if hr then b.icon:SetDesaturated(true) b:SetBackdropColor(0.15, 0.03, 0.02, 0.5) end
-  if mine > 0 then b:SetBackdropColor(0.05, 0.18, 0.03, 0.6) b:SetBackdropBorderColor(0.12, 0.6, 0.1, 0.8) end
+  if hr then b.icon:SetDesaturated(true) b:SetBackdropColor(K.bg(0.15, 0.03, 0.02, 0.5)) end
+  if mine > 0 then b:SetBackdropColor(K.bg(0.05, 0.18, 0.03, 0.6)) b:SetBackdropBorderColor(K.edge(0.12, 0.6, 0.1, 0.8)) end
   b:SetScript("OnClick", function(_, button)
     if UI.modifiedClick(LR.itemLink(id)) then return end
     if not s then return end

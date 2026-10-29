@@ -39,6 +39,182 @@ K.FLAT = { bgFile = K.WHITE8, edgeFile = K.WHITE8, edgeSize = 1, insets = { left
 
 function K.rgb(c) return c[1], c[2], c[3] end
 
+---------------------------------------------------------------------- themes
+-- A theme changes only how things look: frames, edges, buttons, ticks and fonts. Never where anything is, how big
+-- it is, or what it does. The one in use is picked in Settings (settings.theme) and set when LootRuler's saved data is
+-- read (K.useTheme, from LR.loadDB), before any window is made: every frame is made in its look, so a change comes in
+-- with the next reload. Every look is drawn with the game's own textures and plain colours: nothing from another
+-- addon is used, the ElvUI theme included.
+local function flat(px)
+  return { bgFile = K.WHITE8, edgeFile = K.WHITE8, edgeSize = px, insets = { left = px, right = px, top = px, bottom = px } }
+end
+local GOLD_EDGE = { 1, 0.82, 0, 1 }
+K.THEMES = {
+  -- the game's own look (what LootRuler always had)
+  classic = {
+    key = "classic", name = "Classic", what = "The game's own look: stone frames, gold title plates and red buttons.",
+    rock = K.ROCK, sheet = K.ROCK, panel = K.PANEL, inset = K.INSET, flat = K.FLAT,
+    plate = true, buttons = "game", close = "game", tick = "game", drop = "game", sign = "game", edit = "game",
+    panelBg = { 1, 1, 1, 1 }, panelEdge = { 0.72, 0.56, 0.24, 1 }, hotBg = { 0.16, 0.12, 0.04, 1 }, hotEdge = GOLD_EDGE,
+    foldBg = { 0.11, 0.09, 0.07, 1 }, foldEdge = { 0.72, 0.56, 0.24, 0.9 },
+    quietBg = { 0.11, 0.09, 0.07, 1 }, quietEdge = { 0.55, 0.43, 0.2, 1 }, quietText = { 0.91, 0.89, 0.82 },
+    chipOnBg = { 0.85, 0.66, 0.13, 1 }, chipOnEdge = { 0.36, 0.24, 0.06, 1 }, chipOnText = { 0, 0, 0 },
+    chipBg = { 0.11, 0.09, 0.07, 1 }, chipEdge = { 0.42, 0.33, 0.19, 1 }, chipText = { 0.85, 0.81, 0.74 },
+    navOnBg = { 0.85, 0.66, 0.13, 1 }, navOnEdge = { 0.36, 0.24, 0.06, 1 }, navOnText = { 0, 0, 0 },
+    navBg = { 0, 0, 0, 0 }, navEdge = { 0, 0, 0, 0 }, navText = { 0.85, 0.81, 0.74 },
+    factBg = { 0.08, 0.07, 0.05, 0.9 }, factEdge = { 0.42, 0.33, 0.19, 1 },
+    rowBg = { 0, 0, 0, 0.35 }, rowEdge = { 0.42, 0.33, 0.19, 0.6 }, actBg = { 0.15, 0.12, 0.08, 1 }, actEdge = { 0.42, 0.33, 0.19, 1 },
+    dropBg = { 0.02, 0.02, 0.02, 0.95 }, dropEdge = { 0.62, 0.52, 0.32, 1 },
+    listBackdrop = { bgFile = K.WHITE8, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = false, edgeSize = 16,
+      insets = { left = 4, right = 4, top = 4, bottom = 4 } },
+    listBg = { 0, 0, 0, 1 }, listEdge = { 0.8, 0.8, 0.8, 1 },
+    memoBg = { 0, 0, 0, 0.8 }, memoEdge = { 0.42, 0.33, 0.19, 1 },
+    line = { 0.72, 0.54, 0.23, 0.45 },
+    tabOnBg = { 0.35, 0.27, 0.07, 1 }, tabOnEdge = GOLD_EDGE, tabBg = { 0.1, 0.08, 0.06, 1 }, tabEdge = { 0.42, 0.33, 0.19, 1 },
+    bar = "Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar",
+    hilite = "Interface\\Buttons\\ButtonHilight-Square", rowHilite = "Interface\\QuestFrame\\UI-QuestTitleHighlight",
+    foldHilite = "Interface\\Buttons\\UI-Listbox-Highlight2",
+  },
+  -- flat and dark like ElvUI: one-pixel black edges, dark grey frames, gold for what's picked, a narrow font.
+  -- Made here from plain colours and the game's own textures and font
+  elvui = {
+    key = "elvui", name = "ElvUI", what = "Flat and dark, with thin black edges and a narrow font, to sit beside ElvUI.",
+    rock = flat(1), sheet = flat(1), panel = flat(1), inset = flat(1), flat = flat(1),
+    rockBg = { 0.06, 0.06, 0.06, 0.92 }, rockEdge = { 0, 0, 0, 1 },
+    sheetBg = { 0.06, 0.06, 0.06, 1 }, sheetEdge = { 0, 0, 0, 1 },      -- (a pop-up over the window: solid)
+    plate = false, buttons = "flat", close = "flat", tick = "flat", drop = "flat", sign = "flat", edit = "flat",
+    font = "Fonts\\ARIALN.TTF", fontPlus = 0,
+    panelBg = { 0.1, 0.1, 0.1, 0.8 }, panelEdge = { 0, 0, 0, 1 }, hotBg = { 0.13, 0.11, 0.05, 0.9 }, hotEdge = GOLD_EDGE,
+    foldBg = { 0.1, 0.1, 0.1, 0.9 }, foldEdge = { 0, 0, 0, 1 },
+    quietBg = { 0.1, 0.1, 0.1, 1 }, quietEdge = { 0, 0, 0, 1 }, quietText = { 0.9, 0.9, 0.9 },
+    mainBg = { 0.1, 0.1, 0.1, 1 }, mainEdge = GOLD_EDGE, mainText = { 1, 0.82, 0 },
+    chipOnBg = { 0.24, 0.2, 0.05, 1 }, chipOnEdge = GOLD_EDGE, chipOnText = { 1, 0.82, 0 },
+    chipBg = { 0.1, 0.1, 0.1, 1 }, chipEdge = { 0, 0, 0, 1 }, chipText = { 0.85, 0.85, 0.85 },
+    navOnBg = { 0.24, 0.2, 0.05, 1 }, navOnEdge = GOLD_EDGE, navOnText = { 1, 0.82, 0 },
+    navBg = { 0.1, 0.1, 0.1, 0.9 }, navEdge = { 0, 0, 0, 1 }, navText = { 1, 0.82, 0 },
+    factBg = { 0.08, 0.08, 0.08, 0.9 }, factEdge = { 0, 0, 0, 1 },
+    rowBg = { 0.1, 0.1, 0.1, 0.75 }, rowEdge = { 0, 0, 0, 1 }, actBg = { 0.12, 0.12, 0.12, 1 }, actEdge = { 0, 0, 0, 1 },
+    dropBg = { 0.1, 0.1, 0.1, 1 }, dropEdge = { 0, 0, 0, 1 },
+    listBackdrop = flat(1), listBg = { 0.06, 0.06, 0.06, 1 }, listEdge = { 0, 0, 0, 1 },
+    memoBg = { 0.04, 0.04, 0.04, 0.9 }, memoEdge = { 0, 0, 0, 1 },
+    editBg = { 0.04, 0.04, 0.04, 1 }, editEdge = { 0, 0, 0, 1 },
+    line = { 0.3, 0.3, 0.3, 0.9 },
+    tabOnBg = { 0.24, 0.2, 0.05, 1 }, tabOnEdge = GOLD_EDGE, tabBg = { 0.1, 0.1, 0.1, 1 }, tabEdge = { 0, 0, 0, 1 },
+    bar = K.WHITE8,
+    hilite = "flat", rowHilite = "flat", foldHilite = "flat",
+  },
+}
+K.THEME_ORDER = { "classic", "elvui" }
+
+--- the look in use (K.T): call before any window is made
+function K.useTheme(key)
+  local t = K.THEMES[key] or K.THEMES.classic
+  K.T = t
+  K.ROCK, K.PANEL, K.INSET, K.FLAT = t.rock, t.panel, t.inset, t.flat
+  return t
+end
+K.useTheme("classic")
+
+--- colours from the theme (a list of r, g, b, a)
+local function paint(f, bg, edge)
+  if bg then f:SetBackdropColor(bg[1], bg[2], bg[3], bg[4] or 1) end
+  if edge then f:SetBackdropBorderColor(edge[1], edge[2], edge[3], edge[4] or 1) end
+end
+K.paint = paint
+
+--- a window's frame (the stone frame, or the theme's): sets its backdrop and the theme's colours for it
+function K.skin(f, role)
+  f:SetBackdrop(K.T[role or "rock"])
+  paint(f, K.T[(role or "rock") .. "Bg"], K.T[(role or "rock") .. "Edge"])
+end
+
+-- the classic look's brown and dim gold edges and dark brown fills, as the theme draws them: for colours the screens
+-- set themselves (K.edge, K.bg). Bright gold, greens and reds keep their meaning in every theme
+local function brownish(r, g, b) return r >= g and g >= b and r < 0.8 and r - b <= 0.6 and r - b >= 0.05 end
+function K.edge(r, g, b, a)
+  if K.T.key ~= "classic" and brownish(r, g, b) then return 0, 0, 0, (a or 1) > 0 and 1 or 0 end
+  return r, g, b, a
+end
+function K.bg(r, g, b, a)
+  if K.T.key ~= "classic" and r >= g and g >= b and r < 0.4 and g >= r * 0.6 then
+    local m = math.min(0.2, (r + g + b) / 3 * 1.1)
+    return m, m, m, a
+  end
+  return r, g, b, a
+end
+
+--- what shows while the mouse is over a button: the game's glow, or (flat looks) a gold edge
+local function hover(b, art)
+  local tex = K.T[art or "hilite"]
+  if tex ~= "flat" then b:SetHighlightTexture(tex, "ADD") return end
+  if b.hoverEdge then return end
+  b.hoverEdge = {}
+  for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", nil, 1 }, { "BOTTOMLEFT", "BOTTOMRIGHT", nil, 1 }, { "TOPLEFT", "BOTTOMLEFT", 1 }, { "TOPRIGHT", "BOTTOMRIGHT", 1 } }) do
+    local t = b:CreateTexture(nil, "HIGHLIGHT")
+    t:SetColorTexture(1, 0.82, 0, 0.9)
+    t:SetPoint(side[1]) t:SetPoint(side[2])
+    if side[3] then t:SetWidth(side[3]) else t:SetHeight(side[4]) end
+    b.hoverEdge[#b.hoverEdge + 1] = t
+  end
+  local fill = b:CreateTexture(nil, "HIGHLIGHT")
+  fill:SetColorTexture(1, 1, 1, 0.05)
+  fill:SetAllPoints()
+end
+K.hover = hover
+
+--- the game's close button, or the theme's: a plain x (for a window's corner; OnClick hides its parent until set)
+function K.closeButton(parent, size)
+  if K.T.close == "game" then return CreateFrame("Button", nil, parent, "UIPanelCloseButton") end
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(size or 32, size or 32)
+  b.cross = b:CreateTexture(nil, "ARTWORK")
+  b.cross:SetTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
+  b.cross:SetDesaturated(true)
+  b.cross:SetVertexColor(0.9, 0.9, 0.9)
+  b.cross:SetSize(16, 16)
+  b.cross:SetPoint("CENTER")
+  b.glow = b:CreateTexture(nil, "HIGHLIGHT")
+  b.glow:SetTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
+  b.glow:SetSize(16, 16)
+  b.glow:SetPoint("CENTER")
+  b:SetScript("OnClick", function(self) self:GetParent():Hide() end)
+  return b
+end
+
+--- a flat button (the flat themes' main button): SetText / GetText like the game's, gold words that grey when disabled
+local function flatButton(parent)
+  local b = CreateFrame("Button", nil, parent or UIParent, "BackdropTemplate")
+  b:SetBackdrop(K.T.inset)
+  paint(b, K.T.mainBg, K.T.mainEdge)
+  b.text = b:CreateFontString(nil, "OVERLAY")
+  K.themeFont(b.text)
+  b.text:SetFontObject("GameFontNormal")
+  b.text:SetPoint("LEFT", 6, 0)
+  b.text:SetPoint("RIGHT", -6, 0)
+  b.text:SetJustifyH("CENTER")
+  b.text:SetJustifyV("MIDDLE")
+  b.text:SetWordWrap(false)
+  b:SetFontString(b.text)
+  hover(b)
+  b:SetHeight(24)
+  local enable, disable, setEnabled = b.Enable, b.Disable, b.SetEnabled
+  local function look(self, on)
+    local c = on and K.T.mainText or { 0.5, 0.5, 0.5 }
+    self.text:SetTextColor(c[1], c[2], c[3])
+    paint(self, nil, on and K.T.mainEdge or { 0, 0, 0, 1 })
+  end
+  b.Enable = function(self) enable(self) look(self, true) end
+  b.Disable = function(self) disable(self) look(self, false) end
+  b.SetEnabled = function(self, on) setEnabled(self, on) look(self, on and true or false) end
+  return b
+end
+
+--- the screen's main button, outside the pools (a roll window's Bid): the game's red button, or the theme's
+function K.mainButton(parent)
+  if K.T.buttons == "game" then return CreateFrame("Button", nil, parent, "UIPanelButtonTemplate") end
+  return flatButton(parent)
+end
+
 ---------------------------------------------------------------------- pools
 local pools, live = {}, {}
 local linkBoxes = setmetatable({}, { __mode = "k" })   -- text boxes that take item links (K.takeLinks)
@@ -83,8 +259,21 @@ end
 
 function K.liveCount() local n = 0 for _, l in pairs(live) do n = n + #l end return n end
 
+--- a theme with its own font: every font set on this text (the game's font objects, by name) is drawn in it, a size up
+--- (the game's font objects are never changed: they're the whole game's)
+function K.themeFont(f)
+  if not K.T.font then return end
+  local set = f.SetFontObject
+  f.SetFontObject = function(self, font)
+    set(self, font)
+    local _, size = self:GetFont()
+    if size then self:SetFont(K.T.font, size + (K.T.fontPlus or 0), "") end
+  end
+end
+
 local function fs(parent, font, layer)
   local f = parent:CreateFontString(nil, layer or "OVERLAY")
+  K.themeFont(f)
   f:SetFontObject(font or "GameFontHighlight")
   f:SetJustifyH("LEFT")
   f:SetJustifyV("TOP")
@@ -109,7 +298,7 @@ local PLATE_MIN, PLATE_PAD = 90, 12     -- its middle: at least this wide, and t
 K.define("panel", function()
   local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
   f:SetBackdrop(K.PANEL)
-  f:SetBackdropBorderColor(0.72, 0.56, 0.24, 1)
+  paint(f, nil, K.T.panelEdge)
   -- the plate in three pieces of the game's header art (its left end, a middle that stretches, its right end), so it
   -- grows with the title (K.fitPlate)
   local art = "Interface\\DialogFrame\\UI-DialogBox-Header"
@@ -129,20 +318,26 @@ K.define("panel", function()
   f.plateR:SetSize(PLATE_END, PLATE_H)
   f.plateR:SetPoint("LEFT", f.plate, "RIGHT")
   f.title = fs(f, "GameFontNormal")
-  f.title:SetJustifyH("CENTER")
-  f.title:SetPoint("TOP", f.plate, "TOP", 0, -13)
+  if K.T.plate then
+    f.title:SetJustifyH("CENTER")
+    f.title:SetPoint("TOP", f.plate, "TOP", 0, -13)
+  else
+    -- (no plate: the title sits at the top left, inside, above what the panel holds)
+    f.title:SetJustifyH("LEFT")
+    f.title:SetPoint("TOPLEFT", 10, -7)
+  end
   return f
 end, function(f)
   f.title:SetText("") K.fitPlate(f)
-  f:SetBackdropColor(1, 1, 1, 1)                          -- (a hot panel's colours, back to the usual)
-  f:SetBackdropBorderColor(0.72, 0.56, 0.24, 1)
+  paint(f, K.T.panelBg, K.T.panelEdge)                  -- (a hot panel's colours, back to the usual)
 end)
 
 --- sizes a panel's title plate to its title (hidden with no title)
 function K.fitPlate(f)
   local title = f.title:GetText()
   local on = title ~= nil and title ~= ""
-  f.plate:SetShown(on) f.plateL:SetShown(on) f.plateR:SetShown(on)
+  local plate = on and K.T.plate
+  f.plate:SetShown(plate) f.plateL:SetShown(plate) f.plateR:SetShown(plate)
   if on then f.plate:SetWidth(max(PLATE_MIN, f.title:GetStringWidth() + PLATE_PAD)) end
 end
 
@@ -150,20 +345,40 @@ end
 K.define("fold", function()
   local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
   b:SetBackdrop(K.INSET)
-  b:SetBackdropColor(0.11, 0.09, 0.07, 1)
-  b:SetBackdropBorderColor(0.72, 0.56, 0.24, 0.9)
+  paint(b, K.T.foldBg, K.T.foldEdge)
   b.sign = b:CreateTexture(nil, "ARTWORK")
   b.sign:SetSize(16, 16)
   b.sign:SetPoint("TOPLEFT", 9, -8)
+  if K.T.sign ~= "game" then
+    -- (flat looks: a gold + or - in a small dark box)
+    b.signBox = b:CreateTexture(nil, "ARTWORK")
+    b.signBox:SetColorTexture(0, 0, 0, 1)
+    b.signBox:SetSize(14, 14)
+    b.signBox:SetPoint("CENTER", b.sign, "CENTER")
+    b.signText = fs(b, "GameFontNormal")
+    b.signText:SetJustifyH("CENTER")
+    b.signText:SetJustifyV("MIDDLE")
+    b.signText:SetAllPoints(b.sign)
+  end
   b.title = fs(b, "GameFontNormal")
   b.title:SetPoint("TOPLEFT", 32, -8)
   b.title:SetPoint("RIGHT", -10, 0)
   b.what = fs(b, "GameFontHighlightSmall")
   b.what:SetPoint("TOPLEFT", b.title, "BOTTOMLEFT", 0, -3)
   b.what:SetPoint("RIGHT", -10, 0)
-  b:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+  hover(b, "foldHilite")
   return b
 end, function(b) b.title:SetText("") b.what:SetText("") b.what:SetTextColor(K.rgb(K.SUB)) end)
+
+--- a fold's + or -
+function K.foldSign(b, open)
+  if b.signText then
+    b.sign:SetTexture(nil)
+    b.signText:SetText(open and "-" or "+")
+  else
+    b.sign:SetTexture(open and "Interface\\Buttons\\UI-MinusButton-Up" or "Interface\\Buttons\\UI-PlusButton-Up")
+  end
+end
 
 -- a plain container (no look of its own)
 K.define("box", function() return CreateFrame("Frame", nil, UIParent, "BackdropTemplate") end, function(f)
@@ -192,6 +407,8 @@ K.define("button", function()
   b:SetHeight(24)
   return b
 end, function(b) b:Enable() b:SetText("") end)
+-- the flat themes' main button (K.button's red, in those looks)
+K.define("flatmain", function() return flatButton(UIParent) end, function(b) b:Enable() b:SetText("") end)
 
 -- a quiet button: for everything that isn't the screen's main action (that one stays the game's red button). Dark, with a
 -- thin gold edge, like the chips
@@ -204,15 +421,14 @@ K.define("quiet", function()
   b.text:SetPoint("LEFT", 8, 0)
   b.text:SetPoint("RIGHT", -8, 0)
   b.text:SetWordWrap(false)
-  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  hover(b)
   b:SetHeight(24)
   return b
 end, function(b)
   b:Enable()
   b.text:SetText("")
-  b:SetBackdropColor(0.11, 0.09, 0.07, 1)
-  b:SetBackdropBorderColor(0.55, 0.43, 0.2, 1)
-  b.text:SetTextColor(0.91, 0.89, 0.82)
+  paint(b, K.T.quietBg, K.T.quietEdge)
+  b.text:SetTextColor(K.rgb(K.T.quietText))
 end)
 
 -- a link: words only, for rare or risky actions (Call off, Change). `danger` makes it red
@@ -246,7 +462,7 @@ function K.button(owner, parent, style, label, minW, maxW, danger)
       b:SetWidth(min(maxW or 9999, max(minW or 0, w)))
     end
   else
-    b = K.get(owner, "button", parent)
+    b = K.get(owner, K.T.buttons == "game" and "button" or "flatmain", parent)
     b:SetText(label)
     b:SetWidth(min(maxW or 9999, max(minW or 80, b:GetFontString():GetStringWidth() + 28)))
   end
@@ -282,8 +498,7 @@ K.define("fact", function()
   return f
 end, function(f)
   f.k:SetText("") f.v:SetText("")
-  f:SetBackdropColor(0.08, 0.07, 0.05, 0.9)
-  f:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+  paint(f, K.T.factBg, K.T.factEdge)
 end)
 
 -- a row for a person (or anything with a few things under it): a name and a line under it on the left, words in the
@@ -298,12 +513,12 @@ K.define("entry", function()
   b.sub:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -3)
   b.sub:SetWordWrap(false)
   b.body = fs(b, "GameFontHighlightSmall")
-  b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+  hover(b, "rowHilite")
   return b
 end, function(b)
   b.name:SetText("") b.sub:SetText("") b.body:SetText("")
   b.sub:SetTextColor(K.rgb(K.SUB)) b.body:SetTextColor(K.rgb(K.TEXT))
-  b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.6)
+  paint(b, K.T.rowBg, K.T.rowEdge)
   b:Enable()
 end)
 
@@ -313,7 +528,7 @@ K.define("nav", function()
   b:SetBackdrop(K.FLAT)
   b.text = fs(b, "GameFontHighlightSmall")
   b.text:SetPoint("TOPLEFT", 6, -4)
-  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  hover(b)
   return b
 end, function(b) b:Enable() b.text:SetText("") end)
 
@@ -323,9 +538,9 @@ function K.setNav(b, width, label, on)
   b.text:SetWidth(width - 12)
   b.text:SetText(label)
   if on then
-    b:SetBackdropColor(0.85, 0.66, 0.13, 1) b:SetBackdropBorderColor(0.36, 0.24, 0.06, 1) b.text:SetTextColor(0, 0, 0)
+    paint(b, K.T.navOnBg, K.T.navOnEdge) b.text:SetTextColor(K.rgb(K.T.navOnText))
   else
-    b:SetBackdropColor(0, 0, 0, 0) b:SetBackdropBorderColor(0, 0, 0, 0) b.text:SetTextColor(0.85, 0.81, 0.74)
+    paint(b, K.T.navBg, K.T.navEdge) b.text:SetTextColor(K.rgb(K.T.navText))
   end
   local h = math.max(20, b.text:GetStringHeight() + 8)
   b:SetHeight(h)
@@ -341,7 +556,7 @@ K.define("chip", function()
   b.text:SetJustifyV("MIDDLE")
   b.text:SetPoint("LEFT", 6, 0)
   b.text:SetPoint("RIGHT", -6, 0)
-  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  hover(b)
   b:SetHeight(20)
   return b
 end, function(b) b:Enable() end)
@@ -350,13 +565,11 @@ function K.setChip(b, label, on)
   b.text:SetText(label)
   b:SetWidth(max(28, b.text:GetStringWidth() + 16))
   if on then
-    b:SetBackdropColor(0.85, 0.66, 0.13, 1)
-    b:SetBackdropBorderColor(0.36, 0.24, 0.06, 1)
-    b.text:SetTextColor(0, 0, 0)
+    paint(b, K.T.chipOnBg, K.T.chipOnEdge)
+    b.text:SetTextColor(K.rgb(K.T.chipOnText))
   else
-    b:SetBackdropColor(0.11, 0.09, 0.07, 1)
-    b:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
-    b.text:SetTextColor(0.85, 0.81, 0.74)
+    paint(b, K.T.chipBg, K.T.chipEdge)
+    b.text:SetTextColor(K.rgb(K.T.chipText))
   end
 end
 
@@ -373,9 +586,16 @@ K.define("drop", function()
   b.arrow = CreateFrame("Button", nil, b)
   b.arrow:SetSize(24, 24)
   b.arrow:SetPoint("RIGHT", -1, 0)
-  b.arrow:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
-  b.arrow:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
-  b.arrow:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+  if K.T.drop == "game" then
+    b.arrow:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+    b.arrow:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
+    b.arrow:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+  else
+    -- (flat looks: just a gold arrow, no box)
+    b.arrow:SetNormalTexture("Interface\\Buttons\\Arrow-Down-Up")
+    b.arrow:SetPushedTexture("Interface\\Buttons\\Arrow-Down-Down")
+    hover(b)
+  end
   b.arrow:SetScript("OnClick", function() if b.toggle then b.toggle() end end)
   b.text = fs(b, "GameFontHighlightSmall")
   b.text:SetJustifyH("RIGHT")
@@ -393,8 +613,7 @@ K.define("drop", function()
 end, function(b)
   b.toggle = nil
   b.text:SetText("")
-  b:SetBackdropColor(0.02, 0.02, 0.02, 0.95)
-  b:SetBackdropBorderColor(0.62, 0.52, 0.32, 1)
+  paint(b, K.T.dropBg, K.T.dropEdge)
 end)
 
 -- while the list is open, Escape closes it and nothing else: our frames come off the game's Escape list until it closes
@@ -419,10 +638,8 @@ local function makeDropList()
   dropCatcher:SetScript("OnClick", function() K.closeDrop() end)
   dropCatcher:Hide()
   dropList = CreateFrame("Frame", "LootRulerDropList", UIParent, "BackdropTemplate")
-  dropList:SetBackdrop({ bgFile = K.WHITE8, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = false, edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 } })
-  dropList:SetBackdropColor(0, 0, 0, 0.97)
-  dropList:SetBackdropBorderColor(0.8, 0.8, 0.8, 1)
+  dropList:SetBackdrop(K.T.listBackdrop)
+  paint(dropList, K.T.listBg, K.T.listEdge)
   dropList:EnableMouse(true)
   dropList:SetClampedToScreen(true)
   dropList:Hide()
@@ -440,14 +657,15 @@ local function dropRow(i)
   r = CreateFrame("Button", nil, dropList)
   r:SetHeight(DROP_ROW)
   r.tick = r:CreateTexture(nil, "ARTWORK")
-  r.tick:SetTexture("Interface\\Common\\UI-DropDownRadioChecks")
+  -- the round ticks of the game's drop-downs, or (flat looks) a gold tick by the one picked
+  r.tick:SetTexture(K.T.drop == "game" and "Interface\\Common\\UI-DropDownRadioChecks" or "Interface\\Buttons\\UI-CheckBox-Check")
   r.tick:SetSize(16, 16)
   r.tick:SetPoint("LEFT", 0, 0)
   r.text = fs(r, "GameFontHighlightSmall")
   r.text:SetJustifyV("MIDDLE")
   r.text:SetPoint("LEFT", 20, 0)
   r.text:SetWordWrap(false)
-  r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+  hover(r, "rowHilite")
   dropRows[i] = r
   return r
 end
@@ -471,8 +689,12 @@ local function fillDrop(b, items, pick)
     r:SetFrameLevel(dropList:GetFrameLevel() + 2)
     r.text:SetFontObject(it.head and "GameFontNormalSmall" or "GameFontHighlightSmall")
     r.text:SetText(it.label)
-    r.tick:SetShown(not it.head)
-    if it.on then r.tick:SetTexCoord(0, 0.5, 0.5, 1) else r.tick:SetTexCoord(0.5, 1, 0.5, 1) end
+    if K.T.drop == "game" then
+      r.tick:SetShown(not it.head)
+      if it.on then r.tick:SetTexCoord(0, 0.5, 0.5, 1) else r.tick:SetTexCoord(0.5, 1, 0.5, 1) end
+    else
+      r.tick:SetShown(it.on and not it.head and true or false)
+    end
     r.text:ClearAllPoints()
     r.text:SetPoint("LEFT", it.head and 0 or 20, 0)
     r:EnableMouse(not it.head)
@@ -538,30 +760,60 @@ end
 -- the game's own close button (the red square with a gold x): every x that closes something or takes it away. Its art
 -- has a margin round it, so K.X_SIZE is bigger than the square you see
 K.X_SIZE = 30
-K.define("x", function()
-  local b = CreateFrame("Button", nil, UIParent, "UIPanelCloseButtonNoScripts")
+--- the theme's x on its own (no script: the caller sets what it does)
+function K.xButton(parent)
+  local b
+  if K.T.close == "game" then
+    b = CreateFrame("Button", nil, parent, "UIPanelCloseButtonNoScripts")
+  else
+    b = K.closeButton(parent)
+    b:SetScript("OnClick", nil)
+  end
   b:SetSize(K.X_SIZE, K.X_SIZE)
   return b
-end, function(b) b:Enable() end)
+end
+K.define("x", function() return K.xButton(UIParent) end, function(b) b:Enable() end)
 
 -- a tick box with its words beside it (an on / off switch): Flow:chips with tick = true
 K.define("tick", function()
   local b = CreateFrame("Button", nil, UIParent)
   b.box = b:CreateTexture(nil, "ARTWORK")
-  b.box:SetTexture("Interface\\Buttons\\UI-CheckBox-Up")
   b.box:SetSize(22, 22)
   b.box:SetPoint("LEFT", -2, 0)
   b.check = b:CreateTexture(nil, "OVERLAY")
-  b.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
-  b.check:SetAllPoints(b.box)
+  if K.T.tick == "game" then
+    b.box:SetTexture("Interface\\Buttons\\UI-CheckBox-Up")
+    b.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    b.check:SetAllPoints(b.box)
+  else
+    -- (flat looks: a small dark square with a black edge, filled gold when it's on; the 22 by 22 box keeps its room)
+    b.box:SetColorTexture(0, 0, 0, 0)
+    b.edge = b:CreateTexture(nil, "ARTWORK", nil, 1)
+    b.edge:SetColorTexture(0, 0, 0, 1)
+    b.edge:SetSize(14, 14)
+    b.edge:SetPoint("CENTER", b.box)
+    b.inner = b:CreateTexture(nil, "ARTWORK", nil, 2)
+    b.inner:SetColorTexture(0.12, 0.12, 0.12, 1)
+    b.inner:SetSize(12, 12)
+    b.inner:SetPoint("CENTER", b.box)
+    b.check:SetColorTexture(1, 0.82, 0, 1)
+    b.check:SetSize(10, 10)
+    b.check:SetPoint("CENTER", b.box)
+  end
   b.text = fs(b, "GameFontHighlightSmall")
   b.text:SetJustifyV("MIDDLE")
   b.text:SetPoint("LEFT", b.box, "RIGHT", 1, 0)
   b.text:SetPoint("RIGHT")
   b.glow = b:CreateTexture(nil, "HIGHLIGHT")              -- (the HIGHLIGHT layer shows while the mouse is over it)
-  b.glow:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
-  b.glow:SetBlendMode("ADD")
-  b.glow:SetAllPoints(b.box)
+  if K.T.tick == "game" then
+    b.glow:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
+    b.glow:SetBlendMode("ADD")
+    b.glow:SetAllPoints(b.box)
+  else
+    b.glow:SetColorTexture(1, 0.82, 0, 0.3)
+    b.glow:SetSize(14, 14)
+    b.glow:SetPoint("CENTER", b.box)
+  end
   b:SetHeight(20)
   return b
 end, function(b) b:Enable() end)
@@ -609,10 +861,21 @@ end)
 
 -- a text box
 K.define("edit", function()
-  local e = CreateFrame("EditBox", nil, UIParent, "InputBoxTemplate")
+  local e
+  if K.T.edit == "game" then
+    e = CreateFrame("EditBox", nil, UIParent, "InputBoxTemplate")
+  else
+    -- (flat looks: a dark box with a black edge; the words start where the game's box has them)
+    e = CreateFrame("EditBox", nil, UIParent, "BackdropTemplate")
+    e:SetBackdrop(K.T.inset)
+    paint(e, K.T.editBg, K.T.editEdge)
+    e:SetTextInsets(4, 4, 0, 0)
+    e:SetScript("OnEditFocusLost", function(self) self:HighlightText(0, 0) end)
+  end
   e:SetAutoFocus(false)
   e:SetHeight(22)
   e:SetFontObject("GameFontHighlight")
+  if K.T.font then e:SetFont(K.T.font, 12 + (K.T.fontPlus or 0), "") end
   e:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   -- InputBoxTemplate highlights all the text whenever the box gains focus, so the next key replaces it.
   -- Right when you click in; wrong when a redraw hands the focus back while you're typing (K.refocus)
@@ -627,7 +890,7 @@ K.define("edit", function()
   end)
   -- greyed words inside the box while it's empty ("Search Karazhan"): K.setHint, K.onText
   e.hint = fs(e, "GameFontDisableSmall")
-  e.hint:SetPoint("LEFT", 2, 0)
+  e.hint:SetPoint("LEFT", K.T.edit == "game" and 2 or 5, 0)
   e.hint:SetPoint("RIGHT", -4, 0)
   e.hint:SetJustifyV("MIDDLE")
   e.hint:SetWordWrap(false)
@@ -655,8 +918,7 @@ end
 K.define("memo", function()
   local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
   f:SetBackdrop(K.INSET)
-  f:SetBackdropColor(0, 0, 0, 0.8)
-  f:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+  paint(f, K.T.memoBg, K.T.memoEdge)
   f.scroll = K.scroller(f)
   f.scroll:SetPoint("TOPLEFT", 6, -6)
   f.scroll:SetPoint("BOTTOMRIGHT", -6, 6)
@@ -664,6 +926,7 @@ K.define("memo", function()
   f.edit:SetMultiLine(true)
   f.edit:SetAutoFocus(false)
   f.edit:SetFontObject("GameFontHighlightSmall")
+  if K.T.font then f.edit:SetFont(K.T.font, 10 + (K.T.fontPlus or 0), "") end
   f.edit:SetPoint("TOPLEFT")
   f.edit:SetMaxLetters(0)                  -- (no limit: a softres.it export is thousands of letters)
   f.edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
@@ -761,12 +1024,11 @@ K.define("item", function()
   b.act.text:SetJustifyH("CENTER")
   b.act.text:SetJustifyV("MIDDLE")
   b.act.text:SetAllPoints()
-  b.act:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  hover(b.act)
   -- (an "x" is the game's own close button: K.X_SIZE)
-  b.x = CreateFrame("Button", nil, b, "UIPanelCloseButtonNoScripts")
-  b.x:SetSize(K.X_SIZE, K.X_SIZE)
+  b.x = K.xButton(b)
   b.x:SetPoint("RIGHT", 1, 0)
-  b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+  hover(b, "rowHilite")
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetHeight(36)
   return b
@@ -776,7 +1038,7 @@ end, function(b)
   b.act:Hide() b.act:SetWidth(20) b.act:SetScript("OnClick", nil) b.act:SetScript("OnEnter", nil) b.act:SetScript("OnLeave", nil)
   b.x:Hide() b.x:SetScript("OnClick", nil) b.x:SetScript("OnEnter", nil) b.x:SetScript("OnLeave", nil)
   b.icon:SetDesaturated(false) b.icon:SetAlpha(1)
-  b:SetBackdropColor(0, 0, 0, 0.35) b:SetBackdropBorderColor(0.42, 0.33, 0.19, 0.6)
+  paint(b, K.T.rowBg, K.T.rowEdge)
   b:SetAlpha(1)
   b:Enable()
 end)
@@ -799,8 +1061,7 @@ function K.setItem(b, width, icon, name, sub, badge, act)
     b.act:Show()
     b.act:SetWidth(act.width or 20)
     b.act.text:SetText(act.text)
-    b.act:SetBackdropColor(0.15, 0.12, 0.08, 1)
-    b.act:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+    paint(b.act, K.T.actBg, K.T.actEdge)
     b.act:SetScript("OnClick", act.click)
     if act.tip then tooltipOn(b.act, function(tt) tt:SetText(act.tip, 1, 1, 1, 1, true) end) end
     right = (act.width or 20) + 12
@@ -818,7 +1079,7 @@ K.define("head", function()
   f.text = fs(f, "GameFontNormal")
   f.text:SetPoint("BOTTOMLEFT", 2, 3)
   f.line = f:CreateTexture(nil, "ARTWORK")
-  f.line:SetColorTexture(0.72, 0.54, 0.23, 0.45)
+  f.line:SetColorTexture(unpack(K.T.line))
   f.line:SetHeight(1)
   f.line:SetPoint("BOTTOMLEFT", 0, 0)
   f.line:SetPoint("BOTTOMRIGHT", 0, 0)
@@ -872,7 +1133,7 @@ function Flow:note(text, color) return self:text(text, { font = "GameFontHighlig
 --- toggle: what a click on the bar does (the caller keeps whether it's open)
 function Flow:fold(title, what, open, toggle, fill)
   local b = K.get(self.owner, "fold", self.parent)
-  b.sign:SetTexture(open and "Interface\\Buttons\\UI-MinusButton-Up" or "Interface\\Buttons\\UI-PlusButton-Up")
+  K.foldSign(b, open)
   b.title:SetText(title)
   b.title:SetWidth(self.width - 42)
   b.what:SetText(what or "")
@@ -908,8 +1169,7 @@ end
 --- a framed panel standing out from the rest (gold edge): the one box on a screen that matters most right now
 function Flow:hot(title, fill)
   local p = self:panel(title, fill)
-  p:SetBackdropBorderColor(1, 0.82, 0, 1)
-  p:SetBackdropColor(0.16, 0.12, 0.04, 1)
+  paint(p, K.T.hotBg, K.T.hotEdge)
   return p
 end
 
@@ -927,8 +1187,8 @@ end
 function Flow:strip(text, tone, link)
   local t = TONES[tone] or TONES.ok
   local f = K.get(self.owner, "strip", self.parent)
-  f:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
-  f:SetBackdropBorderColor(t.edge[1], t.edge[2], t.edge[3], t.edge[4])
+  f:SetBackdropColor(K.bg(t.bg[1], t.bg[2], t.bg[3], t.bg[4]))
+  f:SetBackdropBorderColor(K.edge(t.edge[1], t.edge[2], t.edge[3], t.edge[4]))
   f.dot:SetTexture(t.dot)
   local right = 10
   if link then

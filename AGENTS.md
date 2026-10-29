@@ -229,6 +229,16 @@ Start here in a new session; rewrite this section at the end of each piece of wo
   sent) for the import box's check; `UI.giveSheet`'s `it.to` picks who to start with; `UI.maxBidSheet`, `UI.batchMaxSheet`. The
   auction window has `f.bid` (red, the least that counts), `f.price`, `f.priceBy`, and extras 1-3: Bid an amount, Max bid, Bid
   ahead. Kept as they were (the owner's picks): the roll window, the loot panel, the trade timers.
+- **Themes** (#163, the owner's ask; `K.THEMES`, `K.THEME_ORDER`, `K.useTheme`, `K.T` in `UI/Kit.lua`; setting `theme`, Settings "Themes"):
+  a theme changes only the look, never the layout or what anything does. `LR.loadDB` sets it before any frame is made, so a change
+  comes in with a reload (`ReloadUI`, asked). Each theme is a table of backdrops (`rock`, `sheet`, `panel`, `inset`, `flat`), colours
+  (`panelBg`, `chipOnEdge`, `tabBg`...) and styles (`plate`, `buttons`, `close`, `tick`, `drop`, `sign`, `edit`: "game" or "flat"), and
+  `font` (a game font file every `K.fs` text is drawn in, `K.themeFont`). Use the theme for anything new: `K.skin(frame, role)` for a
+  window, `K.paint(frame, bg, edge)`, `K.hover(button, art)`, `K.closeButton(parent)`, `K.xButton(parent)`, `K.mainButton(parent)`
+  (the red button outside the pools; the flat one is kind "flatmain"), `K.foldSign`, and `K.edge(r, g, b, a)` / `K.bg(...)` around
+  colours a screen sets itself (the classic look's browns become black edges and grey fills in flat looks; gold, greens and reds
+  keep their meaning). Only the game's own textures and fonts, and plain colours: no other addon's art or code (ElvUI's included).
+  The UI test's "themes" run draws the ElvUI look on a second player (`elvui-*` pictures).
 - **The test copy** (#163, `ci/testcopy.sh`, `out/LootRulerTest.zip`): the addon in the folder LootRulerTest, saving to
   `LootRulerTestDB`. The code names nothing by folder: `LR.NAME` is the folder, `LR.DB_NAME` the saved file, `LR.LOGO` the art,
   `LR.TITLE` "LootRuler test" in the window and chat; the network prefix and raid lines stay LootRuler's. With both loaded, the

@@ -296,6 +296,7 @@ end
 function EditBox:SetMultiLine(v) self._multi = v end
 function EditBox:SetMaxLetters(n) self._max = n end
 function EditBox:SetFontObject(f) self._font = f end
+function EditBox:SetFont(path, size, flags) self._fontPath, self._fontSize = path, size end
 function EditBox:SetTextInsets() end
 function EditBox:SetJustifyH() end
 function EditBox:SetCursorPosition(n) self._cursor = math.max(0, math.min(n or 0, #self:GetText())) end
@@ -439,6 +440,7 @@ function FontString:GetText() return self._text end
 function FontString:SetFormattedText(f, ...) self._text = f:format(...) end
 function FontString:SetFontObject(f)
   if type(f) == "string" then f = fontObjects[f] or fail("no font object " .. f) end
+  self._fontSize, self._fontPath = nil, nil          -- (a font object replaces a font set with SetFont)
   if not f or not f._size then fail("bad font object") end
   self._font = f
 end
@@ -700,6 +702,7 @@ function M.render()
             op.size = reg._fontSize or (reg._font and reg._font._size) or 12
             op.color = reg._color or (reg._font and reg._font._color) or { 1, 1, 1 }
             op.justifyH, op.justifyV, op.wrap, op.maxLines = reg._justifyH or "CENTER", reg._justifyV or "MIDDLE", reg._wrap ~= false, reg._maxLines
+            op.fontPath = reg._fontPath
             if op.text ~= "" then table.insert(ops, op) end
           end
         end
@@ -1124,6 +1127,7 @@ function M.env(player)
   G.ShowUIPanel = function(f) f:Show() end
   G.HideUIPanel = function(f) f:Hide() end
   G.CloseDropDownMenus = function() end
+  G.ReloadUI = function() M.reloads = (M.reloads or 0) + 1 end
   G.C_AddOns = { GetAddOnMetadata = function(_, k) return k == "Version" and "1.0.0-beta" or nil end,
     LoadAddOn = function(name)
       if M.loadAddOn then return M.loadAddOn(name) end
