@@ -7,13 +7,14 @@ local floor, max, min = math.floor, math.max, math.min
 
 local WIDTH, HEIGHT = 460, 640
 local TOP_H, TAB_H, PAD = 54, 30, 14
+local BAR_H = 32               -- the bar of a screen's main actions, pinned above the tabs (UI.pin)
 LR.CONTENT_W = WIDTH - 2 * PAD - 22
 
 local UI = { tab = "reserve", usable = true, view = "item", q = "" }
 LR.UI = UI
 
-local win, top, view, tabsBar, toastFrame
-local TABS = { { "reserve", "Reserve" }, { "reserves", "Reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
+local win, top, view, tabsBar, toastFrame, bar
+local TABS = { { "reserve", "My reserves" }, { "reserves", "All reserves" }, { "loot", "Loot" }, { "session", "Session" }, { "guild", "Guild" }, { "settings", "Settings" }, { "test", "Test" } }
 
 ---------------------------------------------------------------------- the window
 local function build()
@@ -83,6 +84,19 @@ local function build()
   view = K.scroller(win)
   view:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
   view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16)
+
+  -- a screen's main actions, pinned under the scrolling part so they're always there (UI.pin)
+  bar = CreateFrame("Frame", nil, win)
+  bar:SetPoint("BOTTOMLEFT", PAD, TAB_H + 14)
+  bar:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 14)
+  bar:SetHeight(BAR_H)
+  bar.line = bar:CreateTexture(nil, "ARTWORK")
+  bar.line:SetColorTexture(0.72, 0.54, 0.23, 0.45)
+  bar.line:SetHeight(1)
+  bar.line:SetPoint("TOPLEFT", 0, 0)
+  bar.line:SetPoint("TOPRIGHT", 0, 0)
+  bar:Hide()
+  UI.bar = bar
 
   tabsBar = CreateFrame("Frame", nil, win)
   tabsBar:SetPoint("BOTTOMLEFT", 12, 12)
@@ -215,6 +229,9 @@ function UI.render()
   local tw = (WIDTH - 24 - (#shown - 1) * 4) / #shown
   for i, b in ipairs(shown) do
     b:SetWidth(tw)
+    -- (seven tabs leave little room: a name that doesn't fit goes smaller)
+    b.text:SetFontObject("GameFontNormal")
+    if b.text:GetStringWidth() > tw - 6 then b.text:SetFontObject("GameFontNormalSmall") end
     b:ClearAllPoints()
     b:SetPoint("LEFT", (i - 1) * (tw + 4), 0)
   end
@@ -225,6 +242,7 @@ function UI.render()
     b.text:SetTextColor(on and 1 or 0.8, on and 0.82 or 0.7, on and 0 or 0.5)
   end
   K.release("view")
+  UI.pinned = nil
   local flow = K.flow("view", view.child, 0, 4, LR.CONTENT_W)
   local screens = { reserve = UI.reserveView, reserves = UI.reservesView, loot = UI.lootView, session = UI.sessionView, guild = UI.guildView, settings = UI.settingsView, test = UI.testView }
   local ok, err = pcall(screens[UI.tab], flow, s)
@@ -232,8 +250,82 @@ function UI.render()
     flow:text("|cffff5a4aSomething went wrong drawing this screen:|r " .. tostring(err), { font = "GameFontHighlightSmall" })
     geterrorhandler()(err)
   end
+  UI.drawBar()
   view:setContentHeight(flow.y + 8, keep)
   for _, e in ipairs(UI.openSheets()) do e.handle.redraw(true) end
+end
+
+--- a screen's main actions, pinned under it (call while drawing the screen): list = buttons ({ label, click, style }, the
+--- first usually the red one), more = the rarer ones, behind a "More" button that opens them in a sheet
+function UI.pin(list, more) UI.pinned = { list = list, more = more } end
+--- something else pinned under the screen (your reserves, on the Reserve tab): fill(flow) draws it, as tall as it needs
+function UI.pinPanel(fill) UI.pinned = { fill = fill } end
+
+--- the rarer actions of a screen, one per line
+function UI.moreSheet(title, list)
+  UI.openSheet(title or "More", function(f, h)
+    for _, c in ipairs(list) do if c then
+      if c.heading then
+        f:text(c.heading, { font = "GameFontNormal", color = K.GOLD, gap = 2 })
+      else
+        f:buttons({ { label = c.label, style = c.danger and "link" or "quiet", danger = c.danger, disabled = c.disabled, width = c.danger and nil or f.width,
+          click = function() h.close() c.click() end } }, "left")
+        if c.note then f:note(c.note) f:gap(2) end
+      end
+    end end
+  end)
+end
+
+function UI.drawBar()
+  K.release("bar")
+  local p = UI.pinned
+  view:ClearAllPoints()
+  view:SetPoint("TOPLEFT", PAD, -(TOP_H + 8))
+  if not p then
+    bar:Hide()
+    view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16)
+    return
+  end
+  bar:Show()
+  local width = WIDTH - 2 * PAD
+  if p.fill then
+    local flow = K.flow("bar", bar, 0, 8, width)
+    p.fill(flow)
+    local h = math.min(HEIGHT - 260, flow.y + 2)
+    bar:SetHeight(h)
+    view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16 + h + 2)
+    return
+  end
+  bar:SetHeight(BAR_H)
+  view:SetPoint("BOTTOMRIGHT", -PAD, TAB_H + 16 + BAR_H + 2)
+  local more = {}
+  for _, c in ipairs(p.more or {}) do if c then more[#more + 1] = c end end
+  -- "More" on the right; buttons that don't fit go into it too
+  local moreB
+  local function makeMore()
+    if moreB or #more == 0 then return end
+    moreB = K.button("bar", bar, "quiet", "More...", 60)
+    moreB:SetScript("OnClick", function() UI.moreSheet("More", more) end)
+    moreB:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 0, -5)
+  end
+  makeMore()
+  local x = 0
+  local room = width - (moreB and (moreB:GetWidth() + 8) or 0)
+  for i, c in ipairs(p.list or {}) do if c then
+    local b = K.button("bar", bar, c.style, c.label, c.style == "quiet" and 60 or nil, room)
+    if x > 0 and x + b:GetWidth() > room then
+      -- (no room: this one and the rest go under More)
+      b:Hide()
+      for j = #p.list, i, -1 do if p.list[j] then table.insert(more, 1, p.list[j]) end end
+      makeMore()
+      break
+    end
+    if c.disabled then b:Disable() if b.text then b.text:SetTextColor(0.5, 0.5, 0.5) end end
+    b:SetScript("OnClick", c.click)
+    if c.tip then K.tooltipOn(b, function(tt) tt:SetText(c.tip, 1, 1, 1, 1, true) end) end
+    b:SetPoint("TOPLEFT", bar, "TOPLEFT", x, -(5 + math.floor((24 - b:GetHeight()) / 2)))
+    x = x + b:GetWidth() + 6
+  end end
 end
 
 -- redraws soon (item names arrive by the hundred when a raid's items load)

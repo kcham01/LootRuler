@@ -190,7 +190,7 @@ run("raiders reserve", function()
 end)
 
 run("the leader reserves", function()
-  clickText("Reserve")
+  clickText("My reserves")
   check("the loot list: each boss, closed, with how many items", visible("Attumen the Huntsman") and visible("Moroes") and visible("Open all")
     and not visible("Royal Cloak of Arathi Kings"))
   shot("reserve-bosses")
@@ -291,7 +291,7 @@ run("hard reserves", function()
 end)
 
 run("the reserves list", function()
-  clickText("Reserves")
+  clickText("All reserves")
   check("leader tools", visible("Send to Gargul") and visible("Copy for Gargul") and visible("Lock reserves"))
   check("with a reminder for who hasn't reserved, and how many", visible("Remind who hasn't reserved (1)"))
   local n = #srv.chat
@@ -400,7 +400,7 @@ run("softres.it import", function()
   shot("import-names")
   LR.UI.closeAll()
   -- the Reserves tab asks too, under the name
-  clickText("Reserves")
+  clickText("All reserves")
   clickText("By player")
   check("the Reserves tab offers the same fix", visible("Bobb -> Bob-Faerlina"))
   shot("import-names-by-player")
@@ -421,7 +421,7 @@ run("softres.it import", function()
   srv:tick(1)
   check("posted in raid chat", srv.chat[before + 1] and srv.chat[before + 1].text:find("Reserve on softres.it", 1, true) ~= nil)
   check("once imported, it says import again", visible("Import again") and visible("Import again whenever the sheet changes"))
-  clickText("Reserves")
+  clickText("All reserves")
   check("the Reserves tab can import too", visible("Import from softres.it again"))
   clickText("Import from softres.it again")
   check("the same box", visible("Bring in reserves from softres.it"))
@@ -2614,9 +2614,9 @@ end)
 run("no leaks", function()
   local s3 = LR.startSession("BlackTemple", 2, true, false)
   srv:tick(1)
-  for _, t in ipairs({ "Reserve", "Reserves", "Session" }) do clickText(t) end
+  for _, t in ipairs({ "My reserves", "All reserves", "Session" }) do clickText(t) end
   local before = M.frameCount()
-  for _ = 1, 15 do for _, t in ipairs({ "Reserve", "Reserves", "Session" }) do clickText(t) end end
+  for _ = 1, 15 do for _, t in ipairs({ "My reserves", "All reserves", "Session" }) do clickText(t) end end
   check("redrawing reuses frames", M.frameCount() - before < 5, ("%d frames before, %d after 45 redraws"):format(before, M.frameCount()))
   if M.frameCount() - before >= 5 then
     local kinds = {}

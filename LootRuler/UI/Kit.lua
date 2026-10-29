@@ -189,6 +189,99 @@ K.define("button", function()
   return b
 end, function(b) b:Enable() b:SetText("") end)
 
+-- a quiet button: for everything that isn't the screen's main action (that one stays the game's red button). Dark, with a
+-- thin gold edge, like the chips
+K.define("quiet", function()
+  local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+  b:SetBackdrop(K.INSET)
+  b.text = fs(b, "GameFontHighlightSmall")
+  b.text:SetJustifyH("CENTER")
+  b.text:SetJustifyV("MIDDLE")
+  b.text:SetPoint("LEFT", 8, 0)
+  b.text:SetPoint("RIGHT", -8, 0)
+  b.text:SetWordWrap(false)
+  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  b:SetHeight(24)
+  return b
+end, function(b)
+  b:Enable()
+  b.text:SetText("")
+  b:SetBackdropColor(0.11, 0.09, 0.07, 1)
+  b:SetBackdropBorderColor(0.55, 0.43, 0.2, 1)
+  b.text:SetTextColor(0.91, 0.89, 0.82)
+end)
+
+-- a link: words only, for rare or risky actions (End this session, Change, Lift). `danger` makes it red
+K.define("link", function()
+  local b = CreateFrame("Button", nil, UIParent)
+  b.text = fs(b, "GameFontNormalSmall")
+  b.text:SetJustifyV("MIDDLE")
+  b.text:SetAllPoints()
+  b.text:SetWordWrap(false)
+  b.line = b:CreateTexture(nil, "HIGHLIGHT")             -- (an underline while the mouse is over it)
+  b.line:SetColorTexture(1, 0.82, 0, 0.8)
+  b.line:SetHeight(1)
+  b.line:SetPoint("BOTTOMLEFT", 0, 3)
+  b.line:SetPoint("BOTTOMRIGHT", 0, 3)
+  b:SetHeight(20)
+  return b
+end, function(b) b:Enable() b.text:SetText("") b.text:SetTextColor(K.rgb(K.GOLD)) b.text:SetJustifyH("LEFT") end)
+
+--- a button of one of the three weights: "red" (the screen's main action, the game's own button), "quiet" or "link";
+--- returns it sized to its words (at least minW, at most maxW)
+function K.button(owner, parent, style, label, minW, maxW, danger)
+  local b
+  if style == "quiet" or style == "link" then
+    b = K.get(owner, style, parent)
+    b.text:SetText(label)
+    local w = b.text:GetStringWidth() + (style == "quiet" and 18 or 2)
+    if style == "link" then
+      if danger then b.text:SetTextColor(1, 0.35, 0.3) end
+      b:SetWidth(min(maxW or w, w))
+    else
+      b:SetWidth(min(maxW or 9999, max(minW or 0, w)))
+    end
+  else
+    b = K.get(owner, "button", parent)
+    b:SetText(label)
+    b:SetWidth(min(maxW or 9999, max(minW or 80, b:GetFontString():GetStringWidth() + 28)))
+  end
+  return b
+end
+
+-- a line saying how things stand (open, locked, your reserves are in): a coloured dot, the words, and maybe a link
+-- on the right. tone: "ok" (green), "warn" (gold) or "bad" (red)
+local TONES = {
+  ok = { dot = "Interface\\COMMON\\Indicator-Green", bg = { 0.07, 0.13, 0.06, 0.95 }, edge = { 0.25, 0.42, 0.16, 1 } },
+  warn = { dot = "Interface\\COMMON\\Indicator-Yellow", bg = { 0.13, 0.1, 0.03, 0.95 }, edge = { 0.6, 0.47, 0.12, 1 } },
+  bad = { dot = "Interface\\COMMON\\Indicator-Red", bg = { 0.15, 0.05, 0.04, 0.95 }, edge = { 0.6, 0.2, 0.15, 1 } },
+}
+K.define("strip", function()
+  local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  f:SetBackdrop(K.INSET)
+  f.dot = f:CreateTexture(nil, "ARTWORK")
+  f.dot:SetSize(14, 14)
+  f.dot:SetPoint("TOPLEFT", 8, -7)
+  f.text = fs(f, "GameFontHighlightSmall")
+  f.text:SetPoint("TOPLEFT", 26, -8)
+  return f
+end, function(f) f.text:SetText("") f:EnableMouse(false) end)
+
+-- a small box with a gold heading and a line under it (the facts about someone else's session)
+K.define("fact", function()
+  local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  f:SetBackdrop(K.INSET)
+  f.k = fs(f, "GameFontNormalSmall")
+  f.k:SetPoint("TOPLEFT", 9, -8)
+  f.v = fs(f, "GameFontHighlightSmall")
+  f.v:SetPoint("TOPLEFT", f.k, "BOTTOMLEFT", 0, -3)
+  return f
+end, function(f)
+  f.k:SetText("") f.v:SetText("")
+  f:SetBackdropColor(0.08, 0.07, 0.05, 0.9)
+  f:SetBackdropBorderColor(0.42, 0.33, 0.19, 1)
+end)
+
 -- a rounded toggle "chip"
 K.define("chip", function()
   local b = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
@@ -567,6 +660,108 @@ function Flow:panel(title, fill)
   return p
 end
 
+--- a framed panel standing out from the rest (gold edge): the one box on a screen that matters most right now
+function Flow:hot(title, fill)
+  local p = self:panel(title, fill)
+  p:SetBackdropBorderColor(1, 0.82, 0, 1)
+  p:SetBackdropColor(0.16, 0.12, 0.04, 1)
+  return p
+end
+
+--- a heading for a part of a screen, with a short summary on the right ("To roll out ... 3 items")
+function Flow:heading(title, sum)
+  local h = K.get(self.owner, "head", self.parent)
+  h.text:SetText(title)
+  h.right:SetText(sum or "")
+  self:place(h, 22, nil, self.width)
+  self:gap(4)
+  return h
+end
+
+--- a line saying how things stand: tone "ok" / "warn" / "bad"; link = { label, click } on the right
+function Flow:strip(text, tone, link)
+  local t = TONES[tone] or TONES.ok
+  local f = K.get(self.owner, "strip", self.parent)
+  f:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
+  f:SetBackdropBorderColor(t.edge[1], t.edge[2], t.edge[3], t.edge[4])
+  f.dot:SetTexture(t.dot)
+  local right = 10
+  if link then
+    local b = K.button(self.owner, self.parent, "link", link[1])
+    b:SetScript("OnClick", link[2])
+    right = b:GetWidth() + 16
+    b:SetPoint("TOPRIGHT", self.parent, "TOPLEFT", self.x + self.width - 8, -(self.y + 4))
+    b:SetFrameLevel(f:GetFrameLevel() + 2)
+  end
+  f.text:SetWidth(self.width - 26 - right)
+  f.text:SetText(text)
+  self:place(f, max(28, f.text:GetStringHeight() + 16), nil, self.width)
+  self:gap(8)
+  return f
+end
+
+--- a row with its label in a column of its own, so every row's choices start at the same line; fill(flow) lays out the
+--- choices to the right of it. opts.lw: the label column's width
+function Flow:row(label, fill, opts)
+  local lw = (opts and opts.lw) or 104
+  local l = K.get(self.owner, "label", self.parent)
+  l.text:SetFontObject("GameFontNormalSmall")
+  l.text:SetTextColor(K.rgb(K.GOLD))
+  l.text:SetWordWrap(true)
+  l.text:SetText(label or "")
+  l:SetWidth(lw - 8)
+  l.text:SetWidth(lw - 8)
+  local lh = max(l.text:GetStringHeight(), 1)
+  l:SetHeight(lh + 2)
+  l:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x, -(self.y + 4))
+  local inner = K.flow(self.owner, self.parent, self.x + lw, self.y, self.width - lw)
+  fill(inner)
+  self.y = max(inner.y, self.y + lh + 10)
+  return self
+end
+
+--- side by side: fills (a list of functions) each lay out one column; the panels they return are made as tall as the
+--- tallest, so the columns line up
+function Flow:cols(fills, gap)
+  gap = gap or 10
+  local n = #fills
+  local w = floor((self.width - gap * (n - 1)) / n)
+  local bottom, made = self.y, {}
+  for i, fill in ipairs(fills) do
+    local col = K.flow(self.owner, self.parent, self.x + (i - 1) * (w + gap), self.y, w)
+    local p = fill(col)
+    if p then made[#made + 1] = { p, col } end
+    bottom = max(bottom, col.y)
+  end
+  -- (a panel's flow ends 10 below it: stretch each to the lowest)
+  for _, m in ipairs(made) do m[1]:SetHeight(m[1]:GetHeight() + (bottom - m[2].y)) end
+  self.y = bottom
+  return self
+end
+
+--- small boxes of facts, two to a row: list = { { heading, words }, ... }
+function Flow:facts(list)
+  local w = floor((self.width - 8) / 2)
+  local i, rowTop, rowH, made = 0, self.y, 0, {}
+  for _, x in ipairs(list) do if x then
+    i = i + 1
+    local f = K.get(self.owner, "fact", self.parent)
+    f.k:SetText(x[1])
+    f.v:SetWidth(w - 18)
+    f.v:SetText(x[2])
+    local h = 8 + f.k:GetStringHeight() + 3 + f.v:GetStringHeight() + 9
+    f:SetWidth(w)
+    local col = (i - 1) % 2
+    if col == 0 and i > 1 then rowTop = rowTop + rowH + 8 rowH = 0 made = {} end
+    f:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + col * (w + 8), -rowTop)
+    made[#made + 1] = f
+    rowH = max(rowH, h)
+    for _, g in ipairs(made) do g:SetHeight(rowH) end
+  end end
+  self.y = rowTop + rowH + 8
+  return self
+end
+
 --- a row of chips (or other fixed-size buttons) that wraps onto more lines; `false` in the list is skipped
 function Flow:chips(list, opts)
   opts = opts or {}
@@ -605,16 +800,23 @@ end
 
 --- red panel buttons in a row, right-aligned (or centered, or left). A row too wide for the space goes on over more
 --- lines, each aligned the same way, so no button runs past the edge (one wider than the space is cut to fit)
+--- Each is { label, click, style = "quiet" / "link" (else the red main button), danger (a red link), disabled, width, tip };
+--- `false` / nil in the list are skipped.
 function Flow:buttons(list, align)
   local widths, made = {}, {}
+  local packed = {}
+  for i = 1, table.maxn(list) do if list[i] then packed[#packed + 1] = list[i] end end
+  list = packed
   for i, c in ipairs(list) do
-    local b = K.get(self.owner, "button", self.parent)
-    b:SetText(c.label)
-    local w = min(self.width, c.width or max(80, b:GetFontString():GetStringWidth() + 28))
-    b:SetWidth(w)
-    widths[i] = w
-    if c.disabled then b:Disable() end
+    local b = K.button(self.owner, self.parent, c.style, c.label, c.style == "quiet" and 60 or nil, self.width, c.danger)
+    if c.width then b:SetWidth(min(self.width, c.width)) end
+    widths[i] = b:GetWidth()
+    if c.disabled then
+      b:Disable()
+      if b.text then b.text:SetTextColor(0.5, 0.5, 0.5) end
+    end
     b:SetScript("OnClick", c.click)
+    if c.tip then tooltipOn(b, function(tt) tt:SetText(c.tip, 1, 1, 1, 1, true) end) end
     made[i] = b
   end
   -- lines: as many buttons as fit in each
@@ -630,7 +832,7 @@ function Flow:buttons(list, align)
     local total = l[2]
     local x = align == "center" and floor((self.width - total) / 2) or align == "left" and 0 or self.width - total
     for _, i in ipairs(l[1]) do
-      made[i]:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + x, -self.y)
+      made[i]:SetPoint("TOPLEFT", self.parent, "TOPLEFT", self.x + x, -(self.y + floor((24 - made[i]:GetHeight()) / 2)))
       x = x + widths[i] + 6
     end
     self.y = self.y + 24 + (n < #lines and 4 or 6)

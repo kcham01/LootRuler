@@ -133,6 +133,8 @@ function opHtml(op) {
     if (/GroupLoot-(Dice|Coin)-(Down|Highlight)/i.test(tex)) return '';
     if (/Skills-BarBorder/i.test(tex)) return `<div style="${base}"><div style="position:absolute;left:0;right:0;top:25%;bottom:25%;border:1px solid #9a8560;border-radius:2px;box-shadow:0 0 0 1px #000"></div></div>`;
     if (/Skills-Bar/i.test(tex)) return `<div style="${base}background:linear-gradient(${rgba(tint)},${rgba([tint[0] * 0.6, tint[1] * 0.6, tint[2] * 0.6, tint[3] ?? 1])})"></div>`;
+    if (/Indicator-Green/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:22%;border-radius:50%;background:radial-gradient(#9dff7a,#2f9a10)"></div></div>`;
+    if (/Indicator-Red/i.test(tex)) return `<div style="${base}"><div style="position:absolute;inset:22%;border-radius:50%;background:radial-gradient(#ff8a7a,#a8160a)"></div></div>`;
     if (/Indicator-Yellow/i.test(tex)) return `<div style="${base}border-radius:50%;background:radial-gradient(#ffe066,#c98a00)"></div>`;
     if (/ButtonHilight|QuestTitleHighlight/i.test(tex)) return '';
     return `<div style="${base}background:repeating-linear-gradient(45deg,#3a0040,#3a0040 4px,#200020 4px,#200020 8px)" title="${esc(tex)}"></div>`;
